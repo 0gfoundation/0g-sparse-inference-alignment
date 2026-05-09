@@ -102,8 +102,14 @@ class _ValueModelWrapper(nn.Module):
 # ---------------------------------------------------------------------------
 
 def parse_conversation(text: str):
-    """将 'Human:\\nQ\\nAssistant:\\nA' 格式解析为 conversations list。"""
+    """
+    将对话文本解析为 conversations list。
+    支持两种格式：
+      - 'Human:\\nQ\\nAssistant:\\nA'（老格式，带冒号）
+      - 'user\\nQ\\nassistant\\nA'（Qwen3 chat template skip_special_tokens 后的格式）
+    """
     text = text.strip()
+    # 尝试带冒号格式（Human: / Assistant:）
     parts = re.split(r'(Human|Assistant):\s*', text, flags=re.IGNORECASE)
     conversations = []
     current_role = None
@@ -118,9 +124,33 @@ def parse_conversation(text: str):
         else:
             if current_role:
                 conversations.append({'role': current_role, 'content': part})
-    if not conversations:
-        conversations = [{'role': 'user', 'content': text}]
-    return conversations
+
+    if conversations:
+        return conversations
+
+    # 尝试 Qwen3 chat template 格式（无冒号，role 单独一行）
+    # 例：'user\nHello\n\nassistant\nHi'
+    parts = re.split(r'\n(user|assistant|system)\n', '\n' + text, flags=re.IGNORECASE)
+    conversations = []
+    current_role = None
+    for part in parts:
+        part = part.strip()
+        if not part:
+            continue
+        if part.lower() in ('user', 'human'):
+            current_role = 'user'
+        elif part.lower() == 'assistant':
+            current_role = 'assistant'
+        elif part.lower() == 'system':
+            current_role = 'system'
+        else:
+            if current_role:
+                conversations.append({'role': current_role, 'content': part})
+
+    if conversations:
+        return conversations
+
+    return [{'role': 'user', 'content': text}]
 
 
 def extract_user_content(prompt_text: str) -> str:
@@ -315,6 +345,9 @@ def make_sia_processor(
                           flush=True)
                     continue
 
+                # 归一化：减均值，使得 topk 内有相对排序，
+                # 避免全负分时把 topk 全部压低、让 topk 外 token 意外胜出
+                rm_scores = rm_scores - rm_scores.mean()
                 logits[i, topk_indices] = (
                     logits[i, topk_indices]
                     + rm_scores.to(logits.device) * self._WEIGHT
