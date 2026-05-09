@@ -37,7 +37,6 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
-from transformers import AutoTokenizer
 
 from vllm import LLM, SamplingParams
 
@@ -49,7 +48,6 @@ from sia_vllm_RM import make_sia_processor
 # 全局状态（在 main() 里初始化）
 # ---------------------------------------------------------------------------
 _llm: Optional[LLM] = None
-_tokenizer: Optional[AutoTokenizer] = None
 _model_id: str = ""        # 对外暴露的 model 名称（basename of llm path）
 _args = None
 
@@ -95,33 +93,9 @@ class ChatCompletionRequest(BaseModel):
 def _messages_to_prompt(messages: list[ChatMessage]) -> str:
     """
     将 OpenAI messages 转为 LLM prompt 字符串。
-    优先使用 tokenizer 的 chat_template；
-    fallback 到 Human/Assistant 格式（兼容 Base 模型）。
+    使用 Human/Assistant 格式（与 sia_vllm_RM.py CLI 行为一致，适合 Base 模型）。
+    SIA processor 的 parse_conversation 和 RM 打分均基于此格式设计。
     """
-    msg_dicts = [{"role": m.role, "content": m.content} for m in messages]
-
-    if _tokenizer.chat_template:
-        try:
-            prompt = _tokenizer.apply_chat_template(
-                msg_dicts,
-                tokenize=False,
-                add_generation_prompt=True,
-                enable_thinking=False,   # Qwen3 thinking mode off
-            )
-        except TypeError:
-            # 旧版 tokenizer 不支持 enable_thinking 参数
-            prompt = _tokenizer.apply_chat_template(
-                msg_dicts,
-                tokenize=False,
-                add_generation_prompt=True,
-            )
-        # 去掉开头重复的 BOS
-        bos = _tokenizer.bos_token
-        if bos and prompt.startswith(bos):
-            prompt = prompt[len(bos):]
-        return prompt
-
-    # Fallback: Human/Assistant 格式
     parts = []
     for m in messages:
         if m.role == "user":
@@ -333,9 +307,6 @@ def main():
         logits_processors=[SIAProcessor],
     )
     print("LLM loaded.\n")
-
-    # 加载 tokenizer（用于 prompt 格式化）
-    _tokenizer = AutoTokenizer.from_pretrained(_args.llm, trust_remote_code=True)
 
     print(f"Starting HTTP server on http://{_args.host}:{_args.port} ...")
     uvicorn.run(app, host=_args.host, port=_args.port, log_level="info")
