@@ -234,6 +234,9 @@ def make_sia_processor(
             self._rm_model.eval()
             print("[SIA] RM loaded.", flush=True)
 
+            # 预计算哨兵边界（启动时一次，用于 _extract_user_content）
+            self._sentinel_prefix, self._sentinel_suffix = self._compute_sentinel_bounds()
+
             # per-request 状态
             self._prompt_user: dict[int, str] = {}
             self._output_ids: dict[int, list] = {}
@@ -292,74 +295,71 @@ def make_sia_processor(
         # ----------------------------------------------------------------
         # 从 prompt token IDs 中提取 user 内容
         # ----------------------------------------------------------------
-        def _extract_user_content(self, prompt_ids: list) -> str:
+        def _compute_sentinel_bounds(self):
             """
-            主方案：用 apply_chat_template 注入哨兵字符串，在 token ID 层定位
-            最后一个 user turn 的边界，不依赖任何格式假设。
-            适用于任何带有 chat_template 的 tokenizer（Qwen3 / Llama 3 / Mistral v3 等）。
-            回退方案：基于正则的文本解析（覆盖 Llama 2 / Gemma / Human: 格式）。
+            启动时调用一次：用哨兵字符串推算 user turn 的 prefix / suffix token 序列。
+            成功返回 (prefix, suffix) list；tokenizer 无 chat_template 或推算失败返回 (None, None)。
             """
             SENTINEL = "XSIASENTINELX"
             try:
                 if not getattr(self._llm_tok, 'chat_template', None):
-                    raise ValueError("no chat_template")
-
+                    return None, None
                 test_ids = self._llm_tok.apply_chat_template(
                     [{"role": "user", "content": SENTINEL}],
                     tokenize=True,
                     add_generation_prompt=True,
                 )
                 sentinel_ids = self._llm_tok.encode(SENTINEL, add_special_tokens=False)
-
                 test_list = list(test_ids)
                 sentinel_list = list(sentinel_ids)
-
-                # 找哨兵在 test_ids 中的位置，确定 prefix / suffix
                 sentinel_pos = next(
                     (i for i in range(len(test_list) - len(sentinel_list) + 1)
                      if test_list[i:i + len(sentinel_list)] == sentinel_list),
                     None,
                 )
                 if sentinel_pos is None:
-                    raise ValueError("sentinel not found in template output")
-
+                    return None, None
                 prefix = test_list[:sentinel_pos]
                 suffix = test_list[sentinel_pos + len(sentinel_list):]
-                if not suffix:
-                    raise ValueError("empty suffix — cannot determine user content end")
+                if not prefix or not suffix:
+                    return None, None
+                return prefix, suffix
+            except Exception:
+                return None, None
 
+        def _extract_user_content(self, prompt_ids: list) -> str:
+            """
+            主方案：在 token ID 层用预计算的 prefix/suffix 定位最后一个 user turn，
+            不依赖格式假设，适用于任何有 chat_template 的 tokenizer。
+            回退方案：基于正则的文本解析（覆盖 Llama 2 / Gemma / Human: 格式）。
+            两种方案均无声切换，不打印警告。
+            """
+            prefix = self._sentinel_prefix
+            suffix = self._sentinel_suffix
+            if prefix is not None and suffix is not None:
                 prompt_list = list(prompt_ids)
-
-                # 找 prefix 在 prompt_ids 中最后一次出现（处理多轮对话）
+                # 最后一次出现 prefix（处理多轮对话）
                 last_prefix_pos = next(
                     (i for i in range(len(prompt_list) - len(prefix), -1, -1)
                      if prompt_list[i:i + len(prefix)] == prefix),
                     None,
                 )
-                if last_prefix_pos is None:
-                    raise ValueError("prefix not found in prompt_ids")
+                if last_prefix_pos is not None:
+                    content_start = last_prefix_pos + len(prefix)
+                    suffix_pos = next(
+                        (i for i in range(content_start, len(prompt_list) - len(suffix) + 1)
+                         if prompt_list[i:i + len(suffix)] == suffix),
+                        None,
+                    )
+                    if suffix_pos is not None:
+                        user_ids = prompt_list[content_start:suffix_pos]
+                        content = self._llm_tok.decode(
+                            user_ids, skip_special_tokens=True
+                        ).strip()
+                        if content:
+                            return content
 
-                content_start = last_prefix_pos + len(prefix)
-
-                # 找 suffix 紧随其后的位置
-                suffix_pos = next(
-                    (i for i in range(content_start, len(prompt_list) - len(suffix) + 1)
-                     if prompt_list[i:i + len(suffix)] == suffix),
-                    None,
-                )
-                if suffix_pos is None:
-                    raise ValueError("suffix not found after prefix")
-
-                user_ids = prompt_list[content_start:suffix_pos]
-                content = self._llm_tok.decode(user_ids, skip_special_tokens=True).strip()
-                if content:
-                    return content
-                raise ValueError("decoded user content is empty")
-
-            except Exception as e:
-                print(f"[SIA] _extract_user_content sentinel failed ({e}), fallback to text parsing",
-                      flush=True)
-
+            # Fallback：文本解析（raw string prompt / 无 chat_template 时的正常路径）
             prompt_text = self._llm_tok.decode(prompt_ids, skip_special_tokens=True)
             return extract_user_content(prompt_text)
 
