@@ -54,6 +54,35 @@ curl -X POST http://localhost:8000/v1/chat/completions \
 
 There is no test suite.
 
+## References
+
+### Paper
+
+**"Inference-time Alignment via Sparse Junction Steering"**
+Runyi Hu et al. — [https://arxiv.org/pdf/2602.21215](https://arxiv.org/pdf/2602.21215)
+
+核心思路：不在每个 decoding step 都干预，而是**只在高熵的关键决策点（junction）介入**，20–80% 的 token 干预率即可达到或超过全量 dense steering 的效果，同时将计算开销降低最多 6 倍。`--entropy_threshold` 参数直接对应此论文的稀疏干预策略。
+
+### Experimental Code
+
+原始实验代码（训练 Value Model、评估脚本等）：
+[https://github.com/hurunyi/SIA](https://github.com/hurunyi/SIA)
+
+### Pretrained Value Models
+
+已训练好的 Value Model checkpoints（LoRA 格式，用于 `--rm_lora`）：
+[https://huggingface.co/Runyi-Hu/SIA/tree/main](https://huggingface.co/Runyi-Hu/SIA/tree/main)
+
+| Checkpoint | Base Model |
+|------------|------------|
+| `VM-Qwen3-0.6B-Base` | Qwen3-0.6B-Base |
+| `VM-Qwen3-1.7B-Base` | Qwen3-1.7B-Base |
+| `VM-Qwen3-4B-Base` | Qwen3-4B-Base |
+| `VM-Skywork-Reward-V2-Llama-3.2-1B` | Llama-3.2-1B |
+| `VM-Skywork-Reward-V2-Llama-3.2-3B` | Llama-3.2-3B |
+
+使用时将对应 checkpoint 目录路径传给 `--rm_lora`，`--rm` 指向对应的基础模型。
+
 ## Architecture
 
 ### Files
