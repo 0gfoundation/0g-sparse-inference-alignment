@@ -17,8 +17,7 @@ broker 会调用的 endpoints（来自 api/inference/const/const.go）：
 Usage:
   python sia_vllm_server.py \\
     --llm     /workspace/SIA/models/Qwen3-1.7B-Base \\
-    --rm      /workspace/SIA/models/Qwen3-1.7B-Base \\
-    [--rm_lora /workspace/SIA/models/SIA-checkpoints/VM-Qwen3-1.7B-Base] \\
+    --rm_url  http://localhost:8001 \\
     --host 0.0.0.0 --port 8000 \\
     --llm_gpu_mem 0.3 --topk 5 --weight 1.0
 """
@@ -256,11 +255,10 @@ async def chat_completions(req: ChatCompletionRequest):
 
 def parse_args():
     p = argparse.ArgumentParser(description="SIA vLLM OpenAI-compatible HTTP Server")
-    # LLM / RM 参数（透传给 sia_vllm_RM.py）
+    # LLM 参数
     p.add_argument("--llm",       required=True)
-    p.add_argument("--rm",        required=True)
-    p.add_argument("--rm_lora",   default=None)
-    p.add_argument("--rm_device", default="cuda:0")
+    p.add_argument("--rm_url",    default="http://localhost:8001",
+                   help="RM server 地址（默认 http://localhost:8001）")
     p.add_argument("--llm_gpu_mem", type=float, default=0.5)
     p.add_argument("--topk",      type=int,   default=10)
     p.add_argument("--weight",    type=float, default=1.0)
@@ -283,9 +281,7 @@ def main():
     print("=" * 60)
     print(f"Model ID : {_model_id}")
     print(f"LLM      : {_args.llm}")
-    print(f"RM       : {_args.rm}  device={_args.rm_device}")
-    if _args.rm_lora:
-        print(f"RM LoRA  : {_args.rm_lora}")
+    print(f"RM URL   : {_args.rm_url}")
     print(f"topk={_args.topk}  weight={_args.weight}  "
           f"entropy_threshold={_args.entropy_threshold}")
     print(f"Server   : http://{_args.host}:{_args.port}")
@@ -293,11 +289,9 @@ def main():
 
     # 构造 SIA LogitsProcessor 类
     SIAProcessor = make_sia_processor(
-        rm_path=_args.rm,
-        rm_lora_path=_args.rm_lora,
+        rm_url=_args.rm_url,
         topk=_args.topk,
         weight=_args.weight,
-        rm_device=_args.rm_device,
         entropy_threshold=_args.entropy_threshold,
     )
 

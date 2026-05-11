@@ -1,43 +1,35 @@
 """
-SIA per-token 干预（接入真实 RM）- vLLM v1 engine 版本
+SIA per-token 干预（HTTP RM Server 版本）- vLLM v1 engine 版本
 
 架构：
   - LLM: vllm (v1 engine) 负责生成，GPU 由 vllm 管理
-  - RM:  HuggingFace AutoModelForSequenceClassification（可选 LoRA），在 apply() 里同步调用
+  - RM:  独立 RM server（sia_rm_server.py），通过 HTTP /score 调用
   - SIALogitsProcessor 运行在 EngineCore 子进程中，通过 LLM(logits_processors=[...]) 注册
 
 干预逻辑（per-token）：
   1. 从 LLM logits 中取 top-k candidate token IDs
   2. 将当前生成序列 + 各 candidate 解码成文本
-  3. 用 RM tokenizer apply_chat_template 逐个格式化并送入 RM 打分
+  3. 通过 HTTP POST /score 批量发送到 RM server 打分
   4. combined_logits[topk_indices] += rm_scores * weight
   5. 返回 combined_logits
 
 用法示例：
-  # 不带 LoRA
+  # 先启动 RM server（sia_rm_server.py），再启动本脚本
   python sia_vllm_RM.py \\
     --llm  /workspace/SIA/models/Qwen3-1.7B-Base \\
-    --rm   /workspace/SIA/models/Qwen3-1.7B-Base \\
-    --rm_device cuda:0 --llm_gpu_mem 0.3 --topk 5 --weight 0.1 --max_tokens 20
-
-  # 带 LoRA（ValueModel checkpoint）
-  python sia_vllm_RM.py \\
-    --llm     /workspace/SIA/models/Qwen3-1.7B-Base \\
-    --rm      /workspace/SIA/models/Qwen3-1.7B-Base \\
-    --rm_lora /workspace/SIA/models/SIA-checkpoints/VM-Qwen3-1.7B-Base \\
-    --rm_device cuda:0 --llm_gpu_mem 0.3 --topk 5 --weight 1.0 --max_tokens 64
+    --rm_url http://localhost:8001 \\
+    --llm_gpu_mem 0.3 --topk 5 --weight 0.1 --max_tokens 20
 """
 
 import argparse
-import os
 import re
+import requests
 from typing import Optional
 
 import torch
 import torch.distributions as dist
-import torch.nn as nn
 import torch.nn.functional as F
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
+from transformers import AutoTokenizer
 
 from vllm import LLM, SamplingParams
 from vllm.v1.sample.logits_processor.interface import (
@@ -45,56 +37,6 @@ from vllm.v1.sample.logits_processor.interface import (
     LogitsProcessor,
     MoveDirectionality,
 )
-
-
-# ---------------------------------------------------------------------------
-# ValueModel 轻量包装（仅在 --rm_lora 时使用）
-# 复现 src/value_model/model.py 中 ValueModel 的推理路径，
-# 不依赖 SIA 源码，避免跨模块 import 问题。
-# ---------------------------------------------------------------------------
-
-class _ValueModelOutput:
-    def __init__(self, logits):
-        self.logits = logits  # (batch, 1)
-
-
-class _ValueModelWrapper(nn.Module):
-    """
-    加载 ValueModel checkpoint（base RM + LoRA + token_reward_head）后的推理封装。
-    forward() 返回与 AutoModelForSequenceClassification 兼容的输出对象（.logits）。
-    """
-
-    def __init__(self, base_model, token_reward_head: nn.Linear):
-        super().__init__()
-        self.base_model = base_model
-        self.token_reward_head = token_reward_head
-        self.config = base_model.config
-
-    def forward(self, input_ids, attention_mask=None, **kwargs):
-        # 取 transformer backbone（跳过分类头）
-        if hasattr(self.base_model, 'model'):
-            backbone = self.base_model.model
-        elif hasattr(self.base_model, 'transformer'):
-            backbone = self.base_model.transformer
-        else:
-            backbone = self.base_model
-
-        out = backbone(
-            input_ids=input_ids,
-            attention_mask=attention_mask,
-            output_hidden_states=True,
-        )
-
-        if isinstance(out, tuple):
-            hidden = out[0]
-        elif hasattr(out, 'hidden_states') and out.hidden_states is not None:
-            hidden = out.hidden_states[-1]
-        else:
-            hidden = out.last_hidden_state  # (batch, seq, hidden)
-
-        token_rewards = self.token_reward_head(hidden.float()).squeeze(-1)  # (batch, seq)
-        logits = token_rewards[:, -1].unsqueeze(-1)                         # (batch, 1)
-        return _ValueModelOutput(logits=logits)
 
 
 # ---------------------------------------------------------------------------
@@ -199,24 +141,21 @@ def extract_user_content(prompt_text: str) -> str:
 # ---------------------------------------------------------------------------
 
 def make_sia_processor(
-    rm_path: str,
-    rm_lora_path: Optional[str] = None,
+    rm_url: str = "http://localhost:8001",
     topk: int = 10,
     weight: float = 1.0,
-    rm_device: str = "cuda:0",
     entropy_threshold: Optional[float] = None,
 ):
     """
     返回一个 SIALogitsProcessor 类（不是实例）。
     vllm 引擎以 (vllm_config, device, is_pin_memory) 参数实例化该类。
+    RM 打分通过 HTTP 调用独立的 sia_rm_server.py 完成。
     """
 
     class SIALogitsProcessor(LogitsProcessor):
-        _RM_PATH = rm_path
-        _RM_LORA_PATH = rm_lora_path
+        _RM_URL = rm_url
         _TOPK = topk
         _WEIGHT = weight
-        _RM_DEVICE = rm_device
         _ENTROPY_THRESHOLD = entropy_threshold
 
         # ----------------------------------------------------------------
@@ -226,27 +165,16 @@ def make_sia_processor(
                      is_pin_memory: bool) -> None:
             self._llm_device = device
 
-            # LLM tokenizer
+            # LLM tokenizer（用于解码候选 token、提取 user content）
             llm_model_path = vllm_config.model_config.model
             print(f"[SIA] Loading LLM tokenizer: {llm_model_path}", flush=True)
             self._llm_tok = AutoTokenizer.from_pretrained(
                 llm_model_path, trust_remote_code=True
             )
 
-            # RM tokenizer
-            print(f"[SIA] Loading RM tokenizer: {self._RM_PATH}", flush=True)
-            self._rm_tok = AutoTokenizer.from_pretrained(
-                self._RM_PATH, trust_remote_code=True
-            )
-
-            # RM model
-            if self._RM_LORA_PATH:
-                self._rm_model = self._load_rm_with_lora()
-            else:
-                self._rm_model = self._load_rm_base()
-
-            self._rm_model.eval()
-            print("[SIA] RM loaded.", flush=True)
+            # HTTP session（复用 TCP 连接到 RM server）
+            self._rm_session = requests.Session()
+            print(f"[SIA] RM URL: {self._RM_URL}", flush=True)
 
             # 预计算哨兵边界（启动时一次，用于 _extract_user_content）
             self._sentinel_prefix, self._sentinel_suffix = self._compute_sentinel_bounds()
@@ -256,56 +184,6 @@ def make_sia_processor(
             self._output_ids: dict[int, list] = {}
             self._weight_per_req: dict[int, float] = {}
             self._step = 0
-
-        def _load_rm_base(self):
-            """加载普通 AutoModelForSequenceClassification RM。"""
-            print(f"[SIA] Loading RM (base): {self._RM_PATH}  device={self._RM_DEVICE}",
-                  flush=True)
-            model = AutoModelForSequenceClassification.from_pretrained(
-                self._RM_PATH,
-                num_labels=1,
-                torch_dtype=torch.bfloat16,
-                low_cpu_mem_usage=True,
-                trust_remote_code=True,
-            ).to(self._RM_DEVICE)
-            # 设置 pad_token_id，否则 sequence classification pooler 报错
-            model.config.pad_token_id = self._rm_tok.eos_token_id
-            return model
-
-        def _load_rm_with_lora(self):
-            """
-            加载 ValueModel checkpoint：base RM + LoRA + token_reward_head。
-            checkpoint 目录结构（与 src/value_model/model.py 保持一致）：
-              {rm_lora_path}/
-                lora_weights/        # PeftModel adapter
-                token_reward_head.pt # {'token_reward_head': state_dict}
-                model_config.json    # 可选
-            """
-            from peft import PeftModel
-
-            print(f"[SIA] Loading RM base for LoRA: {self._RM_PATH}", flush=True)
-            base_model = AutoModelForSequenceClassification.from_pretrained(
-                self._RM_PATH,
-                num_labels=1,
-                torch_dtype=torch.bfloat16,
-                low_cpu_mem_usage=True,
-                trust_remote_code=True,
-            )
-
-            lora_dir = os.path.join(self._RM_LORA_PATH, "lora_weights")
-            print(f"[SIA] Loading LoRA from: {lora_dir}", flush=True)
-            base_model = PeftModel.from_pretrained(base_model, lora_dir)
-            base_model = base_model.merge_and_unload()
-
-            hidden_size = base_model.config.hidden_size
-            token_reward_head = nn.Linear(hidden_size, 1)  # float32，与 checkpoint 一致
-            head_path = os.path.join(self._RM_LORA_PATH, "token_reward_head.pt")
-            print(f"[SIA] Loading token_reward_head from: {head_path}", flush=True)
-            head_state = torch.load(head_path, map_location='cpu', weights_only=True)
-            token_reward_head.load_state_dict(head_state['token_reward_head'])
-
-            model = _ValueModelWrapper(base_model, token_reward_head).to(self._RM_DEVICE)
-            return model
 
         # ----------------------------------------------------------------
         # 从 prompt token IDs 中提取 user 内容
@@ -379,7 +257,7 @@ def make_sia_processor(
             return extract_user_content(prompt_text)
 
         # ----------------------------------------------------------------
-        # RM 打分：逐个 candidate forward，避免 fast tokenizer padding 问题
+        # RM 打分：批量发送到 RM server，一次 HTTP 调用
         # ----------------------------------------------------------------
         def _score_candidates(
             self,
@@ -388,31 +266,21 @@ def make_sia_processor(
             candidate_token_ids: list[int],
         ) -> torch.Tensor:
             """返回 shape (topk,) float32 tensor（CPU）。"""
-            bos = self._rm_tok.bos_token
-            scores = []
-            for tid in candidate_token_ids:
-                cand_text = self._llm_tok.decode([tid], skip_special_tokens=False)
-                response_with_cand = response_so_far + cand_text
-                convs = [
-                    {'role': 'user',      'content': user_content},
-                    {'role': 'assistant', 'content': response_with_cand},
-                ]
-                rm_text = self._rm_tok.apply_chat_template(convs, tokenize=False)
-                if bos and rm_text.startswith(bos):
-                    rm_text = rm_text[len(bos):]
-
-                encoded = self._rm_tok(
-                    rm_text,
-                    return_tensors='pt',
-                    truncation=True,
-                    max_length=2048,
-                ).to(self._RM_DEVICE)
-
-                with torch.no_grad():
-                    rm_out = self._rm_model(**encoded)
-                scores.append(rm_out.logits.flatten()[0].item())
-                del rm_out, encoded
-
+            candidate_texts = [
+                self._llm_tok.decode([tid], skip_special_tokens=False)
+                for tid in candidate_token_ids
+            ]
+            resp = self._rm_session.post(
+                f"{self._RM_URL}/score",
+                json={
+                    "user_content": user_content,
+                    "response_so_far": response_so_far,
+                    "candidate_texts": candidate_texts,
+                },
+                timeout=30,
+            )
+            resp.raise_for_status()
+            scores = resp.json()["scores"]
             return torch.tensor(scores, dtype=torch.float32)
 
         # ----------------------------------------------------------------
@@ -527,12 +395,10 @@ def make_sia_processor(
 # ---------------------------------------------------------------------------
 
 def parse_args():
-    p = argparse.ArgumentParser(description="SIA vllm 干预（真实 RM，可选 LoRA）")
+    p = argparse.ArgumentParser(description="SIA vllm 干预（HTTP RM Server 版本）")
     p.add_argument("--llm",       required=True,  help="LLM 模型路径")
-    p.add_argument("--rm",        required=True,  help="RM 基础模型路径")
-    p.add_argument("--rm_lora",   default=None,
-                   help="RM LoRA checkpoint 目录（ValueModel 格式，含 lora_weights/ 和 token_reward_head.pt）")
-    p.add_argument("--rm_device", default="cuda:0")
+    p.add_argument("--rm_url",    default="http://localhost:8001",
+                   help="RM server 地址（默认 http://localhost:8001）")
     p.add_argument("--llm_gpu_mem", type=float, default=0.5,
                    help="vllm gpu_memory_utilization（默认 0.5）")
     p.add_argument("--topk",      type=int,   default=10)
@@ -551,19 +417,15 @@ def main():
 
     print("=" * 60)
     print(f"LLM      : {args.llm}")
-    print(f"RM       : {args.rm}  (device={args.rm_device})")
-    if args.rm_lora:
-        print(f"RM LoRA  : {args.rm_lora}")
+    print(f"RM URL   : {args.rm_url}")
     print(f"topk={args.topk}  weight={args.weight}  "
           f"entropy_threshold={args.entropy_threshold}")
     print("=" * 60)
 
     SIAProcessor = make_sia_processor(
-        rm_path=args.rm,
-        rm_lora_path=args.rm_lora,
+        rm_url=args.rm_url,
         topk=args.topk,
         weight=args.weight,
-        rm_device=args.rm_device,
         entropy_threshold=args.entropy_threshold,
     )
 
