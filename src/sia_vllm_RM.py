@@ -103,13 +103,15 @@ class _ValueModelWrapper(nn.Module):
 
 def parse_conversation(text: str):
     """
-    将对话文本解析为 conversations list。
-    支持两种格式：
-      - 'Human:\\nQ\\nAssistant:\\nA'（老格式，带冒号）
-      - 'user\\nQ\\nassistant\\nA'（Qwen3 chat template skip_special_tokens 后的格式）
+    将对话文本解析为 conversations list。支持以下格式：
+      - 'Human:\\nQ\\nAssistant:\\nA'（带冒号格式）
+      - '[INST] Q [/INST] A'（Llama 2 / Mistral 格式）
+      - 'user\\nQ\\nassistant\\nA'（ChatML stripped，如 Qwen3 / Llama 3）
+      - 'user\\nQ\\nmodel\\nA'（Gemma，model 为 assistant 别名）
     """
     text = text.strip()
-    # 尝试带冒号格式（Human: / Assistant:）
+
+    # Format 1: Human: / Assistant: 带冒号
     parts = re.split(r'(Human|Assistant):\s*', text, flags=re.IGNORECASE)
     conversations = []
     current_role = None
@@ -124,29 +126,45 @@ def parse_conversation(text: str):
         else:
             if current_role:
                 conversations.append({'role': current_role, 'content': part})
-
     if conversations:
         return conversations
 
-    # 尝试 Qwen3 chat template 格式（无冒号，role 单独一行）
-    # 例：'user\nHello\n\nassistant\nHi'
-    parts = re.split(r'\n(user|assistant|system)\n', '\n' + text, flags=re.IGNORECASE)
+    # Format 2: [INST] ... [/INST] (Llama 2 / Mistral)
+    if '[INST]' in text:
+        inst_matches = re.findall(
+            r'\[INST\](.*?)\[/INST\](.*?)(?=\[INST\]|$)', text, re.DOTALL
+        )
+        if inst_matches:
+            conversations = []
+            for user_part, asst_part in inst_matches:
+                user_part = user_part.strip()
+                asst_part = asst_part.strip()
+                if user_part:
+                    conversations.append({'role': 'user', 'content': user_part})
+                if asst_part:
+                    conversations.append({'role': 'assistant', 'content': asst_part})
+            if conversations:
+                return conversations
+
+    # Format 3: role 单独一行（ChatML stripped / Gemma 等）
+    # 'model' 是 Gemma 对 assistant 的别名
+    parts = re.split(r'\n(user|assistant|system|human|model)\n', '\n' + text, flags=re.IGNORECASE)
     conversations = []
     current_role = None
     for part in parts:
         part = part.strip()
         if not part:
             continue
-        if part.lower() in ('user', 'human'):
+        lower = part.lower()
+        if lower in ('user', 'human'):
             current_role = 'user'
-        elif part.lower() == 'assistant':
+        elif lower in ('assistant', 'model'):
             current_role = 'assistant'
-        elif part.lower() == 'system':
+        elif lower == 'system':
             current_role = 'system'
         else:
             if current_role:
                 conversations.append({'role': current_role, 'content': part})
-
     if conversations:
         return conversations
 
@@ -154,11 +172,12 @@ def parse_conversation(text: str):
 
 
 def extract_user_content(prompt_text: str) -> str:
-    """从 prompt 文本中提取 user 侧内容。"""
+    """从 prompt 文本中提取最后一个 user turn 内容。"""
+    user_content = None
     for c in parse_conversation(prompt_text):
         if c['role'] == 'user':
-            return c['content']
-    return prompt_text
+            user_content = c['content']
+    return user_content if user_content is not None else prompt_text
 
 
 # ---------------------------------------------------------------------------
@@ -269,6 +288,80 @@ def make_sia_processor(
 
             model = _ValueModelWrapper(base_model, token_reward_head).to(self._RM_DEVICE)
             return model
+
+        # ----------------------------------------------------------------
+        # 从 prompt token IDs 中提取 user 内容
+        # ----------------------------------------------------------------
+        def _extract_user_content(self, prompt_ids: list) -> str:
+            """
+            主方案：用 apply_chat_template 注入哨兵字符串，在 token ID 层定位
+            最后一个 user turn 的边界，不依赖任何格式假设。
+            适用于任何带有 chat_template 的 tokenizer（Qwen3 / Llama 3 / Mistral v3 等）。
+            回退方案：基于正则的文本解析（覆盖 Llama 2 / Gemma / Human: 格式）。
+            """
+            SENTINEL = "XSIASENTINELX"
+            try:
+                if not getattr(self._llm_tok, 'chat_template', None):
+                    raise ValueError("no chat_template")
+
+                test_ids = self._llm_tok.apply_chat_template(
+                    [{"role": "user", "content": SENTINEL}],
+                    tokenize=True,
+                    add_generation_prompt=True,
+                )
+                sentinel_ids = self._llm_tok.encode(SENTINEL, add_special_tokens=False)
+
+                test_list = list(test_ids)
+                sentinel_list = list(sentinel_ids)
+
+                # 找哨兵在 test_ids 中的位置，确定 prefix / suffix
+                sentinel_pos = next(
+                    (i for i in range(len(test_list) - len(sentinel_list) + 1)
+                     if test_list[i:i + len(sentinel_list)] == sentinel_list),
+                    None,
+                )
+                if sentinel_pos is None:
+                    raise ValueError("sentinel not found in template output")
+
+                prefix = test_list[:sentinel_pos]
+                suffix = test_list[sentinel_pos + len(sentinel_list):]
+                if not suffix:
+                    raise ValueError("empty suffix — cannot determine user content end")
+
+                prompt_list = list(prompt_ids)
+
+                # 找 prefix 在 prompt_ids 中最后一次出现（处理多轮对话）
+                last_prefix_pos = next(
+                    (i for i in range(len(prompt_list) - len(prefix), -1, -1)
+                     if prompt_list[i:i + len(prefix)] == prefix),
+                    None,
+                )
+                if last_prefix_pos is None:
+                    raise ValueError("prefix not found in prompt_ids")
+
+                content_start = last_prefix_pos + len(prefix)
+
+                # 找 suffix 紧随其后的位置
+                suffix_pos = next(
+                    (i for i in range(content_start, len(prompt_list) - len(suffix) + 1)
+                     if prompt_list[i:i + len(suffix)] == suffix),
+                    None,
+                )
+                if suffix_pos is None:
+                    raise ValueError("suffix not found after prefix")
+
+                user_ids = prompt_list[content_start:suffix_pos]
+                content = self._llm_tok.decode(user_ids, skip_special_tokens=True).strip()
+                if content:
+                    return content
+                raise ValueError("decoded user content is empty")
+
+            except Exception as e:
+                print(f"[SIA] _extract_user_content sentinel failed ({e}), fallback to text parsing",
+                      flush=True)
+
+            prompt_text = self._llm_tok.decode(prompt_ids, skip_special_tokens=True)
+            return extract_user_content(prompt_text)
 
         # ----------------------------------------------------------------
         # RM 打分：逐个 candidate forward，避免 fast tokenizer padding 问题
@@ -391,10 +484,7 @@ def make_sia_processor(
 
             for idx, params, prompt_ids, output_ids in batch_update.added:
                 self._output_ids[idx] = output_ids
-                prompt_text = self._llm_tok.decode(
-                    prompt_ids, skip_special_tokens=True
-                )
-                self._prompt_user[idx] = extract_user_content(prompt_text)
+                self._prompt_user[idx] = self._extract_user_content(prompt_ids)
 
     return SIALogitsProcessor
 
