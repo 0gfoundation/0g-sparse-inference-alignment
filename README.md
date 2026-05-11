@@ -6,9 +6,9 @@ SIA（Sparse Inference-time Alignment）per-token 干预推理服务，兼容 Op
 
 | 文件 | 说明 |
 |------|------|
-| `sia_vllm_RM.py` | SIA 核心逻辑：per-token logits 干预，通过 HTTP 调用 RM server 打分 |
-| `sia_vllm_server.py` | FastAPI HTTP 服务，包装 `sia_vllm_RM.py` |
-| `sia_rm_server.py` | 独立 RM 打分服务，支持热切换 RM / LoRA |
+| `src/sia_vllm_RM.py` | SIA 核心逻辑：per-token logits 干预，通过 HTTP 调用 RM server 打分 |
+| `src/sia_vllm_server.py` | FastAPI HTTP 服务，包装 `sia_vllm_RM.py` |
+| `src/sia_rm_server.py` | 独立 RM 打分服务，支持热切换 RM / LoRA |
 
 ## 依赖安装
 
@@ -26,7 +26,7 @@ SIA 由两个独立进程组成：**RM server** 负责打分，**LLM server** �
 **不带 LoRA：**
 
 ```bash
-python sia_rm_server.py \
+python src/sia_rm_server.py \
   --rm /workspace/SIA/models/Qwen3-1.7B-Base \
   --rm_device cuda:0 --port 8001
 ```
@@ -34,7 +34,7 @@ python sia_rm_server.py \
 **带 LoRA（ValueModel checkpoint）：**
 
 ```bash
-python sia_rm_server.py \
+python src/sia_rm_server.py \
   --rm      /workspace/SIA/models/Qwen3-1.7B-Base \
   --rm_lora /workspace/SIA/models/SIA-checkpoints/VM-Qwen3-1.7B-Base \
   --rm_device cuda:0 --port 8001
@@ -43,7 +43,7 @@ python sia_rm_server.py \
 ### 第二步：启动 LLM server
 
 ```bash
-python sia_vllm_server.py \
+python src/sia_vllm_server.py \
   --llm    /workspace/SIA/models/Qwen3-1.7B-Base \
   --rm_url http://localhost:8001 \
   --host 0.0.0.0 --port 8000 \
