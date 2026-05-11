@@ -83,6 +83,20 @@ curl -X POST http://localhost:8000/v1/chat/completions \
   }'
 ```
 
+### 指定 per-request SIA weight
+
+`sia_weight` 是 SIA 扩展字段（不与 OpenAI API 冲突），用于在单次请求中覆盖启动时的 `--weight` 默认值。不传则沿用默认值。
+
+```bash
+curl -X POST http://localhost:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "messages": [{"role": "user", "content": "Hello!"}],
+    "max_tokens": 50,
+    "sia_weight": 2.0
+  }'
+```
+
 ### 流式对话（SSE）
 
 ```bash
