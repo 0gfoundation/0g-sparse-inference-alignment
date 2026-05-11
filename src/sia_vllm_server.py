@@ -84,18 +84,21 @@ class ChatCompletionRequest(BaseModel):
     presence_penalty: Optional[float] = 0.0
     frequency_penalty: Optional[float] = 0.0
     n: Optional[int] = 1
+    sia_weight: Optional[float] = None  # SIA-specific: per-request RM score multiplier
 
 
 # ---------------------------------------------------------------------------
 # 工具函数
 # ---------------------------------------------------------------------------
 
-def _messages_to_prompt(messages: list[ChatMessage]) -> str:
+def _messages_to_prompt(messages: list[ChatMessage], sia_weight: Optional[float] = None) -> str:
     """
     将 OpenAI messages 转为 LLM prompt 字符串。
     使用 Human/Assistant 格式（与 sia_vllm_RM.py CLI 行为一致，适合 Base 模型）。
     SIA processor 的 parse_conversation 和 RM 打分均基于此格式设计。
+    若指定 sia_weight，在 prompt 开头注入 [SIA:weight=X] header 供处理器读取。
     """
+    header = f"[SIA:weight={sia_weight}]\n" if sia_weight is not None else ""
     parts = []
     for m in messages:
         if m.role == "user":
@@ -105,7 +108,7 @@ def _messages_to_prompt(messages: list[ChatMessage]) -> str:
         elif m.role == "system":
             parts.append(m.content)
     parts.append("Assistant:\n")
-    return "\n".join(parts)
+    return header + "\n".join(parts)
 
 
 def _build_sampling_params(req: ChatCompletionRequest) -> SamplingParams:
@@ -164,7 +167,7 @@ async def list_models():
 
 async def _handle_chat(req: ChatCompletionRequest):
     """共用逻辑：将 messages 转为 prompt，调用 LLM 生成。"""
-    prompt = _messages_to_prompt(req.messages)
+    prompt = _messages_to_prompt(req.messages, sia_weight=req.sia_weight)
     sampling_params = _build_sampling_params(req)
     model = req.model or _model_id
     request_id = f"chatcmpl-{uuid.uuid4().hex[:12]}"

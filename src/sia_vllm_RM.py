@@ -101,6 +101,20 @@ class _ValueModelWrapper(nn.Module):
 # 工具函数
 # ---------------------------------------------------------------------------
 
+_SIA_WEIGHT_RE = re.compile(r'^\[SIA:weight=([-+]?[0-9]*\.?[0-9]+)\]\n?')
+
+
+def _parse_sia_header(prompt_text: str):
+    """
+    检查 prompt 开头是否有 [SIA:weight=X] header（由 HTTP server 注入）。
+    返回 (weight, cleaned_text)；无 header 则 weight 为 None。
+    """
+    m = _SIA_WEIGHT_RE.match(prompt_text)
+    if m:
+        return float(m.group(1)), prompt_text[m.end():]
+    return None, prompt_text
+
+
 def parse_conversation(text: str):
     """
     将对话文本解析为 conversations list。支持以下格式：
@@ -240,6 +254,7 @@ def make_sia_processor(
             # per-request 状态
             self._prompt_user: dict[int, str] = {}
             self._output_ids: dict[int, list] = {}
+            self._weight_per_req: dict[int, float] = {}
             self._step = 0
 
         def _load_rm_base(self):
@@ -441,9 +456,10 @@ def make_sia_processor(
                 # 归一化：减均值，使得 topk 内有相对排序，
                 # 避免全负分时把 topk 全部压低、让 topk 外 token 意外胜出
                 rm_scores = rm_scores - rm_scores.mean()
+                effective_weight = self._weight_per_req.get(i, self._WEIGHT)
                 logits[i, topk_indices] = (
                     logits[i, topk_indices]
-                    + rm_scores.to(logits.device) * self._WEIGHT
+                    + rm_scores.to(logits.device) * effective_weight
                 )
 
                 print(
@@ -468,23 +484,39 @@ def make_sia_processor(
             for idx in batch_update.removed:
                 self._output_ids.pop(idx, None)
                 self._prompt_user.pop(idx, None)
+                self._weight_per_req.pop(idx, None)
 
             if batch_update.moved:
                 old_out = dict(self._output_ids)
                 old_prompt = dict(self._prompt_user)
+                old_weight = dict(self._weight_per_req)
                 for i1, i2, directionality in batch_update.moved:
                     if directionality == MoveDirectionality.UNIDIRECTIONAL:
                         self._output_ids[i2] = old_out.get(i1, [])
                         self._prompt_user[i2] = old_prompt.get(i1, "")
+                        if i1 in old_weight:
+                            self._weight_per_req[i2] = old_weight[i1]
                     else:  # SWAP
                         self._output_ids[i1] = old_out.get(i2, [])
                         self._output_ids[i2] = old_out.get(i1, [])
                         self._prompt_user[i1] = old_prompt.get(i2, "")
                         self._prompt_user[i2] = old_prompt.get(i1, "")
+                        if i2 in old_weight:
+                            self._weight_per_req[i1] = old_weight[i2]
+                        else:
+                            self._weight_per_req.pop(i1, None)
+                        if i1 in old_weight:
+                            self._weight_per_req[i2] = old_weight[i1]
+                        else:
+                            self._weight_per_req.pop(i2, None)
 
             for idx, params, prompt_ids, output_ids in batch_update.added:
                 self._output_ids[idx] = output_ids
-                self._prompt_user[idx] = self._extract_user_content(prompt_ids)
+                prompt_text = self._llm_tok.decode(prompt_ids, skip_special_tokens=True)
+                sia_weight, prompt_text_clean = _parse_sia_header(prompt_text)
+                if sia_weight is not None:
+                    self._weight_per_req[idx] = sia_weight
+                self._prompt_user[idx] = extract_user_content(prompt_text_clean)
 
     return SIALogitsProcessor
 
