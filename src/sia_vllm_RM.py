@@ -464,6 +464,7 @@ def make_sia_processor(
 
                 print(
                     f"[SIA] step={self._step:3d} req={i} "
+                    f"weight={effective_weight} "
                     f"gen_len={len(output_ids)} "
                     f"rm=[{rm_scores.min():.3f}, {rm_scores.max():.3f}]",
                     flush=True,
