@@ -10,12 +10,8 @@ broker 会调用的 endpoints（来自 api/inference/const/const.go）：
   GET  /v1/models             (broker 获取模型信息)
   GET  /health                (健康检查)
 
-注意：streaming 目前为"先生成再分块发送"（simulated streaming），
-因为 vllm.LLM 是同步接口。需要真·token-level streaming 时
-须切换到 AsyncLLMEngine（后续工作）。
-
 Usage:
-  python sia_vllm_server.py \\
+  python src/sia_vllm_server.py \\
     --llm     /workspace/SIA/models/Qwen3-1.7B-Base \\
     --rm_url  http://localhost:8001 \\
     --host 0.0.0.0 --port 8000 \\
@@ -23,7 +19,6 @@ Usage:
 """
 
 import argparse
-import asyncio
 import json
 import os
 import sys
@@ -32,12 +27,13 @@ import uuid
 from typing import AsyncIterator, Optional
 
 import uvicorn
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
-from vllm import LLM, SamplingParams
+from vllm import AsyncLLMEngine, SamplingParams
+from vllm.engine.arg_utils import AsyncEngineArgs
 
 # sia_vllm_RM.py 与本文件同目录
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -46,8 +42,8 @@ from sia_vllm_RM import make_sia_processor
 # ---------------------------------------------------------------------------
 # 全局状态（在 main() 里初始化）
 # ---------------------------------------------------------------------------
-_llm: Optional[LLM] = None
-_model_id: str = ""        # 对外暴露的 model 名称（basename of llm path）
+_engine: Optional[AsyncLLMEngine] = None
+_model_id: str = ""
 _args = None
 
 
@@ -165,7 +161,6 @@ async def list_models():
 
 
 async def _handle_chat(req: ChatCompletionRequest):
-    """共用逻辑：将 messages 转为 prompt，调用 LLM 生成。"""
     prompt = _messages_to_prompt(req.messages, sia_weight=req.sia_weight)
     sampling_params = _build_sampling_params(req)
     model = req.model or _model_id
@@ -182,16 +177,15 @@ async def _handle_chat(req: ChatCompletionRequest):
             },
         )
 
-    # ── 非流式：同步生成 ──────────────────────────────────────────
-    loop = asyncio.get_event_loop()
-    outputs = await loop.run_in_executor(
-        None, lambda: _llm.generate([prompt], sampling_params)
-    )
-    out = outputs[0]
-    text = out.outputs[0].text
-    finish_reason = out.outputs[0].finish_reason or "stop"
-    prompt_tokens = len(out.prompt_token_ids)
-    completion_tokens = len(out.outputs[0].token_ids)
+    # 非流式：等待生成完成
+    final = None
+    async for output in _engine.generate(prompt, sampling_params, request_id):
+        final = output
+
+    text = final.outputs[0].text
+    finish_reason = final.outputs[0].finish_reason or "stop"
+    prompt_tokens = len(final.prompt_token_ids)
+    completion_tokens = len(final.outputs[0].token_ids)
 
     return JSONResponse({
         "id": request_id,
@@ -218,23 +212,21 @@ async def _stream_sse(
     created: int,
     model: str,
 ) -> AsyncIterator[str]:
-    """先同步生成完整文本，再以 SSE chunk 格式发送（simulated streaming）。"""
-    loop = asyncio.get_event_loop()
-    outputs = await loop.run_in_executor(
-        None, lambda: _llm.generate([prompt], sampling_params)
-    )
-    text = outputs[0].outputs[0].text
-    finish_reason = outputs[0].outputs[0].finish_reason or "stop"
-
-    # 第一个 chunk 带 role
+    """每生成一个 token 立即推送一个 SSE chunk（真·token-level streaming）。"""
     yield _make_chunk(request_id, created, model, role="assistant")
 
-    # 按字符逐个发送（token-level 粒度最细）
-    for ch in text:
-        yield _make_chunk(request_id, created, model, content=ch)
+    prev_len = 0
+    async for output in _engine.generate(prompt, sampling_params, request_id):
+        new_text = output.outputs[0].text
+        delta = new_text[prev_len:]
+        prev_len = len(new_text)
+        if delta:
+            yield _make_chunk(request_id, created, model, content=delta)
+        if output.finished:
+            finish_reason = output.outputs[0].finish_reason or "stop"
+            yield _make_chunk(request_id, created, model, finish_reason=finish_reason)
+            break
 
-    # 结束 chunk
-    yield _make_chunk(request_id, created, model, finish_reason=finish_reason)
     yield "data: [DONE]\n\n"
 
 
@@ -255,7 +247,6 @@ async def chat_completions(req: ChatCompletionRequest):
 
 def parse_args():
     p = argparse.ArgumentParser(description="SIA vLLM OpenAI-compatible HTTP Server")
-    # LLM 参数
     p.add_argument("--llm",       required=True)
     p.add_argument("--rm_url",    default="http://localhost:8001",
                    help="RM server 地址（默认 http://localhost:8001）")
@@ -264,7 +255,6 @@ def parse_args():
     p.add_argument("--weight",    type=float, default=1.0)
     p.add_argument("--entropy_threshold", type=float, default=None)
     p.add_argument("--max_model_len", type=int, default=4096)
-    # HTTP 服务器参数
     p.add_argument("--host", default="0.0.0.0")
     p.add_argument("--port", type=int, default=8000)
     p.add_argument("--model_id", default=None,
@@ -273,7 +263,7 @@ def parse_args():
 
 
 def main():
-    global _llm, _tokenizer, _model_id, _args
+    global _engine, _model_id, _args
     _args = parse_args()
 
     _model_id = _args.model_id or os.path.basename(_args.llm.rstrip("/"))
@@ -287,7 +277,6 @@ def main():
     print(f"Server   : http://{_args.host}:{_args.port}")
     print("=" * 60)
 
-    # 构造 SIA LogitsProcessor 类
     SIAProcessor = make_sia_processor(
         rm_url=_args.rm_url,
         topk=_args.topk,
@@ -295,14 +284,15 @@ def main():
         entropy_threshold=_args.entropy_threshold,
     )
 
-    # 加载 LLM（含 SIA processor）
-    print("Loading vLLM LLM...")
-    _llm = LLM(
+    print("Loading vLLM AsyncLLMEngine...")
+    engine_args = AsyncEngineArgs(
         model=_args.llm,
         max_model_len=_args.max_model_len,
         gpu_memory_utilization=_args.llm_gpu_mem,
         logits_processors=[SIAProcessor],
+        disable_log_stats=True,
     )
+    _engine = AsyncLLMEngine.from_engine_args(engine_args)
     print("LLM loaded.\n")
 
     print(f"Starting HTTP server on http://{_args.host}:{_args.port} ...")
