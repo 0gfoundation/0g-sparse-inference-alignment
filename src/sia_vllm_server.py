@@ -26,6 +26,7 @@ import time
 import uuid
 from typing import AsyncIterator, Optional
 
+import httpx
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -160,7 +161,24 @@ async def list_models():
     }
 
 
+async def _log_rm_status():
+    """查询 RM server /status 并打印到日志，失败时静默跳过。"""
+    try:
+        async with httpx.AsyncClient(timeout=3.0) as client:
+            resp = await client.get(f"{_args.rm_url}/status")
+            s = resp.json()
+            lora = s.get("rm_lora") or "none"
+            print(
+                f"[SIA] RM status: {s.get('status')}  "
+                f"rm={s.get('rm')}  rm_lora={lora}",
+                flush=True,
+            )
+    except Exception as e:
+        print(f"[SIA] RM status query failed: {e}", flush=True)
+
+
 async def _handle_chat(req: ChatCompletionRequest):
+    await _log_rm_status()
     prompt = _messages_to_prompt(req.messages, sia_weight=req.sia_weight)
     sampling_params = _build_sampling_params(req)
     model = req.model or _model_id
