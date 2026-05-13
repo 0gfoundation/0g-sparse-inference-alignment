@@ -10,6 +10,19 @@ SIA（Sparse Inference-time Alignment）是 NTU 团队提出的推理时对齐�
 
 ---
 
+## 当前进展
+
+SIA 核心工程已完成初步集成，具备以下基础能力：
+
+- **推理干预已跑通**：SIA 干预逻辑已集成进 vLLM，支持 per-token 干预，可对接 OpenAI-compatible API；
+- **RM 独立部署，支持热切换**：Reward Model 以独立服务运行，无需重启 LLM 即可切换 Value Model；
+- **LLM 与 RM 可使用不同 tokenizer**：两侧通过文本桥接解耦，对用户上传的 Value Model 无 tokenizer 兼容性约束；
+- **NTU Value Model checkpoint 可直接加载**：NTU 已训练完毕的 LoRA checkpoint 可直接挂载使用，方案一无需额外训练工作。
+
+以上为方案一的直接工程基础，可快速进入效果评测与性能测试阶段。
+
+---
+
 按实现难度从低到高排序。
 
 ---
