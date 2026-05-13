@@ -19,7 +19,7 @@ SIA（Sparse Inference-time Alignment）是 NTU 团队提出的推理时对齐�
 0g marketplace 提供选项，用户可自行选择开启 SIA 功能。
 
 **优点：**
-- 可将"0g 已初步完成 SIA 集成"作为 PR；
+- 可将"0g 已率先完成 SIA 集成——支持推理时在线定制对齐方向，无需 fine-tune 模型"作为 PR；
 - 工程实现成本最低，依托现有 Value Model checkpoint（NTU 同学已训练完毕）。
 
 **缺点：**
