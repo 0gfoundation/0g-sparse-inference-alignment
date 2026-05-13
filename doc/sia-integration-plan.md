@@ -36,6 +36,8 @@ SIA 干预在每个 decoding step 均需调用 Value Model，存在两处固有�
 
 **性能测试目标：** 在不同输入长度、输出长度、topk 取值组合下，分别测量端到端推理延迟，并与无 SIA 干预的 baseline 进行对比，量化延迟增幅，为是否启动 batch 评分、Value Model KV cache 复用等优化方案提供决策依据。
 
+**粗略估计：** SIA 干预在每个 decoding step 需额外调用 topk 次 Value Model forward pass。由于 Value Model 参数量通常远小于推理 LLM，单次 forward pass 的绝对耗时有限；但随着生成长度增加、topk 增大，累计开销不可忽视。实际延迟增幅需结合 0g 部署的具体 LLM 与 Value Model 规模组合进行测试评估，再判断是否在 SLA 可接受范围内。
+
 ---
 
 ## 方案二：针对 0g 业务场景重新训练 Value Model
@@ -49,7 +51,7 @@ SIA 干预在每个 decoding step 均需调用 Value Model，存在两处固有�
 
 ## 方案三：offline 千人千面 —— 用户上传自己训练好的 Value Model
 
-0g marketplace 支持每个用户上传自己训练完毕的 Value Model；不同用户使用不同 Value Model 干预推理（底层依托现有 `/reload` 热切换接口）。Value Model 由用户在线下自行训练，不使用 0g 训练平台。
+0g marketplace 支持每个用户上传自己训练完毕的 Value Model，不同用户使用不同 Value Model 干预推理。Value Model 由用户在线下自行训练，不使用 0g 训练平台。
 
 **优点：**
 - 将训练 Value Model 的成本转嫁给用户；
@@ -59,6 +61,18 @@ SIA 干预在每个 decoding step 均需调用 Value Model，存在两处固有�
 - 用户量少，且即使技术用户，训练 Value Model 也需要自行准备偏好数据集，门槛不低；小白用户无法使用；
 - 用户上传的 Value Model 需与 0g 部署的推理 LLM 在 tokenizer 兼容性上满足一定约束（需在产品层面明确告知用户，避免不兼容导致的问题）；
 - **资源开销随用户规模线性增长**：每个用户的 Value Model 需常驻 GPU 显存以支持实时推理干预，用户规模扩大后，Value Model 服务的硬件资源占用将成为不可忽视的成本。可通过对 Value Model 部署能力单独计费（类似 fine-tuned model hosting 的定价模型）来覆盖该成本，同时形成新的收入来源。
+
+**多用户 Value Model 部署架构**
+
+方案三/四的规模化落地存在两种架构路径：
+
+- **方案 A：每用户独立 Value Model 服务。** 每个用户的 Value Model 独占进程和显存，隔离性好、实现简单，但资源消耗随用户数线性增长，不具备规模化能力。
+
+- **方案 B：共享 Base + 多用户 LoRA（推荐）。** 一份 Value Model Base 常驻显存，多用户共享；每个用户仅上传自己的 LoRA weights（通常几十至几百 MB），推理时动态加载对应用户的 LoRA。Base Model 只占一份显存，资源利用率大幅提升。需解决的关键工程问题：LoRA 切换延迟（可通过按用户批处理请求缓解）、多用户并发时的 LoRA 并行应用（业界有 S-LoRA、Punica 等成熟方案可参考）。
+
+方案 B 是更可行的规模化路径，也与 0g 平台的多用户定位更契合，建议方案三/四采用此架构。
+
+**工程难点：** 业界已有 S-LoRA、Punica、vLLM 原生 LoRA serving 等成熟的多用户 LoRA 并发方案，但这些工具均针对文本生成（causal LM）设计，无法直接复用于 SIA 的 Value Model（本质是 Reward Model，推理路径不同）。此外，SIA 的 Value Model 并非独立服务，而是嵌入在 LLM 每个 decoding step 内同步调用——多用户并发时，需在同一 batch 内对不同用户的请求动态应用各自的 LoRA，需针对 Reward Model 推理路径专项实现，工程量较大。
 
 ---
 
@@ -73,4 +87,4 @@ SIA 干预在每个 decoding step 均需调用 Value Model，存在两处固有�
 **缺点：**
 - 需要较大的工程投入，实现完整的训练 → 部署 → 干预闭环；
 - 短期内 ROI 取决于是否有足够多有个性化需求的用户；
-- **资源开销随用户规模线性增长**：同方案三，每个用户的 Value Model 需占用独立的 GPU 资源以提供在线推理干预服务，规模化后硬件成本显著。同样可通过对 Value Model 部署与训练能力分别计费来实现成本覆盖，并将其作为差异化的付费功能。
+- **资源开销随用户规模增长**：每个用户的 Value Model 需占用 GPU 资源以提供在线推理干预服务，规模化后硬件成本显著；若采用共享 Base + LoRA 架构（见方案三部署架构说明），可显著降低此项开销。同样可通过对 Value Model 部署与训练能力分别计费来实现成本覆盖，并将其作为差异化的付费功能。
