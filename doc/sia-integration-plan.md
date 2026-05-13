@@ -1,5 +1,15 @@
 # SIA 集成方案分析
 
+## 背景与动机
+
+当前主流 LLM 对齐方式（RLHF、DPO 等）需要对模型本身进行 fine-tune，成本高、周期长，且模型一旦训练完成对齐方向即固定。
+
+SIA（Sparse Inference-time Alignment）是 NTU 团队提出的推理时对齐方案：无需修改 LLM 权重，在推理阶段通过一个轻量的 Value Model 对每个 decoding step 的候选 token 打分，将高reward token 的概率拉高，从而引导输出方向。Value Model 以 LoRA 形式存在，体积小、可热替换，天然适合多用户场景下的个性化对齐。
+
+**对 0g 的价值：** 0g 作为去中心化推理平台，底层 LLM 由平台统一部署，用户无法自行 fine-tune。SIA 提供了一种在不改动 LLM 的前提下、按用户维度定制输出风格和对齐方向的技术路径，是 0g marketplace 差异化竞争的潜在抓手。
+
+---
+
 按实现难度从低到高排序。
 
 ---
