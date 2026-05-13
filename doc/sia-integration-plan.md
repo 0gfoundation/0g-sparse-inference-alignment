@@ -59,7 +59,6 @@ SIA 干预在每个 decoding step 均需调用 Value Model，存在两处固有�
 
 **缺点：**
 - 用户量少，且即使技术用户，训练 Value Model 也需要自行准备偏好数据集，门槛不低；小白用户无法使用；
-- 用户上传的 Value Model 需与 0g 部署的推理 LLM 在 tokenizer 兼容性上满足一定约束（需在产品层面明确告知用户，避免不兼容导致的问题）；
 - **资源开销随用户规模线性增长**：每个用户的 Value Model 需常驻 GPU 显存以支持实时推理干预，用户规模扩大后，Value Model 服务的硬件资源占用将成为不可忽视的成本。可通过对 Value Model 部署能力单独计费（类似 fine-tuned model hosting 的定价模型）来覆盖该成本，同时形成新的收入来源。
 
 **多用户 Value Model 部署架构**
