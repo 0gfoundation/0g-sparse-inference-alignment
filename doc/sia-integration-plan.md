@@ -19,7 +19,7 @@ SIA 核心工程已完成初步集成，具备以下基础能力：
 - **LLM 与 RM 可使用不同 tokenizer**：两侧通过文本桥接解耦，对用户上传的 Value Model 无 tokenizer 兼容性约束；
 - **NTU Value Model checkpoint 可直接加载**：NTU 已训练完毕的 LoRA checkpoint 可直接挂载使用，方案一无需额外训练工作。
 
-以上为方案一的直接工程基础。当前代码已可直接挂载 NTU 提供的 Value Model checkpoint，无需额外开发，可立即进入效果评测与性能测试阶段。
+以上为方案一的直接工程基础，当前代码已可直接挂载 NTU 提供的 Value Model checkpoint。
 
 ---
 
