@@ -19,7 +19,7 @@ SIA 核心工程已完成初步集成，具备以下基础能力：
 - **LLM 与 RM 可使用不同 tokenizer**：两侧通过文本桥接解耦，对用户上传的 Value Model 无 tokenizer 兼容性约束；
 - **NTU Value Model checkpoint 可直接加载**：NTU 已训练完毕的 LoRA checkpoint 可直接挂载使用，方案一无需额外训练工作。
 
-以上为方案一的直接工程基础，可快速进入效果评测与性能测试阶段。
+以上为方案一的直接工程基础。当前代码已可直接挂载 NTU 提供的 Value Model checkpoint，无需额外开发，可立即进入效果评测与性能测试阶段。
 
 ---
 
@@ -51,6 +51,8 @@ SIA 干预在每个 decoding step 均需调用 Value Model，存在两处固有�
 
 **粗略估计：** SIA 干预在每个 decoding step 需额外调用 topk 次 Value Model forward pass。由于 Value Model 参数量通常远小于推理 LLM，单次 forward pass 的绝对耗时有限；但随着生成长度增加、topk 增大，累计开销不可忽视。实际延迟增幅需结合 0g 部署的具体 LLM 与 Value Model 规模组合进行测试评估，再判断是否在 SLA 可接受范围内。
 
+**所需工程投入：** 无需额外开发。主要工作量为效果评测与性能测试，预计数天至一周。
+
 ---
 
 ## 方案二：扩充训练数据、重新训练 Value Model
@@ -69,6 +71,8 @@ SIA 干预在每个 decoding step 均需调用 Value Model，存在两处固有�
 - 扩充训练数据集规模，提升数据质量；
 - 在数据集改进的前提下，再评估是否需要更大参数量的 Value Model；
 - 预估并控制训练费用。
+
+**所需工程投入：** 主要工作量在数据集构建，训练本身依赖 NTU 资源。工期取决于数据准备难度，建议与 NTU 同学对齐后再定，大致在数周至一个月量级。
 
 ---
 
@@ -96,6 +100,8 @@ SIA 干预在每个 decoding step 均需调用 Value Model，存在两处固有�
 
 **工程难点：** 业界已有 S-LoRA、Punica、vLLM 原生 LoRA serving 等成熟的多用户 LoRA 并发方案，但这些工具均针对文本生成（causal LM）设计，无法直接复用于 SIA 的 Value Model（本质是 Reward Model，推理路径不同）。此外，SIA 的 Value Model 并非独立服务，而是嵌入在 LLM 每个 decoding step 内同步调用——多用户并发时，需在同一 batch 内对不同用户的请求动态应用各自的 LoRA，需针对 Reward Model 推理路径专项实现，工程量较大。
 
+**所需工程投入：** 多用户 LoRA 动态加载是核心难点，无现成方案可直接复用，需专项实现。预计数月量级的工程投入。
+
 ---
 
 ## 方案四：online 千人千面 —— 用户在 0g 平台上训练 Value Model
@@ -110,6 +116,8 @@ SIA 干预在每个 decoding step 均需调用 Value Model，存在两处固有�
 - 需要较大的工程投入，实现完整的训练 → 部署 → 干预闭环；
 - 短期内值不值得投入，取决于是否有足够多有个性化需求的用户；
 - **资源开销随用户规模增长**：每个用户的 Value Model 需占用 GPU 资源以提供在线推理干预服务，规模化后硬件成本显著；若采用共享 Base + LoRA（见方案三架构 B），可显著降低此项开销。同样可通过对 Value Model 部署与训练能力分别计费来实现成本覆盖，并将其作为差异化的付费功能。
+
+**所需工程投入：** 在方案三基础上，额外增加训练平台集成（数据上传、训练触发、模型部署闭环）。整体工程量大于方案三，预计半年量级。
 
 ---
 
