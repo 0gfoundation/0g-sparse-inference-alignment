@@ -4,7 +4,7 @@
 
 当前主流 LLM 对齐方式（RLHF、DPO 等）需要对模型本身进行 fine-tune，成本高、周期长，且模型一旦训练完成对齐方向即固定。
 
-SIA（Sparse Inference-time Alignment）是 NTU 团队提出的推理时对齐方案：无需修改 LLM 权重，在推理阶段通过一个轻量的 Value Model 对每个 decoding step 的候选 token 打分，将高reward token 的概率拉高，从而引导输出方向。Value Model 以 LoRA 形式存在，体积小、可热替换，天然适合多用户场景下的个性化对齐。
+SIA（Sparse Inference-time Alignment）是 NTU 团队提出的推理时对齐方案：无需修改 LLM 权重，在推理阶段通过一个轻量的 Value Model 对每个 decoding step 的候选 token 打分，将高 reward token 的概率拉高，从而引导输出方向。Value Model 以 LoRA 形式存在，体积小、可热替换，天然适合多用户场景下的个性化对齐。
 
 **对 0g 的价值：** 0g 作为去中心化推理平台，底层 LLM 由平台统一部署，用户无法自行 fine-tune。SIA 提供了一种在不改动 LLM 的前提下、按用户维度定制输出风格和对齐方向的技术路径，是 0g marketplace 差异化竞争的潜在抓手。
 
@@ -32,12 +32,12 @@ SIA 核心工程已完成初步集成，具备以下基础能力：
 0g marketplace 提供选项，用户可自行选择开启 SIA 功能。
 
 **优点：**
-- 可将"0g 已率先完成 SIA 集成——支持推理时在线定制对齐方向，无需 fine-tune 模型"作为 PR；
+- 可将"0g 已率先完成 SIA 集成——支持推理时在线定制对齐方向，无需 fine-tune 模型"作为对外宣传素材；
 - 工程实现成本最低，依托现有 Value Model checkpoint（NTU 同学已训练完毕）。
 
 **缺点：**
 - 现有 Value Model 针对通用对齐目标（Harmlessness / Helpfulness / Honesty）训练，干预方向固定，所有用户共享同一套对齐策略，**无法做个性化**；
-- 需在 0g 实际部署环境中做效果评测：在 MMLU 等通用评测集上，SIA 干预后输出相对无干预 baseline 有明显提升、且无明显下降，视为达预期。
+- 需在 0g 实际部署环境中做效果评测：在 MMLU 等通用评测集上，SIA 干预后输出相对无干预 baseline 有明显提升且无明显下降，视为达预期。
 
 **性能测试（与效果评测并行开展）**
 
