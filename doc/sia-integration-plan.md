@@ -100,7 +100,7 @@ SIA 干预在每个 decoding step 均需调用 Value Model，存在两处固有�
 
 **工程难点：** 业界已有 S-LoRA、Punica、vLLM 原生 LoRA serving 等成熟的多用户 LoRA 并发方案，但这些工具均针对文本生成（causal LM）设计，无法直接复用于 SIA 的 Value Model（本质是 Reward Model，推理路径不同）。此外，SIA 的 Value Model 并非独立服务，而是嵌入在 LLM 每个 decoding step 内同步调用——多用户并发时，需在同一 batch 内对不同用户的请求动态应用各自的 LoRA，需针对 Reward Model 推理路径专项实现，工程量较大。
 
-**所需工程投入：** 多用户 LoRA 动态加载是核心难点，无现成方案可直接复用，需专项实现。预计大于一个月的工程投入。
+**所需工程投入：** 需实现 LoRA 上传接口、按请求动态加载对应用户的 LoRA、多用户并发隔离，无现成方案可直接复用，需专项实现。预计大于一个月的工程投入。
 
 ---
 
