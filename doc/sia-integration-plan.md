@@ -47,9 +47,7 @@ SIA 干预在每个 decoding step 均需调用 Value Model，存在两处固有�
 
 2. **top-k 候选 token 的顺序评分开销**：当前实现对每个候选 token 分别执行独立的 forward pass（不做 batch 合并），单个 decoding step 的 Value Model 调用次数等于 `--topk` 参数值，导致推理延迟与 topk 成正比线性扩大。
 
-**性能测试目标：** 在不同输入长度、输出长度、topk 取值组合下，分别测量端到端推理延迟，并与无 SIA 干预的 baseline 进行对比，量化延迟增幅，为是否启动 batch 评分、Value Model KV cache 复用等优化方案提供决策依据。
-
-**粗略估计：** SIA 干预在每个 decoding step 需额外调用 topk 次 Value Model forward pass。由于 Value Model 参数量通常远小于推理 LLM，单次 forward pass 的绝对耗时有限；但随着生成长度增加、topk 增大，累计开销不可忽视。实际延迟增幅需结合 0g 部署的具体 LLM 与 Value Model 规模组合进行测试评估，再判断是否在 SLA 可接受范围内。
+**性能测试目标：** 在不同输入长度、输出长度、topk 取值组合下，测量端到端推理延迟并与无干预 baseline 对比，量化延迟增幅。由于 Value Model 参数量通常远小于推理 LLM，单次 forward pass 绝对耗时有限，但累计开销不可忽视，测试结果将作为是否启动 batch 评分、KV cache 复用等优化方案的决策依据。
 
 **所需工程投入：** 无需额外开发。主要工作量为效果评测与性能测试，预计数天至一周。
 
