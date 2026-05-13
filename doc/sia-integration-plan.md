@@ -92,7 +92,7 @@ SIA 干预在每个 decoding step 均需调用 Value Model，存在两处固有�
 
 - **架构 A：每用户独立 Value Model 服务。** 每个用户的 Value Model 独占进程和显存，隔离性好、实现简单，但资源消耗随用户数线性增长，不具备规模化能力。
 
-- **架构 B：共享 Base + 多用户 LoRA（推荐）。** 一份 Value Model Base 常驻显存，多用户共享；每个用户仅上传自己的 LoRA weights（通常几十至几百 MB），推理时动态加载对应用户的 LoRA。Base Model 只占一份显存，资源利用率大幅提升。需解决的关键工程问题：LoRA 切换延迟（可通过按用户批处理请求缓解）、多用户并发时的 LoRA 并行应用。
+- **架构 B：共享 Base + 多用户 LoRA（推荐）。** 一份 Value Model Base 常驻显存，多用户共享；每个用户仅上传自己的 LoRA weights（通常几十至几百 MB），推理时动态加载对应用户的 LoRA。Base Model 只占一份显存，资源利用率大幅提升。需解决的关键工程问题：LoRA 切换延迟、多用户并发时的 LoRA 并行应用。
 
 架构 B 是更可行的规模化路径，也与 0g 平台的多用户定位更契合，建议方案三/四采用此架构。
 
