@@ -15,7 +15,7 @@ SIA（Sparse Inference-time Alignment）是 NTU 团队提出的推理时对齐�
 SIA 核心工程已完成初步集成，具备以下基础能力：
 
 - **推理干预已跑通**：SIA 干预逻辑已集成进 vLLM，支持 per-token 干预，可对接 OpenAI-compatible API；
-- **RM 独立部署，支持热切换**：Reward Model 以独立服务运行，无需重启 LLM 即可切换 Value Model；
+- **Value Model 独立部署，支持热切换**：Value Model 以独立服务运行，无需重启 LLM 即可切换 Value Model；
 - **LLM 与 Value Model 可采用不同 Base 模型**：两者通过文本解耦，用户上传的 Value Model 不受 0g 部署 LLM 架构的限制；
 - **NTU Value Model checkpoint 可直接加载**：NTU 已训练完毕的 LoRA checkpoint 可直接挂载使用，方案一无需额外训练工作。
 
@@ -96,7 +96,7 @@ SIA 干预在每个 decoding step 均需调用 Value Model，存在两处固有�
 
 架构 B 是更可行的规模化路径，也与 0g 平台的多用户定位更契合，建议方案三/四采用此架构。
 
-**工程难点：** 业界已有 S-LoRA、Punica、vLLM 原生 LoRA serving 等成熟的多用户 LoRA 并发方案，但这些工具均针对文本生成（causal LM）设计，无法直接复用于 SIA 的 Value Model（本质是 Reward Model，推理路径不同）。此外，SIA 的 Value Model 并非独立服务，而是嵌入在 LLM 每个 decoding step 内同步调用——多用户并发时，需在同一 batch 内对不同用户的请求动态应用各自的 LoRA，需针对 Reward Model 推理路径专项实现，工程量较大。
+**工程难点：** 业界已有 S-LoRA、Punica、vLLM 原生 LoRA serving 等成熟的多用户 LoRA 并发方案，但这些工具均针对文本生成（causal LM）设计，无法直接复用于 SIA 的 Value Model（推理路径不同）。此外，SIA 的 Value Model 并非独立服务，而是嵌入在 LLM 每个 decoding step 内同步调用——多用户并发时，需在同一 batch 内对不同用户的请求动态应用各自的 LoRA，需针对 Value Model 推理路径专项实现，工程量较大。
 
 **所需工程投入：** 需实现 LoRA 上传接口、按请求动态加载对应用户的 LoRA、多用户并发隔离，无现成方案可直接复用，需专项实现。预计大于一个月的工程投入。
 
