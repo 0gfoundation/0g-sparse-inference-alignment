@@ -72,7 +72,7 @@ CHOICE_LETTERS = ["A", "B", "C", "D"]
 SYSTEM_PROMPT = (
     "You are a helpful assistant. "
     "Answer the following multiple choice question. "
-    "You may think before answering, but keep your reasoning concise and under 1500 tokens. "
+    "You may think before answering, but keep your reasoning concise and under 500 tokens. "
     "End your response with exactly: Answer: X "
     "(where X is A, B, C, or D)."
 )

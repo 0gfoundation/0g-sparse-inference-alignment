@@ -37,7 +37,7 @@ SIA 核心工程已完成初步集成，具备以下基础能力：
 
 **缺点：**
 - 现有 Value Model 针对通用对齐目标（Harmlessness / Helpfulness / Honesty）训练，干预方向固定，所有用户共享同一套对齐策略，**无法做个性化**；
-- 需在 0g 实际部署环境中做效果评测：在 MMLU 等通用评测集上，SIA 干预后输出相对无干预 baseline 有明显提升且无明显下降，视为达预期。
+- 需在 0g 实际部署环境中做效果评测：在 MMLU 等通用知识类评测集上，SIA 干预后输出相对无干预 baseline 无明显下降；在对齐目标对口的评测集（Harmlessness / Helpfulness / Honesty，如 HEx-PHI、AlpacaEval、TruthfulQA）上，SIA 干预后相对无干预 baseline 有明显提升。两项均达预期，视为方案一验收通过。
 
 **性能测试（与效果评测并行开展）**
 
