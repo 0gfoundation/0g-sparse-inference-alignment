@@ -4,7 +4,7 @@
 
 当前主流 LLM 对齐方式（RLHF、DPO 等）需要对模型本身进行 fine-tune，成本高、周期长，且模型一旦训练完成对齐方向即固定。
 
-SIA（Sparse Inference-time Alignment）是 NTU 团队提出的推理时对齐方案：无需修改 LLM 权重，在推理阶段通过一个轻量的 Value Model 对每个 decoding step 的候选 token 打分，将高 reward token 的概率拉高，从而引导输出方向。Value Model 以 LoRA 形式存在，体积小、可热替换，天然适合多用户场景下的个性化对齐。
+SIA（Sparse Inference-time Alignment）是 NTU 团队提出的推理时对齐方案：无需修改 LLM 权重，在推理阶段通过一个轻量的 Value Model 对候选 token 打分，将高 reward token 的概率拉高，从而引导输出方向。关键在于"稀疏"——只在模型不确定（logit 熵较高）的关键决策点介入，低熵（模型已确信）的 token 直接跳过，无需调用 Value Model。论文表明，干预 20%–80% 的 token 即可达到或超过全量干预的效果，同时将计算开销降低最多 6 倍。Value Model 以 LoRA 形式存在，体积小、可热替换，天然适合多用户场景下的个性化对齐。
 
 **对 0g 的价值：** 0g 作为去中心化推理平台，底层 LLM 由平台统一部署，用户无法自行 fine-tune。SIA 提供了一种在不改动 LLM 的前提下、按用户维度定制输出风格和对齐方向的技术路径，是 0g marketplace 差异化竞争的潜在抓手。
 
@@ -14,7 +14,7 @@ SIA（Sparse Inference-time Alignment）是 NTU 团队提出的推理时对齐�
 
 SIA 核心工程已完成初步集成，具备以下基础能力：
 
-- **推理干预已跑通**：SIA 干预逻辑已集成进 vLLM，支持 per-token 干预，可对接 OpenAI-compatible API；
+- **推理干预已跑通**：SIA 干预逻辑已集成进 vLLM，支持基于熵阈值的稀疏干预（`--entropy_threshold` 参数控制跳过低熵 token），可对接 OpenAI-compatible API；
 - **Value Model 独立部署，支持热切换**：Value Model 以独立服务运行，无需重启 LLM 即可热切换；
 - **LLM 与 Value Model 可采用不同 Base 模型**：两者通过文本解耦，用户上传的 Value Model 不受 0g 部署 LLM 架构的限制；
 - **NTU Value Model checkpoint 可直接加载**：NTU 已训练完毕的 LoRA checkpoint 可直接挂载使用，方案一无需额外训练工作。
@@ -41,7 +41,7 @@ SIA 核心工程已完成初步集成，具备以下基础能力：
 
 **性能测试（与效果评测并行开展）**
 
-SIA 干预在每个 decoding step 均需调用 Value Model，存在两处固有的性能开销，需通过系统性的性能测试加以量化，作为后续优化优先级判断的依据：
+SIA 在稀疏模式下只对高熵 token 调用 Value Model（低熵 token 直接跳过），但即便如此，仍存在两处固有的性能开销，需通过系统性的性能测试加以量化，作为后续优化优先级判断的依据：
 
 1. **序列长度增长导致的延迟累积**：Value Model 在每个 step 均以"已生成的完整上下文 + 候选 token"作为输入，随着生成长度增加，输入序列线性增长，Value Model 的 forward pass 耗时随之上升，长文本生成场景中尤为显著。
 
