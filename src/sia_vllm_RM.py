@@ -183,7 +183,9 @@ def make_sia_processor(
             self._prompt_user: dict[int, str] = {}
             self._output_ids: dict[int, list] = {}
             self._weight_per_req: dict[int, float] = {}
-            self._step = 0
+            # 干预统计：每个请求的 total token steps 和实际干预次数
+            self._total_steps: dict[int, int] = {}
+            self._intervened_steps: dict[int, int] = {}
 
         # ----------------------------------------------------------------
         # 从 prompt token IDs 中提取 user 内容
@@ -287,22 +289,24 @@ def make_sia_processor(
         # apply：每个 token 生成前被 vllm 调用一次
         # ----------------------------------------------------------------
         def apply(self, logits: torch.Tensor) -> torch.Tensor:
-            self._step += 1
             batch_size = logits.shape[0]
 
             for i in range(batch_size):
                 output_ids = list(self._output_ids.get(i, []))
                 user_content = self._prompt_user.get(i, "")
 
+                self._total_steps[i] = self._total_steps.get(i, 0) + 1
+                req_step = self._total_steps[i]
+
                 topk_logits, topk_indices = torch.topk(logits[i], self._TOPK)
 
                 # entropy 过滤
+                probs = F.softmax(topk_logits.float(), dim=-1)
+                entropy = dist.Categorical(probs=probs).entropy().item()
                 if self._ENTROPY_THRESHOLD is not None:
-                    probs = F.softmax(topk_logits.float(), dim=-1)
-                    entropy = dist.Categorical(probs=probs).entropy().item()
                     if entropy < self._ENTROPY_THRESHOLD:
                         print(
-                            f"[SIA] step={self._step:3d} req={i} "
+                            f"[SIA] step={req_step:3d} req={i} "
                             f"SKIP (entropy={entropy:.3f} < {self._ENTROPY_THRESHOLD})",
                             flush=True,
                         )
@@ -317,7 +321,7 @@ def make_sia_processor(
                         user_content, response_so_far, topk_indices.tolist()
                     )
                 except Exception as e:
-                    print(f"[SIA] step={self._step:3d} req={i} RM error: {e}",
+                    print(f"[SIA] step={req_step:3d} req={i} RM error: {e}",
                           flush=True)
                     continue
 
@@ -330,9 +334,11 @@ def make_sia_processor(
                     + rm_scores.to(logits.device) * effective_weight
                 )
 
+                self._intervened_steps[i] = self._intervened_steps.get(i, 0) + 1
+
                 print(
-                    f"[SIA] step={self._step:3d} req={i} "
-                    f"weight={effective_weight} "
+                    f"[SIA] step={req_step:3d} req={i} INTERVENE "
+                    f"entropy={entropy:.3f} "
                     f"gen_len={len(output_ids)} "
                     f"rm=[{rm_scores.min():.3f}, {rm_scores.max():.3f}]",
                     flush=True,
@@ -351,6 +357,14 @@ def make_sia_processor(
                 return
 
             for idx in batch_update.removed:
+                total = self._total_steps.pop(idx, 0)
+                intervened = self._intervened_steps.pop(idx, 0)
+                ratio = intervened / total if total > 0 else 0.0
+                print(
+                    f"[SIA] req={idx} DONE  "
+                    f"intervened={intervened}/{total}  ratio={ratio:.1%}",
+                    flush=True,
+                )
                 self._output_ids.pop(idx, None)
                 self._prompt_user.pop(idx, None)
                 self._weight_per_req.pop(idx, None)
@@ -359,12 +373,16 @@ def make_sia_processor(
                 old_out = dict(self._output_ids)
                 old_prompt = dict(self._prompt_user)
                 old_weight = dict(self._weight_per_req)
+                old_total = dict(self._total_steps)
+                old_intervened = dict(self._intervened_steps)
                 for i1, i2, directionality in batch_update.moved:
                     if directionality == MoveDirectionality.UNIDIRECTIONAL:
                         self._output_ids[i2] = old_out.get(i1, [])
                         self._prompt_user[i2] = old_prompt.get(i1, "")
                         if i1 in old_weight:
                             self._weight_per_req[i2] = old_weight[i1]
+                        self._total_steps[i2] = old_total.get(i1, 0)
+                        self._intervened_steps[i2] = old_intervened.get(i1, 0)
                     else:  # SWAP
                         self._output_ids[i1] = old_out.get(i2, [])
                         self._output_ids[i2] = old_out.get(i1, [])
@@ -378,6 +396,10 @@ def make_sia_processor(
                             self._weight_per_req[i2] = old_weight[i1]
                         else:
                             self._weight_per_req.pop(i2, None)
+                        self._total_steps[i1] = old_total.get(i2, 0)
+                        self._total_steps[i2] = old_total.get(i1, 0)
+                        self._intervened_steps[i1] = old_intervened.get(i2, 0)
+                        self._intervened_steps[i2] = old_intervened.get(i1, 0)
 
             for idx, params, prompt_ids, output_ids in batch_update.added:
                 self._output_ids[idx] = output_ids

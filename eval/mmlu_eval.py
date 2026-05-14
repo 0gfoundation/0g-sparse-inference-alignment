@@ -43,7 +43,6 @@ import argparse
 import json
 import re
 import sys
-import time
 from pathlib import Path
 
 import requests
@@ -129,9 +128,7 @@ def chat_completion(
     messages: list[dict],
     api_key: str = "dummy",
     max_tokens: int = 1024,
-    temperature: float = 0.0,
-    retries: int = 3,
-    retry_delay: float = 2.0,
+    temperature: float = 0.6,
 ) -> str:
     headers = {
         "Content-Type": "application/json",
@@ -145,16 +142,12 @@ def chat_completion(
     }
     url = f"{base_url.rstrip('/')}/chat/completions"
 
-    for attempt in range(retries):
-        try:
-            resp = requests.post(url, json=payload, headers=headers, timeout=60)
-            resp.raise_for_status()
-            return resp.json()["choices"][0]["message"]["content"]
-        except Exception as e:
-            if attempt < retries - 1:
-                time.sleep(retry_delay)
-            else:
-                raise RuntimeError(f"Request failed after {retries} attempts: {e}") from e
+    try:
+        resp = requests.post(url, json=payload, headers=headers, timeout=120)
+        resp.raise_for_status()
+        return resp.json()["choices"][0]["message"]["content"]
+    except Exception as e:
+        raise RuntimeError(f"Request failed: {e}") from e
 
 
 # ---------------------------------------------------------------------------

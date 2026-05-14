@@ -113,6 +113,7 @@ def _build_sampling_params(req: ChatCompletionRequest) -> SamplingParams:
         max_tokens=req.max_tokens if req.max_tokens is not None else 512,
         top_p=req.top_p if req.top_p is not None else 1.0,
         stop=req.stop or [],
+        repetition_penalty=1.3,
     )
 
 
@@ -195,13 +196,23 @@ async def _handle_chat(req: ChatCompletionRequest):
             },
         )
 
-    # 非流式：等待生成完成
+    # 非流式：等待生成完成，超过 60 秒则中止并返回已生成内容
+    REQUEST_TIMEOUT = 60
+    start_time = time.time()
     final = None
     async for output in _engine.generate(prompt, sampling_params, request_id):
         final = output
+        elapsed = time.time() - start_time
+        if elapsed > REQUEST_TIMEOUT:
+            print(
+                f"[SERVER] {request_id} timed out after {elapsed:.1f}s, aborting",
+                flush=True,
+            )
+            await _engine.abort(request_id)
+            break
 
-    text = final.outputs[0].text
-    finish_reason = final.outputs[0].finish_reason or "stop"
+    text = final.outputs[0].text if final else ""
+    finish_reason = (final.outputs[0].finish_reason or "stop") if final else "timeout"
     prompt_tokens = len(final.prompt_token_ids)
     completion_tokens = len(final.outputs[0].token_ids)
 
