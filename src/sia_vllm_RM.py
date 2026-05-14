@@ -24,6 +24,7 @@ SIA per-token 干预（HTTP RM Server 版本）- vLLM v1 engine 版本
 import argparse
 import re
 import requests
+import time
 from typing import Optional
 
 import torch
@@ -306,7 +307,8 @@ def make_sia_processor(
                 if self._ENTROPY_THRESHOLD is not None:
                     if entropy < self._ENTROPY_THRESHOLD:
                         print(
-                            f"[SIA] step={req_step:3d} req={i} "
+                            f"[SIA] {time.strftime('%H:%M:%S')}.{int(time.time() % 1 * 1_000_000):06d} "
+                            f"step={req_step:3d} req={i} "
                             f"SKIP (entropy={entropy:.3f} < {self._ENTROPY_THRESHOLD})",
                             flush=True,
                         )
@@ -321,8 +323,11 @@ def make_sia_processor(
                         user_content, response_so_far, topk_indices.tolist()
                     )
                 except Exception as e:
-                    print(f"[SIA] step={req_step:3d} req={i} RM error: {e}",
-                          flush=True)
+                    print(
+                        f"[SIA] {time.strftime('%H:%M:%S')}.{int(time.time() % 1 * 1_000_000):06d} "
+                        f"step={req_step:3d} req={i} RM error: {e}",
+                        flush=True,
+                    )
                     continue
 
                 # 归一化：减均值，使得 topk 内有相对排序，
@@ -337,7 +342,8 @@ def make_sia_processor(
                 self._intervened_steps[i] = self._intervened_steps.get(i, 0) + 1
 
                 print(
-                    f"[SIA] step={req_step:3d} req={i} INTERVENE "
+                    f"[SIA] {time.strftime('%H:%M:%S')}.{int(time.time() % 1 * 1_000_000):06d} "
+                    f"step={req_step:3d} req={i} INTERVENE "
                     f"entropy={entropy:.3f} "
                     f"gen_len={len(output_ids)} "
                     f"rm=[{rm_scores.min():.3f}, {rm_scores.max():.3f}]",

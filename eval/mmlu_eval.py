@@ -40,6 +40,7 @@ MMLU-Redux 生成式评测脚本
 """
 
 import argparse
+import time
 import json
 import re
 import sys
@@ -96,21 +97,16 @@ def format_prompt(question: str, choices: list[str]) -> str:
 def extract_answer(text: str) -> str | None:
     """
     从模型输出中提取 A/B/C/D。
-    - 若 thinking 被截断（有 <think> 无 </think>），返回 None
-    - 否则只在 </think> 之后的内容里提取，防止 thinking 内猜测被误判
+    优先全文匹配 "Answer: X"（含 thinking 内部），再从 </think> 后提取独立字母行。
     """
-    if "<think>" in text and "</think>" not in text:
-        return None
-
-    after_think = text.split("</think>", 1)[-1] if "</think>" in text else text
-    after_think = after_think.strip()
-
-    # 优先匹配显式 "Answer: X"，字母后不能紧跟其他字母（防止 "Cannot" 等）
-    m = re.search(r"[Aa]nswer\s*[:\-]\s*\*{0,2}([ABCD])\*{0,2}(?![a-zA-Z])", after_think)
+    # 全文优先：匹配 Answer: + 可选空格 + A/B/C/D（不紧跟其他字母）
+    m = re.search(r"[Aa]nswer:\s*\*{0,2}([ABCD])\*{0,2}(?![a-zA-Z])", text)
     if m:
         return m.group(1).upper()
 
-    # 独立字母行（行首或换行后，后跟标点/空白/行尾）
+    # 兜底：</think> 之后的独立字母行
+    after_think = text.split("</think>", 1)[-1] if "</think>" in text else ""
+    after_think = after_think.strip()
     m = re.search(r"(?:^|\n)\s*([ABCD])\s*(?:\.|,|\s|$)", after_think)
     if m:
         return m.group(1).upper()
@@ -128,8 +124,8 @@ def chat_completion(
     messages: list[dict],
     api_key: str = "dummy",
     max_tokens: int = 1024,
-    temperature: float = 0.6,
-) -> str:
+    temperature: float = 1.0,
+) -> tuple[str, int]:
     headers = {
         "Content-Type": "application/json",
         "Authorization": f"Bearer {api_key}",
@@ -145,7 +141,10 @@ def chat_completion(
     try:
         resp = requests.post(url, json=payload, headers=headers, timeout=120)
         resp.raise_for_status()
-        return resp.json()["choices"][0]["message"]["content"]
+        data = resp.json()
+        text = data["choices"][0]["message"]["content"]
+        tokens = data.get("usage", {}).get("completion_tokens", -1)
+        return text, tokens
     except Exception as e:
         raise RuntimeError(f"Request failed: {e}") from e
 
@@ -160,6 +159,7 @@ def evaluate_subject(
     subject: str,
     api_key: str = "dummy",
     limit: int | None = None,
+    temperature: float = 1.0,
 ) -> dict:
     try:
         dataset = load_dataset(
@@ -195,9 +195,12 @@ def evaluate_subject(
         log(prompt)
         log(f"{'─'*60}")
 
+        t0 = time.time()
+        tokens = -1
         try:
-            response_text = chat_completion(
-                base_url, model, messages, api_key=api_key, max_tokens=2048
+            response_text, tokens = chat_completion(
+                base_url, model, messages, api_key=api_key,
+                max_tokens=2048, temperature=temperature,
             )
             predicted = extract_answer(response_text)
             is_correct = predicted == answer_letter
@@ -205,9 +208,10 @@ def evaluate_subject(
             response_text = f"ERROR: {e}"
             predicted = None
             is_correct = False
+        elapsed = time.time() - t0
 
         log(response_text)
-        log(f"→ predicted={predicted}  correct={is_correct}")
+        log(f"→ truth={answer_letter}  predicted={predicted}  correct={is_correct}  tokens={tokens}  latency={elapsed:.1f}s")
 
         correct += int(is_correct)
         details.append({
@@ -217,11 +221,13 @@ def evaluate_subject(
             "predicted": predicted,
             "response": response_text,
             "correct": is_correct,
+            "tokens": tokens if tokens >= 0 else 0,
         })
 
     total = len(details)
     accuracy = correct / total if total > 0 else 0.0
-    return {"accuracy": accuracy, "correct": correct, "total": total, "details": details}
+    total_tokens = sum(d.get("tokens", 0) or 0 for d in details)
+    return {"accuracy": accuracy, "correct": correct, "total": total, "total_tokens": total_tokens, "details": details}
 
 
 # ---------------------------------------------------------------------------
@@ -245,32 +251,39 @@ def main():
                         help="每个子学科限制题数，用于快速测试")
     parser.add_argument("--api_key", default="dummy",
                         help="API key（vLLM 不校验，传任意字符串即可）")
+    parser.add_argument("--temperature", type=float, default=1.0,
+                        help="采样温度（默认 1.0）")
     args = parser.parse_args()
 
     subjects = args.subjects or ALL_SUBJECTS
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    print(f"base_url : {args.base_url}")
-    print(f"model    : {args.model}")
-    print(f"subjects : {len(subjects)} 个")
-    print(f"limit    : {args.limit or '无'}")
-    print(f"output   : {output_path}")
+    print(f"base_url    : {args.base_url}")
+    print(f"model       : {args.model}")
+    print(f"subjects    : {len(subjects)} 个")
+    print(f"limit       : {args.limit or '无'}")
+    print(f"temperature : {args.temperature}")
+    print(f"output      : {output_path}")
     print("-" * 60)
 
     per_subject: dict[str, dict] = {}
     total_correct = 0
     total_count = 0
+    total_tokens = 0
+    eval_start = time.time()
 
     for subject in subjects:
         result = evaluate_subject(
             args.base_url, args.model, subject,
             api_key=args.api_key, limit=args.limit,
+            temperature=args.temperature,
         )
         per_subject[subject] = result
         if result["accuracy"] is not None:
             total_correct += result["correct"]
             total_count += result["total"]
+            total_tokens += result.get("total_tokens", 0)
             print(
                 f"  {subject:<45} {result['correct']:>3}/{result['total']:<3}"
                 f"  acc={result['accuracy']:.3f}",
@@ -302,8 +315,15 @@ def main():
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(output, f, indent=2, ensure_ascii=False)
 
+    total_elapsed = time.time() - eval_start
+    avg_latency = total_elapsed / total_count if total_count > 0 else 0.0
+    avg_tokens = total_tokens / total_count if total_count > 0 else 0.0
+    tps = total_tokens / total_elapsed if total_elapsed > 0 else 0.0
     print("-" * 60)
     print(f"Overall accuracy: {overall_acc:.4f}  ({total_correct}/{total_count})")
+    print(f"Total latency   : {total_elapsed:.1f}s  avg={avg_latency:.1f}s/q")
+    print(f"Avg token length: {avg_tokens:.1f} tokens/q  (total={total_tokens})")
+    print(f"Throughput      : {tps:.1f} tokens/s")
     print(f"Results saved to: {output_path}")
 
 

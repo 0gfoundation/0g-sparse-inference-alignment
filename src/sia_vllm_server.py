@@ -21,10 +21,14 @@ Usage:
 import argparse
 import json
 import os
+import re
 import sys
 import time
 import uuid
 from typing import AsyncIterator, Optional
+
+# 匹配 "Answer:" + 可选空格 + A/B/C/D（不紧跟其他字母）
+_ANSWER_RE = re.compile(r"Answer:\s*([ABCD])(?![a-zA-Z])")
 
 import httpx
 import uvicorn
@@ -196,12 +200,19 @@ async def _handle_chat(req: ChatCompletionRequest):
             },
         )
 
-    # 非流式：等待生成完成，超过 60 秒则中止并返回已生成内容
+    # 非流式：等待生成完成，超过 60 秒或检测到 Answer: 则立即中止
     REQUEST_TIMEOUT = 60
     start_time = time.time()
     final = None
     async for output in _engine.generate(prompt, sampling_params, request_id):
         final = output
+        generated = output.outputs[0].text
+
+        # 全文检测：只要 Answer: 后跟可选空格再接 A/B/C/D，立即停止
+        if _ANSWER_RE.search(generated):
+            await _engine.abort(request_id)
+            break
+
         elapsed = time.time() - start_time
         if elapsed > REQUEST_TIMEOUT:
             print(
