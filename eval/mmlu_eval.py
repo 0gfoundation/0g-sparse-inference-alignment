@@ -48,7 +48,6 @@ from pathlib import Path
 
 import requests
 from datasets import load_dataset
-from tqdm import tqdm
 
 
 # ---------------------------------------------------------------------------
@@ -69,12 +68,13 @@ ALL_SUBJECTS = [
 
 CHOICE_LETTERS = ["A", "B", "C", "D"]
 
-# 系统提示：要求模型只输出答案字母，并禁用 Qwen3 的 thinking 模式
+# 系统提示：允许 Qwen3 thinking，但要求简洁推理，答案以 "Answer: X" 结尾
 SYSTEM_PROMPT = (
     "You are a helpful assistant. "
-    "Answer the following multiple choice question with only the letter "
-    "of the correct answer (A, B, C, or D). "
-    "Do not explain. Do not think. Just output the letter."
+    "Answer the following multiple choice question. "
+    "You may think before answering, but keep your reasoning concise and under 1500 tokens. "
+    "End your response with exactly: Answer: X "
+    "(where X is A, B, C, or D)."
 )
 
 
@@ -97,31 +97,24 @@ def format_prompt(question: str, choices: list[str]) -> str:
 def extract_answer(text: str) -> str | None:
     """
     从模型输出中提取 A/B/C/D。
-    兼容：
-      - Qwen3 thinking 模式输出（<think>...</think> 后取答案）
-      - 直接输出字母
-      - "The answer is X" 等格式
+    - 若 thinking 被截断（有 <think> 无 </think>），返回 None
+    - 否则只在 </think> 之后的内容里提取，防止 thinking 内猜测被误判
     """
-    # 去除 thinking 内容
-    if "</think>" in text:
-        text = text.split("</think>", 1)[-1]
+    if "<think>" in text and "</think>" not in text:
+        return None
 
-    text = text.strip()
+    after_think = text.split("</think>", 1)[-1] if "</think>" in text else text
+    after_think = after_think.strip()
 
-    # 直接以字母开头
-    if text and text[0].upper() in CHOICE_LETTERS:
-        return text[0].upper()
+    # 优先匹配显式 "Answer: X"，字母后不能紧跟其他字母（防止 "Cannot" 等）
+    m = re.search(r"[Aa]nswer\s*[:\-]\s*\*{0,2}([ABCD])\*{0,2}(?![a-zA-Z])", after_think)
+    if m:
+        return m.group(1).upper()
 
-    # 常见模式匹配
-    patterns = [
-        r"(?:^|\s)([ABCD])(?:\.|,|\s|$)",
-        r"answer\s*(?:is\s*)?[:\-]?\s*([ABCD])",
-        r"(?:option|choice)\s*([ABCD])",
-    ]
-    for pattern in patterns:
-        m = re.search(pattern, text, re.IGNORECASE)
-        if m:
-            return m.group(1).upper()
+    # 独立字母行（行首或换行后，后跟标点/空白/行尾）
+    m = re.search(r"(?:^|\n)\s*([ABCD])\s*(?:\.|,|\s|$)", after_think)
+    if m:
+        return m.group(1).upper()
 
     return None
 
@@ -201,9 +194,17 @@ def evaluate_subject(
             {"role": "user", "content": prompt},
         ]
 
+        def log(s=""):
+            print(s, flush=True)
+
+        log(f"\n{'='*60}")
+        log(f"[{subject}] Q{len(details)+1}  answer={answer_letter}")
+        log(prompt)
+        log(f"{'─'*60}")
+
         try:
             response_text = chat_completion(
-                base_url, model, messages, api_key=api_key, max_tokens=1024
+                base_url, model, messages, api_key=api_key, max_tokens=2048
             )
             predicted = extract_answer(response_text)
             is_correct = predicted == answer_letter
@@ -211,6 +212,9 @@ def evaluate_subject(
             response_text = f"ERROR: {e}"
             predicted = None
             is_correct = False
+
+        log(response_text)
+        log(f"→ predicted={predicted}  correct={is_correct}")
 
         correct += int(is_correct)
         details.append({
@@ -265,7 +269,7 @@ def main():
     total_correct = 0
     total_count = 0
 
-    for subject in tqdm(subjects, desc="MMLU-Redux"):
+    for subject in subjects:
         result = evaluate_subject(
             args.base_url, args.model, subject,
             api_key=args.api_key, limit=args.limit,
@@ -274,9 +278,10 @@ def main():
         if result["accuracy"] is not None:
             total_correct += result["correct"]
             total_count += result["total"]
-            tqdm.write(
+            print(
                 f"  {subject:<45} {result['correct']:>3}/{result['total']:<3}"
-                f"  acc={result['accuracy']:.3f}"
+                f"  acc={result['accuracy']:.3f}",
+                flush=True,
             )
 
     overall_acc = total_correct / total_count if total_count > 0 else 0.0
