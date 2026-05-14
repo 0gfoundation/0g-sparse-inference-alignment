@@ -5,7 +5,7 @@ MMLU-Redux 生成式评测脚本
 对 baseline（vLLM 原生 server）和 SIA server 使用完全相同的评测逻辑，
 通过 --base_url 切换，结果可直接对比。
 
-数据集：edinburgh-dawg/mmlu-redux（57 个子学科，每科约 100 题）
+数据集：edinburgh-dawg/mmlu-redux（30 个子学科，每科约 100 题）
 打分：exact_match（从模型输出中提取 A/B/C/D，与标准答案字符串匹配）
 
 依赖：
@@ -52,29 +52,19 @@ from tqdm import tqdm
 
 
 # ---------------------------------------------------------------------------
-# 全部 57 个子学科
+# edinburgh-dawg/mmlu-redux 实际可用的 30 个子学科
 # ---------------------------------------------------------------------------
 ALL_SUBJECTS = [
-    "abstract_algebra", "anatomy", "astronomy", "business_ethics",
-    "clinical_knowledge", "college_biology", "college_chemistry",
-    "college_computer_science", "college_mathematics", "college_medicine",
-    "college_physics", "computer_security", "conceptual_physics",
-    "econometrics", "electrical_engineering", "elementary_mathematics",
-    "formal_logic", "global_facts", "high_school_biology",
-    "high_school_chemistry", "high_school_computer_science",
-    "high_school_european_history", "high_school_geography",
-    "high_school_government_and_politics", "high_school_macroeconomics",
-    "high_school_mathematics", "high_school_microeconomics",
-    "high_school_physics", "high_school_psychology",
-    "high_school_statistics", "high_school_us_history",
-    "high_school_world_history", "human_aging", "human_sexuality",
-    "international_law", "jurisprudence", "logical_fallacies",
-    "machine_learning", "management", "marketing", "medical_genetics",
-    "miscellaneous", "moral_disputes", "moral_scenarios", "nutrition",
-    "philosophy", "prehistory", "professional_accounting",
-    "professional_law", "professional_medicine", "professional_psychology",
-    "public_relations", "security_studies", "sociology",
-    "us_foreign_policy", "virology", "world_religions",
+    "anatomy", "astronomy", "business_ethics", "clinical_knowledge",
+    "college_chemistry", "college_computer_science", "college_mathematics",
+    "college_medicine", "college_physics", "conceptual_physics",
+    "econometrics", "electrical_engineering", "formal_logic",
+    "global_facts", "high_school_chemistry", "high_school_geography",
+    "high_school_macroeconomics", "high_school_mathematics",
+    "high_school_physics", "high_school_statistics", "high_school_us_history",
+    "human_aging", "logical_fallacies", "machine_learning", "miscellaneous",
+    "philosophy", "professional_accounting", "professional_law",
+    "public_relations", "virology",
 ]
 
 CHOICE_LETTERS = ["A", "B", "C", "D"]
@@ -145,7 +135,7 @@ def chat_completion(
     model: str,
     messages: list[dict],
     api_key: str = "dummy",
-    max_tokens: int = 64,
+    max_tokens: int = 1024,
     temperature: float = 0.0,
     retries: int = 3,
     retry_delay: float = 2.0,
@@ -187,7 +177,7 @@ def evaluate_subject(
 ) -> dict:
     try:
         dataset = load_dataset(
-            "edinburgh-dawg/mmlu-redux", subject, split="test", trust_remote_code=True
+            "edinburgh-dawg/mmlu-redux", subject, split="test"
         )
     except Exception as e:
         print(f"  [WARN] Failed to load subject '{subject}': {e}", file=sys.stderr)
@@ -212,7 +202,9 @@ def evaluate_subject(
         ]
 
         try:
-            response_text = chat_completion(base_url, model, messages, api_key=api_key)
+            response_text = chat_completion(
+                base_url, model, messages, api_key=api_key, max_tokens=1024
+            )
             predicted = extract_answer(response_text)
             is_correct = predicted == answer_letter
         except Exception as e:
