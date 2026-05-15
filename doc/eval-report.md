@@ -43,9 +43,19 @@
 | repetition_penalty | 1.3 |
 | system prompt | "You are a helpful assistant. Answer the following multiple choice question. You may think before answering, but keep your reasoning concise and under 500 tokens. End your response with exactly: Answer: X (where X is A, B, C, or D)." |
 
+### noSIA 说明
+
+noSIA 并非另一套独立部署，而是在同一套服务框架下、将 SIA 干预完全关闭后运行：将 RM 打分权重设为 0、干预阈值设为极大值，使得每一步都直接跳过 RM 调用，退化为标准的 vLLM 推理。这样可以保证两组实验除 SIA 干预开关外，其余条件（模型、参数、评测脚本）完全一致，结果具有直接可比性。
+
 ### 超时处理
 
-服务端设置 60s 超时：超时后 abort 生成，返回已有内容。评测时**排除** latency > 60s 的样本；同时在 noSIA 日志中同步排除对应顺序号的样本，保证两组比较的题目完全一致（side-by-side 公平对比）。
+SIA 开启时，每个生成步骤需要额外调用 RM 打分，导致单题推理时间显著拉长。为避免个别超长回复无限占用资源，服务端设置 60s 超时上限：超时后强制中止生成，返回已有内容。
+
+评测时**排除** latency > 60s 的样本，原因如下：
+- 超时样本的回复被截断，无法保证答案完整，纳入统计会引入噪声；
+- noSIA 同步排除对应题目，保证两组比较的题目集合完全一致（side-by-side 公平对比）。
+
+超时题目集中在推理链较长的子学科（如 formal_logic、college_mathematics），并非随机分布，但两组排除后剩余题目完全相同，不影响对比的公平性。
 
 ---
 
@@ -63,6 +73,8 @@
 | **Accuracy** | **80.33%** | **81.97%** |
 | 95% 置信区间 | ±9.98% | ±9.65% |
 | 平均 latency | 28.5s | 6.8s |
+
+*注：latency 差异来自 SIA 的 RM 打分开销，详见性能分析章节。*
 
 **小结：** 两组 accuracy 差值约 1.6 个百分点（仅 1 道题的差异），远小于 ±10% 的置信区间，统计上无显著差异。但 61 题的样本量过小，结论可靠性有限。
 
@@ -83,6 +95,8 @@
 | 95% 置信区间 | ±3.46% | ±3.57% |
 | 平均输出 tokens | 325.5 | 507.8 |
 | 平均 latency | 26.0s | 5.9s |
+
+*注：latency 差异来自 SIA 的 RM 打分开销，详见性能分析章节。*
 
 **小结：** 两组 accuracy 差值 1.35 个百分点，在 ±3.5% 的置信区间内，统计上无显著差异。实验2 有 442 个有效样本，置信区间显著收窄，结论可靠性更高。
 
