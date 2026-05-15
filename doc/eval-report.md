@@ -114,14 +114,9 @@ SIA 开启时，每个生成步骤需要额外调用 Value Model 打分，导致
 
 本次实验的目的**不是期望 SIA 提升 MMLU 准确率**，而是验证 SIA 在与 Value Model 训练目标无关的领域内是否引入负面效果（regression）。结论是：无 regression。
 
-### 3. noSIA 平均输出 tokens 更高的原因
+### 3. SIA 对生成方式的影响
 
-观察到一个现象：noSIA 的平均输出 tokens（507.8）显著高于 SIA（325.5），但两者使用完全相同的 prompt。
-
-原因在于 SIA 的 Value Model 改变了模型的**生成方式**：
-
-- **noSIA**：无 Value Model 干预，模型自由选择是否进行推理。有时跳过推理直接输出 `Answer: X`（仅 3 个 tokens），有时进行长篇推理（500~800+ tokens），导致分布呈两极，平均值被长回复拉高。
-- **SIA**：Value Model 从第一个 token 开始干预。在 Helpfulness 数据上训练的 Value Model 倾向于给"开始推理"的 token 打高分，稳定地引导模型进入 thinking 模式，始终生成中等长度的推理过程（平均 325 tokens）。
+noSIA 的平均输出 tokens（507.8）显著高于 SIA（325.5）。在 Helpfulness 数据上训练的 Value Model 倾向于给"开始推理"的 token 打高分，稳定地引导模型进入 thinking 模式，生成中等长度的推理过程；而 noSIA 无干预，模型的生成长度分布较为分散，平均值偏高。
 
 这说明 SIA 干预改变了模型"用什么方式回答"——即便在对最终 accuracy 无显著影响的任务上，生成行为本身已发生明显变化。
 
