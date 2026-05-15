@@ -95,14 +95,27 @@ class ChatCompletionRequest(BaseModel):
 def _messages_to_prompt(messages: list[ChatMessage]) -> dict:
     """
     将 OpenAI messages 转为 vLLM prompt dict（token IDs）。
-    直接传 token IDs 给 vLLM，跳过二次 tokenize，避免 special token 处理歧义。
+    有 chat_template 时用标准 chat template（适合 Instruct 模型）；
+    无 chat_template 时 fallback 到 Human/Assistant 纯文本格式（适合 Base 模型）。
     """
     msgs = [{"role": m.role, "content": m.content} for m in messages]
-    token_ids = _llm_tok.apply_chat_template(
-        msgs,
-        tokenize=True,
-        add_generation_prompt=True,
-    )
+    if getattr(_llm_tok, "chat_template", None):
+        token_ids = _llm_tok.apply_chat_template(
+            msgs,
+            tokenize=True,
+            add_generation_prompt=True,
+        )
+    else:
+        parts = []
+        for m in msgs:
+            if m["role"] == "user":
+                parts.append(f"Human:\n{m['content']}")
+            elif m["role"] == "assistant":
+                parts.append(f"Assistant:\n{m['content']}")
+            elif m["role"] == "system":
+                parts.append(m["content"])
+        parts.append("Assistant:\n")
+        token_ids = _llm_tok.encode("\n".join(parts), add_special_tokens=True)
     return {"prompt_token_ids": token_ids}
 
 
