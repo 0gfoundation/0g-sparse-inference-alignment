@@ -86,7 +86,6 @@ class ChatCompletionRequest(BaseModel):
     presence_penalty: Optional[float] = 0.0
     frequency_penalty: Optional[float] = 0.0
     n: Optional[int] = 1
-    sia_weight: Optional[float] = None  # SIA-specific: per-request RM score multiplier
 
 
 # ---------------------------------------------------------------------------
