@@ -92,17 +92,18 @@ class ChatCompletionRequest(BaseModel):
 # 工具函数
 # ---------------------------------------------------------------------------
 
-def _messages_to_prompt(messages: list[ChatMessage]) -> str:
+def _messages_to_prompt(messages: list[ChatMessage]) -> dict:
     """
-    将 OpenAI messages 转为 LLM prompt 字符串。
-    使用模型标准 chat template，确保 Instruct 模型行为与官方推理方式一致。
+    将 OpenAI messages 转为 vLLM prompt dict（token IDs）。
+    直接传 token IDs 给 vLLM，跳过二次 tokenize，避免 special token 处理歧义。
     """
     msgs = [{"role": m.role, "content": m.content} for m in messages]
-    return _llm_tok.apply_chat_template(
+    token_ids = _llm_tok.apply_chat_template(
         msgs,
-        tokenize=False,
+        tokenize=True,
         add_generation_prompt=True,
     )
+    return {"prompt_token_ids": token_ids}
 
 
 def _build_sampling_params(req: ChatCompletionRequest) -> SamplingParams:
@@ -240,7 +241,7 @@ async def _handle_chat(req: ChatCompletionRequest):
 
 
 async def _stream_sse(
-    prompt: str,
+    prompt: dict,
     sampling_params: SamplingParams,
     request_id: str,
     created: int,
