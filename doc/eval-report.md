@@ -131,7 +131,7 @@ SIA 开启时，每个生成步骤需要额外调用 Value Model 打分，导致
 
 1. **无 regression（最核心结论）**：SIA 干预在 MMLU 知识类评测上没有造成 accuracy 下降，与预期一致。两次实验均显示 SIA 与 noSIA 的 accuracy 差值在统计误差范围内，可认为无显著影响。
 
-2. **SIA 的适用边界**：Value Model 在哪个领域训练，就在哪个领域引导效果。在与训练目标无关的知识问答类任务上，SIA 既不提升也不损害，属于"透明"干预。
+2. **SIA 的适用边界**：Value Model 在哪个领域训练，就只在哪个领域的任务上能引导 LLM，对无关领域既不提升也不干扰。举例来说，若 Value Model 训练目标是"不提供有害内容"，则在与安全无关的对话中它基本不起作用；若对话涉及有害内容，它才会发挥引导效果。本次实验中，Value Model 训练在 Helpfulness 和 Harmlessness 方向，而 MMLU 是纯知识问答，两者无关，因此干预效果为零——这是符合预期的。
 
 3. **后续实验建议**：在 SIA Value Model 对口的评测集（AlpacaEval、TruthfulQA、HEx-PHI）上验证 SIA 是否能带来 accuracy/reward 提升，以完整覆盖方案一的验收标准。
 
