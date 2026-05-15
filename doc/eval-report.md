@@ -17,13 +17,19 @@
 | LLM | Qwen3-14B | 推理主模型 |
 | Value Model（RM） | Qwen3-4B + VM-Qwen3-4B-Base LoRA | SIA 干预所用奖励模型 |
 
-### SIA 参数
+**模型组合选择说明：**
+
+- **为何选用 Qwen3-14B + Qwen3-4B 组合**：该组合是 SIA 论文中测试的最大规模配置，实验结论可与论文原始结果直接参照对比。
+- **为何选用 VM-Qwen3-4B-Base LoRA 作为 Value Model**：该 checkpoint 由论文第一作者 Hu Runyi 训练并公开发布，是论文推荐的最完善版本。本次实验直接下载使用，未做任何修改。
+
+### SIA 干预参数
 
 | 参数 | 值 | 说明 |
 |------|----|------|
-| `--topk` | 5 | 每步评分的候选 token 数 |
-| `--weight` | 1.0 | RM score 乘以权重后加到 logits |
-| `--entropy_threshold` | 1.0 | 只在 token entropy ≥ 1.0 时干预（稀疏策略） |
+| `--weight` | 1.0 | RM score 加权后叠加到 logits |
+| `--entropy_threshold` | 1.0 | 只在模型不确定（token entropy ≥ 1.0）时才触发干预；确定性高的 token 直接跳过 |
+
+以上参数值参照论文推荐配置，为效果最稳定的一组。
 
 ### 评测集
 
@@ -34,7 +40,6 @@
 | 参数 | 值 |
 |------|----|
 | temperature | 1.0 |
-| max_tokens | 2048 |
 | repetition_penalty | 1.3 |
 | system prompt | "You are a helpful assistant. Answer the following multiple choice question. You may think before answering, but keep your reasoning concise and under 500 tokens. End your response with exactly: Answer: X (where X is A, B, C, or D)." |
 
@@ -44,17 +49,17 @@
 
 ---
 
-## 实验1：小规模验证（limit=3）
+## 实验1：小规模验证（每科取 3 题，共 90 题）
 
 **结果：**
 
-| 指标 | SIA | noSIA（同顺序号题目） |
-|------|-----|---------------------|
+| 指标 | SIA | noSIA（同组题目） |
+|------|-----|-----------------|
 | 原始总样本 | 90 | 90 |
 | 超时排除（>60s） | 29 | — |
 | **有效样本** | **61** | **61** |
-| correct=True | 49 | 50 |
-| correct=False | 12 | 11 |
+| 预测正确 | 49 | 50 |
+| 预测错误 | 12 | 11 |
 | **Accuracy** | **80.33%** | **81.97%** |
 | 95% 置信区间 | ±9.98% | ±9.65% |
 | 平均 latency | 28.5s | 6.8s |
@@ -63,20 +68,20 @@
 
 ---
 
-## 实验2：大规模验证（limit=20）
+## 实验2：大规模验证（每科取 20 题，共 600 题）
 
 **结果：**
 
-| 指标 | SIA | noSIA（同顺序号题目） |
-|------|-----|---------------------|
+| 指标 | SIA | noSIA（同组题目） |
+|------|-----|-----------------|
 | 原始总样本 | 600 | 600 |
 | 超时排除（>60s） | 158 | — |
 | **有效样本** | **442** | **442** |
-| correct=True | 369 | 363 |
-| correct=False | 73 | 79 |
+| 预测正确 | 369 | 363 |
+| 预测错误 | 73 | 79 |
 | **Accuracy** | **83.48%** | **82.13%** |
 | 95% 置信区间 | ±3.46% | ±3.57% |
-| 平均 tokens | 325.5 | 507.8 |
+| 平均输出 tokens | 325.5 | 507.8 |
 | 平均 latency | 26.0s | 5.9s |
 
 **小结：** 两组 accuracy 差值 1.35 个百分点，在 ±3.5% 的置信区间内，统计上无显著差异。实验2 有 442 个有效样本，置信区间显著收窄，结论可靠性更高。
@@ -95,16 +100,14 @@
 
 本次实验的目的**不是期望 SIA 提升 MMLU 准确率**，而是验证 SIA 在与 Value Model 训练目标无关的领域内是否引入负面效果（regression）。结论是：无 regression。
 
-### 3. noSIA 平均 tokens 更高的原因
+### 3. noSIA 平均输出 tokens 更高的原因
 
-观察到一个现象：noSIA 的平均 tokens（507.8）显著高于 SIA（325.5），但两者使用完全相同的 prompt。
+观察到一个现象：noSIA 的平均输出 tokens（507.8）显著高于 SIA（325.5），但两者使用完全相同的 prompt。
 
 原因在于 SIA 的 Value Model 改变了模型的**生成方式**：
 
-- **noSIA**：无 RM 干预，模型自由选择是否 thinking。有时跳过 thinking 直接输出 `Answer: X`（仅 3 个 tokens），有时进行长篇推理（500~800+ tokens），导致分布呈两极，平均值被长回复拉高。
+- **noSIA**：无 RM 干预，模型自由选择是否进行推理。有时跳过推理直接输出 `Answer: X`（仅 3 个 tokens），有时进行长篇推理（500~800+ tokens），导致分布呈两极，平均值被长回复拉高。
 - **SIA**：RM 从第一个 token 开始干预。在 Helpfulness 数据上训练的 Value Model 倾向于给"开始推理"的 token 打高分，稳定地引导模型进入 thinking 模式，始终生成中等长度的推理过程（平均 325 tokens）。
-
-这说明 SIA 不只改变"选哪个答案"，还改变了"用什么方式回答"。
 
 ### 4. 推理延迟开销
 
@@ -114,10 +117,10 @@ SIA 的平均 latency（26s）远高于 noSIA（5.9s），约为 4.4 倍。
 
 | 类型 | 平均耗时/step |
 |------|------------|
-| SKIP（不调用 RM） | 17 ms |
-| INTERVENE（调用 RM） | 279 ms |
+| 无干预的步骤（直接跳过 RM） | 17 ms |
+| 有干预的步骤（调用 RM 打分） | 279 ms |
 
-INTERVENE 比 SKIP 慢约 **16 倍**，主要原因是当前实现对 topk=5 个候选 token 串行进行 5 次独立 RM forward pass。该性能问题有明确的优化路径（批量 forward、KV cache prefix 共享等），详见 `/tmp/sia_latency_optimization.md`。
+有干预的步骤比无干预的步骤慢约 **16 倍**，主要原因是当前实现对每个候选 token 串行进行多次独立 RM forward pass。该性能问题有明确的优化路径（批量 forward、KV cache prefix 共享等）。
 
 ---
 
@@ -127,7 +130,7 @@ INTERVENE 比 SKIP 慢约 **16 倍**，主要原因是当前实现对 topk=5 个
 
 2. **SIA 的适用边界**：Value Model 在哪个领域训练，就在哪个领域引导效果。在与训练目标无关的知识问答类任务上，SIA 既不提升也不损害，属于"透明"干预。
 
-3. **延迟开销存在，有优化空间**：当前实现中，INTERVENE 步骤比无干预步骤慢约 16 倍，是主要的工程优化方向，但不影响 accuracy 的评测结论。
+3. **延迟开销存在，有优化空间**：有干预的步骤比无干预步骤慢约 16 倍，是主要的工程优化方向，但不影响 accuracy 的评测结论。
 
 4. **后续实验建议**：在 SIA Value Model 对口的评测集（AlpacaEval、TruthfulQA、HEx-PHI）上验证 SIA 是否能带来 accuracy/reward 提升，以完整覆盖方案一的验收标准。
 
@@ -135,7 +138,7 @@ INTERVENE 比 SKIP 慢约 **16 倍**，主要原因是当前实现对 topk=5 个
 
 ## Appendix：实验运行命令
 
-### 实验1（limit=3）
+### 实验1（每科取 3 题）
 
 **SIA：**
 ```bash
@@ -172,7 +175,7 @@ nohup python eval/mmlu_eval.py \
     --limit 3 > log_noSIA_selfServer_202605141540.txt 2>&1 &
 ```
 
-### 实验2（limit=20）
+### 实验2（每科取 20 题）
 
 **SIA：**
 ```bash
