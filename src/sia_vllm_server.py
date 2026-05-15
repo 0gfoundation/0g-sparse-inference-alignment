@@ -37,6 +37,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
+from transformers import AutoTokenizer
 from vllm import AsyncLLMEngine, SamplingParams
 from vllm.engine.arg_utils import AsyncEngineArgs
 
@@ -48,6 +49,7 @@ from sia_vllm_RM import make_sia_processor
 # 全局状态（在 main() 里初始化）
 # ---------------------------------------------------------------------------
 _engine: Optional[AsyncLLMEngine] = None
+_llm_tok = None
 _model_id: str = ""
 _args = None
 
@@ -91,24 +93,17 @@ class ChatCompletionRequest(BaseModel):
 # 工具函数
 # ---------------------------------------------------------------------------
 
-def _messages_to_prompt(messages: list[ChatMessage], sia_weight: Optional[float] = None) -> str:
+def _messages_to_prompt(messages: list[ChatMessage]) -> str:
     """
     将 OpenAI messages 转为 LLM prompt 字符串。
-    使用 Human/Assistant 格式（与 sia_vllm_RM.py CLI 行为一致，适合 Base 模型）。
-    SIA processor 的 parse_conversation 和 RM 打分均基于此格式设计。
-    若指定 sia_weight，在 prompt 开头注入 [SIA:weight=X] header 供处理器读取。
+    使用模型标准 chat template，确保 Instruct 模型行为与官方推理方式一致。
     """
-    header = f"[SIA:weight={sia_weight}]\n" if sia_weight is not None else ""
-    parts = []
-    for m in messages:
-        if m.role == "user":
-            parts.append(f"Human:\n{m.content}")
-        elif m.role == "assistant":
-            parts.append(f"Assistant:\n{m.content}")
-        elif m.role == "system":
-            parts.append(m.content)
-    parts.append("Assistant:\n")
-    return header + "\n".join(parts)
+    msgs = [{"role": m.role, "content": m.content} for m in messages]
+    return _llm_tok.apply_chat_template(
+        msgs,
+        tokenize=False,
+        add_generation_prompt=True,
+    )
 
 
 def _build_sampling_params(req: ChatCompletionRequest) -> SamplingParams:
@@ -184,7 +179,7 @@ async def _log_rm_status():
 
 async def _handle_chat(req: ChatCompletionRequest):
     await _log_rm_status()
-    prompt = _messages_to_prompt(req.messages, sia_weight=req.sia_weight)
+    prompt = _messages_to_prompt(req.messages)
     sampling_params = _build_sampling_params(req)
     model = req.model or _model_id
     request_id = f"chatcmpl-{uuid.uuid4().hex[:12]}"
@@ -303,10 +298,14 @@ def parse_args():
 
 
 def main():
-    global _engine, _model_id, _args
+    global _engine, _llm_tok, _model_id, _args
     _args = parse_args()
 
     _model_id = _args.model_id or os.path.basename(_args.llm.rstrip("/"))
+
+    print(f"Loading tokenizer: {_args.llm} ...")
+    _llm_tok = AutoTokenizer.from_pretrained(_args.llm, trust_remote_code=True)
+    print("Tokenizer loaded.")
 
     print("=" * 60)
     print(f"Model ID : {_model_id}")

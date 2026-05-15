@@ -409,11 +409,7 @@ def make_sia_processor(
 
             for idx, params, prompt_ids, output_ids in batch_update.added:
                 self._output_ids[idx] = output_ids
-                prompt_text = self._llm_tok.decode(prompt_ids, skip_special_tokens=True)
-                sia_weight, prompt_text_clean = _parse_sia_header(prompt_text)
-                if sia_weight is not None:
-                    self._weight_per_req[idx] = sia_weight
-                self._prompt_user[idx] = extract_user_content(prompt_text_clean)
+                self._prompt_user[idx] = self._extract_user_content(list(prompt_ids))
 
     return SIALogitsProcessor
 
