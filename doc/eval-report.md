@@ -111,19 +111,6 @@
 
 这说明 SIA 干预改变了模型"用什么方式回答"——即便在对最终 accuracy 无显著影响的任务上，生成行为本身已发生明显变化。
 
-### 4. 推理延迟开销
-
-SIA 的平均 latency（26s）远高于 noSIA（5.9s），约为 4.4 倍。
-
-根据 LLM server 日志的逐步分析：
-
-| 类型 | 平均耗时/step |
-|------|------------|
-| 无干预的步骤（直接跳过 RM） | 17 ms |
-| 有干预的步骤（调用 RM 打分） | 279 ms |
-
-有干预的步骤比无干预的步骤慢约 **16 倍**，主要原因是当前实现对每个候选 token 串行进行多次独立 RM forward pass。该性能问题有明确的优化路径（批量 forward、KV cache prefix 共享等）。
-
 ---
 
 ## 结论
@@ -132,9 +119,7 @@ SIA 的平均 latency（26s）远高于 noSIA（5.9s），约为 4.4 倍。
 
 2. **SIA 的适用边界**：Value Model 在哪个领域训练，就在哪个领域引导效果。在与训练目标无关的知识问答类任务上，SIA 既不提升也不损害，属于"透明"干预。
 
-3. **延迟开销存在，有优化空间**：有干预的步骤比无干预步骤慢约 16 倍，是主要的工程优化方向，但不影响 accuracy 的评测结论。
-
-4. **后续实验建议**：在 SIA Value Model 对口的评测集（AlpacaEval、TruthfulQA、HEx-PHI）上验证 SIA 是否能带来 accuracy/reward 提升，以完整覆盖方案一的验收标准。
+3. **后续实验建议**：在 SIA Value Model 对口的评测集（AlpacaEval、TruthfulQA、HEx-PHI）上验证 SIA 是否能带来 accuracy/reward 提升，以完整覆盖方案一的验收标准。
 
 ---
 
