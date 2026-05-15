@@ -46,41 +46,6 @@
 
 ## 实验1：小规模验证（limit=3）
 
-**运行命令（SIA）：**
-```bash
-nohup python src/sia_rm_server.py \
-    --rm /workspace/SIA/models/Qwen3-4B \
-    --rm_lora /workspace/SIA/models/VM-Qwen3-4B-Base/VM-Qwen3-4B-Base \
-    --rm_device cuda:0 --port 8001 > log_rm_server_202605141350.txt 2>&1 &
-
-nohup python src/sia_vllm_server.py \
-    --llm /workspace/SIA/models/Qwen3-14B \
-    --rm_url http://localhost:8001 \
-    --llm_gpu_mem 0.6 --topk 5 --weight 1.0 --entropy_threshold 1.0 \
-    --host 0.0.0.0 --port 8000 > log_llm_server_202605141350.txt 2>&1 &
-
-nohup python eval/mmlu_eval.py \
-    --base_url http://localhost:8000/v1 \
-    --model /workspace/SIA/models/Qwen3-14B \
-    --output results/test_SIA_202605141350.json \
-    --limit 3 > log_SIA_202605141350.txt 2>&1 &
-```
-
-**运行命令（noSIA）：**
-```bash
-nohup python src/sia_vllm_server.py \
-    --llm /workspace/SIA/models/Qwen3-14B \
-    --rm_url http://localhost:8001 \
-    --llm_gpu_mem 0.6 --topk 5 --weight 0.0 --entropy_threshold 999999 \
-    --host 0.0.0.0 --port 8000 > log_llm_server_noSIA_202605141540.txt 2>&1 &
-
-nohup python eval/mmlu_eval.py \
-    --base_url http://localhost:8000/v1 \
-    --model /workspace/SIA/models/Qwen3-14B \
-    --output results/test_noSIA_selfServer_202605141540.json \
-    --limit 3 > log_noSIA_selfServer_202605141540.txt 2>&1 &
-```
-
 **结果：**
 
 | 指标 | SIA | noSIA（同顺序号题目） |
@@ -99,41 +64,6 @@ nohup python eval/mmlu_eval.py \
 ---
 
 ## 实验2：大规模验证（limit=20）
-
-**运行命令（SIA）：**
-```bash
-nohup python src/sia_rm_server.py \
-    --rm /workspace/SIA/models/Qwen3-4B \
-    --rm_lora /workspace/SIA/models/VM-Qwen3-4B-Base/VM-Qwen3-4B-Base \
-    --rm_device cuda:0 --port 8001 > log_rm_server_SIA_202605142111.txt 2>&1 &
-
-nohup python src/sia_vllm_server.py \
-    --llm /workspace/SIA/models/Qwen3-14B \
-    --rm_url http://localhost:8001 \
-    --llm_gpu_mem 0.6 --topk 5 --weight 1.0 --entropy_threshold 1.0 \
-    --host 0.0.0.0 --port 8000 > log_llm_server_SIA_202605142111.txt 2>&1 &
-
-nohup python eval/mmlu_eval.py \
-    --base_url http://localhost:8000/v1 \
-    --model /workspace/SIA/models/Qwen3-14B \
-    --output results/test_SIA_202605142111.json \
-    --limit 20 > log_SIA_202605142111.txt 2>&1 &
-```
-
-**运行命令（noSIA）：**
-```bash
-nohup python src/sia_vllm_server.py \
-    --llm /workspace/SIA/models/Qwen3-14B \
-    --rm_url http://localhost:8001 \
-    --llm_gpu_mem 0.6 --topk 5 --weight 0.0 --entropy_threshold 999999 \
-    --host 0.0.0.0 --port 8000 > log_llm_server_noSIA_202605142111.txt 2>&1 &
-
-nohup python eval/mmlu_eval.py \
-    --base_url http://localhost:8000/v1 \
-    --model /workspace/SIA/models/Qwen3-14B \
-    --output results/test_noSIA_selfServer_202605142111.json \
-    --limit 20 > log_noSIA_selfServer_202605142111.txt 2>&1 &
-```
 
 **结果：**
 
@@ -159,21 +89,11 @@ nohup python eval/mmlu_eval.py \
 
 两次实验的结果高度一致：SIA 与 noSIA 的 accuracy 差值均在 1~2 个百分点以内，均在统计误差范围内。这说明 SIA 干预**既没有提升、也没有损害** Qwen3-14B 在 MMLU 上的表现。
 
-这一结果是符合预期的。正如 Ming Wu 所指出的：
-
-> "Value Model 是在 alignment 的场景里训练的，如果实际的场景跟 align 的目标毫无关系，就不会有所谓的提升。"
-
-MMLU 是事实知识类评测，而 VM-Qwen3-4B-Base 是在 Helpfulness（UltraFeedback）和 Harmlessness（WildGuardMix）数据上训练的，训练目标与知识问答没有直接关联。Value Model 无法分辨"选 A 还是选 B 哪个更符合事实"，因此在此类任务上既不能提升，也不应造成干扰。
+这一结果是符合预期的。MMLU 是事实知识类评测，而 VM-Qwen3-4B-Base 是在 Helpfulness（UltraFeedback）和 Harmlessness（WildGuardMix）数据上训练的，训练目标与知识问答没有直接关联。Value Model 无法分辨"选 A 还是选 B 哪个更符合事实"，因此在此类任务上既不能提升，也不应造成干扰。
 
 ### 2. 为何做 MMLU Regression 测试
 
-本次实验的目的**不是期望 SIA 提升 MMLU 准确率**，而是验证 SIA 在与 Value Model 训练目标无关的领域内是否引入负面效果（regression）。
-
-此次测试对应 Jason 所说的：
-
-> "本来也是看有没有 regression。"
-
-结论是：无 regression。
+本次实验的目的**不是期望 SIA 提升 MMLU 准确率**，而是验证 SIA 在与 Value Model 训练目标无关的领域内是否引入负面效果（regression）。结论是：无 regression。
 
 ### 3. noSIA 平均 tokens 更高的原因
 
@@ -210,3 +130,81 @@ INTERVENE 比 SKIP 慢约 **16 倍**，主要原因是当前实现对 topk=5 个
 3. **延迟开销存在，有优化空间**：当前实现中，INTERVENE 步骤比无干预步骤慢约 16 倍，是主要的工程优化方向，但不影响 accuracy 的评测结论。
 
 4. **后续实验建议**：在 SIA Value Model 对口的评测集（AlpacaEval、TruthfulQA、HEx-PHI）上验证 SIA 是否能带来 accuracy/reward 提升，以完整覆盖方案一的验收标准。
+
+---
+
+## Appendix：实验运行命令
+
+### 实验1（limit=3）
+
+**SIA：**
+```bash
+nohup python src/sia_rm_server.py \
+    --rm /workspace/SIA/models/Qwen3-4B \
+    --rm_lora /workspace/SIA/models/VM-Qwen3-4B-Base/VM-Qwen3-4B-Base \
+    --rm_device cuda:0 --port 8001 > log_rm_server_202605141350.txt 2>&1 &
+
+nohup python src/sia_vllm_server.py \
+    --llm /workspace/SIA/models/Qwen3-14B \
+    --rm_url http://localhost:8001 \
+    --llm_gpu_mem 0.6 --topk 5 --weight 1.0 --entropy_threshold 1.0 \
+    --host 0.0.0.0 --port 8000 > log_llm_server_202605141350.txt 2>&1 &
+
+nohup python eval/mmlu_eval.py \
+    --base_url http://localhost:8000/v1 \
+    --model /workspace/SIA/models/Qwen3-14B \
+    --output results/test_SIA_202605141350.json \
+    --limit 3 > log_SIA_202605141350.txt 2>&1 &
+```
+
+**noSIA：**
+```bash
+nohup python src/sia_vllm_server.py \
+    --llm /workspace/SIA/models/Qwen3-14B \
+    --rm_url http://localhost:8001 \
+    --llm_gpu_mem 0.6 --topk 5 --weight 0.0 --entropy_threshold 999999 \
+    --host 0.0.0.0 --port 8000 > log_llm_server_noSIA_202605141540.txt 2>&1 &
+
+nohup python eval/mmlu_eval.py \
+    --base_url http://localhost:8000/v1 \
+    --model /workspace/SIA/models/Qwen3-14B \
+    --output results/test_noSIA_selfServer_202605141540.json \
+    --limit 3 > log_noSIA_selfServer_202605141540.txt 2>&1 &
+```
+
+### 实验2（limit=20）
+
+**SIA：**
+```bash
+nohup python src/sia_rm_server.py \
+    --rm /workspace/SIA/models/Qwen3-4B \
+    --rm_lora /workspace/SIA/models/VM-Qwen3-4B-Base/VM-Qwen3-4B-Base \
+    --rm_device cuda:0 --port 8001 > log_rm_server_SIA_202605142111.txt 2>&1 &
+
+nohup python src/sia_vllm_server.py \
+    --llm /workspace/SIA/models/Qwen3-14B \
+    --rm_url http://localhost:8001 \
+    --llm_gpu_mem 0.6 --topk 5 --weight 1.0 --entropy_threshold 1.0 \
+    --host 0.0.0.0 --port 8000 > log_llm_server_SIA_202605142111.txt 2>&1 &
+
+nohup python eval/mmlu_eval.py \
+    --base_url http://localhost:8000/v1 \
+    --model /workspace/SIA/models/Qwen3-14B \
+    --output results/test_SIA_202605142111.json \
+    --limit 20 > log_SIA_202605142111.txt 2>&1 &
+```
+
+**noSIA：**
+```bash
+nohup python src/sia_vllm_server.py \
+    --llm /workspace/SIA/models/Qwen3-14B \
+    --rm_url http://localhost:8001 \
+    --llm_gpu_mem 0.6 --topk 5 --weight 0.0 --entropy_threshold 999999 \
+    --host 0.0.0.0 --port 8000 > log_llm_server_noSIA_202605142111.txt 2>&1 &
+
+nohup python eval/mmlu_eval.py \
+    --base_url http://localhost:8000/v1 \
+    --model /workspace/SIA/models/Qwen3-14B \
+    --output results/test_noSIA_selfServer_202605142111.json \
+    --limit 20 > log_noSIA_selfServer_202605142111.txt 2>&1 &
+```
