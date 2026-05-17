@@ -12,10 +12,10 @@
 
 | 组件 | 模型 |
 |------|------|
-| LLM | Qwen3-14B（vLLM 部署，`--llm_gpu_mem 0.6`） |
-| Value Model | Qwen3-4B + VM-Qwen3-4B-Base LoRA（`cuda:0`） |
+| LLM | Qwen3-14B（vLLM 部署） |
+| Value Model | Qwen3-4B + VM-Qwen3-4B-Base LoRA |
 
-LLM 与 Value Model 运行在同一块 GPU（cuda:0）上，LLM 占用 60% 显存，Value Model 使用剩余 40%。每次 INTERVENE 步骤中，Value Model 串行占用 GPU 进行打分，LLM 在此期间等待，两者不并行。
+LLM 与 Value Model 运行在同一块 GPU 上，两者均已获得足够的显存（详见 Appendix）。每次 INTERVENE 步骤中，Value Model 串行占用 GPU 进行打分，LLM 在此期间等待，两者不并行。
 
 **SIA 干预参数：**
 
@@ -134,7 +134,20 @@ SIA 的稀疏干预策略将每个生成步骤分为两类：
 
 ---
 
-## Appendix：实验运行命令
+## Appendix
+
+### GPU 显存配置说明
+
+实验所用 GPU 为 **NVIDIA H200，总显存 140.4 GB**。LLM 分配 60% 显存（约 84 GB），Value Model 使用剩余 40%（约 56 GB）：
+
+| 组件 | 分配显存 | 模型权重（bfloat16） | 剩余可用 |
+|------|---------|---------------------|---------|
+| LLM Qwen3-14B（60%） | ~84 GB | 14B × 2B ≈ 28 GB | ~56 GB（用于 KV Cache） |
+| Value Model Qwen3-4B + LoRA（40%） | ~56 GB | 4B × 2B + LoRA ≈ 8.5 GB | ~47 GB |
+
+两个模型的显存均远超实际需求，60%/40% 的分配比例在本机上不产生任何显存压力。
+
+### 实验运行命令
 
 ### SIA 推理
 
