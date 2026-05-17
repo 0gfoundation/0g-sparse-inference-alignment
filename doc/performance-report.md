@@ -56,20 +56,17 @@ LLM 与 Value Model 运行在同一块 GPU 上，两者均已获得足够的显�
 
 **三种跑法的 LLM 计算路径完全一致。**
 
-`sia_vllm_server.py` 内部直接使用 vLLM 的 `AsyncLLMEngine`，KV Cache 机制与原生 vLLM 相同。`SIALogitsProcessor` 是在 LLM 已完成 forward pass、输出 raw logits **之后**才介入的后处理钩子，不会导致 LLM 多跑一次：
+SIA 推理服务内部直接使用 vLLM 的引擎，KV Cache 机制与原生 vLLM 相同。SIA 的干预逻辑是在 LLM 已完成 forward pass、输出原始 logits **之后**才介入的后处理钩子，不会导致 LLM 多跑一次：
 
 ```
-LLM forward（1 token decode，复用 KV Cache）→ raw logits
-  └─ SIALogitsProcessor.apply()  ← 此时 LLM 已算完
+LLM forward（1 token decode，复用 KV Cache）→ 原始 logits
+  └─ SIA 干预逻辑  ← 此时 LLM 已算完
        ├─ [跳过]   直接返回原始 logits           → 耗时 ≈ 16 ms
        └─ [干预]   调用 Value Model 打分 5 次   → 耗时 ≈ 281 ms
 ```
 
 无干预步骤（16.1 ms）与原生 vLLM 单步速度接近，证明 LLM 本身的推理速度在三种跑法下没有差异。**SIA 的性能开销完全来自 Value Model，与 LLM 的 KV Cache 复用无关。**
 
-**两种 noSIA 版本的 2.9% 差距也不是真实的速度差异。**
-
-`sia_vllm_server.py` 的实际总耗时比原生 vLLM 更短，tokens/s 指标略低是因为前者检测到模型输出 `Answer: X` 后立即终止生成，每题输出 token 数更少，并非实际推理速度变慢。
 
 ---
 
@@ -91,7 +88,7 @@ SIA 的稀疏干预策略将每个生成步骤分为两类：
 
 ## 四、性能瓶颈根本原因
 
-有干预步骤慢 17.5 倍的根本原因：`sia_rm_server.py` 的 `/score` 端点对 topk=5 个候选 token **串行**执行了 5 次独立的 Value Model forward pass，每次都包含完整的 prefix（system prompt + question + 已生成内容），GPU 利用率极低：
+有干预步骤慢 17.5 倍的根本原因：Value Model 打分服务对 topk=5 个候选 token **串行**执行了 5 次独立的 Value Model forward pass，每次都包含完整的 prefix（system prompt + question + 已生成内容），GPU 利用率极低：
 
 ```
 当前实现（串行，5 次独立 forward）：
