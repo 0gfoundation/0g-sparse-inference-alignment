@@ -71,8 +71,14 @@ class _ValueModelWrapper(nn.Module):
         else:
             hidden = out.last_hidden_state
 
-        token_rewards = self.token_reward_head(hidden.float()).squeeze(-1)
-        logits = token_rewards[:, -1].unsqueeze(-1)
+        token_rewards = self.token_reward_head(hidden.float()).squeeze(-1)  # (batch, seq)
+        if attention_mask is not None:
+            seq_lens = attention_mask.sum(dim=1) - 1       # (batch,)
+            logits = token_rewards[
+                torch.arange(token_rewards.size(0)), seq_lens
+            ].unsqueeze(-1)                                # (batch, 1)
+        else:
+            logits = token_rewards[:, -1].unsqueeze(-1)
         return _ValueModelOutput(logits=logits)
 
 
@@ -101,6 +107,8 @@ def _load_rm_base(rm_path: str, device: str):
         trust_remote_code=True,
     ).to(device)
     model.config.pad_token_id = tok.eos_token_id
+    if tok.pad_token_id is None:
+        tok.pad_token_id = tok.eos_token_id
     return model, tok
 
 
@@ -129,6 +137,8 @@ def _load_rm_with_lora(rm_path: str, rm_lora_path: str, device: str):
     token_reward_head.load_state_dict(head_state['token_reward_head'])
 
     tok = AutoTokenizer.from_pretrained(rm_path, trust_remote_code=True)
+    if tok.pad_token_id is None:
+        tok.pad_token_id = tok.eos_token_id
     model = _ValueModelWrapper(base_model, token_reward_head).to(device)
     return model, tok
 
@@ -165,7 +175,7 @@ def get_status():
 def score(req: ScoreRequest):
     with _rm_lock:
         bos = _rm_tok.bos_token
-        scores = []
+        texts = []
         for cand_text in req.candidate_texts:
             response_with_cand = req.response_so_far + cand_text
             convs = [
@@ -175,18 +185,20 @@ def score(req: ScoreRequest):
             rm_text = _rm_tok.apply_chat_template(convs, tokenize=False)
             if bos and rm_text.startswith(bos):
                 rm_text = rm_text[len(bos):]
+            texts.append(rm_text)
 
-            encoded = _rm_tok(
-                rm_text,
-                return_tensors="pt",
-                truncation=True,
-                max_length=2048,
-            ).to(_rm_device)
+        encoded = _rm_tok(
+            texts,
+            return_tensors="pt",
+            padding=True,
+            truncation=True,
+            max_length=2048,
+        ).to(_rm_device)
 
-            with torch.no_grad():
-                rm_out = _rm_model(**encoded)
-            scores.append(rm_out.logits.flatten()[0].item())
-            del rm_out, encoded
+        with torch.no_grad():
+            rm_out = _rm_model(**encoded)
+
+        scores = rm_out.logits.flatten().tolist()
 
     return {"scores": scores}
 
