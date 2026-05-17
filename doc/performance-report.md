@@ -127,11 +127,9 @@ SIA 的稀疏干预策略将每个生成步骤分为两类：
 
 ## 结论
 
-1. **推理大模型（LLM）的 KV Cache 在三种跑法下均正常复用**：`SIALogitsProcessor` 在 LLM forward pass 完成后才介入，不影响 LLM 本身的推理速度。两种 noSIA 版本的实际总耗时相差不到 4%，差异源于早停逻辑导致的 token 数不同，而非真实速度差异。
+1. **两组 noSIA 实验证明 hook vLLM 方案本身不引入额外开销**：`sia_vllm_server.py`（hook vLLM）与原生 vLLM 的实际总耗时相差不到 4%，说明将 `SIALogitsProcessor` 挂载到 vLLM 的 logits 处理流程这一操作本身，对推理大模型的 KV Cache 复用和整体吞吐量没有影响。由此可得出明确推论：同样使用 hook vLLM 方案的 SIA 实验中，**7.5 倍的延迟增幅完全来自 Value Model 的打分开销，而非推理大模型**。
 
-2. **`sia_vllm_server.py` 封装 overhead 可忽略**：与原生 vLLM 吞吐量差距 < 3%，HTTP server 层不是瓶颈。
-
-2. **SIA 开启后吞吐量下降约 7.5 倍**：从 84.3 降至 11.3 tokens/s，瓶颈完全来自 Value Model 串行 forward pass。
+2. **SIA 开启后吞吐量下降约 7.5 倍**：从 84.3 降至 11.3 tokens/s，瓶颈完全来自 Value Model 对 topk=5 个候选 token 的串行 forward pass（每次干预耗时 ≈ 281 ms）。
 
 3. **稀疏策略有效减少了干预频率**：在 `entropy_threshold=1.0` 下，约 72.7% 的 token 生成步骤直接跳过 Value Model（仅 27.3% 触发干预），否则全量干预的吞吐量将进一步降低至约 3.6 tokens/s。
 
