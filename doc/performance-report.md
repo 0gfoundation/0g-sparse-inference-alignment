@@ -43,7 +43,7 @@ LLM 与 Value Model 运行在同一块 GPU 上，两者均已获得足够的显�
 
 **结论：**
 
-- noSIA 两种跑法几乎相同（84.3 vs 86.8 tokens/s，差距 < 3%），说明 `sia_vllm_server.py` 本身的 HTTP 封装 overhead 可以忽略不计。
+- noSIA 两种跑法几乎相同（84.3 vs 86.8 tokens/s，差距 < 3%），说明 SIA 推理服务本身的 HTTP 封装 overhead 可以忽略不计。
 - SIA 开启后吞吐量降至 11.3 tokens/s，约为 noSIA 的 **1/7.5**，瓶颈完全来自 Value Model 逐步打分的开销。
 
 ---
@@ -52,7 +52,7 @@ LLM 与 Value Model 运行在同一块 GPU 上，两者均已获得足够的显�
 
 **LLM 的每个 decode step 只处理 1 个新 token。**
 
-现代 LLM 推理引擎（包括 vLLM）采用 **KV Cache** 机制：输入序列在首次进入模型时完成一次 Prefill，将所有 token 的 Key/Value 矩阵缓存到显存；此后每个 decode step 只需将新生成的 1 个 token 送入模型，attention 直接读取缓存，无需重新计算整个序列。因此，不论已生成多少 token，每个 decode step 的计算量都基本固定。
+现代 LLM 推理引擎（包括 vLLM）采用 **KV Cache** 机制：输入序列在首次进入模型时完成一次 Prefill，将所有 token 的 Key/Value 矩阵缓存到显存；此后每个 decode step 只需将新生成的 1 个 token 送入模型，attention 直接读取缓存，无需重新计算整个序列。因此，每个 decode step 只需计算新 token 与已缓存 KV 的 attention，避免了对 prefix 的重复计算，计算量随序列长度增长缓慢，远低于每步重新计算整个序列的开销。
 
 **三种跑法的 LLM 计算路径完全一致。**
 
