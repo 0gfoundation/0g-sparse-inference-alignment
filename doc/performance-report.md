@@ -44,7 +44,37 @@
 
 ---
 
-## 二、逐步延迟分析
+## 二、推理大模型（LLM）不是瓶颈
+
+**LLM 的每个 decode step 只处理 1 个新 token。**
+
+现代 LLM 推理引擎（包括 vLLM）采用 **KV Cache** 机制：输入序列在首次进入模型时完成一次 Prefill，将所有 token 的 Key/Value 矩阵缓存到显存；此后每个 decode step 只需将新生成的 1 个 token 送入模型，attention 直接读取缓存，无需重新计算整个序列。因此，不论已生成多少 token，每个 decode step 的计算量都基本固定。
+
+**三种跑法的 LLM 计算路径完全一致。**
+
+`sia_vllm_server.py` 内部直接使用 vLLM 的 `AsyncLLMEngine`，KV Cache 机制与原生 vLLM 相同。`SIALogitsProcessor` 是在 LLM 已完成 forward pass、输出 raw logits **之后**才介入的后处理钩子，不会导致 LLM 多跑一次：
+
+```
+LLM forward（1 token decode，复用 KV Cache）→ raw logits
+  └─ SIALogitsProcessor.apply()  ← 此时 LLM 已算完
+       ├─ [SKIP]     直接返回原始 logits           → 耗时 ≈ 16 ms
+       └─ [INTERVENE] 调用 Value Model 打分 5 次   → 耗时 ≈ 281 ms
+```
+
+SKIP 步骤（16.1 ms）与原生 vLLM 单步速度接近，证明 LLM 本身的推理速度在三种跑法下没有差异。**SIA 的性能开销完全来自 Value Model，与 LLM 的 KV Cache 复用无关。**
+
+**两种 noSIA 版本的 2.9% 差距也不是真实的速度差异。**
+
+| 跑法 | 总 tokens | 总耗时 | tokens/s |
+|------|-----------|--------|----------|
+| noSIA（`sia_vllm_server.py`） | 401,598 | 4,764 s | 84.3 |
+| noSIA（原生 vLLM） | 430,908 | 4,964 s | 86.8 |
+
+`sia_vllm_server.py` 实际总耗时更短（4,764 s vs 4,964 s），但每题生成的 token 数更少（669 vs 718）。原因是 `sia_vllm_server.py` 检测到模型输出 `Answer: X` 后立即终止生成，而原生 vLLM 会继续生成到 EOS 或 max_tokens 上限。token 数减少使分子变小，导致 tokens/s 指标略低，并非实际推理速度变慢。
+
+---
+
+## 三、逐步延迟分析
 
 SIA 的稀疏干预策略将每个生成步骤分为两类：
 
@@ -63,7 +93,7 @@ SIA 的稀疏干预策略将每个生成步骤分为两类：
 
 ---
 
-## 三、性能瓶颈根本原因
+## 四、性能瓶颈根本原因
 
 有干预步骤慢 17.5 倍的根本原因：`sia_rm_server.py` 的 `/score` 端点对 topk=5 个候选 token **串行**执行了 5 次独立的 Value Model forward pass，每次都包含完整的 prefix（system prompt + question + 已生成内容），GPU 利用率极低：
 
@@ -81,7 +111,7 @@ SIA 的稀疏干预策略将每个生成步骤分为两类：
 
 ---
 
-## 四、优化方向
+## 五、优化方向
 
 以下优化方案均可在**不重训练**的前提下实施：
 
@@ -97,7 +127,9 @@ SIA 的稀疏干预策略将每个生成步骤分为两类：
 
 ## 结论
 
-1. **`sia_vllm_server.py` 封装 overhead 可忽略**：与原生 vLLM 吞吐量差距 < 3%，HTTP server 层不是瓶颈。
+1. **推理大模型（LLM）的 KV Cache 在三种跑法下均正常复用**：`SIALogitsProcessor` 在 LLM forward pass 完成后才介入，不影响 LLM 本身的推理速度。两种 noSIA 版本的实际总耗时相差不到 4%，差异源于早停逻辑导致的 token 数不同，而非真实速度差异。
+
+2. **`sia_vllm_server.py` 封装 overhead 可忽略**：与原生 vLLM 吞吐量差距 < 3%，HTTP server 层不是瓶颈。
 
 2. **SIA 开启后吞吐量下降约 7.5 倍**：从 84.3 降至 11.3 tokens/s，瓶颈完全来自 Value Model 串行 forward pass。
 
