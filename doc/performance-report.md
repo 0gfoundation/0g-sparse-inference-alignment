@@ -144,6 +144,27 @@ SIA 的稀疏干预策略将每个生成步骤分为两类：
 
 两个模型的显存均远超实际需求，60%/40% 的分配比例在本机上不产生任何显存压力。
 
+### SIA 挂载 vLLM 的实现原理
+
+vLLM 提供 `LogitsProcessor` 接口，允许在每个 decode step 的 LLM forward pass 完成后、采样之前，对输出的 logits 进行自定义修改。SIA 通过实现 `SIALogitsProcessor` 接入这一接口：
+
+**执行流程（每个 decode step）：**
+
+1. vLLM 完成本步的 LLM forward pass，输出当前 batch 内所有请求的 raw logits
+2. vLLM 调用 `SIALogitsProcessor.apply()`，传入 logits 和当前生成状态
+3. Processor 对每个请求计算当前 token 分布的熵：
+   - 熵低于 `entropy_threshold`（模型已较确定）→ **直接返回原始 logits**，跳过干预
+   - 熵高于阈值（模型不确定）→ 取 top-k 候选 token，调用 RM server 的 `/score` 端点打分
+4. RM server 对每个候选 token 拼接完整上下文后运行 Value Model，返回 k 个分数
+5. Processor 将分数乘以 `weight` 后叠加到对应的 logits 位置，返回修改后的 logits
+6. vLLM 从修改后的分布中采样，生成本步 token
+
+**状态管理：**
+
+Processor 内部维护一个 per-request 的状态字典，记录每个请求的用户输入和已生成的 token 序列。vLLM 在每个 step 通过 batch update 通知 Processor 请求的增减，Processor 据此同步状态，确保 Value Model 的输入（上下文 + 候选 token）始终准确。
+
+noSIA 版本（`--weight 0.0 --entropy_threshold 999999`）同样经过这套流程，但每步均因熵低于阈值而直接跳过，等价于标准 vLLM 推理。
+
 ### 吞吐量加权验证
 
 ```
