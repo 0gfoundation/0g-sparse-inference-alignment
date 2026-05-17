@@ -15,6 +15,8 @@
 | LLM | Qwen3-14B（vLLM 部署，`--llm_gpu_mem 0.6`） |
 | Value Model | Qwen3-4B + VM-Qwen3-4B-Base LoRA（`cuda:0`） |
 
+LLM 与 Value Model 运行在同一块 GPU（cuda:0）上，LLM 占用 60% 显存，Value Model 使用剩余 40%。每次 INTERVENE 步骤中，Value Model 串行占用 GPU 进行打分，LLM 在此期间等待，两者不并行。
+
 **SIA 干预参数：**
 
 | 参数 | 值 | 说明 |
@@ -31,11 +33,11 @@
 
 三种跑法在相同评测集下的整体吞吐量：
 
-| 跑法 | 总 tokens | 吞吐量（tokens/s） |
-|------|-----------|--------------------|
-| SIA（`sia_vllm_server.py`，干预开启） | 239,389 | **11.3** |
-| noSIA（`sia_vllm_server.py`，干预关闭） | 401,598 | **84.3** |
-| noSIA（原生 vLLM，不经过 `sia_vllm_server`） | 430,908 | **86.8** |
+| 跑法 | 吞吐量（tokens/s） |
+|------|-------------------|
+| SIA（`sia_vllm_server.py`，干预开启） | **11.3** |
+| noSIA（`sia_vllm_server.py`，干预关闭） | **84.3** |
+| noSIA（原生 vLLM，不经过 `sia_vllm_server`） | **86.8** |
 
 **结论：**
 
@@ -65,12 +67,7 @@ SKIP 步骤（16.1 ms）与原生 vLLM 单步速度接近，证明 LLM 本身的
 
 **两种 noSIA 版本的 2.9% 差距也不是真实的速度差异。**
 
-| 跑法 | 总 tokens | 总耗时 | tokens/s |
-|------|-----------|--------|----------|
-| noSIA（`sia_vllm_server.py`） | 401,598 | 4,764 s | 84.3 |
-| noSIA（原生 vLLM） | 430,908 | 4,964 s | 86.8 |
-
-`sia_vllm_server.py` 实际总耗时更短（4,764 s vs 4,964 s），但每题生成的 token 数更少（669 vs 718）。原因是 `sia_vllm_server.py` 检测到模型输出 `Answer: X` 后立即终止生成，而原生 vLLM 会继续生成到 EOS 或 max_tokens 上限。token 数减少使分子变小，导致 tokens/s 指标略低，并非实际推理速度变慢。
+`sia_vllm_server.py` 的实际总耗时比原生 vLLM 更短，tokens/s 指标略低是因为前者检测到模型输出 `Answer: X` 后立即终止生成，每题输出 token 数更少，并非实际推理速度变慢。
 
 ---
 
@@ -106,8 +103,6 @@ SIA 的稀疏干预策略将每个生成步骤分为两类：
   候选 token_5 → Value Model forward → score_5   ╝
   耗时 ≈ 281 ms
 ```
-
-相比之下，SKIP 步骤（16.1 ms）只需一次正常的 vLLM forward，与原生推理速度接近，说明 LLM 本身的推理速度并不是瓶颈。
 
 ---
 
