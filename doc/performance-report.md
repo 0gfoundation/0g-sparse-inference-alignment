@@ -15,7 +15,7 @@
 | LLM | Qwen3-14B（vLLM 部署） |
 | Value Model | Qwen3-4B + VM-Qwen3-4B-Base LoRA |
 
-LLM 与 Value Model 运行在同一块 GPU 上，两者均已获得足够的显存（详见 Appendix）。每次 INTERVENE 步骤中，Value Model 串行占用 GPU 进行打分，LLM 在此期间等待，两者不并行。
+LLM 与 Value Model 运行在同一块 GPU 上，两者均已获得足够的显存（详见 Appendix）。每次触发干预的步骤中，Value Model 串行占用 GPU 进行打分，LLM 在此期间等待，两者不并行。
 
 **SIA 干预参数：**
 
@@ -59,11 +59,11 @@ LLM 与 Value Model 运行在同一块 GPU 上，两者均已获得足够的显�
 ```
 LLM forward（1 token decode，复用 KV Cache）→ raw logits
   └─ SIALogitsProcessor.apply()  ← 此时 LLM 已算完
-       ├─ [SKIP]     直接返回原始 logits           → 耗时 ≈ 16 ms
-       └─ [INTERVENE] 调用 Value Model 打分 5 次   → 耗时 ≈ 281 ms
+       ├─ [跳过]   直接返回原始 logits           → 耗时 ≈ 16 ms
+       └─ [干预]   调用 Value Model 打分 5 次   → 耗时 ≈ 281 ms
 ```
 
-SKIP 步骤（16.1 ms）与原生 vLLM 单步速度接近，证明 LLM 本身的推理速度在三种跑法下没有差异。**SIA 的性能开销完全来自 Value Model，与 LLM 的 KV Cache 复用无关。**
+无干预步骤（16.1 ms）与原生 vLLM 单步速度接近，证明 LLM 本身的推理速度在三种跑法下没有差异。**SIA 的性能开销完全来自 Value Model，与 LLM 的 KV Cache 复用无关。**
 
 **两种 noSIA 版本的 2.9% 差距也不是真实的速度差异。**
 
@@ -77,8 +77,8 @@ SIA 的稀疏干预策略将每个生成步骤分为两类：
 
 | 步骤类型 | 步数 | 占比 | 平均延迟/step | 吞吐量（tokens/s） |
 |---------|------|------|-------------|-------------------|
-| SKIP（熵低，直接跳过 Value Model） | 174,226 | **72.7%** | 16.1 ms | **62.2** |
-| INTERVENE（调用 Value Model 打分） | 65,503 | **27.3%** | 281.0 ms | **3.6** |
+| 无干预（熵低，直接跳过 Value Model） | 174,226 | **72.7%** | 16.1 ms | **62.2** |
+| 有干预（调用 Value Model 打分） | 65,503 | **27.3%** | 281.0 ms | **3.6** |
 | 倍数 | — | — | **17.5x** | — |
 
 *注：干预比例与任务类型和 `--topk` 参数有关。本次测试（MMLU，topk=5）测得干预比例为 27.3%；在 AlpacaEval 实验（topk=10）中测得干预比例为 16.14%，两者差异主要来自任务类型不同——MMLU 推理链中高熵 token 比例更高。*
@@ -112,13 +112,13 @@ SIA 的稀疏干预策略将每个生成步骤分为两类：
 
 以下优化方案均可在**不重训练**的前提下实施，预期延迟为**理论估算**：
 
-| 方案 | 核心思路 | 预期 INTERVENE 延迟 | 实现难度 |
+| 方案 | 核心思路 | 预期有干预步骤延迟 | 实现难度 |
 |------|---------|---------------------|---------|
 | **1. 批量 forward** | 将 k 个候选组成 batch，一次 forward 完成 | ~70–100 ms | 极低（约 20 行改动） |
 | **2. KV cache prefix 共享** | k 个候选共享相同 prefix 的 KV states，仅对最后 1 token 做 decode | ~40–60 ms | 中 |
 | **3. SGLang 作为 RM Server** | SGLang RadixAttention 自动复用共享 prefix KV，无需手写缓存逻辑 | ~50 ms | 中 |
 
-方案 1 为最优先项：改动最小，预期可将 INTERVENE 延迟从 281 ms 降至 70–100 ms，整体吞吐量有望从 11.3 提升至 20–30 tokens/s（约 2–3x 提升）。
+方案 1 为最优先项：改动最小，预期可将有干预步骤的延迟从 281 ms 降至 70–100 ms，整体吞吐量有望从 11.3 提升至 20–30 tokens/s（约 2–3x 提升）。
 
 ---
 
