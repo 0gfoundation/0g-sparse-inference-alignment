@@ -65,10 +65,16 @@ class _ValueModelWrapper(nn.Module):
         else:
             backbone = self.base_model
 
+        # 在 backbone 调用前记录前缀长度（backbone 会原地扩展 cache，之后读就不准了）
+        prefix_kv_len = _kv_seq_len(past_key_values)
+
+        # 新版 HF backbone 要求 Cache 对象，不接受 legacy tuple
+        kv_for_backbone = _to_dynamic_cache(past_key_values)
+
         out = backbone(
             input_ids=input_ids,
             attention_mask=attention_mask,
-            past_key_values=past_key_values,
+            past_key_values=kv_for_backbone,
             use_cache=use_cache,
             output_hidden_states=True,
         )
@@ -86,7 +92,6 @@ class _ValueModelWrapper(nn.Module):
             # KV cache 模式：token_rewards 只包含 diff tokens 的 hidden states
             # 找 diff 中最后一个有效 token 的位置
             if attention_mask is not None:
-                prefix_kv_len = past_key_values[0][0].shape[2]
                 diff_mask = attention_mask[:, prefix_kv_len:]
                 diff_lens = diff_mask.sum(dim=1) - 1
                 logits = token_rewards[
@@ -143,6 +148,35 @@ def _to_legacy_tuple(past_kv):
     return past_kv
 
 
+def _to_dynamic_cache(past_kv):
+    """将 legacy tuple 转为 DynamicCache（新版 HF backbone 要求 Cache 对象）。"""
+    if past_kv is None:
+        return None
+    try:
+        from transformers.cache_utils import DynamicCache
+    except ImportError:
+        return past_kv  # 旧版 HF，不需要转换
+    if isinstance(past_kv, DynamicCache):
+        return past_kv
+    # legacy tuple: ((K0,V0), (K1,V1), ...) → DynamicCache
+    if isinstance(past_kv, tuple):
+        return DynamicCache.from_legacy_cache(past_kv)
+    return past_kv
+
+
+def _kv_seq_len(past_kv) -> int:
+    """从 past_key_values（任意格式）中读取已缓存的序列长度。"""
+    if past_kv is None:
+        return 0
+    if isinstance(past_kv, tuple) and len(past_kv) > 0:
+        return past_kv[0][0].shape[2]
+    if hasattr(past_kv, 'key_cache') and past_kv.key_cache:
+        return past_kv.key_cache[0].shape[-2]
+    if hasattr(past_kv, 'get_seq_length'):
+        return past_kv.get_seq_length()
+    return 0
+
+
 def _find_common_prefix(seqs: list) -> list:
     """找到多个 token ID 序列的最长公共前缀。"""
     if not seqs:
@@ -185,7 +219,7 @@ def _get_prefix_kv(prefix_ids: list, request_id: str):
                 out = _rm_model(
                     input_ids=ext_tensor,
                     attention_mask=attn_mask,
-                    past_key_values=cached["past_key_values"],
+                    past_key_values=_to_dynamic_cache(cached["past_key_values"]),
                     use_cache=True,
                 )
             new_past_kv = _to_legacy_tuple(getattr(out, 'past_key_values', None))
@@ -243,13 +277,13 @@ def _score_with_kv_cache(prefix_kv: tuple, diff_seqs: list, prefix_len: int) -> 
     for i, d in enumerate(diff_seqs):
         attn_mask[i, prefix_len:prefix_len + len(d)] = 1
 
-    # 将 batch=1 的 KV 扩展到 batch=k
-    # prefix_kv: tuple of (K, V) per layer，K/V shape: (1, num_kv_heads, seq_len, head_dim)
-    batch_past_kv = tuple(
+    # 将 batch=1 的 KV 扩展到 batch=k，并转为 DynamicCache（新版 HF 要求）
+    # prefix_kv 是 legacy tuple: ((K0,V0),(K1,V1),...), K/V shape: (1,heads,seq,head_dim)
+    batch_past_kv = _to_dynamic_cache(tuple(
         (k_val.expand(k, -1, -1, -1).contiguous(),
          v_val.expand(k, -1, -1, -1).contiguous())
         for k_val, v_val in prefix_kv
-    )
+    ))
 
     with torch.no_grad():
         rm_out = _rm_model(
