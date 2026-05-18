@@ -22,6 +22,7 @@ SIA per-token 干预（HTTP RM Server 版本）- vLLM v1 engine 版本
 """
 
 import argparse
+import hashlib
 import re
 import requests
 import time
@@ -279,6 +280,7 @@ def make_sia_processor(
                     "user_content": user_content,
                     "response_so_far": response_so_far,
                     "candidate_texts": candidate_texts,
+                    "request_id": hashlib.md5(user_content.encode()).hexdigest()[:16],
                 },
                 timeout=30,
             )
