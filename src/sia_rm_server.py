@@ -24,6 +24,7 @@ Usage:
 import argparse
 import os
 import threading
+import time
 from typing import Optional
 
 import torch
@@ -396,7 +397,7 @@ class ScoreRequest(BaseModel):
     user_content: str
     response_so_far: str
     candidate_texts: list[str]
-    request_id: Optional[str] = None   # 用于 KV prefix cache 命中判断
+    request_id: Optional[str] = None   # 保留兼容性，当前未使用
 
 
 class ReloadRequest(BaseModel):
@@ -416,6 +417,7 @@ def get_status():
 
 @app.post("/score")
 def score(req: ScoreRequest):
+    t0 = time.time()
     with _rm_lock:
         bos = _rm_tok.bos_token
         texts = []
@@ -430,13 +432,7 @@ def score(req: ScoreRequest):
                 rm_text = rm_text[len(bos):]
             texts.append(rm_text)
 
-        # 优先走 KV prefix cache 路径（request_id 存在时）
-        if req.request_id is not None:
-            scores = _try_score_with_kv_cache(texts, req.request_id)
-            if scores is not None:
-                return {"scores": scores}
-
-        # Fallback：batch forward（原有逻辑）
+        t_tok = time.time()
         encoded = _rm_tok(
             texts,
             return_tensors="pt",
@@ -444,12 +440,23 @@ def score(req: ScoreRequest):
             truncation=True,
             max_length=2048,
         ).to(_rm_device)
+        t_enc = time.time()
 
         with torch.no_grad():
             rm_out = _rm_model(**encoded)
+        t_fwd = time.time()
 
         scores = rm_out.logits.flatten().tolist()
 
+    seq_len = encoded["input_ids"].shape[1]
+    print(
+        f"[RM] score: tok={int((t_tok-t0)*1000)}ms"
+        f"  enc={int((t_enc-t_tok)*1000)}ms"
+        f"  fwd={int((t_fwd-t_enc)*1000)}ms"
+        f"  seq_len={seq_len}"
+        f"  k={len(texts)}",
+        flush=True,
+    )
     return {"scores": scores}
 
 
