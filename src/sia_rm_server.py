@@ -69,13 +69,11 @@ class _ValueModelWrapper(nn.Module):
             attention_mask=attention_mask,
             past_key_values=kv_in,
             use_cache=use_cache,
-            output_hidden_states=True,
+            output_hidden_states=False,
         )
 
         if isinstance(out, tuple):
             hidden = out[0]
-        elif hasattr(out, 'hidden_states') and out.hidden_states is not None:
-            hidden = out.hidden_states[-1]
         else:
             hidden = out.last_hidden_state
 
@@ -131,6 +129,9 @@ _BPE_TRIM = 5
 
 # 统计 hit/miss（仅用于日志）
 _kv_stats = {"hit": 0, "miss": 0}
+
+# 是否启用 torch.compile（CLI --compile 时置 True）
+_compile_mode: bool = False
 
 
 # ---------------------------------------------------------------------------
@@ -416,6 +417,71 @@ def _load_rm_with_lora(rm_path: str, rm_lora_path: str, device: str):
 
 
 # ---------------------------------------------------------------------------
+# torch.compile 辅助
+# ---------------------------------------------------------------------------
+
+def _apply_compile_and_warmup(model, tok, device: str):
+    """
+    对 model 应用 torch.compile 并执行 warmup forward，触发 JIT 编译。
+
+    torch.compile 消除 PyTorch kernel launch overhead（~36ms → ~5ms），
+    使 KV cache 的 short-sequence forward 真正受益。
+    首次 warmup 约需 20-60s，后续调用无额外开销。
+    """
+    import torch._dynamo
+    # 遇到不支持的 op 时使用 graph break 而非报错
+    torch._dynamo.config.suppress_errors = True
+
+    print("[RM] Applying torch.compile(dynamic=True, fullgraph=False)...", flush=True)
+    compiled = torch.compile(model, dynamic=True, fullgraph=False)
+
+    print("[RM] Running warmup pass 1/2: standard forward (may take 20-60s)...", flush=True)
+    dummy_texts = ["Warmup forward pass for torch.compile kernel fusion."] * 5
+    enc = tok(
+        dummy_texts, return_tensors="pt", padding=True,
+        truncation=True, max_length=64,
+    ).to(device)
+    with torch.no_grad():
+        out1 = compiled(**enc, use_cache=True)
+        _ = compiled(**enc, use_cache=True)
+
+    # 用 pass-1 产出的 KV cache 触发 KV-cache HIT 路径的编译
+    print("[RM] Running warmup pass 2/2: KV cache HIT forward...", flush=True)
+    raw_kv = getattr(out1, 'past_key_values', None)
+    if raw_kv is not None:
+        try:
+            from transformers.cache_utils import DynamicCache
+            kv_dc = _to_dynamic_cache(raw_kv)
+            if kv_dc is not None:
+                prefix_len = _dc_seq_len(kv_dc) - 4  # 留 4 个 token 作为 diff
+                if prefix_len > 0:
+                    prefix_dc = _dc_extract_batch0_trim(kv_dc, prefix_len)
+                    if prefix_dc is not None:
+                        batch_dc = _dc_expand_batch(prefix_dc, 5)
+                        diff_ids = torch.zeros((5, 4), dtype=torch.long, device=device)
+                        full_len = prefix_len + 4
+                        attn_mask = torch.ones((5, full_len), dtype=torch.long, device=device)
+                        with torch.no_grad():
+                            _ = compiled(
+                                input_ids=diff_ids,
+                                attention_mask=attn_mask,
+                                past_key_values=batch_dc,
+                                use_cache=True,
+                            )
+                            _ = compiled(
+                                input_ids=diff_ids,
+                                attention_mask=attn_mask,
+                                past_key_values=batch_dc,
+                                use_cache=True,
+                            )
+        except Exception as e:
+            print(f"[RM] KV cache warmup skipped ({e})", flush=True)
+
+    print("[RM] torch.compile warmup complete.", flush=True)
+    return compiled
+
+
+# ---------------------------------------------------------------------------
 # FastAPI app
 # ---------------------------------------------------------------------------
 
@@ -465,9 +531,10 @@ def score(req: ScoreRequest):
 
         path = "baseline"
         if req.request_id is not None:
+            _hit_before = _kv_stats["hit"]
             scores = _try_score_with_kv_cache(texts, req.request_id)
             if scores is not None:
-                path = "kv_hit" if _kv_stats["hit"] > _kv_stats["miss"] else "kv_miss"
+                path = "kv_hit" if _kv_stats["hit"] > _hit_before else "kv_miss"
             else:
                 scores = None
         else:
@@ -521,6 +588,8 @@ def reload_rm(req: ReloadRequest):
         else:
             _rm_model, _rm_tok = _load_rm_base(req.rm, _rm_device)
         _rm_model.eval()
+        if _compile_mode:
+            _rm_model = _apply_compile_and_warmup(_rm_model, _rm_tok, _rm_device)
 
         _status["status"] = "ready"
         _status["rm"] = req.rm
@@ -541,18 +610,22 @@ def parse_args():
     p.add_argument("--rm_device", default="cuda:0")
     p.add_argument("--host",      default="0.0.0.0")
     p.add_argument("--port",      type=int, default=8001)
+    p.add_argument("--compile",   action="store_true",
+                   help="启用 torch.compile 加速推理（消除 kernel launch overhead，建议与 KV cache 一起使用）")
     return p.parse_args()
 
 
 def main():
-    global _rm_model, _rm_tok, _rm_device
+    global _rm_model, _rm_tok, _rm_device, _compile_mode
     args = parse_args()
     _rm_device = args.rm_device
+    _compile_mode = args.compile
 
     print("=" * 60)
     print(f"RM       : {args.rm}  device={args.rm_device}")
     if args.rm_lora:
         print(f"RM LoRA  : {args.rm_lora}")
+    print(f"Compile  : {args.compile}")
     print(f"Server   : http://{args.host}:{args.port}")
     print("=" * 60)
 
@@ -561,6 +634,8 @@ def main():
     else:
         _rm_model, _rm_tok = _load_rm_base(args.rm, args.rm_device)
     _rm_model.eval()
+    if args.compile:
+        _rm_model = _apply_compile_and_warmup(_rm_model, _rm_tok, args.rm_device)
 
     _status["status"] = "ready"
     _status["rm"] = args.rm
