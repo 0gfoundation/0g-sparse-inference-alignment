@@ -263,15 +263,15 @@ def _score_with_prefix_kv(
 
 def _try_score_with_kv_cache(texts: list, request_id: str) -> Optional[list]:
     """
-    尝试用跨步 KV cache 打分。
-    - HIT：只做 1 次 forward（batch=k, seq=extension+diff），比 baseline 更快
-    - MISS：做 1 次标准 batch forward（与 baseline 相同），同时提取并缓存前缀 KV
-    任何情况都不会做 2 次 forward。
+    尝试用跨步 KV cache 打分。优先级：
+      HIT ：1 pass (batch=k, seq≈8)                 最快，O(8×N)，与 N 无关
+      MISS：2 pass (batch=1, seq=N) + (batch=k, seq≈8)  O(N/k + 8)，约 5× 快于 batch=k full
+    返回 None → score() 降级到 baseline (batch=k, seq=N 完整 forward)。
     """
     global _req_kv
 
+    # ── Tokenize（不 padding，保持原始 IDs 用于前缀匹配） ──────────────────────
     try:
-        # Step 1: tokenize（不 padding，保留原始长度）
         encoded_list = [
             _rm_tok(
                 t, return_tensors="pt", truncation=True,
@@ -279,89 +279,84 @@ def _try_score_with_kv_cache(texts: list, request_id: str) -> Optional[list]:
             ).input_ids[0].tolist()
             for t in texts
         ]
-
-        # Step 2: 找 k 个候选的公共前缀，再修剪末尾 _BPE_TRIM 个 token 以消除边界影响
         raw_prefix = _find_common_prefix(encoded_list)
         stable_len = len(raw_prefix) - _BPE_TRIM
         if stable_len < 16:
-            return None  # 前缀太短，不走 KV cache
+            return None
         stable_prefix = raw_prefix[:stable_len]
+        bpe_tail = raw_prefix[stable_len:]
+    except Exception as e:
+        print(f"[RM] tokenize failed ({e})", flush=True)
+        return None
 
+    # ── HIT path：复用上一步缓存的 prefix KV ──────────────────────────────────
+    try:
         state = _req_kv.get(request_id)
-
         if state is not None:
             cached_ids = state["prefix_ids"]
-            # 检查 stable_prefix 是否是缓存前缀的单调扩展
             if (len(cached_ids) <= len(stable_prefix)
                     and stable_prefix[:len(cached_ids)] == cached_ids):
 
                 prefix_dc = state["kv"]
                 cached_len = _dc_seq_len(prefix_dc)
-
-                # extension = 从上次缓存位置到当前 stable_prefix 末尾的新 token
                 extension = stable_prefix[len(cached_ids):]
-                # diff_seqs = extension + per-candidate tokens
-                # raw_prefix[stable_len:] 是被 trim 掉的 BPE 边界 token，也要放进 diff
-                bpe_tail = raw_prefix[stable_len:]
                 diff_seqs = [
                     extension + bpe_tail + e[len(raw_prefix):]
                     for e in encoded_list
                 ]
 
-                if any(len(d) == 0 for d in diff_seqs):
-                    return None
-
-                # 单次 forward：extension + diff，更新 cache 到 stable_prefix 末尾
-                scores, new_dc = _score_with_prefix_kv(
-                    prefix_dc,
-                    cached_len,
-                    diff_seqs,
-                    update_len=len(extension),
-                )
-
-                if new_dc is not None:
-                    _req_kv[request_id] = {
-                        "prefix_ids": stable_prefix,
-                        "kv": new_dc,
-                    }
-
-                _kv_stats["hit"] += 1
-                return scores
-
+                if all(len(d) > 0 for d in diff_seqs):
+                    scores, new_dc = _score_with_prefix_kv(
+                        prefix_dc, cached_len, diff_seqs,
+                        update_len=len(extension),
+                    )
+                    if new_dc is not None:
+                        _req_kv[request_id] = {
+                            "prefix_ids": stable_prefix,
+                            "kv": new_dc,
+                        }
+                    _kv_stats["hit"] += 1
+                    return scores
     except Exception as e:
-        print(f"[RM] KV cache hit path failed ({e}), trying miss path", flush=True)
+        print(f"[RM] KV HIT failed ({e}), trying MISS", flush=True)
 
-    # MISS：标准 batch forward（与 baseline 相同速度），但顺便提取前缀 KV
+    # ── Optimized MISS：batch=1 只处理 stable_prefix，再 batch=k 只处理 diff ────
+    # 直接传 stable_prefix token IDs（不经 tokenizer，不含 bpe_tail/candidate），
+    # 比传整段 texts[0] 更短，且不需要 _dc_extract_batch0_trim（KV 长度恰好等于 stable_len）。
+    # 对 N=600：~180ms → ~(T_rm(stable_len)/5 + T_rm(8)) ≈ 17ms，约 10× 加速。
     try:
-        encoded_padded = _rm_tok(
-            texts, return_tensors="pt", padding=True,
-            truncation=True, max_length=2048,
-        ).to(_rm_device)
-
+        prefix_ids_t = torch.tensor(
+            [stable_prefix], dtype=torch.long, device=_rm_device,
+        )
         with torch.no_grad():
-            out = _rm_model(**encoded_padded, use_cache=True)
+            prefix_out = _rm_model(input_ids=prefix_ids_t, use_cache=True)
 
-        scores = out.logits.flatten().tolist()
+        raw_kv = getattr(prefix_out, 'past_key_values', None)
+        if raw_kv is None:
+            raise RuntimeError("no past_key_values from batch=1 prefix forward")
 
-        # 提取 stable_prefix 的 KV 供下次使用
-        raw_kv = getattr(out, 'past_key_values', None)
-        if raw_kv is not None and request_id is not None:
-            kv_dc = _to_dynamic_cache(raw_kv)
-            if kv_dc is not None and _dc_seq_len(kv_dc) >= stable_len:
-                prefix_dc = _dc_extract_batch0_trim(kv_dc, stable_len)
-                if prefix_dc is not None:
-                    if len(_req_kv) >= _MAX_REQ_KV:
-                        del _req_kv[next(iter(_req_kv))]
-                    _req_kv[request_id] = {
-                        "prefix_ids": stable_prefix,
-                        "kv": prefix_dc,
-                    }
+        prefix_dc = _to_dynamic_cache(raw_kv)
+        if prefix_dc is None or _dc_seq_len(prefix_dc) < stable_len:
+            raise RuntimeError(
+                f"KV length {_dc_seq_len(prefix_dc)} < stable_len {stable_len}"
+            )
+
+        diff_seqs = [bpe_tail + e[len(raw_prefix):] for e in encoded_list]
+        if not all(len(d) > 0 for d in diff_seqs):
+            raise RuntimeError("empty diff sequence in MISS path")
+
+        scores, _ = _score_with_prefix_kv(
+            prefix_dc, stable_len, diff_seqs, update_len=0,
+        )
+
+        if len(_req_kv) >= _MAX_REQ_KV:
+            del _req_kv[next(iter(_req_kv))]
+        _req_kv[request_id] = {"prefix_ids": stable_prefix, "kv": prefix_dc}
 
         _kv_stats["miss"] += 1
         return scores
-
     except Exception as e:
-        print(f"[RM] KV cache miss path failed ({e})", flush=True)
+        print(f"[RM] KV MISS failed ({e})", flush=True)
         return None
 
 
