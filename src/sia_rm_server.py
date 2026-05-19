@@ -165,31 +165,31 @@ def _dc_seq_len(dc) -> int:
 
 
 def _dc_expand_batch(dc, k: int):
-    """将 batch=1 的 DynamicCache 扩展到 batch=k（.contiguous() 物化）。"""
+    """将 batch=1 的 DynamicCache 扩展到 batch=k（.contiguous() 物化）。
+    兼容 transformers 4.57+ 新 API（layers[i].keys/values + update()）。
+    """
     from transformers.cache_utils import DynamicCache
     new_dc = DynamicCache()
-    for layer_idx in range(len(dc.key_cache)):
-        K = dc.key_cache[layer_idx].expand(k, -1, -1, -1).contiguous()
-        V = dc.value_cache[layer_idx].expand(k, -1, -1, -1).contiguous()
-        new_dc.key_cache.append(K)
-        new_dc.value_cache.append(V)
+    for i, layer in enumerate(dc.layers):
+        K = layer.keys.expand(k, -1, -1, -1).contiguous()
+        V = layer.values.expand(k, -1, -1, -1).contiguous()
+        new_dc.update(K, V, i)
     return new_dc
 
 
 def _dc_extract_batch0_trim(dc, keep_len: int):
     """
     从 batch>=1 的 DynamicCache 中取 batch[0]，并只保留前 keep_len 个位置。
-    前缀 token 的 KV 对所有 batch 相同（causal attention 中 pos<keep_len 不依赖后续 token），
-    因此取 batch[0] 是安全的。
+    前缀 token 的 KV 对所有 batch 相同（causal attention 中 pos<keep_len 不依赖后续 token）。
+    兼容 transformers 4.57+ 新 API。
     """
     try:
         from transformers.cache_utils import DynamicCache
         new_dc = DynamicCache()
-        for layer_idx in range(len(dc.key_cache)):
-            K = dc.key_cache[layer_idx][0:1, :, :keep_len, :].contiguous()
-            V = dc.value_cache[layer_idx][0:1, :, :keep_len, :].contiguous()
-            new_dc.key_cache.append(K)
-            new_dc.value_cache.append(V)
+        for i, layer in enumerate(dc.layers):
+            K = layer.keys[0:1, :, :keep_len, :].contiguous()
+            V = layer.values[0:1, :, :keep_len, :].contiguous()
+            new_dc.update(K, V, i)
         return new_dc
     except Exception:
         return None
@@ -431,10 +431,12 @@ def _apply_compile_and_warmup(model, tok, device: str):
     compiled = torch.compile(model, dynamic=True, fullgraph=False)
 
     print("[RM] Running warmup pass 1/2: standard forward (may take 20-60s)...", flush=True)
-    dummy_texts = ["Warmup forward pass for torch.compile kernel fusion."] * 5
+    # 用接近真实推理长度的序列（256 tokens）热身，避免首次真实请求触发 recompile
+    dummy_text = "Warmup " * 50   # ~50 tokens, pad 到 256
+    dummy_texts = [dummy_text] * 5
     enc = tok(
         dummy_texts, return_tensors="pt", padding=True,
-        truncation=True, max_length=64,
+        truncation=True, max_length=256,
     ).to(device)
     with torch.no_grad():
         out1 = compiled(**enc, use_cache=True)
