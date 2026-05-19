@@ -44,12 +44,6 @@ class _ValueModelOutput:
         self.logits = logits
 
 
-class _ValueModelOutputWithPast:
-    def __init__(self, logits, past_key_values=None):
-        self.logits = logits
-        self.past_key_values = past_key_values
-
-
 class _ValueModelWrapper(nn.Module):
     def __init__(self, base_model, token_reward_head: nn.Linear):
         super().__init__()
@@ -66,16 +60,14 @@ class _ValueModelWrapper(nn.Module):
         else:
             backbone = self.base_model
 
-        # 在 backbone 调用前记录前缀长度（backbone 会原地扩展 cache，之后读就不准了）
-        prefix_kv_len = _kv_seq_len(past_key_values)
-
         # 新版 HF backbone 要求 Cache 对象，不接受 legacy tuple
-        kv_for_backbone = _to_dynamic_cache(past_key_values)
+        kv_in = _to_dynamic_cache(past_key_values)
+        prefix_kv_len = _dc_seq_len(kv_in)
 
         out = backbone(
             input_ids=input_ids,
             attention_mask=attention_mask,
-            past_key_values=kv_for_backbone,
+            past_key_values=kv_in,
             use_cache=use_cache,
             output_hidden_states=True,
         )
@@ -90,8 +82,7 @@ class _ValueModelWrapper(nn.Module):
         token_rewards = self.token_reward_head(hidden.float()).squeeze(-1)  # (batch, seq)
 
         if past_key_values is not None:
-            # KV cache 模式：token_rewards 只包含 diff tokens 的 hidden states
-            # 找 diff 中最后一个有效 token 的位置
+            # KV cache 模式：找 diff 中最后一个有效 token
             if attention_mask is not None:
                 diff_mask = attention_mask[:, prefix_kv_len:]
                 diff_lens = diff_mask.sum(dim=1) - 1
@@ -101,18 +92,25 @@ class _ValueModelWrapper(nn.Module):
             else:
                 logits = token_rewards[:, -1].unsqueeze(-1)
         elif attention_mask is not None:
-            seq_lens = attention_mask.sum(dim=1) - 1       # (batch,)
+            seq_lens = attention_mask.sum(dim=1) - 1
             logits = token_rewards[
                 torch.arange(token_rewards.size(0)), seq_lens
-            ].unsqueeze(-1)                                # (batch, 1)
+            ].unsqueeze(-1)
         else:
             logits = token_rewards[:, -1].unsqueeze(-1)
 
         if use_cache:
-            raw_past = getattr(out, 'past_key_values', None)
-            new_past_kv = _to_legacy_tuple(raw_past)
-            return _ValueModelOutputWithPast(logits=logits, past_key_values=new_past_kv)
+            return _ValueModelOutputWithPast(
+                logits=logits,
+                past_key_values=getattr(out, 'past_key_values', None),
+            )
         return _ValueModelOutput(logits=logits)
+
+
+class _ValueModelOutputWithPast:
+    def __init__(self, logits, past_key_values=None):
+        self.logits = logits
+        self.past_key_values = past_key_values
 
 
 # ---------------------------------------------------------------------------
@@ -124,62 +122,79 @@ _rm_device: str = "cuda:0"
 _rm_lock = threading.Lock()
 _status = {"status": "initializing", "rm": "", "rm_lora": None}
 
-# KV prefix cache：request_id -> {"prefix_ids": list[int], "past_key_values": tuple}
-_prefix_cache: dict = {}
-_MAX_CACHE_ENTRIES = 64
+# 跨步 KV 状态：request_id → {"prefix_ids": list[int], "kv": DynamicCache}
+_req_kv: dict = {}
+_MAX_REQ_KV = 64
+
+# 修剪末尾 token 数，消除 BPE 边界影响
+_BPE_TRIM = 5
+
+# 统计 hit/miss（仅用于日志）
+_kv_stats = {"hit": 0, "miss": 0}
 
 
 # ---------------------------------------------------------------------------
-# KV Cache 辅助函数
+# DynamicCache 辅助
 # ---------------------------------------------------------------------------
-
-def _to_legacy_tuple(past_kv):
-    """将 HF past_key_values（DynamicCache 或 tuple）统一转为 legacy tuple 格式。"""
-    if past_kv is None:
-        return None
-    if isinstance(past_kv, tuple):
-        return past_kv
-    if hasattr(past_kv, 'to_legacy_cache'):
-        return past_kv.to_legacy_cache()
-    if hasattr(past_kv, 'key_cache'):
-        return tuple(
-            (past_kv.key_cache[i], past_kv.value_cache[i])
-            for i in range(len(past_kv.key_cache))
-        )
-    return past_kv
-
 
 def _to_dynamic_cache(past_kv):
-    """将 legacy tuple 转为 DynamicCache（新版 HF backbone 要求 Cache 对象）。"""
+    """将任意格式 past_key_values 转为 DynamicCache。"""
     if past_kv is None:
         return None
     try:
         from transformers.cache_utils import DynamicCache
     except ImportError:
-        return past_kv  # 旧版 HF，不需要转换
+        return past_kv
     if isinstance(past_kv, DynamicCache):
         return past_kv
-    # legacy tuple: ((K0,V0), (K1,V1), ...) → DynamicCache
     if isinstance(past_kv, tuple):
         return DynamicCache.from_legacy_cache(past_kv)
     return past_kv
 
 
-def _kv_seq_len(past_kv) -> int:
-    """从 past_key_values（任意格式）中读取已缓存的序列长度。"""
-    if past_kv is None:
+def _dc_seq_len(dc) -> int:
+    """获取 DynamicCache 已缓存的序列长度。"""
+    if dc is None:
         return 0
-    if isinstance(past_kv, tuple) and len(past_kv) > 0:
-        return past_kv[0][0].shape[2]
-    if hasattr(past_kv, 'key_cache') and past_kv.key_cache:
-        return past_kv.key_cache[0].shape[-2]
-    if hasattr(past_kv, 'get_seq_length'):
-        return past_kv.get_seq_length()
+    if hasattr(dc, 'get_seq_length'):
+        return dc.get_seq_length()
+    if hasattr(dc, 'key_cache') and dc.key_cache:
+        return dc.key_cache[0].shape[-2]
     return 0
 
 
+def _dc_expand_batch(dc, k: int):
+    """将 batch=1 的 DynamicCache 扩展到 batch=k（.contiguous() 物化）。"""
+    from transformers.cache_utils import DynamicCache
+    new_dc = DynamicCache()
+    for layer_idx in range(len(dc.key_cache)):
+        K = dc.key_cache[layer_idx].expand(k, -1, -1, -1).contiguous()
+        V = dc.value_cache[layer_idx].expand(k, -1, -1, -1).contiguous()
+        new_dc.key_cache.append(K)
+        new_dc.value_cache.append(V)
+    return new_dc
+
+
+def _dc_extract_batch0_trim(dc, keep_len: int):
+    """
+    从 batch>=1 的 DynamicCache 中取 batch[0]，并只保留前 keep_len 个位置。
+    前缀 token 的 KV 对所有 batch 相同（causal attention 中 pos<keep_len 不依赖后续 token），
+    因此取 batch[0] 是安全的。
+    """
+    try:
+        from transformers.cache_utils import DynamicCache
+        new_dc = DynamicCache()
+        for layer_idx in range(len(dc.key_cache)):
+            K = dc.key_cache[layer_idx][0:1, :, :keep_len, :].contiguous()
+            V = dc.value_cache[layer_idx][0:1, :, :keep_len, :].contiguous()
+            new_dc.key_cache.append(K)
+            new_dc.value_cache.append(V)
+        return new_dc
+    except Exception:
+        return None
+
+
 def _find_common_prefix(seqs: list) -> list:
-    """找到多个 token ID 序列的最长公共前缀。"""
     if not seqs:
         return []
     min_len = min(len(s) for s in seqs)
@@ -192,146 +207,160 @@ def _find_common_prefix(seqs: list) -> list:
     return prefix
 
 
-def _get_prefix_kv(prefix_ids: list, request_id: str):
+# ---------------------------------------------------------------------------
+# 核心：单次 forward 的 KV cache 打分
+# ---------------------------------------------------------------------------
+
+def _score_with_prefix_kv(
+    prefix_dc,          # DynamicCache，batch=1，seq=stable_prefix_len
+    stable_prefix_len: int,
+    diff_seqs: list,    # list[list[int]]，每个候选的 diff token IDs（含 extension + cand）
+    update_len: int,    # diff_seqs 中属于"extension"的前缀长度（用于更新 cache）
+) -> tuple:
     """
-    获取 prefix_ids 对应的 KV cache（legacy tuple 格式）。
-    若已有缓存且新 prefix 是旧 prefix 的单调扩展，则增量前向；否则从头计算。
-    返回 None 表示模型不支持 KV cache。
-    """
-    global _prefix_cache
-
-    cached = _prefix_cache.get(request_id)
-    if cached is not None:
-        cached_ids = cached["prefix_ids"]
-        # 新 prefix 是旧 prefix 的扩展（单调增长）
-        if (len(cached_ids) <= len(prefix_ids)
-                and prefix_ids[:len(cached_ids)] == cached_ids):
-            if len(cached_ids) == len(prefix_ids):
-                # 完全命中
-                return cached["past_key_values"]
-
-            # 增量：只对扩展部分做前向
-            ext_ids = prefix_ids[len(cached_ids):]
-            ext_tensor = torch.tensor([ext_ids], dtype=torch.long, device=_rm_device)
-            full_len = len(prefix_ids)
-            attn_mask = torch.ones((1, full_len), dtype=torch.long, device=_rm_device)
-
-            with torch.no_grad():
-                out = _rm_model(
-                    input_ids=ext_tensor,
-                    attention_mask=attn_mask,
-                    past_key_values=_to_dynamic_cache(cached["past_key_values"]),
-                    use_cache=True,
-                )
-            new_past_kv = _to_legacy_tuple(getattr(out, 'past_key_values', None))
-            if new_past_kv is None:
-                return None
-            _prefix_cache[request_id] = {
-                "prefix_ids": prefix_ids,
-                "past_key_values": new_past_kv,
-            }
-            return new_past_kv
-
-    # 全量计算
-    prefix_tensor = torch.tensor([prefix_ids], dtype=torch.long, device=_rm_device)
-    attn_mask = torch.ones((1, len(prefix_ids)), dtype=torch.long, device=_rm_device)
-
-    with torch.no_grad():
-        out = _rm_model(
-            input_ids=prefix_tensor,
-            attention_mask=attn_mask,
-            use_cache=True,
-        )
-    new_past_kv = _to_legacy_tuple(getattr(out, 'past_key_values', None))
-    if new_past_kv is None:
-        return None
-
-    # LRU 淘汰：超出上限时删除最旧条目
-    if len(_prefix_cache) >= _MAX_CACHE_ENTRIES:
-        oldest = next(iter(_prefix_cache))
-        del _prefix_cache[oldest]
-    _prefix_cache[request_id] = {
-        "prefix_ids": prefix_ids,
-        "past_key_values": new_past_kv,
-    }
-    return new_past_kv
-
-
-def _score_with_kv_cache(prefix_kv: tuple, diff_seqs: list, prefix_len: int) -> list:
-    """
-    将 batch=1 的前缀 KV 展开为 batch=k，对各候选的 diff tokens 打分。
-    diff_seqs: list of list[int]，右侧会 padding 到相同长度。
+    单次 forward：batch=k, seq=max(diff_len), 使用 prefix_dc 作为 KV cache。
+    返回 (scores: list[float], new_prefix_dc: DynamicCache | None)
+      new_prefix_dc 包含 stable_prefix + extension 的 KV（batch=1）。
     """
     k = len(diff_seqs)
-    max_diff_len = max(len(d) for d in diff_seqs)
-
-    # right-pad diff sequences（用 pad_token_id）
+    max_diff = max(len(d) for d in diff_seqs)
     pad_id = _rm_tok.pad_token_id or 0
-    diff_ids = torch.full((k, max_diff_len), pad_id, dtype=torch.long, device=_rm_device)
+
+    diff_ids = torch.full((k, max_diff), pad_id, dtype=torch.long, device=_rm_device)
     for i, d in enumerate(diff_seqs):
         diff_ids[i, :len(d)] = torch.tensor(d, dtype=torch.long)
 
-    # 完整 attention_mask：prefix 全 1 + diff 实际长度区域为 1，其余 0
-    full_len = prefix_len + max_diff_len
+    full_len = stable_prefix_len + max_diff
     attn_mask = torch.zeros((k, full_len), dtype=torch.long, device=_rm_device)
-    attn_mask[:, :prefix_len] = 1
+    attn_mask[:, :stable_prefix_len] = 1
     for i, d in enumerate(diff_seqs):
-        attn_mask[i, prefix_len:prefix_len + len(d)] = 1
+        attn_mask[i, stable_prefix_len:stable_prefix_len + len(d)] = 1
 
-    # 将 batch=1 的 KV 扩展到 batch=k，并转为 DynamicCache（新版 HF 要求）
-    # prefix_kv 是 legacy tuple: ((K0,V0),(K1,V1),...), K/V shape: (1,heads,seq,head_dim)
-    batch_past_kv = _to_dynamic_cache(tuple(
-        (k_val.expand(k, -1, -1, -1).contiguous(),
-         v_val.expand(k, -1, -1, -1).contiguous())
-        for k_val, v_val in prefix_kv
-    ))
+    batch_dc = _dc_expand_batch(prefix_dc, k)
 
     with torch.no_grad():
-        rm_out = _rm_model(
+        out = _rm_model(
             input_ids=diff_ids,
             attention_mask=attn_mask,
-            past_key_values=batch_past_kv,
+            past_key_values=batch_dc,
+            use_cache=True,
         )
 
-    return rm_out.logits.flatten().tolist()
+    scores = out.logits.flatten().tolist()
+
+    # 从输出中提取更新后的 prefix KV（stable_prefix + extension 部分，batch[0]）
+    new_prefix_dc = None
+    raw_kv = getattr(out, 'past_key_values', None)
+    if raw_kv is not None:
+        new_len = stable_prefix_len + update_len
+        kv_dc = _to_dynamic_cache(raw_kv)
+        if kv_dc is not None and _dc_seq_len(kv_dc) >= new_len:
+            new_prefix_dc = _dc_extract_batch0_trim(kv_dc, new_len)
+
+    return scores, new_prefix_dc
 
 
 def _try_score_with_kv_cache(texts: list, request_id: str) -> Optional[list]:
     """
-    尝试用 KV cache 对候选打分。
-    成功返回 scores list；前缀太短或出错则返回 None（退回 batch forward）。
+    尝试用跨步 KV cache 打分。
+    - HIT：只做 1 次 forward（batch=k, seq=extension+diff），比 baseline 更快
+    - MISS：做 1 次标准 batch forward（与 baseline 相同），同时提取并缓存前缀 KV
+    任何情况都不会做 2 次 forward。
     """
+    global _req_kv
+
     try:
-        # 逐条 tokenize（不 padding，取 token ID 列表）
+        # Step 1: tokenize（不 padding，保留原始长度）
         encoded_list = [
             _rm_tok(
-                t,
-                return_tensors="pt",
-                truncation=True,
-                max_length=2048,
-                padding=False,
+                t, return_tensors="pt", truncation=True,
+                max_length=2048, padding=False,
             ).input_ids[0].tolist()
             for t in texts
         ]
 
-        # 找公共前缀
-        prefix_ids = _find_common_prefix(encoded_list)
-        min_diff_len = min(len(e) - len(prefix_ids) for e in encoded_list)
+        # Step 2: 找 k 个候选的公共前缀，再修剪末尾 _BPE_TRIM 个 token 以消除边界影响
+        raw_prefix = _find_common_prefix(encoded_list)
+        stable_len = len(raw_prefix) - _BPE_TRIM
+        if stable_len < 16:
+            return None  # 前缀太短，不走 KV cache
+        stable_prefix = raw_prefix[:stable_len]
 
-        # 前缀太短或 diff 为空，不值得走 KV cache 路径
-        if len(prefix_ids) < 8 or min_diff_len < 1:
-            return None
+        state = _req_kv.get(request_id)
 
-        # 获取 / 增量扩展前缀 KV
-        prefix_kv = _get_prefix_kv(prefix_ids, request_id)
-        if prefix_kv is None:
-            return None
+        if state is not None:
+            cached_ids = state["prefix_ids"]
+            # 检查 stable_prefix 是否是缓存前缀的单调扩展
+            if (len(cached_ids) <= len(stable_prefix)
+                    and stable_prefix[:len(cached_ids)] == cached_ids):
 
-        diff_seqs = [e[len(prefix_ids):] for e in encoded_list]
-        return _score_with_kv_cache(prefix_kv, diff_seqs, len(prefix_ids))
+                prefix_dc = state["kv"]
+                cached_len = _dc_seq_len(prefix_dc)
+
+                # extension = 从上次缓存位置到当前 stable_prefix 末尾的新 token
+                extension = stable_prefix[len(cached_ids):]
+                # diff_seqs = extension + per-candidate tokens
+                # raw_prefix[stable_len:] 是被 trim 掉的 BPE 边界 token，也要放进 diff
+                bpe_tail = raw_prefix[stable_len:]
+                diff_seqs = [
+                    extension + bpe_tail + e[len(raw_prefix):]
+                    for e in encoded_list
+                ]
+
+                if any(len(d) == 0 for d in diff_seqs):
+                    return None
+
+                # 单次 forward：extension + diff，更新 cache 到 stable_prefix 末尾
+                scores, new_dc = _score_with_prefix_kv(
+                    prefix_dc,
+                    cached_len,
+                    diff_seqs,
+                    update_len=len(extension),
+                )
+
+                if new_dc is not None:
+                    _req_kv[request_id] = {
+                        "prefix_ids": stable_prefix,
+                        "kv": new_dc,
+                    }
+
+                _kv_stats["hit"] += 1
+                return scores
 
     except Exception as e:
-        print(f"[RM] KV cache scoring failed ({e}), falling back to batch forward", flush=True)
+        print(f"[RM] KV cache hit path failed ({e}), trying miss path", flush=True)
+
+    # MISS：标准 batch forward（与 baseline 相同速度），但顺便提取前缀 KV
+    try:
+        encoded_padded = _rm_tok(
+            texts, return_tensors="pt", padding=True,
+            truncation=True, max_length=2048,
+        ).to(_rm_device)
+
+        with torch.no_grad():
+            out = _rm_model(**encoded_padded, use_cache=True)
+
+        scores = out.logits.flatten().tolist()
+
+        # 提取 stable_prefix 的 KV 供下次使用
+        raw_kv = getattr(out, 'past_key_values', None)
+        if raw_kv is not None and request_id is not None:
+            kv_dc = _to_dynamic_cache(raw_kv)
+            if kv_dc is not None and _dc_seq_len(kv_dc) >= stable_len:
+                prefix_dc = _dc_extract_batch0_trim(kv_dc, stable_len)
+                if prefix_dc is not None:
+                    if len(_req_kv) >= _MAX_REQ_KV:
+                        del _req_kv[next(iter(_req_kv))]
+                    _req_kv[request_id] = {
+                        "prefix_ids": stable_prefix,
+                        "kv": prefix_dc,
+                    }
+
+        _kv_stats["miss"] += 1
+        return scores
+
+    except Exception as e:
+        print(f"[RM] KV cache miss path failed ({e})", flush=True)
         return None
 
 
@@ -390,14 +419,14 @@ def _load_rm_with_lora(rm_path: str, rm_lora_path: str, device: str):
 # FastAPI app
 # ---------------------------------------------------------------------------
 
-app = FastAPI(title="SIA RM Server", version="0.2.0")
+app = FastAPI(title="SIA RM Server", version="0.3.0")
 
 
 class ScoreRequest(BaseModel):
     user_content: str
     response_so_far: str
     candidate_texts: list[str]
-    request_id: Optional[str] = None   # 保留兼容性，当前未使用
+    request_id: Optional[str] = None   # 提供时启用跨步 KV cache
 
 
 class ReloadRequest(BaseModel):
@@ -433,28 +462,43 @@ def score(req: ScoreRequest):
             texts.append(rm_text)
 
         t_tok = time.time()
-        encoded = _rm_tok(
-            texts,
-            return_tensors="pt",
-            padding=True,
-            truncation=True,
-            max_length=2048,
-        ).to(_rm_device)
-        t_enc = time.time()
 
-        with torch.no_grad():
-            rm_out = _rm_model(**encoded)
-        t_fwd = time.time()
+        path = "baseline"
+        if req.request_id is not None:
+            scores = _try_score_with_kv_cache(texts, req.request_id)
+            if scores is not None:
+                path = "kv_hit" if _kv_stats["hit"] > _kv_stats["miss"] else "kv_miss"
+            else:
+                scores = None
+        else:
+            scores = None
 
-        scores = rm_out.logits.flatten().tolist()
+        if scores is None:
+            # 真正的 fallback：不带 use_cache 的标准 batch forward
+            encoded = _rm_tok(
+                texts, return_tensors="pt", padding=True,
+                truncation=True, max_length=2048,
+            ).to(_rm_device)
+            t_enc = time.time()
+            with torch.no_grad():
+                rm_out = _rm_model(**encoded)
+            t_fwd = time.time()
+            scores = rm_out.logits.flatten().tolist()
+            seq_len = encoded["input_ids"].shape[1]
+            path = "fallback"
+        else:
+            t_enc = t_tok
+            t_fwd = time.time()
+            seq_len = -1
 
-    seq_len = encoded["input_ids"].shape[1]
+    total = int((t_fwd - t0) * 1000)
+    fwd = int((t_fwd - t_enc) * 1000)
+    hit = _kv_stats["hit"]
+    miss = _kv_stats["miss"]
+    hit_rate = hit / (hit + miss) if (hit + miss) > 0 else 0.0
     print(
-        f"[RM] score: tok={int((t_tok-t0)*1000)}ms"
-        f"  enc={int((t_enc-t_tok)*1000)}ms"
-        f"  fwd={int((t_fwd-t_enc)*1000)}ms"
-        f"  seq_len={seq_len}"
-        f"  k={len(texts)}",
+        f"[RM] score: path={path}  fwd={fwd}ms  total={total}ms"
+        f"  seq={seq_len}  hit_rate={hit_rate:.1%}({hit}/{hit+miss})",
         flush=True,
     )
     return {"scores": scores}
@@ -463,14 +507,14 @@ def score(req: ScoreRequest):
 @app.post("/reload")
 def reload_rm(req: ReloadRequest):
     """热切换 RM（同步，加载完成后才返回）。"""
-    global _rm_model, _rm_tok, _prefix_cache
+    global _rm_model, _rm_tok, _req_kv
     with _rm_lock:
         _status["status"] = "reloading"
         print(f"[RM] Reloading: rm={req.rm}  rm_lora={req.rm_lora}", flush=True)
 
         del _rm_model
         torch.cuda.empty_cache()
-        _prefix_cache.clear()   # 换模型时清空 KV cache
+        _req_kv.clear()
 
         if req.rm_lora:
             _rm_model, _rm_tok = _load_rm_with_lora(req.rm, req.rm_lora, _rm_device)
