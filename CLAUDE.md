@@ -40,6 +40,30 @@ python src/sia_vllm_server.py \
   --llm_gpu_mem 0.3 --topk 5 --weight 1.0
 ```
 
+**vLLM-backed RM (推荐，比 pytorch RM 快 35% 且稳定):**
+
+先一次性转换 RM 到 vLLM 兼容格式：
+```bash
+python scripts/convert_rm_for_vllm.py \
+  --rm /path/to/qwen3-base \
+  --rm_lora /path/to/lora_and_token_reward_head \
+  --output /path/to/merged-for-vllm
+```
+
+启动 vLLM RM server + SIA LLM server（详见 `doc/vllm-rm-backend.md`）：
+```bash
+# RM
+vllm serve /path/to/merged-for-vllm --runner pooling --convert classify \
+  --enable-prefix-caching --gpu-memory-utilization 0.3 --port 8001 &
+
+# LLM 用 --rm_backend vllm
+python src/sia_vllm_server.py --llm /path/to/llm \
+  --rm_url http://localhost:8001 \
+  --rm_backend vllm \
+  --rm_model /path/to/merged-for-vllm \
+  --topk 5 --weight 1.0 --entropy_threshold 1.0 &
+```
+
 **Testing the server:**
 ```bash
 curl -X POST http://localhost:8000/v1/chat/completions \

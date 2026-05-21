@@ -298,6 +298,11 @@ def parse_args():
     p.add_argument("--llm",       required=True)
     p.add_argument("--rm_url",    default="http://localhost:8001",
                    help="RM server 地址（默认 http://localhost:8001）")
+    p.add_argument("--rm_backend", choices=["pytorch", "vllm"], default="pytorch",
+                   help="RM 后端：pytorch=src/sia_rm_server.py（自定义 /score）；"
+                        "vllm=vllm serve（/classify，推荐：更快更稳）")
+    p.add_argument("--rm_model",  default=None,
+                   help="rm_backend=vllm 时必填：vllm serve 加载的 model 路径")
     p.add_argument("--llm_gpu_mem", type=float, default=0.5)
     p.add_argument("--topk",      type=int,   default=10)
     p.add_argument("--weight",    type=float, default=1.0)
@@ -307,7 +312,10 @@ def parse_args():
     p.add_argument("--port", type=int, default=8000)
     p.add_argument("--model_id", default=None,
                    help="对外暴露的 model 名称（默认取 --llm 的 basename）")
-    return p.parse_args()
+    args = p.parse_args()
+    if args.rm_backend == "vllm" and not args.rm_model:
+        p.error("--rm_backend vllm 必须同时指定 --rm_model")
+    return args
 
 
 def main():
@@ -324,6 +332,8 @@ def main():
     print(f"Model ID : {_model_id}")
     print(f"LLM      : {_args.llm}")
     print(f"RM URL   : {_args.rm_url}")
+    print(f"RM mode  : {_args.rm_backend}"
+          + (f"  model={_args.rm_model}" if _args.rm_backend == "vllm" else ""))
     print(f"topk={_args.topk}  weight={_args.weight}  "
           f"entropy_threshold={_args.entropy_threshold}")
     print(f"Server   : http://{_args.host}:{_args.port}")
@@ -334,6 +344,8 @@ def main():
         topk=_args.topk,
         weight=_args.weight,
         entropy_threshold=_args.entropy_threshold,
+        rm_backend=_args.rm_backend,
+        rm_model=_args.rm_model,
     )
 
     print("Loading vLLM AsyncLLMEngine...")

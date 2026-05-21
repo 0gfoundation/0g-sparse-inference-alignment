@@ -147,15 +147,28 @@ def make_sia_processor(
     topk: int = 10,
     weight: float = 1.0,
     entropy_threshold: Optional[float] = None,
+    rm_backend: str = "pytorch",       # "pytorch"（原 sia_rm_server.py）或 "vllm"（vLLM serve）
+    rm_model: Optional[str] = None,    # rm_backend="vllm" 时必填：vLLM 加载的 model 路径
 ):
     """
     返回一个 SIALogitsProcessor 类（不是实例）。
     vllm 引擎以 (vllm_config, device, is_pin_memory) 参数实例化该类。
-    RM 打分通过 HTTP 调用独立的 sia_rm_server.py 完成。
+    RM 打分通过 HTTP 调用独立的 RM server 完成。
+
+    rm_backend:
+      - "pytorch": 调用 src/sia_rm_server.py（手写 FastAPI）的 POST /score endpoint
+      - "vllm":    调用 vllm serve 启动的 /classify endpoint（推荐：更稳定 + 更快）
+                    需配合 scripts/convert_rm_for_vllm.py 转换好的 checkpoint
     """
+    if rm_backend == "vllm" and not rm_model:
+        raise ValueError(
+            "rm_backend='vllm' requires --rm_model (e.g. the path passed to `vllm serve`)"
+        )
 
     class SIALogitsProcessor(LogitsProcessor):
         _RM_URL = rm_url
+        _RM_BACKEND = rm_backend
+        _RM_MODEL = rm_model
         _TOPK = topk
         _WEIGHT = weight
         _ENTROPY_THRESHOLD = entropy_threshold
@@ -269,11 +282,29 @@ def make_sia_processor(
             response_so_far: str,
             candidate_token_ids: list[int],
         ) -> torch.Tensor:
-            """返回 shape (topk,) float32 tensor（CPU）。"""
+            """返回 shape (topk,) float32 tensor（CPU）。
+
+            根据 rm_backend 分发到不同 endpoint：
+              - pytorch: POST /score （sia_rm_server.py 自定义协议）
+              - vllm:    POST /classify （vLLM 原生协议）
+            """
             candidate_texts = [
                 self._llm_tok.decode([tid], skip_special_tokens=False)
                 for tid in candidate_token_ids
             ]
+            if self._RM_BACKEND == "vllm":
+                return self._score_candidates_vllm(
+                    user_content, response_so_far, candidate_texts
+                )
+            return self._score_candidates_pytorch(
+                user_content, response_so_far, candidate_texts
+            )
+
+        def _score_candidates_pytorch(
+            self, user_content: str, response_so_far: str,
+            candidate_texts: list[str],
+        ) -> torch.Tensor:
+            """调用 sia_rm_server.py 的 POST /score"""
             resp = self._rm_session.post(
                 f"{self._RM_URL}/score",
                 json={
@@ -286,6 +317,47 @@ def make_sia_processor(
             )
             resp.raise_for_status()
             scores = resp.json()["scores"]
+            return torch.tensor(scores, dtype=torch.float32)
+
+        def _score_candidates_vllm(
+            self, user_content: str, response_so_far: str,
+            candidate_texts: list[str],
+        ) -> torch.Tensor:
+            """调用 vllm serve 的 POST /classify (activation=false 拿原始 logit)。
+
+            vLLM 不接受我们自定义的 (user_content, response_so_far, candidates) 三元组，
+            必须发送已经格式化好的完整文本字符串列表。我们用 LLM tokenizer 的
+            apply_chat_template 拼出每个候选对应的 chat-formatted 文本。
+            （LLM 和 RM 都是 Qwen3 系，chat template 一致。）
+            """
+            formatted_texts = []
+            for ct in candidate_texts:
+                response_with_cand = response_so_far + ct
+                convs = [
+                    {"role": "user",      "content": user_content},
+                    {"role": "assistant", "content": response_with_cand},
+                ]
+                text = self._llm_tok.apply_chat_template(convs, tokenize=False)
+                # 去掉 leading BOS（如果有），与 sia_rm_server.py 行为一致
+                bos = self._llm_tok.bos_token
+                if bos and text.startswith(bos):
+                    text = text[len(bos):]
+                formatted_texts.append(text)
+
+            resp = self._rm_session.post(
+                f"{self._RM_URL}/classify",
+                json={
+                    "model": self._RM_MODEL,
+                    "input": formatted_texts,
+                    "activation": False,   # 关键：关 sigmoid，拿原始 logit
+                },
+                timeout=30,
+            )
+            resp.raise_for_status()
+            data = resp.json()["data"]
+            # vLLM 不保证返回顺序，按 index 排序
+            data_sorted = sorted(data, key=lambda x: x.get("index", 0))
+            scores = [d["probs"][0] for d in data_sorted]
             return torch.tensor(scores, dtype=torch.float32)
 
         # ----------------------------------------------------------------
@@ -425,6 +497,12 @@ def parse_args():
     p.add_argument("--llm",       required=True,  help="LLM 模型路径")
     p.add_argument("--rm_url",    default="http://localhost:8001",
                    help="RM server 地址（默认 http://localhost:8001）")
+    p.add_argument("--rm_backend", choices=["pytorch", "vllm"], default="pytorch",
+                   help="RM 后端：pytorch=src/sia_rm_server.py 的自定义 /score；"
+                        "vllm=vllm serve 启动的 /classify（推荐，更快更稳）")
+    p.add_argument("--rm_model",  default=None,
+                   help="rm_backend=vllm 时必填：vllm serve 加载的 model 路径，"
+                        "例如 /workspace/SIA/models/VM-Qwen3-4B-merged-for-vllm")
     p.add_argument("--llm_gpu_mem", type=float, default=0.5,
                    help="vllm gpu_memory_utilization（默认 0.5）")
     p.add_argument("--topk",      type=int,   default=10)
@@ -453,6 +531,8 @@ def main():
         topk=args.topk,
         weight=args.weight,
         entropy_threshold=args.entropy_threshold,
+        rm_backend=args.rm_backend,
+        rm_model=args.rm_model,
     )
 
     print("Loading vllm LLM...")
