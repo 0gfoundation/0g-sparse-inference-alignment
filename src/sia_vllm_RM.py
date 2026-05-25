@@ -29,7 +29,6 @@ import time
 from typing import Optional
 
 import torch
-import torch.distributions as dist
 import torch.nn.functional as F
 from transformers import AutoTokenizer
 
@@ -366,6 +365,35 @@ def make_sia_processor(
         def apply(self, logits: torch.Tensor) -> torch.Tensor:
             batch_size = logits.shape[0]
 
+            # ==== Batch-wide topk + entropy（一次提交所有 GPU 工作）====
+            # 原实现在 for-loop 里逐个 .item()，每个 batch item 都会
+            # 触发一次 GPU→CPU sync，阻塞 LLM forward pipeline。
+            # 这里改成在 loop 外面整体算 + 一次性 sync，把 batch_size 次
+            # sync 压成 1 次。
+            topk_result = torch.topk(logits, self._TOPK, dim=-1)
+            # numerically-stable entropy via log_softmax，避免 log(0)
+            log_probs = F.log_softmax(topk_result.values.float(), dim=-1)
+            probs = log_probs.exp()
+            entropies = -(probs * log_probs).sum(dim=-1)  # (batch,)
+
+            # 一次性 GPU→CPU sync（取代原代码中 per-item 的 .item()）
+            entropy_values = entropies.cpu().tolist()
+
+            # 在 CPU 上做 SKIP/INTERVENE 决策（不再触发 sync）
+            if self._ENTROPY_THRESHOLD is not None:
+                intervene_flags = [
+                    e >= self._ENTROPY_THRESHOLD for e in entropy_values
+                ]
+            else:
+                intervene_flags = [True] * batch_size
+
+            # 至少有一个要 INTERVENE 才把 topk_indices 拉到 CPU；纯 SKIP 省一次 sync
+            if any(intervene_flags):
+                topk_indices_lists = topk_result.indices.cpu().tolist()
+            else:
+                topk_indices_lists = None
+
+            # ==== Per-item loop，循环体里不再有 .item() / .tolist() sync ====
             for i in range(batch_size):
                 output_ids = list(self._output_ids.get(i, []))
                 user_content = self._prompt_user.get(i, "")
@@ -373,20 +401,20 @@ def make_sia_processor(
                 self._total_steps[i] = self._total_steps.get(i, 0) + 1
                 req_step = self._total_steps[i]
 
-                topk_logits, topk_indices = torch.topk(logits[i], self._TOPK)
+                entropy = entropy_values[i]
 
-                # entropy 过滤
-                probs = F.softmax(topk_logits.float(), dim=-1)
-                entropy = dist.Categorical(probs=probs).entropy().item()
-                if self._ENTROPY_THRESHOLD is not None:
-                    if entropy < self._ENTROPY_THRESHOLD:
-                        print(
-                            f"[SIA] {time.strftime('%H:%M:%S')}.{int(time.time() % 1 * 1_000_000):06d} "
-                            f"step={req_step:3d} req={i} "
-                            f"SKIP (entropy={entropy:.3f} < {self._ENTROPY_THRESHOLD})",
-                            flush=True,
-                        )
-                        continue
+                if not intervene_flags[i]:
+                    print(
+                        f"[SIA] {time.strftime('%H:%M:%S')}.{int(time.time() % 1 * 1_000_000):06d} "
+                        f"step={req_step:3d} req={i} "
+                        f"SKIP (entropy={entropy:.3f} < {self._ENTROPY_THRESHOLD})",
+                        flush=True,
+                    )
+                    continue
+
+                # INTERVENE path
+                topk_indices_i = topk_indices_lists[i]            # list[int] (CPU)
+                topk_indices_gpu = topk_result.indices[i]         # GPU view，用于索引 logits
 
                 response_so_far = self._llm_tok.decode(
                     output_ids, skip_special_tokens=True
@@ -394,7 +422,7 @@ def make_sia_processor(
 
                 try:
                     rm_scores = self._score_candidates(
-                        user_content, response_so_far, topk_indices.tolist()
+                        user_content, response_so_far, topk_indices_i
                     )
                 except Exception as e:
                     print(
@@ -408,8 +436,8 @@ def make_sia_processor(
                 # 避免全负分时把 topk 全部压低、让 topk 外 token 意外胜出
                 rm_scores = rm_scores - rm_scores.mean()
                 effective_weight = self._weight_per_req.get(i, self._WEIGHT)
-                logits[i, topk_indices] = (
-                    logits[i, topk_indices]
+                logits[i, topk_indices_gpu] = (
+                    logits[i, topk_indices_gpu]
                     + rm_scores.to(logits.device) * effective_weight
                 )
 
