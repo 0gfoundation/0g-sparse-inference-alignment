@@ -1,1 +1,24 @@
 tmp/
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+.pytest_cache/
+
+# nohup / process output
+nohup.out
+
+# Log files at repo root (跑实验时产生的 stdout/stderr 重定向)
+/log_*.txt
+/sia_rm_server.txt
+/sia_vllm_server.txt
+src/log.txt
+
+# Evaluation outputs
+/results/
+/result_*.txt
+
+# Local model / data dirs (in case they end up tracked accidentally)
+*.pt.tmp
