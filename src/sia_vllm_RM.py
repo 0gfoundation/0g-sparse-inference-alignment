@@ -200,6 +200,9 @@ def make_sia_processor(
             # 干预统计：每个请求的 total token steps 和实际干预次数
             self._total_steps: dict[int, int] = {}
             self._intervened_steps: dict[int, int] = {}
+            # response_so_far 增量解码缓存（避免每步 O(n) 全量 re-decode）
+            self._decoded_text: dict[int, str] = {}
+            self._decoded_token_count: dict[int, int] = {}
 
         # ----------------------------------------------------------------
         # 从 prompt token IDs 中提取 user 内容
@@ -360,6 +363,30 @@ def make_sia_processor(
             return torch.tensor(scores, dtype=torch.float32)
 
         # ----------------------------------------------------------------
+        # response_so_far 增量解码
+        # ----------------------------------------------------------------
+        def _get_response_so_far(self, req_idx: int, output_ids: list) -> str:
+            """每步只 decode 新增的 tail，结果与全量 decode 等价但 O(1) per step。
+
+            BPE 边界保护：若 tail 末尾有 \\ufffd（多字节 UTF-8 未闭合），本步
+            不提交 cache，让后续 token 与未闭合字节一起重新 decode，保证 RM
+            收到的文本与一次性 decode 在字节层等价。
+            """
+            last_n = self._decoded_token_count.get(req_idx, 0)
+            cached = self._decoded_text.get(req_idx, "")
+            n = len(output_ids)
+            if n <= last_n:
+                return cached
+            tail_text = self._llm_tok.decode(
+                output_ids[last_n:], skip_special_tokens=True
+            )
+            response = cached + tail_text
+            if not tail_text.endswith("�"):
+                self._decoded_text[req_idx] = response
+                self._decoded_token_count[req_idx] = n
+            return response
+
+        # ----------------------------------------------------------------
         # apply：每个 token 生成前被 vllm 调用一次
         # ----------------------------------------------------------------
         def apply(self, logits: torch.Tensor) -> torch.Tensor:
@@ -416,9 +443,7 @@ def make_sia_processor(
                 topk_indices_i = topk_indices_lists[i]            # list[int] (CPU)
                 topk_indices_gpu = topk_result.indices[i]         # GPU view，用于索引 logits
 
-                response_so_far = self._llm_tok.decode(
-                    output_ids, skip_special_tokens=True
-                )
+                response_so_far = self._get_response_so_far(i, output_ids)
 
                 try:
                     rm_scores = self._score_candidates(
@@ -476,6 +501,8 @@ def make_sia_processor(
                 self._output_ids.pop(idx, None)
                 self._prompt_user.pop(idx, None)
                 self._weight_per_req.pop(idx, None)
+                self._decoded_text.pop(idx, None)
+                self._decoded_token_count.pop(idx, None)
 
             if batch_update.moved:
                 old_out = dict(self._output_ids)
@@ -483,6 +510,8 @@ def make_sia_processor(
                 old_weight = dict(self._weight_per_req)
                 old_total = dict(self._total_steps)
                 old_intervened = dict(self._intervened_steps)
+                old_decoded = dict(self._decoded_text)
+                old_decoded_n = dict(self._decoded_token_count)
                 for i1, i2, directionality in batch_update.moved:
                     if directionality == MoveDirectionality.UNIDIRECTIONAL:
                         self._output_ids[i2] = old_out.get(i1, [])
@@ -491,6 +520,9 @@ def make_sia_processor(
                             self._weight_per_req[i2] = old_weight[i1]
                         self._total_steps[i2] = old_total.get(i1, 0)
                         self._intervened_steps[i2] = old_intervened.get(i1, 0)
+                        if i1 in old_decoded:
+                            self._decoded_text[i2] = old_decoded[i1]
+                            self._decoded_token_count[i2] = old_decoded_n.get(i1, 0)
                     else:  # SWAP
                         self._output_ids[i1] = old_out.get(i2, [])
                         self._output_ids[i2] = old_out.get(i1, [])
@@ -508,6 +540,18 @@ def make_sia_processor(
                         self._total_steps[i2] = old_total.get(i1, 0)
                         self._intervened_steps[i1] = old_intervened.get(i2, 0)
                         self._intervened_steps[i2] = old_intervened.get(i1, 0)
+                        if i2 in old_decoded:
+                            self._decoded_text[i1] = old_decoded[i2]
+                            self._decoded_token_count[i1] = old_decoded_n.get(i2, 0)
+                        else:
+                            self._decoded_text.pop(i1, None)
+                            self._decoded_token_count.pop(i1, None)
+                        if i1 in old_decoded:
+                            self._decoded_text[i2] = old_decoded[i1]
+                            self._decoded_token_count[i2] = old_decoded_n.get(i1, 0)
+                        else:
+                            self._decoded_text.pop(i2, None)
+                            self._decoded_token_count.pop(i2, None)
 
             for idx, params, prompt_ids, output_ids in batch_update.added:
                 self._output_ids[idx] = output_ids
