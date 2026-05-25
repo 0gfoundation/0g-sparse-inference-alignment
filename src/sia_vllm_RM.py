@@ -200,6 +200,8 @@ def make_sia_processor(
             # 干预统计：每个请求的 total token steps 和实际干预次数
             self._total_steps: dict[int, int] = {}
             self._intervened_steps: dict[int, int] = {}
+            # 干预导致 top-1 token 翻转（pre top-1 ≠ post top-1）的次数
+            self._flipped_steps: dict[int, int] = {}
             # response_so_far 增量解码缓存（避免每步 O(n) 全量 re-decode）
             self._decoded_text: dict[int, str] = {}
             self._decoded_token_count: dict[int, int] = {}
@@ -414,11 +416,13 @@ def make_sia_processor(
             else:
                 intervene_flags = [True] * batch_size
 
-            # 至少有一个要 INTERVENE 才把 topk_indices 拉到 CPU；纯 SKIP 省一次 sync
+            # 至少有一个要 INTERVENE 才把 topk_indices/values 拉到 CPU；纯 SKIP 省 sync
             if any(intervene_flags):
                 topk_indices_lists = topk_result.indices.cpu().tolist()
+                topk_values_lists = topk_result.values.cpu().tolist()
             else:
                 topk_indices_lists = None
+                topk_values_lists = None
 
             # ==== Per-item loop，循环体里不再有 .item() / .tolist() sync ====
             for i in range(batch_size):
@@ -468,12 +472,32 @@ def make_sia_processor(
 
                 self._intervened_steps[i] = self._intervened_steps.get(i, 0) + 1
 
+                # top-1 flip 检测：干预前 top-1 = topk_indices_i[0]（已按 logit 降序）；
+                # 干预后 top-1 取 topk 内的 argmax（SIA 加权幅度远小于 topk 内 logit gap，
+                # argmax 极少跳到 topk 外，topk 内排序足够代表实际选中变化）
+                topk_vals_i = topk_values_lists[i]
+                rm_list = rm_scores.tolist()
+                modified_vals = [
+                    topk_vals_i[k] + rm_list[k] * effective_weight
+                    for k in range(len(rm_list))
+                ]
+                post_top1_local = max(
+                    range(len(modified_vals)), key=modified_vals.__getitem__
+                )
+                pre_top1 = topk_indices_i[0]
+                post_top1 = topk_indices_i[post_top1_local]
+                flipped = pre_top1 != post_top1
+                if flipped:
+                    self._flipped_steps[i] = self._flipped_steps.get(i, 0) + 1
+
                 print(
                     f"[SIA] {time.strftime('%H:%M:%S')}.{int(time.time() % 1 * 1_000_000):06d} "
                     f"step={req_step:3d} req={i} INTERVENE "
                     f"entropy={entropy:.3f} "
                     f"gen_len={len(output_ids)} "
-                    f"rm=[{rm_scores.min():.3f}, {rm_scores.max():.3f}]",
+                    f"rm=[{rm_scores.min():.3f}, {rm_scores.max():.3f}] "
+                    f"flip={'Y' if flipped else 'N'} "
+                    f"pre_top1={pre_top1} post_top1={post_top1}",
                     flush=True,
                 )
 
@@ -492,10 +516,13 @@ def make_sia_processor(
             for idx in batch_update.removed:
                 total = self._total_steps.pop(idx, 0)
                 intervened = self._intervened_steps.pop(idx, 0)
+                flipped = self._flipped_steps.pop(idx, 0)
                 ratio = intervened / total if total > 0 else 0.0
+                flip_ratio = flipped / intervened if intervened > 0 else 0.0
                 print(
                     f"[SIA] req={idx} DONE  "
-                    f"intervened={intervened}/{total}  ratio={ratio:.1%}",
+                    f"intervened={intervened}/{total}  ratio={ratio:.1%}  "
+                    f"top1_flip={flipped}/{intervened} ({flip_ratio:.1%})",
                     flush=True,
                 )
                 self._output_ids.pop(idx, None)
@@ -510,6 +537,7 @@ def make_sia_processor(
                 old_weight = dict(self._weight_per_req)
                 old_total = dict(self._total_steps)
                 old_intervened = dict(self._intervened_steps)
+                old_flipped = dict(self._flipped_steps)
                 old_decoded = dict(self._decoded_text)
                 old_decoded_n = dict(self._decoded_token_count)
                 for i1, i2, directionality in batch_update.moved:
@@ -520,6 +548,7 @@ def make_sia_processor(
                             self._weight_per_req[i2] = old_weight[i1]
                         self._total_steps[i2] = old_total.get(i1, 0)
                         self._intervened_steps[i2] = old_intervened.get(i1, 0)
+                        self._flipped_steps[i2] = old_flipped.get(i1, 0)
                         if i1 in old_decoded:
                             self._decoded_text[i2] = old_decoded[i1]
                             self._decoded_token_count[i2] = old_decoded_n.get(i1, 0)
@@ -540,6 +569,8 @@ def make_sia_processor(
                         self._total_steps[i2] = old_total.get(i1, 0)
                         self._intervened_steps[i1] = old_intervened.get(i2, 0)
                         self._intervened_steps[i2] = old_intervened.get(i1, 0)
+                        self._flipped_steps[i1] = old_flipped.get(i2, 0)
+                        self._flipped_steps[i2] = old_flipped.get(i1, 0)
                         if i2 in old_decoded:
                             self._decoded_text[i1] = old_decoded[i2]
                             self._decoded_token_count[i1] = old_decoded_n.get(i2, 0)
