@@ -216,3 +216,5 @@ ls -lt log_rm_pf_*.txt log_llm_pf_*.txt log_SIA_pf_*.txt | head -10
 按本文方式跑过的代表性实验日志已归档至 `exp/`，完整命令与说明见 [`exp/README.md`](../exp/README.md):
 - 「2026-05-20 15:00」— 开 `RM_PROFILE=True` 跑 profiling 定位瓶颈
 - 「2025-05-21 00:50」— CUDA graph 加速实验（§1.4）
+
+基于上述 profiling 数据的瓶颈分析与下一步优化路径，见 [`doc/profiling-bottleneck-analysis.md`](profiling-bottleneck-analysis.md)。
