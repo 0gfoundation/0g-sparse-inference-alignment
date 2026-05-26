@@ -29,7 +29,6 @@ import time
 from typing import Optional
 
 import torch
-import torch.distributions as dist
 import torch.nn.functional as F
 from transformers import AutoTokenizer
 
@@ -201,6 +200,11 @@ def make_sia_processor(
             # 干预统计：每个请求的 total token steps 和实际干预次数
             self._total_steps: dict[int, int] = {}
             self._intervened_steps: dict[int, int] = {}
+            # 干预导致 top-1 token 翻转（pre top-1 ≠ post top-1）的次数
+            self._flipped_steps: dict[int, int] = {}
+            # response_so_far 增量解码缓存（避免每步 O(n) 全量 re-decode）
+            self._decoded_text: dict[int, str] = {}
+            self._decoded_token_count: dict[int, int] = {}
 
         # ----------------------------------------------------------------
         # 从 prompt token IDs 中提取 user 内容
@@ -361,11 +365,66 @@ def make_sia_processor(
             return torch.tensor(scores, dtype=torch.float32)
 
         # ----------------------------------------------------------------
+        # response_so_far 增量解码
+        # ----------------------------------------------------------------
+        def _get_response_so_far(self, req_idx: int, output_ids: list) -> str:
+            """每步只 decode 新增的 tail，结果与全量 decode 等价但 O(1) per step。
+
+            BPE 边界保护：若 tail 末尾有 \\ufffd（多字节 UTF-8 未闭合），本步
+            不提交 cache，让后续 token 与未闭合字节一起重新 decode，保证 RM
+            收到的文本与一次性 decode 在字节层等价。
+            """
+            last_n = self._decoded_token_count.get(req_idx, 0)
+            cached = self._decoded_text.get(req_idx, "")
+            n = len(output_ids)
+            if n <= last_n:
+                return cached
+            tail_text = self._llm_tok.decode(
+                output_ids[last_n:], skip_special_tokens=True
+            )
+            response = cached + tail_text
+            if not tail_text.endswith("�"):
+                self._decoded_text[req_idx] = response
+                self._decoded_token_count[req_idx] = n
+            return response
+
+        # ----------------------------------------------------------------
         # apply：每个 token 生成前被 vllm 调用一次
         # ----------------------------------------------------------------
         def apply(self, logits: torch.Tensor) -> torch.Tensor:
             batch_size = logits.shape[0]
 
+            # ==== Batch-wide topk + entropy（一次提交所有 GPU 工作）====
+            # 原实现在 for-loop 里逐个 .item()，每个 batch item 都会
+            # 触发一次 GPU→CPU sync，阻塞 LLM forward pipeline。
+            # 这里改成在 loop 外面整体算 + 一次性 sync，把 batch_size 次
+            # sync 压成 1 次。
+            topk_result = torch.topk(logits, self._TOPK, dim=-1)
+            # numerically-stable entropy via log_softmax，避免 log(0)
+            log_probs = F.log_softmax(topk_result.values.float(), dim=-1)
+            probs = log_probs.exp()
+            entropies = -(probs * log_probs).sum(dim=-1)  # (batch,)
+
+            # 一次性 GPU→CPU sync（取代原代码中 per-item 的 .item()）
+            entropy_values = entropies.cpu().tolist()
+
+            # 在 CPU 上做 SKIP/INTERVENE 决策（不再触发 sync）
+            if self._ENTROPY_THRESHOLD is not None:
+                intervene_flags = [
+                    e >= self._ENTROPY_THRESHOLD for e in entropy_values
+                ]
+            else:
+                intervene_flags = [True] * batch_size
+
+            # 至少有一个要 INTERVENE 才把 topk_indices/values 拉到 CPU；纯 SKIP 省 sync
+            if any(intervene_flags):
+                topk_indices_lists = topk_result.indices.cpu().tolist()
+                topk_values_lists = topk_result.values.cpu().tolist()
+            else:
+                topk_indices_lists = None
+                topk_values_lists = None
+
+            # ==== Per-item loop，循环体里不再有 .item() / .tolist() sync ====
             for i in range(batch_size):
                 output_ids = list(self._output_ids.get(i, []))
                 user_content = self._prompt_user.get(i, "")
@@ -373,28 +432,26 @@ def make_sia_processor(
                 self._total_steps[i] = self._total_steps.get(i, 0) + 1
                 req_step = self._total_steps[i]
 
-                topk_logits, topk_indices = torch.topk(logits[i], self._TOPK)
+                entropy = entropy_values[i]
 
-                # entropy 过滤
-                probs = F.softmax(topk_logits.float(), dim=-1)
-                entropy = dist.Categorical(probs=probs).entropy().item()
-                if self._ENTROPY_THRESHOLD is not None:
-                    if entropy < self._ENTROPY_THRESHOLD:
-                        print(
-                            f"[SIA] {time.strftime('%H:%M:%S')}.{int(time.time() % 1 * 1_000_000):06d} "
-                            f"step={req_step:3d} req={i} "
-                            f"SKIP (entropy={entropy:.3f} < {self._ENTROPY_THRESHOLD})",
-                            flush=True,
-                        )
-                        continue
+                if not intervene_flags[i]:
+                    print(
+                        f"[SIA] {time.strftime('%H:%M:%S')}.{int(time.time() % 1 * 1_000_000):06d} "
+                        f"step={req_step:3d} req={i} "
+                        f"SKIP (entropy={entropy:.3f} < {self._ENTROPY_THRESHOLD})",
+                        flush=True,
+                    )
+                    continue
 
-                response_so_far = self._llm_tok.decode(
-                    output_ids, skip_special_tokens=True
-                )
+                # INTERVENE path
+                topk_indices_i = topk_indices_lists[i]            # list[int] (CPU)
+                topk_indices_gpu = topk_result.indices[i]         # GPU view，用于索引 logits
+
+                response_so_far = self._get_response_so_far(i, output_ids)
 
                 try:
                     rm_scores = self._score_candidates(
-                        user_content, response_so_far, topk_indices.tolist()
+                        user_content, response_so_far, topk_indices_i
                     )
                 except Exception as e:
                     print(
@@ -408,19 +465,39 @@ def make_sia_processor(
                 # 避免全负分时把 topk 全部压低、让 topk 外 token 意外胜出
                 rm_scores = rm_scores - rm_scores.mean()
                 effective_weight = self._weight_per_req.get(i, self._WEIGHT)
-                logits[i, topk_indices] = (
-                    logits[i, topk_indices]
+                logits[i, topk_indices_gpu] = (
+                    logits[i, topk_indices_gpu]
                     + rm_scores.to(logits.device) * effective_weight
                 )
 
                 self._intervened_steps[i] = self._intervened_steps.get(i, 0) + 1
+
+                # top-1 flip 检测：干预前 top-1 = topk_indices_i[0]（已按 logit 降序）；
+                # 干预后 top-1 取 topk 内的 argmax（SIA 加权幅度远小于 topk 内 logit gap，
+                # argmax 极少跳到 topk 外，topk 内排序足够代表实际选中变化）
+                topk_vals_i = topk_values_lists[i]
+                rm_list = rm_scores.tolist()
+                modified_vals = [
+                    topk_vals_i[k] + rm_list[k] * effective_weight
+                    for k in range(len(rm_list))
+                ]
+                post_top1_local = max(
+                    range(len(modified_vals)), key=modified_vals.__getitem__
+                )
+                pre_top1 = topk_indices_i[0]
+                post_top1 = topk_indices_i[post_top1_local]
+                flipped = pre_top1 != post_top1
+                if flipped:
+                    self._flipped_steps[i] = self._flipped_steps.get(i, 0) + 1
 
                 print(
                     f"[SIA] {time.strftime('%H:%M:%S')}.{int(time.time() % 1 * 1_000_000):06d} "
                     f"step={req_step:3d} req={i} INTERVENE "
                     f"entropy={entropy:.3f} "
                     f"gen_len={len(output_ids)} "
-                    f"rm=[{rm_scores.min():.3f}, {rm_scores.max():.3f}]",
+                    f"rm=[{rm_scores.min():.3f}, {rm_scores.max():.3f}] "
+                    f"flip={'Y' if flipped else 'N'} "
+                    f"pre_top1={pre_top1} post_top1={post_top1}",
                     flush=True,
                 )
 
@@ -439,15 +516,20 @@ def make_sia_processor(
             for idx in batch_update.removed:
                 total = self._total_steps.pop(idx, 0)
                 intervened = self._intervened_steps.pop(idx, 0)
+                flipped = self._flipped_steps.pop(idx, 0)
                 ratio = intervened / total if total > 0 else 0.0
+                flip_ratio = flipped / intervened if intervened > 0 else 0.0
                 print(
                     f"[SIA] req={idx} DONE  "
-                    f"intervened={intervened}/{total}  ratio={ratio:.1%}",
+                    f"intervened={intervened}/{total}  ratio={ratio:.1%}  "
+                    f"top1_flip={flipped}/{intervened} ({flip_ratio:.1%})",
                     flush=True,
                 )
                 self._output_ids.pop(idx, None)
                 self._prompt_user.pop(idx, None)
                 self._weight_per_req.pop(idx, None)
+                self._decoded_text.pop(idx, None)
+                self._decoded_token_count.pop(idx, None)
 
             if batch_update.moved:
                 old_out = dict(self._output_ids)
@@ -455,6 +537,9 @@ def make_sia_processor(
                 old_weight = dict(self._weight_per_req)
                 old_total = dict(self._total_steps)
                 old_intervened = dict(self._intervened_steps)
+                old_flipped = dict(self._flipped_steps)
+                old_decoded = dict(self._decoded_text)
+                old_decoded_n = dict(self._decoded_token_count)
                 for i1, i2, directionality in batch_update.moved:
                     if directionality == MoveDirectionality.UNIDIRECTIONAL:
                         self._output_ids[i2] = old_out.get(i1, [])
@@ -463,6 +548,10 @@ def make_sia_processor(
                             self._weight_per_req[i2] = old_weight[i1]
                         self._total_steps[i2] = old_total.get(i1, 0)
                         self._intervened_steps[i2] = old_intervened.get(i1, 0)
+                        self._flipped_steps[i2] = old_flipped.get(i1, 0)
+                        if i1 in old_decoded:
+                            self._decoded_text[i2] = old_decoded[i1]
+                            self._decoded_token_count[i2] = old_decoded_n.get(i1, 0)
                     else:  # SWAP
                         self._output_ids[i1] = old_out.get(i2, [])
                         self._output_ids[i2] = old_out.get(i1, [])
@@ -480,6 +569,20 @@ def make_sia_processor(
                         self._total_steps[i2] = old_total.get(i1, 0)
                         self._intervened_steps[i1] = old_intervened.get(i2, 0)
                         self._intervened_steps[i2] = old_intervened.get(i1, 0)
+                        self._flipped_steps[i1] = old_flipped.get(i2, 0)
+                        self._flipped_steps[i2] = old_flipped.get(i1, 0)
+                        if i2 in old_decoded:
+                            self._decoded_text[i1] = old_decoded[i2]
+                            self._decoded_token_count[i1] = old_decoded_n.get(i2, 0)
+                        else:
+                            self._decoded_text.pop(i1, None)
+                            self._decoded_token_count.pop(i1, None)
+                        if i1 in old_decoded:
+                            self._decoded_text[i2] = old_decoded[i1]
+                            self._decoded_token_count[i2] = old_decoded_n.get(i1, 0)
+                        else:
+                            self._decoded_text.pop(i2, None)
+                            self._decoded_token_count.pop(i2, None)
 
             for idx, params, prompt_ids, output_ids in batch_update.added:
                 self._output_ids[idx] = output_ids

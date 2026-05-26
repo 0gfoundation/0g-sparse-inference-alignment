@@ -109,6 +109,8 @@ batch forward 提速后，原本因推理链较长而超时（>60s）的题目�
 
 ## Appendix：实验运行命令
 
+> 本节命令的日志已归档至 `exp/`。完整命令与说明见 [`exp/README.md`](../exp/README.md) 中「2026-05-17 20:30」一节。
+
 ```bash
 nohup python src/sia_rm_server.py \
     --rm /workspace/SIA/models/Qwen3-4B \

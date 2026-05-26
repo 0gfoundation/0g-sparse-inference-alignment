@@ -124,6 +124,10 @@ SIA 的稀疏干预策略将每个生成步骤分为两类：
 
 ## Appendix
 
+> 本报告引用的实验日志已归档至 `exp/`。完整命令与说明见 [`exp/README.md`](../exp/README.md)：
+> - SIA：「2026-05-14 21:11 — SIA 部分」
+> - noSIA 对照（性能上限）：「2026-05-14 21:11 — N2」（via `sia_vllm_server.py`）、「2026-05-14 21:11 — N3」（vLLM 原生 api_server，88.4 tok/s）
+
 ### GPU 显存配置说明
 
 实验所用 GPU 为 **NVIDIA H200，总显存 140.4 GB**。LLM 分配 60% 显存（约 84 GB），Value Model 使用剩余 40%（约 56 GB）：

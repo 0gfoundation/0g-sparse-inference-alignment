@@ -208,3 +208,11 @@ ls -lt log_rm_pf_*.txt log_llm_pf_*.txt log_SIA_pf_*.txt | head -10
 - `_pf_now()` / `_pf_record()` / `_pf_summary_if_due()`：时间戳与统计
 - `_install_layer_hooks()` / `_layer_pre_hook` / `_layer_post_hook`：per-layer hook
 - 插桩位置：`_score_with_prefix_kv()`、`_try_score_with_kv_cache()`、`score()` endpoint
+
+---
+
+## 6. 实验日志归档
+
+按本文方式跑过的代表性实验日志已归档至 `exp/`，完整命令与说明见 [`exp/README.md`](../exp/README.md):
+- 「2026-05-20 15:00」— 开 `RM_PROFILE=True` 跑 profiling 定位瓶颈
+- 「2025-05-21 00:50」— CUDA graph 加速实验（§1.4）

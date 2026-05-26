@@ -401,3 +401,9 @@ vLLM 内部已经实现了：
 - `aabd5df` — optimize MISS path: batch=1 prefix + batch=k diff
 - `16d4fa5` — add torch.compile support and fix output_hidden_states waste
 - `3c8bc20` — implement single-pass KV prefix cache for Value Model scoring
+
+---
+
+## 9. 实验日志归档
+
+CUDA graph 路线的代表性端到端实验（PyTorch RM + `--cuda_graph` flag）日志已归档至 `exp/`，完整命令与说明见 [`exp/README.md`](../exp/README.md) 中「2025-05-21 00:50 — CUDA graph 加速实验」一节。

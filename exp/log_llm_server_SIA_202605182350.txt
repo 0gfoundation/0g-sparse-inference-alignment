@@ -1,0 +1,55 @@
+nohup: ignoring input
+INFO 05-19 00:03:59 [__init__.py:241] Automatically detected platform cuda.
+Loading tokenizer: /workspace/SIA/models/Qwen3-14B ...
+Tokenizer loaded.
+============================================================
+Model ID : Qwen3-14B
+LLM      : /workspace/SIA/models/Qwen3-14B
+RM URL   : http://localhost:8001
+topk=5  weight=1.0  entropy_threshold=1.0
+Server   : http://0.0.0.0:8000
+============================================================
+Loading vLLM AsyncLLMEngine...
+INFO 05-19 00:04:07 [__init__.py:711] Resolved architecture: Qwen3ForCausalLM
+`torch_dtype` is deprecated! Use `dtype` instead!
+INFO 05-19 00:04:07 [__init__.py:1750] Using max model len 4096
+INFO 05-19 00:04:08 [scheduler.py:222] Chunked prefill is enabled with max_num_batched_tokens=2048.
+[1;36m(EngineCore_0 pid=623760)[0;0m INFO 05-19 00:04:08 [core.py:636] Waiting for init message from front-end.
+[1;36m(EngineCore_0 pid=623760)[0;0m INFO 05-19 00:04:08 [core.py:74] Initializing a V1 LLM engine (v0.10.1.1) with config: model='/workspace/SIA/models/Qwen3-14B', speculative_config=None, tokenizer='/workspace/SIA/models/Qwen3-14B', skip_tokenizer_init=False, tokenizer_mode=auto, revision=None, override_neuron_config={}, tokenizer_revision=None, trust_remote_code=False, dtype=torch.bfloat16, max_seq_len=4096, download_dir=None, load_format=auto, tensor_parallel_size=1, pipeline_parallel_size=1, disable_custom_all_reduce=False, quantization=None, enforce_eager=False, kv_cache_dtype=auto, device_config=cuda, decoding_config=DecodingConfig(backend='auto', disable_fallback=False, disable_any_whitespace=False, disable_additional_properties=False, reasoning_backend=''), observability_config=ObservabilityConfig(show_hidden_metrics_for_version=None, otlp_traces_endpoint=None, collect_detailed_traces=None), seed=0, served_model_name=/workspace/SIA/models/Qwen3-14B, enable_prefix_caching=True, chunked_prefill_enabled=True, use_async_output_proc=True, pooler_config=None, compilation_config={"level":3,"debug_dump_path":"","cache_dir":"","backend":"","custom_ops":[],"splitting_ops":["vllm.unified_attention","vllm.unified_attention_with_output","vllm.mamba_mixer2"],"use_inductor":true,"compile_sizes":[],"inductor_compile_config":{"enable_auto_functionalized_v2":false},"inductor_passes":{},"cudagraph_mode":1,"use_cudagraph":true,"cudagraph_num_of_warmups":1,"cudagraph_capture_sizes":[256,248,240,232,224,216,208,200,192,184,176,168,160,152,144,136,128,120,112,104,96,88,80,72,64,56,48,40,32,24,16,8,4,2,1],"cudagraph_copy_inputs":false,"full_cuda_graph":false,"pass_config":{},"max_capture_size":256,"local_cache_dir":null}
+[1;36m(EngineCore_0 pid=623760)[0;0m INFO 05-19 00:04:12 [parallel_state.py:1134] rank 0 in world size 1 is assigned as DP rank 0, PP rank 0, TP rank 0, EP rank 0
+[1;36m(EngineCore_0 pid=623760)[0;0m INFO 05-19 00:04:12 [topk_topp_sampler.py:50] Using FlashInfer for top-p & top-k sampling.
+[1;36m(EngineCore_0 pid=623760)[0;0m [SIA] Loading LLM tokenizer: /workspace/SIA/models/Qwen3-14B
+[1;36m(EngineCore_0 pid=623760)[0;0m [SIA] RM URL: http://localhost:8001
+[1;36m(EngineCore_0 pid=623760)[0;0m INFO 05-19 00:04:13 [gpu_model_runner.py:1953] Starting to load model /workspace/SIA/models/Qwen3-14B...
+[1;36m(EngineCore_0 pid=623760)[0;0m INFO 05-19 00:04:13 [gpu_model_runner.py:1985] Loading model from scratch...
+[1;36m(EngineCore_0 pid=623760)[0;0m INFO 05-19 00:04:13 [cuda.py:328] Using Flash Attention backend on V1 engine.
+[1;36m(EngineCore_0 pid=623760)[0;0m Loading safetensors checkpoint shards:   0% Completed | 0/8 [00:00<?, ?it/s]
+[1;36m(EngineCore_0 pid=623760)[0;0m Loading safetensors checkpoint shards:  12% Completed | 1/8 [00:00<00:06,  1.04it/s]
+[1;36m(EngineCore_0 pid=623760)[0;0m Loading safetensors checkpoint shards:  25% Completed | 2/8 [00:01<00:05,  1.01it/s]
+[1;36m(EngineCore_0 pid=623760)[0;0m Loading safetensors checkpoint shards:  38% Completed | 3/8 [00:03<00:05,  1.01s/it]
+[1;36m(EngineCore_0 pid=623760)[0;0m Loading safetensors checkpoint shards:  50% Completed | 4/8 [00:04<00:04,  1.03s/it]
+[1;36m(EngineCore_0 pid=623760)[0;0m Loading safetensors checkpoint shards:  62% Completed | 5/8 [00:05<00:03,  1.04s/it]
+[1;36m(EngineCore_0 pid=623760)[0;0m Loading safetensors checkpoint shards:  75% Completed | 6/8 [00:06<00:02,  1.05s/it]
+[1;36m(EngineCore_0 pid=623760)[0;0m Loading safetensors checkpoint shards:  88% Completed | 7/8 [00:06<00:00,  1.14it/s]
+[1;36m(EngineCore_0 pid=623760)[0;0m Loading safetensors checkpoint shards: 100% Completed | 8/8 [00:07<00:00,  1.12it/s]
+[1;36m(EngineCore_0 pid=623760)[0;0m Loading safetensors checkpoint shards: 100% Completed | 8/8 [00:07<00:00,  1.05it/s]
+[1;36m(EngineCore_0 pid=623760)[0;0m 
+[1;36m(EngineCore_0 pid=623760)[0;0m INFO 05-19 00:04:21 [default_loader.py:262] Loading weights took 7.74 seconds
+[1;36m(EngineCore_0 pid=623760)[0;0m INFO 05-19 00:04:21 [gpu_model_runner.py:2007] Model loading took 27.5185 GiB and 7.959319 seconds
+[1;36m(EngineCore_0 pid=623760)[0;0m INFO 05-19 00:04:34 [backends.py:548] Using cache directory: /root/.cache/vllm/torch_compile_cache/8e6d52e7bd/rank_0_0/backbone for vLLM's torch.compile
+[1;36m(EngineCore_0 pid=623760)[0;0m INFO 05-19 00:04:34 [backends.py:559] Dynamo bytecode transform time: 13.00 s
+[1;36m(EngineCore_0 pid=623760)[0;0m INFO 05-19 00:04:46 [backends.py:161] Directly load the compiled graph(s) for dynamic shape from the cache, took 10.707 s
+[1;36m(EngineCore_0 pid=623760)[0;0m INFO 05-19 00:04:49 [monitor.py:34] torch.compile takes 13.00 s in total
+[1;36m(EngineCore_0 pid=623760)[0;0m INFO 05-19 00:04:49 [gpu_worker.py:276] Available KV cache memory: 55.72 GiB
+[1;36m(EngineCore_0 pid=623760)[0;0m INFO 05-19 00:04:50 [kv_cache_utils.py:849] GPU KV cache size: 365,136 tokens
+[1;36m(EngineCore_0 pid=623760)[0;0m INFO 05-19 00:04:50 [kv_cache_utils.py:853] Maximum concurrency for 4,096 tokens per request: 89.14x
+[1;36m(EngineCore_0 pid=623760)[0;0m Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):   0%|          | 0/35 [00:00<?, ?it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):   6%|▌         | 2/35 [00:00<00:01, 17.74it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  11%|█▏        | 4/35 [00:00<00:01, 16.99it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  17%|█▋        | 6/35 [00:00<00:02, 11.72it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  23%|██▎       | 8/35 [00:00<00:02, 13.43it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  29%|██▊       | 10/35 [00:00<00:01, 14.91it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  34%|███▍      | 12/35 [00:00<00:01, 12.03it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  40%|████      | 14/35 [00:01<00:01, 13.32it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  46%|████▌     | 16/35 [00:01<00:01, 10.92it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  51%|█████▏    | 18/35 [00:01<00:01, 12.27it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  57%|█████▋    | 20/35 [00:01<00:01, 13.45it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  63%|██████▎   | 22/35 [00:01<00:01, 10.79it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  69%|██████▊   | 24/35 [00:01<00:00, 12.03it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  74%|███████▍  | 26/35 [00:02<00:00, 13.08it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  80%|████████  | 28/35 [00:02<00:00, 11.39it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  86%|████████▌ | 30/35 [00:02<00:00, 12.52it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  91%|█████████▏| 32/35 [00:02<00:00, 10.96it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  97%|█████████▋| 34/35 [00:02<00:00, 12.48it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE): 100%|██████████| 35/35 [00:02<00:00, 12.55it/s]
+[1;36m(EngineCore_0 pid=623760)[0;0m INFO 05-19 00:04:53 [gpu_model_runner.py:2708] Graph capturing finished in 3 secs, took 0.53 GiB
+[1;36m(EngineCore_0 pid=623760)[0;0m INFO 05-19 00:04:53 [core.py:214] init engine (profile, create kv cache, warmup model) took 31.65 seconds
+LLM loaded.
+
+Starting HTTP server on http://0.0.0.0:8000 ...
+INFO:     Started server process [623616]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
