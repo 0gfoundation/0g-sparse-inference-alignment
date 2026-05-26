@@ -176,7 +176,67 @@ RM 每次 INTERVENE 处理的是 5 候选 × 1-2 token suffix（其余是 prefix
 
 ---
 
-## 5. 结论与下一步
+## 5. 全实验回顾：17 组实验的加速贡献排名
+
+G2/G3/G4 的"边缘收益"现象，放到 SIA 项目 17 组实验的完整历史里看更清楚 —— **真正带来吞吐数量级提升的只有 2 组**，其余都在 ±5% 噪声范围或负贡献。
+
+### 5.1 时间线（17 组实验全景）
+
+| # | 时间 | 干了什么 | 吞吐 (tok/s) | 准确率 | Δ tok/s |
+|---|---|---|---:|---:|---:|
+| 1 | 5-14 13:50 | SIA 首次跑通（PyTorch RM, --limit 3） | n/a | 54.4% | — |
+| N1 | 5-14 15:40 | noSIA 同期冒烟（--limit 3） | n/a | 71.1% | — |
+| 2 | 5-14 17:40 | SIA eager 首次全量（截断 n=247） | 9.94 | n/a | — |
+| 3 | 5-14 21:11 | SIA eager 完整 600 题 | 11.40 | 61.5% | baseline |
+| N2 | 5-14 21:11 | noSIA via SIA harness | 85.86 | 73.8% | — |
+| N3 | 5-14 21:11 | noSIA via vLLM 原生 api_server | **88.43** | 74.8% | **速度天花板** |
+| A1 | 5-15 | AlpacaEval（reward 12.3 → 13.9, +13.2%） | — | — | 验证 SIA 在 Helpfulness 任务有效 |
+| **4** | **5-17 20:30** | **batch forward 优化**：5 candidates 单次 batch | **23.41** | 69.3% | **+105% 🚀** |
+| 5 | 5-18 23:50 | 复测 eager，不明退步 | 18.47 | 67.5% | -21% |
+| 6 | 5-19 08:00 | torch.compile ❌ LLM server 崩了 | crash | 0% | — |
+| 7 | 5-19 23:18 | 回退 eager 复测 | 25.22 | 68.2% | +7% |
+| 8 | 5-20 15:00 | 开 RM_PROFILE 跑 profiling | 25.41 | 72.2% | +1% |
+| 9 | 5-21 00:50 | CUDA graph 静态 bucketing | 24.96 | 72.3% | -2% |
+| **10** | **5-22 10:45 G1** | **架构换代：PyTorch RM → vLLM RM** | **30.23** | 71.5% | **+19% 🚀** |
+| 11 | 5-25 09:45 G2 | RM 调度参数（本报告 §4.2）| 30.30 | 72.5% | +0.2% |
+| 12 | 5-25 21:20 G3 | 客户端代码 3 件套（本报告 §4.3）| 29.65 | 73.7% | -2% |
+| 13 | 5-26 10:30 G4 | RM FP8 + KV FP8（本报告 §4.4）| 28.08 | 73.2% | -5% |
+
+### 5.2 加速贡献排名
+
+🥇 **#4 batch forward 优化（2026-05-17 20:30）—— 唯一数量级提升 +105%**
+
+- **11.40 → 23.41 tok/s**（接近翻倍）
+- 准确率同步 61.5% → 69.3%（+7.8%pt）
+- 原理：5 个 candidate 从串行 5 次 forward 改成单次 batch=5，**直接砍掉 4×forward 的 kernel launch overhead**
+- 详见 [`doc/batch-forward-optimization-report.md`](batch-forward-optimization-report.md)
+
+🥈 **#10 G1 架构换代（2026-05-22 10:45）—— 第二大跳 +19%**
+
+- **25.41 → 30.23 tok/s**（相对历史 PyTorch RM 最佳）
+- 原理：把手写 FastAPI + PyTorch eager 换成 `vllm serve`，吃到 vLLM 自身的 prefix caching / continuous batching / CUDA graph
+- 详见 [`doc/vllm-rm-experiment-report.md`](vllm-rm-experiment-report.md)
+
+### 5.3 贡献低或负的
+
+- **#9 CUDA graph (CG)**：理论上应砍掉 ~360 个 kernel launch，实测反而 -2%（24.96 vs 25.41）—— 实现复杂度高、bucket 退化路径多，没拿到承诺的 +30%。详见 [`doc/cuda-graph-debugging-journal.md`](cuda-graph-debugging-journal.md)
+- **#6 torch.compile**：LLM server 直接 crash，全 0 分
+- **G2 RM 调度参数**：+0.2%，噪声级（本报告 §4.2）
+- **G3 客户端 3 件套**：-2%（但准确率涨 +1.2%pt 是稳定性副产品，本报告 §4.3）
+- **G4 FP8**：-5%（共享 GPU 让 FP8 算力红利无法兑现，本报告 §4.4）
+
+### 5.4 关键观察
+
+> 17 组实验里，真正带来吞吐数量级提升的只有 2 组：**#4 batch forward**（+105%）和 **#10 vLLM RM 换代**（+19%）。这两轮都直接攻击了"RM forward 本身的耗时"。其余 14 组（不含 AlpacaEval）多在边角参数 / 代码层优化上打转，效果都在 ±5% 内或负贡献。
+
+**两条规律**：
+
+1. **RM forward 时间是当前架构的核心成本**。攻击这部分的优化（batch forward、换 vLLM RM 引擎）都能拿到大块红利；攻击边角（调度参数、客户端 sync、量化）都被"共享 GPU + 协议开销"的隔板挡住。
+2. **共享单 GPU 是当前 SIA 速度的硬天花板**（~30 tok/s ≈ noSIA 88.4 的 34%）。继续在单卡上优化的边际收益已接近零；要再破，**必须上 2 张独立 GPU**（详见 §6.下一步 和 [`doc/parallel-decoding-design.md`](parallel-decoding-design.md)）。
+
+---
+
+## 6. 结论与下一步
 
 ### 结论
 
@@ -199,7 +259,7 @@ RM 每次 INTERVENE 处理的是 5 候选 × 1-2 token suffix（其余是 prefix
 
 ---
 
-## 6. 引用
+## 7. 引用
 
 - G1 baseline 详细报告：`doc/vllm-rm-experiment-report.md`
 - 跨阶段优化路线图（2 卡架构方案）：`doc/parallel-decoding-design.md`
