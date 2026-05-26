@@ -330,7 +330,11 @@ H200 上 FP8 GEMM 比 BF16 快 ~2×。
 
 ## 9. 复现日志文件
 
+> 本报告全套日志文件已归档至 `exp/`。完整命令与说明见 [`exp/README.md`](../exp/README.md)：
+> - 实验 1 (noSIA)：「2026-05-14 21:11 — N3」（vLLM 原生 api_server）
+> - 实验 2 (SIA + vLLM RM)：「2026-05-22 10:45 — G1 Baseline」
+
 | 实验 | 日志路径 |
 |------|---------|
 | 实验 1 (noSIA, vLLM) | `log_noSIA_selfServer_vllm_202605142111.txt` (eval), `log_llm_server_noSIA_vllm_202605142111.txt` (LLM server) |
-| 实验 2 (SIA + vLLM RM) | `log_SIA_vllmrm_202605221045.txt` (eval), `log_llm_vllmrm_202605221045.txt` (LLM server), `log_vllm_rm_opt_202605221045.txt` (RM server) |
+| 实验 2 (SIA + vLLM RM) | `log_SIA_vllmrm_202605221045.txt` (eval), `log_llm_vllmrm_202605221045.txt` (LLM server), `log_vllm_rm_202605221045.txt` (RM server) |

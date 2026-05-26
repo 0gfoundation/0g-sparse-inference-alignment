@@ -80,6 +80,8 @@ SIA 仅在 **16.14%** 的 token 位置触发了 Value Model 打分（即约 6 �
 
 ## Appendix
 
+> 本报告的 4 个 artifact 文件（noSIA/SIA generation log + Skywork 打分后的 2 个 JSON）已归档至 `exp/`。完整命令与说明见 [`exp/README.md`](../exp/README.md) 中「2026-05-15 — A1: AlpacaEval」一节。
+
 ### A. 推理 Prompt 格式
 
 本次实验使用论文原始 `evaluate.py`，未启用 `--add_sys_prompt`。每条指令的 prompt 格式为：

@@ -1,0 +1,32 @@
+nohup: ignoring input
+============================================================
+RM       : /workspace/SIA/models/Qwen3-4B  device=cuda:0
+RM LoRA  : /workspace/SIA/models/VM-Qwen3-4B-Base/VM-Qwen3-4B-Base
+Compile  : False
+CUDA graph: True  bucket=(batch=5, diff_max=64, kv_max=2048)
+Profile  : RM_PROFILE=True  RM_PROFILE_LAYERS=False
+Server   : http://0.0.0.0:8001
+============================================================
+[RM] Loading RM base for LoRA: /workspace/SIA/models/Qwen3-4B
+`torch_dtype` is deprecated! Use `dtype` instead!
+Loading checkpoint shards:   0%|          | 0/3 [00:00<?, ?it/s]Loading checkpoint shards: 100%|██████████| 3/3 [00:00<00:00, 59.63it/s]
+Some weights of Qwen3ForSequenceClassification were not initialized from the model checkpoint at /workspace/SIA/models/Qwen3-4B and are newly initialized: ['score.weight']
+You should probably TRAIN this model on a down-stream task to be able to use it for predictions and inference.
+[RM] Loading LoRA from: /workspace/SIA/models/VM-Qwen3-4B-Base/VM-Qwen3-4B-Base/lora_weights
+/workspace/SIA/venv2/lib/python3.12/site-packages/peft/config.py:162: UserWarning: Unexpected keyword arguments ['corda_config', 'qalora_group_size', 'target_parameters', 'trainable_token_indices', 'use_qalora'] for class LoraConfig, these are ignored. This probably means that you're loading a configuration file that was saved using a higher version of the library and additional parameters have been introduced since. It is highly recommended to upgrade the PEFT version before continuing (e.g. by running `pip install -U peft`).
+  warnings.warn(
+[RM] Loading token_reward_head from: /workspace/SIA/models/VM-Qwen3-4B-Base/VM-Qwen3-4B-Base/token_reward_head.pt
+[RM] Original SDPA flags: flash=True mem_eff=True math=True cudnn=True
+[RM] Capture-time SDPA: flash=OFF mem_eff=ON math=ON cudnn=OFF
+[RM] CudaGraph init: layers=36 kv_heads=8 head_dim=128 dtype=torch.bfloat16
+[RM] CudaGraph warmup+capture: batch=5 diff_max=64 kv_max=2048 layers=36 kv_heads=8 head_dim=128
+[RM] CudaGraph captured. output_logits shape=(5, 1) full_K[0] shape=(5, 8, 2112, 128)
+[RM] Restored SDPA flags (post-capture): flash=True mem_eff=True math=True cudnn=True — eager path will use these.
+INFO:     Started server process [1236748]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8001 (Press CTRL+C to quit)
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [1236748]
