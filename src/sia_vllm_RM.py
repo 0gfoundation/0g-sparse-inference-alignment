@@ -201,7 +201,7 @@ def make_sia_processor(
 
         # SIA 客户端 profiling（区别于 RM_PROFILE 那套服务端 profiling）
         _PROFILE_DETAIL: bool = os.environ.get("SIA_PROFILE", "1") == "1"
-        _PF_STATS_INTERVAL: int = 100  # 每 N 次 INTERVENE 打一次 aggregate
+        _PF_STATS_INTERVAL: int = int(os.environ.get("SIA_PF_INTERVAL", "100"))
 
         # ----------------------------------------------------------------
         # 初始化：在 EngineCore 子进程里执行
@@ -254,6 +254,10 @@ def make_sia_processor(
                 "tokenize_client":  [],   # use_token_ids 时客户端 tokenize 耗时
                 "http_post":        [],   # HTTP roundtrip + 服务端处理
                 "parse_response":   [],   # 解析 JSON 响应
+                # b2 backend phases
+                "b2_session_init":  [],   # new_session + apply_chat_template (只第 1 步非 0)
+                "b2_prefix_adv":    [],   # fix_a_token loop 推进 session
+                "b2_score_call":    [],   # RMClient.score_candidates (主要开销)
                 "total":            [],   # 端到端
             }
             self._pf_intervene_calls: int = 0
@@ -471,6 +475,9 @@ def make_sia_processor(
               3. score_candidates(candidate_token_ids)
             """
             assert self._rm is not None, "RMClient not initialized"
+            pf_on = self._PROFILE_DETAIL
+            t0 = time.perf_counter() if pf_on else 0.0
+
             sid = self._b2_sessions.get(req_idx)
             if sid is None:
                 # 第一次见 req: 用 chat template 渲染 user message,
@@ -488,18 +495,27 @@ def make_sia_processor(
                 sid = self._rm.new_session(chat_prefix_tokens)
                 self._b2_sessions[req_idx] = sid
                 self._b2_chat_prefix_len[req_idx] = len(chat_prefix_tokens)
+            t_sess = time.perf_counter() if pf_on else 0.0
 
             # 推进 session 到 chat_prefix_len + len(output_ids)
             cur_len = self._rm.session_length(sid)
             chat_prefix_len = self._b2_chat_prefix_len[req_idx]
             n_already = cur_len - chat_prefix_len
             if n_already < 0:
-                # 防御: 不应发生, 但若 chat_prefix_len 错了就别 crash
                 n_already = 0
             for tid in output_ids[n_already:]:
                 self._rm.fix_a_token(sid, int(tid))
+            t_advance = time.perf_counter() if pf_on else 0.0
 
             rewards = self._rm.score_candidates(sid, candidate_token_ids)
+            t_score = time.perf_counter() if pf_on else 0.0
+
+            if pf_on:
+                self._pf_record("b2_session_init", (t_sess    - t0)      * 1000)
+                self._pf_record("b2_prefix_adv",   (t_advance - t_sess)  * 1000)
+                self._pf_record("b2_score_call",   (t_score   - t_advance) * 1000)
+                self._pf_record("total",           (t_score   - t0)      * 1000)
+                self._pf_summary_if_due()
             return torch.tensor(rewards, dtype=torch.float32)
 
         def _score_candidates_pytorch(

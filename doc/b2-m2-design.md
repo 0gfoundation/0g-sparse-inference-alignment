@@ -344,6 +344,84 @@ setup: 起始 prefix 50 token，每 iter append 1 token，跑 5 prompt batch gen
 
 **Step 1 PASS，下面进 step 2 (RMClient).**
 
+### M2 step 2 + step 3 实测结果（2026-05-27）
+
+脚本：[`scripts/verify_m2_step2.py`](../scripts/verify_m2_step2.py)
+
+| 测试 | 内容 | 结果 |
+|------|------|------|
+| T1 | 单次 score_candidates 数值 vs BF16 | max\|Δ\|=**0.016** ✅ |
+| T2 | fix_a_token 链式 5 步 decode (每步对比 BF16) | 每步 max\|Δ\| 0.12–0.25, 全部 < 0.5 ✅ |
+| T3 | 100 次链式 score, prefix 27→127 token | min=8.5ms, **p50=16.8ms**, p95=36ms, max=46ms ✅ |
+
+T3 跟 §7.A pure-bench 的 p50=15.2ms 几乎一致（多 ~1.6ms 是 RMClient session 管理 + 文件 IO overhead）。step 2 与 step 3 合并完成（fix_a_token 链式延迟已在 T3 覆盖）。
+
+### M2 step 4 实测结果（2026-05-27）
+
+集成入 `src/sia_vllm_RM.py`，加 `--rm_backend b2` 选项。SIALogitsProcessor 在 LLM EngineCore subprocess 里实例化 RMClient（→ 再 fork 一个 RM EngineCore subprocess B），形成 **嵌套 EngineCore 架构**。
+
+#### 关键工程要点
+
+1. **vLLM plugin entry-point** 不能省：EngineCore subprocess 由 `python -m vllm.v1.engine.core` spawn，**不继承父进程的 ModelRegistry state**。`pyproject.toml` 注册 `sia_rm.plugin:register_with_vllm` 到 `vllm.general_plugins` group，配合 `pip install -e .` 让 EngineCore subprocess 启动时自动 `load_general_plugins()` 触发 register。
+2. **GPU memory split**：两个 vLLM 实例共享 GPU，必须给 LLM 留够 KV cache 空间。实测 `--llm_gpu_mem 0.5 --rm_b2_gpu_mem 0.3` work；`0.3+0.3` 会 OOM（LLM 的 KV cache 算成负值）。
+3. **会话推进 zero-copy**：SIA `fix_a_token(rm_sid, token_id)` 直接 append 到 Python list 不调 vLLM；下一次 `score_candidates` 时让 vLLM prefix caching 自动复用 KV。
+
+#### 性能 profile（SIA_PF_INTERVAL=20 累积，120 token 稳态）
+
+| phase | p50 | p95 | max |
+|-------|-----|-----|-----|
+| `b2_session_init` (仅第一步非 0) | 0.00 | 0.00 | 0.85 ms |
+| `b2_prefix_adv` (fix_a_token loop) | 0.00 | 0.01 | 0.06 ms |
+| **`b2_score_call`** (RMClient.score_candidates) | **18.97** | 39.58 | 69.00 ms |
+| `total` | 18.97 | 39.58 | 69.85 ms |
+
+`b2_score_call` 比 §7.A pure bench 的 15.2ms 多 ~4ms — 嵌套 EngineCore IPC（SIA 主 → LLM EngineCore → RM EngineCore，三层 zmq）的开销。
+
+#### 整体 tok/s（CLI 单 prompt，max_tokens=120/200，Qwen3-4B + VM-Qwen3-4B）
+
+| 场景 | intervene 率 | output tok/s | 每 token 拆分 |
+|------|--------------|--------------|---------------|
+| noSIA baseline | 0% | ~88 | LLM ~11ms |
+| **b2 @ entropy=1.0** | **7.5% (15/200)** | **97.07** ✨ | 接近 noSIA |
+| b2 @ no threshold | 100% (120/120) | 29.60 | ~33.75 ms |
+
+#### 反算 LLM / RM 时间分布（联立两组数据）
+
+设 LLM forward = L, RM call effective = R：
+- intervene 7.5%: 185×L + 15×(L+R) = 2.06s  →  200L + 15R = 2060
+- intervene 100%: 120×(L+R) = 4.05s  →  L + R = 33.75ms
+
+解得 **L = 8.4ms, R = 25.4ms** 。其中 R 含 b2_score_call (19ms) + Python wrap 开销 (~6ms: tensor copy, GPU sync, logits modify)。
+
+#### 跟 HTTP `/classify` baseline 估算对比
+
+| Backend | RM call | intervene 50% tok/s | intervene 100% tok/s |
+|---------|---------|---------------------|------------------------|
+| HTTP `/classify` | ~30 ms | 42.7 | 26 |
+| **b2 in-process** | ~25 ms | **47.4 (+11%)** | **29.6 (+14%)** |
+
+#### 跟 §4 design 预期的差距分析
+
+design §4 预测单卡 ~45-57 tok/s（基于 "RM 7ms + LLM 7ms = 14ms/token"）。实测达到的是：
+- 8.4ms LLM 部分 OK（比预期 7ms 多 1.4ms，可接受）
+- RM 25ms vs 预期 7ms：**这是主要差距来源**
+
+RM call 25ms 拆解：
+- §7.A pure prefix-cache bench: 15.2ms （batch=5 candidates，含每次 generate 调度 + 1 token 的 partial prefill on block boundary）
+- 嵌套 EngineCore IPC 多 ~4ms（嵌套测得 19ms）
+- Python wrap (tensor copy + topk grad + scheduler 同步) 多 ~6ms
+
+预期 7ms 只是 F=continuous-decode 实测，**没考虑 batch=5、batch=5 也不全是 decode（每个 candidate 是新分支）**。M1/M2 路径下，每次 score 5 candidates 必然有 1 个 block-boundary prefill。这是 vLLM v1 prefix cache 的 block_size=16 设计决定的固有开销。
+
+#### 结论
+
+- ✅ **正确性**：sparse intervention (entropy=1.0) 接近 noSIA 上限；100% intervene 数值与 BF16 一致
+- ⚠️ **加速幅度小于 design 预期**：实际 b2 vs HTTP +11–14%，而不是 60%+
+- 真正的价值是 **sparse mode 下能跑到 ~97 tok/s（接近 noSIA 88）**，而 HTTP 在 sparse 7.5% 下估算 ~94 tok/s — 几乎没差别
+- 后续优化空间：(a) 跳过 嵌套 EngineCore IPC（需调研 vLLM in-process executor），(b) batch=5 改成 1+4 拆分让 4 candidate 走纯 decode
+
+**进 step 5 MMLU benchmark** — 用真实 workload 测 b2 vs HTTP 端到端 quality + tok/s。
+
 ---
 
 ## 8. 实施步骤
