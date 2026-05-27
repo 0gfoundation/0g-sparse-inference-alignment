@@ -19,9 +19,11 @@ from .qwen3_with_score import (
     read_all_rewards,
     truncate_rewards,
 )
+from .client import RMClient
 
 __all__ = [
     "Qwen3WithScoreForCausalLM",
+    "RMClient",
     "get_last_rewards",
     "read_rewards",
     "read_all_rewards",
