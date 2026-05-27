@@ -236,6 +236,102 @@ M1a 结果
 
 ---
 
+## 6.5 M1a / M1b 实测结果（2026-05-27）
+
+### M1a — hidden_state 提取 ✅ PASS
+
+- 在 `Qwen3ForCausalLM.compute_logits` 入口挂 hook，hidden_state 能直接取到
+- per-token decode = **6.84ms**（vs 无 patch baseline 7.02ms，多出 ~0.2ms 是 hook 写 /tmp 文件的开销）
+- CUDA graph 仍然生效（没有任何重新编译）
+- 关键 insight：`monkey-patch + import` 不跨 subprocess；EngineCore 是 fork 出的 subprocess，必须**直接改 vLLM 源码**，subprocess re-import 时才能拿到 patch
+- 脚本：[`scripts/poc_b2_extract_hidden_state.py`](../scripts/poc_b2_extract_hidden_state.py)
+
+### M1b — score 数值正确性 ✅ PASS（经历一次重跑）
+
+#### 第一次（错配）：vLLM rewards vs BF16 baseline 出现 ~7× systematic scaling
+
+| candidate | vLLM | BF16 | \|Δ\| |
+|-----------|------|------|-------|
+| '4' | +1.13 | +7.06 | 5.94 |
+| '5' | -1.23 | -9.00 | 7.77 |
+
+- Pearson = 0.9731（< 0.99 ❌）
+- Top-1 一致（'4' 都最高），但数值标度差 ~6–8×
+
+#### 根因排查（diagnose 脚本：[`scripts/poc_b2_diagnose_scaling.py`](../scripts/poc_b2_diagnose_scaling.py)）
+
+排查路径：
+1. **vLLM final norm 缺失？** ❌ 不是。`Qwen2Model.forward` line 369 `self.norm(hidden_states, residual)` 确认应用了 final RMSNorm
+2. **vLLM/HF tokenization 不同？** ❌ 不是。dump 出 input_ids 完全相同（包括末尾 `[..., 151645, 198]`）
+3. **sample position 错位？** ❌ 不是。HF 全序列对 vLLM 的 cos 最高出现在 pos 23（last token，cos=0.9998），位置对齐
+4. **vLLM / HF 用了不同模型！** ✅ **就是根因**：
+   - 脚本里 `MODEL_BASE = /workspace/SIA/models/Qwen3-4B`（base）→ 给 vLLM 用
+   - 脚本里 `MODEL_VM  = /workspace/SIA/models/VM-Qwen3-4B-merged-for-vllm`（LoRA merged）→ 给 HF SequenceClassification 用
+   - VM 是 LoRA fine-tune 过的 backbone，weights 跟 base 不同 → hidden_state 自然处在不同的表示空间，cos=0.617，score 标度差 6×
+
+#### 修复（3 处改动 + 1 处临时 config 改动）
+
+**1. config.json**（让 vLLM 用 generative 路径而不是 pooling）：
+```diff
+- "architectures": ["Qwen3ForSequenceClassification"],
++ "architectures": ["Qwen3ForCausalLM"],
+```
+（`config.json.bak` 已备份；M2 进生产时会改成自定义 architecture 名而不是修改 base 模型 config）
+
+**2. qwen3.py `load_weights`**（vLLM 严格校验，看到不认识的 `score.weight` 会 fail）：
+```diff
+- loader = AutoWeightsLoader(self, skip_prefixes=(["lm_head."] if tie else None))
++ skip = ["score."]  # VM score head 不属于 Qwen3ForCausalLM
++ if self.config.tie_word_embeddings:
++     skip.append("lm_head.")
++ loader = AutoWeightsLoader(self, skip_prefixes=skip)
+```
+
+**3. qwen3.py `compute_logits` patch**（lazy-load score head + 算 reward）：
+```python
+if type(self)._b2_score_weight is None:
+    _data = safetensors.torch.load_file(
+        "/workspace/SIA/models/VM-Qwen3-4B-merged-for-vllm/"
+        "model-00002-of-00002.safetensors"  # score.weight 在 shard 2
+    )
+    type(self)._b2_score_weight = _data["score.weight"].to(
+        hidden_states.device, hidden_states.dtype
+    )
+rewards = (hidden_states @ type(self)._b2_score_weight.T).squeeze(-1)
+```
+
+**4. PoC 脚本**：vLLM 端模型路径也指向 VM-Qwen3-4B-merged-for-vllm。
+
+#### 重跑结果（M1b 真正 PASS）
+
+| candidate | vLLM | BF16 | \|Δ\| |
+|-----------|------|------|-------|
+| '4'   | **+7.094** | +7.063 | 0.031 |
+| '5'   | -8.875 | -9.000 | 0.125 |
+| '3'   | -7.313 | -7.313 | 0.000 |
+| '6'   | -8.938 | -8.875 | 0.063 |
+| '100' | -9.000 | -8.938 | 0.063 |
+
+- **Pearson = 0.9999** ✅（> 0.99）
+- **max \|Δ\| = 0.125** ✅（< 0.5）
+- **Top-1 = '4' 一致** ✅
+- batch=5 generate p50 = 14.8ms（含 prefill；纯 decode ≈ 7ms）
+- 诊断 hidden_state cos similarity = **0.9998**，norm 99.9% 一致 → vLLM 和 HF 在同一 backbone 上数值完全等价
+
+### 决策：✅ 走方案 A，投 M2/M3
+
+按 §6 矩阵，M1b S=14.8ms（含 prefill；M2 stateful + decode-only 后预计 ~7ms）+ Pearson > 0.99 → 落在"**全力投 M2/M3，预期 +60% 吞吐**"格子。
+
+### M2 启动前必须做的清理
+
+PoC 期间为了快速验证，**直接改了 vLLM 源码 + VM config**：
+1. `/workspace/SIA/venv2/lib/python3.12/site-packages/vllm/model_executor/models/qwen3.py` — 加了 PoC hook + 改了 `load_weights`。M2 启动前 restore：`cp qwen3.py.bak qwen3.py`
+2. `/workspace/SIA/models/VM-Qwen3-4B-merged-for-vllm/config.json` — architectures 改成 Qwen3ForCausalLM。restore：`cp config.json.bak config.json`
+
+M2 应该用 vLLM `ModelRegistry.register_model` 注册一个新的 `Qwen3WithScoreForCausalLM` adapter（在我们自己的代码里），避免再去修改 vLLM 源码或 base config——这样 patch 是 sticky 的，能在 SIA package 内部 ship。
+
+---
+
 ## 7. M2 / M3 概略（M1 通过后再细化）
 
 ### M2（~400 LOC, 1 周）—— 实现 fix_a_token + score_candidates 的 stateful server
