@@ -300,6 +300,53 @@ class RMClient:
 
 ---
 
+## 7.X 实测结果（2026-05-27）
+
+### §7.B + §7.C ✅ PASS
+
+脚本：[`scripts/bench_b2_registry_and_override.py`](../scripts/bench_b2_registry_and_override.py) + [`scripts/b2_test_model.py`](../scripts/b2_test_model.py)
+
+- vLLM 接受 `hf_overrides={"architectures": ["Qwen3WithScoreTest"]}`，把 VM 模型（架构=`Qwen3ForSequenceClassification`）成功 dispatch 到我们注册的 `Qwen3ForCausalLM` 子类
+- `score.weight` 自动加载到 `self.score`（不需要 `skip_prefixes`），因为 `Qwen3WithScoreTest.__init__` 加了对应 module
+- generate 成功输出文本，supported_tasks = `['generate']`
+
+**踩坑**：vLLM 的 `_run_in_subprocess` 是用 `python -m vllm.model_executor.models.registry` 起一个**全新独立的 Python subprocess**（不是 fork），`sys.path` 修改不继承。必须显式设环境变量 `PYTHONPATH` 让 subprocess 找到自定义 model module：
+
+```python
+os.environ["PYTHONPATH"] = "/path/to/sia_rm:" + os.environ.get("PYTHONPATH", "")
+```
+
+或者把 `sia_rm` 安装为正式 site-packages package。M2 实现时应该走第二条路（pip install -e .）让 SIA 成为正常 importable package。
+
+### §7.A ✅ PASS（带 spike 隐患）
+
+脚本：[`scripts/bench_b2_prefix_cache.py`](../scripts/bench_b2_prefix_cache.py)
+
+setup: 起始 prefix 50 token，每 iter append 1 token，跑 5 prompt batch generate (max_tokens=1)，100 iter 测稳态延迟。
+
+| metric | 值 | 注释 |
+|--------|------|------|
+| min    | **7.88 ms** | ≈ F=7ms 实测，prefix cache 命中时只跑 5×1 token decode |
+| **p50** | **15.22 ms** | ✅ < 20ms 阈值 |
+| avg    | 16.9 ms | |
+| p95    | 35.0 ms | ⚠️ 偶发 spike |
+| max    | 51.4 ms | ⚠️ 估计是 block-boundary partial prefill |
+
+**trajectory（每 10 个 iter 的 p50）**：
+- iter 0-19 (prefix 55-75): p50 ~20ms（warm up 期）
+- iter 20-59 (prefix 75-115): p50 9-14ms（最稳）
+- iter 60-89 (prefix 115-145): 偶有 spike，p50 ~14-24ms（block boundary）
+- iter 90-99: 稳回 14ms
+
+**分析**：
+- p50=15ms 达成（< 20ms），M2 设计可行
+- 偶发 max=51ms 估计是 block_size=16 的 prefix cache 在每 16 个 token 处理一个新 block 的 partial prefill；可以通过更小 block_size 或 manual prewarm 缓解，但 SIA 看 throughput 而非 tail latency，p50 已够
+- 实际 SIA 收益估算：current baseline 30 tok/s（RM HTTP ~30ms/call）→ B2 后约 **45-57 tok/s**（RM 15ms/call + 7ms LLM 主步），跟 §4 doc 预测一致
+
+### 综合判定：✅ 全部 PASS，进 step 1 实现
+
+---
+
 ## 8. 实施步骤
 
 按以下顺序，每个 step 跑完即 commit，失败可以一键回退：
