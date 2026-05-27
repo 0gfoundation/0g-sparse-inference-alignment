@@ -26,12 +26,24 @@ import hashlib
 import os
 import re
 import requests
+import sys
 import time
 from typing import Optional
 
 import torch
 import torch.nn.functional as F
 from transformers import AutoTokenizer
+
+# Make sia_rm importable in EngineCore subprocess (spawned via python -m,
+# does not inherit parent's sys.path). Adding src/ to PYTHONPATH lets the
+# subprocess find sia_rm when SIALogitsProcessor.__init__ instantiates
+# RMClient (which transitively reimports sia_rm in the RM EngineCore).
+_THIS_DIR = os.path.dirname(os.path.abspath(__file__))
+_pp = os.environ.get("PYTHONPATH", "")
+if _THIS_DIR not in _pp.split(":"):
+    os.environ["PYTHONPATH"] = (_THIS_DIR + ":" + _pp) if _pp else _THIS_DIR
+if _THIS_DIR not in sys.path:
+    sys.path.insert(0, _THIS_DIR)
 
 from vllm import LLM, SamplingParams
 from vllm.v1.sample.logits_processor.interface import (
@@ -147,33 +159,34 @@ def make_sia_processor(
     topk: int = 10,
     weight: float = 1.0,
     entropy_threshold: Optional[float] = None,
-    rm_backend: str = "pytorch",       # "pytorch"（原 sia_rm_server.py）或 "vllm"（vLLM serve）
-    rm_model: Optional[str] = None,    # rm_backend="vllm" 时必填：vLLM 加载的 model 路径
+    rm_backend: str = "pytorch",       # "pytorch" / "vllm" / "b2"
+    rm_model: Optional[str] = None,    # rm_backend ∈ {"vllm","b2"} 时必填：RM 模型路径
     use_token_ids: bool = False,       # C2: 客户端预先 tokenize，直接发 token_ids 给 RM
+    rm_b2_gpu_mem: float = 0.3,        # b2 backend: RM vLLM 实例的 gpu_memory_utilization
 ):
     """
     返回一个 SIALogitsProcessor 类（不是实例）。
     vllm 引擎以 (vllm_config, device, is_pin_memory) 参数实例化该类。
-    RM 打分通过 HTTP 调用独立的 RM server 完成。
 
     rm_backend:
       - "pytorch": 调用 src/sia_rm_server.py（手写 FastAPI）的 POST /score endpoint
-      - "vllm":    调用 vllm serve 启动的 /classify endpoint（推荐：更稳定 + 更快）
-                    需配合 scripts/convert_rm_for_vllm.py 转换好的 checkpoint
+      - "vllm":    调用 vllm serve 启动的 /classify endpoint（HTTP 协议，需独立启动）
+      - "b2":      in-process stateful RM (sia_rm.RMClient)，跟 LLM 共享 GPU。
+                    无 HTTP/IPC 开销，依赖 vLLM prefix caching 让多步 score
+                    几乎是 decode-only（~7-15ms vs HTTP /classify ~30ms）。
+                    rm_model 必填: VM 模型路径 (architectures 通过 hf_overrides
+                    强转为 Qwen3WithScoreForCausalLM)。
 
     use_token_ids (仅 rm_backend="vllm" 时生效):
       - False: 客户端发字符串，vLLM 服务端 re-tokenize
-      - True:  客户端预先 tokenize 后发 list[list[int]]，省服务端 tokenize 开销。
-               vLLM 0.10.1.1 的 ClassificationRequest schema 不直接接受 token_ids，
-               需在启动 RM server 时用 scripts/vllm_serve_with_token_ids.py 打 Pydantic
-               补丁。
+      - True:  客户端预先 tokenize 后发 list[list[int]]
 
     SIA_PROFILE 环境变量（默认 "1"，开）：每次 INTERVENE 累积 per-phase 耗时，每 100 次
     INTERVENE 打一次 [SIA-pf-summary] aggregate p50/p95/max。
     """
-    if rm_backend == "vllm" and not rm_model:
+    if rm_backend in ("vllm", "b2") and not rm_model:
         raise ValueError(
-            "rm_backend='vllm' requires --rm_model (e.g. the path passed to `vllm serve`)"
+            f"rm_backend='{rm_backend}' requires --rm_model"
         )
 
     class SIALogitsProcessor(LogitsProcessor):
@@ -184,6 +197,7 @@ def make_sia_processor(
         _WEIGHT = weight
         _ENTROPY_THRESHOLD = entropy_threshold
         _USE_TOKEN_IDS = use_token_ids
+        _RM_B2_GPU_MEM = rm_b2_gpu_mem
 
         # SIA 客户端 profiling（区别于 RM_PROFILE 那套服务端 profiling）
         _PROFILE_DETAIL: bool = os.environ.get("SIA_PROFILE", "1") == "1"
@@ -243,6 +257,24 @@ def make_sia_processor(
                 "total":            [],   # 端到端
             }
             self._pf_intervene_calls: int = 0
+
+            # B2 backend: in-process RMClient + per-request session 表
+            # 假设 LLM 和 RM 用同一个 tokenizer (B2 路径前提)，所以 token_id 通用
+            self._rm: Optional[object] = None
+            self._b2_sessions: dict[int, int] = {}        # req_idx -> rm_sid
+            self._b2_chat_prefix_len: dict[int, int] = {}  # req_idx -> chat_prefix tokens 数
+            if self._RM_BACKEND == "b2":
+                print(f"[SIA-b2] Starting RMClient(model={self._RM_MODEL}, "
+                      f"gpu_mem={self._RM_B2_GPU_MEM}) ...", flush=True)
+                # 这里会再 fork 一个 vLLM EngineCore subprocess (RM 用)
+                # 该过程跑在 LLM EngineCore subprocess 里, 嵌套但可行
+                from sia_rm import RMClient
+                self._rm = RMClient(
+                    model_path=self._RM_MODEL,
+                    gpu_mem=self._RM_B2_GPU_MEM,
+                    max_model_len=2048,
+                )
+                print(f"[SIA-b2] RMClient ready", flush=True)
 
         # ----------------------------------------------------------------
         # 从 prompt token IDs 中提取 user 内容
@@ -396,13 +428,19 @@ def make_sia_processor(
             user_content: str,
             response_so_far: str,
             candidate_token_ids: list[int],
+            output_ids: list[int],
         ) -> torch.Tensor:
             """返回 shape (topk,) float32 tensor（CPU）。
 
-            根据 rm_backend 分发到不同 endpoint：
+            根据 rm_backend 分发到不同实现：
               - pytorch: POST /score （sia_rm_server.py 自定义协议）
               - vllm:    POST /classify （vLLM 原生协议）
+              - b2:      in-process RMClient (token_ids 路径，跳过 chat template / HTTP)
             """
+            if self._RM_BACKEND == "b2":
+                return self._score_candidates_b2(
+                    req_idx, user_content, output_ids, candidate_token_ids
+                )
             candidate_texts = [
                 self._llm_tok.decode([tid], skip_special_tokens=False)
                 for tid in candidate_token_ids
@@ -414,6 +452,55 @@ def make_sia_processor(
             return self._score_candidates_pytorch(
                 user_content, response_so_far, candidate_texts
             )
+
+        def _score_candidates_b2(
+            self,
+            req_idx: int,
+            user_content: str,
+            output_ids: list[int],
+            candidate_token_ids: list[int],
+        ) -> torch.Tensor:
+            """In-process RMClient path: token-level prefix + fix_a_token chain.
+
+            Per-request session 维护 RM prefix:
+              session_prefix = chat_template(user_msg) + output_ids[:N]
+            每次 INTERVENE 时:
+              1. 第一次见 req_idx: new_session(chat_template tokens)
+              2. fix_a_token for any output token added since last call
+                 (entropy SKIP 时 _score_candidates 不被调用, 这里补齐)
+              3. score_candidates(candidate_token_ids)
+            """
+            assert self._rm is not None, "RMClient not initialized"
+            sid = self._b2_sessions.get(req_idx)
+            if sid is None:
+                # 第一次见 req: 用 chat template 渲染 user message,
+                # add_generation_prompt=True 让 prefix 末尾是 assistant role marker
+                chat_prefix_tokens = self._llm_tok.apply_chat_template(
+                    [{"role": "user", "content": user_content}],
+                    tokenize=True,
+                    add_generation_prompt=True,
+                )
+                # 去掉 BOS (vLLM tokens prompt 不需要 BOS, 跟主 LLM 一致)
+                bos = self._llm_tok.bos_token_id
+                if (bos is not None and chat_prefix_tokens
+                        and chat_prefix_tokens[0] == bos):
+                    chat_prefix_tokens = chat_prefix_tokens[1:]
+                sid = self._rm.new_session(chat_prefix_tokens)
+                self._b2_sessions[req_idx] = sid
+                self._b2_chat_prefix_len[req_idx] = len(chat_prefix_tokens)
+
+            # 推进 session 到 chat_prefix_len + len(output_ids)
+            cur_len = self._rm.session_length(sid)
+            chat_prefix_len = self._b2_chat_prefix_len[req_idx]
+            n_already = cur_len - chat_prefix_len
+            if n_already < 0:
+                # 防御: 不应发生, 但若 chat_prefix_len 错了就别 crash
+                n_already = 0
+            for tid in output_ids[n_already:]:
+                self._rm.fix_a_token(sid, int(tid))
+
+            rewards = self._rm.score_candidates(sid, candidate_token_ids)
+            return torch.tensor(rewards, dtype=torch.float32)
 
         def _score_candidates_pytorch(
             self, user_content: str, response_so_far: str,
@@ -602,7 +689,8 @@ def make_sia_processor(
 
                 try:
                     rm_scores = self._score_candidates(
-                        i, user_content, response_so_far, topk_indices_i
+                        i, user_content, response_so_far, topk_indices_i,
+                        output_ids,
                     )
                 except Exception as e:
                     print(
@@ -683,6 +771,15 @@ def make_sia_processor(
                 self._decoded_token_count.pop(idx, None)
                 self._chat_prefix_per_req.pop(idx, None)
                 self._chat_suffix_per_req.pop(idx, None)
+                # b2: 释放 RM session
+                if self._rm is not None:
+                    sid = self._b2_sessions.pop(idx, None)
+                    self._b2_chat_prefix_len.pop(idx, None)
+                    if sid is not None:
+                        try:
+                            self._rm.end_session(sid)
+                        except Exception:
+                            pass
 
             if batch_update.moved:
                 old_out = dict(self._output_ids)
@@ -770,12 +867,15 @@ def parse_args():
     p.add_argument("--llm",       required=True,  help="LLM 模型路径")
     p.add_argument("--rm_url",    default="http://localhost:8001",
                    help="RM server 地址（默认 http://localhost:8001）")
-    p.add_argument("--rm_backend", choices=["pytorch", "vllm"], default="pytorch",
-                   help="RM 后端：pytorch=src/sia_rm_server.py 的自定义 /score；"
-                        "vllm=vllm serve 启动的 /classify（推荐，更快更稳）")
+    p.add_argument("--rm_backend",
+                   choices=["pytorch", "vllm", "b2"],
+                   default="pytorch",
+                   help="RM 后端：pytorch=自定义 /score；vllm=vllm serve 的 /classify；"
+                        "b2=in-process RMClient (跟 LLM 同进程, 无 HTTP 开销)")
     p.add_argument("--rm_model",  default=None,
-                   help="rm_backend=vllm 时必填：vllm serve 加载的 model 路径，"
-                        "例如 /workspace/SIA/models/VM-Qwen3-4B-merged-for-vllm")
+                   help="rm_backend ∈ {vllm, b2} 时必填: RM 模型路径")
+    p.add_argument("--rm_b2_gpu_mem", type=float, default=0.3,
+                   help="b2 backend 下 RM vLLM 实例的 gpu_memory_utilization (默认 0.3)")
     p.add_argument("--llm_gpu_mem", type=float, default=0.5,
                    help="vllm gpu_memory_utilization（默认 0.5）")
     p.add_argument("--topk",      type=int,   default=10)
@@ -806,6 +906,7 @@ def main():
         entropy_threshold=args.entropy_threshold,
         rm_backend=args.rm_backend,
         rm_model=args.rm_model,
+        rm_b2_gpu_mem=args.rm_b2_gpu_mem,
     )
 
     print("Loading vllm LLM...")

@@ -1,0 +1,23 @@
+[project]
+name = "sia_rm"
+version = "0.1.0"
+description = "SIA in-process Reward Model client (B2 path)"
+requires-python = ">=3.10"
+
+# vLLM plugin: when vLLM starts an EngineCore subprocess (or any subprocess
+# that calls load_general_plugins()), it invokes this entry-point, which
+# triggers ModelRegistry.register_model for our Qwen3WithScoreForCausalLM.
+# Without this, the subprocess only sees vLLM's built-in architectures.
+[project.entry-points."vllm.general_plugins"]
+sia_rm = "sia_rm.plugin:register_with_vllm"
+
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["sia_rm*"]
