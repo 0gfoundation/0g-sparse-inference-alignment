@@ -62,62 +62,42 @@
 
 ## 3. Custom model class（替代源码 patch）
 
-文件位置：`src/sia_rm/qwen3_with_score.py`
+文件位置：`src/sia_rm/qwen3_with_score.py`（M2 step 1 已实现）
+
+核心要点（详见 [`../src/sia_rm/qwen3_with_score.py`](../src/sia_rm/qwen3_with_score.py)）：
 
 ```python
-import torch
-from torch import nn
-from vllm import ModelRegistry
-from vllm.model_executor.models.qwen3 import Qwen3ForCausalLM
-from vllm.model_executor.layers.linear import RowParallelLinear  # 或 plain Linear
-from vllm.model_executor.sampling_metadata import SamplingMetadata
-
-
-_TLS = __import__('threading').local()
-
-
 class Qwen3WithScoreForCausalLM(Qwen3ForCausalLM):
-    """
-    Qwen3ForCausalLM + 外接 score head (Linear(hidden, 1)).
-
-    score head 权重直接从 VM checkpoint 的 score.weight 加载,
-    不需要 patch base model.
-    """
-
-    def __init__(self, *, vllm_config, prefix: str = ""):
+    def __init__(self, *, vllm_config, prefix=""):
         super().__init__(vllm_config=vllm_config, prefix=prefix)
         hidden = vllm_config.model_config.hf_config.hidden_size
-        # score 是 row-parallel-friendly Linear; 单卡用 plain nn.Linear 即可
-        self.score = nn.Linear(hidden, 1, bias=False)
+        self.score = nn.Linear(hidden, 1, bias=False)  # 单卡 plain Linear
 
-    def compute_logits(
-        self,
-        hidden_states: torch.Tensor,
-        sampling_metadata: SamplingMetadata,
-    ):
-        # hook: 写 thread-local channel
-        # hidden_states shape (n_samples, hidden) — 已经是 sample positions
-        try:
-            rewards = (hidden_states @ self.score.weight.T).squeeze(-1)
-            _TLS.last_rewards = rewards.detach().to('cpu', torch.float32)
-        except Exception:
-            _TLS.last_rewards = None
-
-        # 仍走原 lm_head logits 计算 — sample 一个 dummy token 走 vLLM scheduler
+    def compute_logits(self, hidden_states, sampling_metadata):
+        rewards = (hidden_states @ self.score.weight.T).squeeze(-1)
+        _write_rewards(rewards.detach().to('cpu', torch.float32))
         return super().compute_logits(hidden_states, sampling_metadata)
 
 
-# 模块 import 时副作用：注册到 vLLM
-# 注意 vLLM 期望 lazy "<module>:<class>" 字符串
 ModelRegistry.register_model(
     "Qwen3WithScoreForCausalLM",
     "sia_rm.qwen3_with_score:Qwen3WithScoreForCausalLM",
 )
-
-
-def get_last_rewards():
-    return getattr(_TLS, 'last_rewards', None)
 ```
+
+**关键设计细节**（从 step 1 实测中浮出的修正）：
+
+1. **Reward channel：不能用 `threading.local()`，必须用文件 channel**
+   - 原因：vLLM v1 的 EngineCore 跑在**独立 subprocess** (不是 fork)，主进程的 thread-local / module globals 无法跨越
+   - 选用 `/dev/shm/sia_reward_{id}.bin`（tmpfs，~50us IO 开销 vs 7-15ms forward 可忽略）
+   - 多 RMClient 实例通过 `SIA_REWARD_FILE_ID` 环境变量隔离 reward 文件
+
+2. **vLLM 可能把 1 次 batch generate 拆成多次 compute_logits 调用**
+   - step 1 实测：5 prompts 拆成 2 次（shape=(1,) + shape=(4,)）
+   - 推测是 prefix caching 优化：先用 1 个 prompt prefill 共享前缀，后 4 个走 cache decode
+   - 文件 channel 采用 **append 模式**（每次 compute_logits 追加一条 record），`read_rewards()` concat 所有 record；RMClient 必须按 record 边界对齐 prompt 顺序
+
+3. **score head 加载**：vLLM `AutoWeightsLoader` 自动把 VM checkpoint 的 `score.weight` 路由到 `self.score.weight`（module 名字相同），不用手写 skip/load
 
 **vLLM 启动方式**：
 
@@ -132,7 +112,7 @@ llm = vllm.LLM(
 )
 ```
 
-> **疑点 B (§7)**：vLLM v1 是否真的支持 `hf_overrides` 在 runtime 切换 architectures，需 micro-bench 确认。
+`hf_overrides` 在 §7.B 实测验过，能在不修改 VM `config.json` 的情况下让 vLLM 用我们注册的子类。
 
 ---
 
@@ -344,6 +324,25 @@ setup: 起始 prefix 50 token，每 iter append 1 token，跑 5 prompt batch gen
 - 实际 SIA 收益估算：current baseline 30 tok/s（RM HTTP ~30ms/call）→ B2 后约 **45-57 tok/s**（RM 15ms/call + 7ms LLM 主步），跟 §4 doc 预测一致
 
 ### 综合判定：✅ 全部 PASS，进 step 1 实现
+
+### M2 step 1 实测结果（2026-05-27）
+
+脚本：[`scripts/verify_m2_step1.py`](../scripts/verify_m2_step1.py)，模块：[`src/sia_rm/`](../src/sia_rm/)
+
+| candidate | vLLM (Qwen3WithScoreForCausalLM) | BF16 baseline | \|Δ\| |
+|-----------|----------------------------------|---------------|-------|
+| '4'       | +7.031                           | +7.063        | 0.031 |
+| '5'       | -8.875                           | -9.000        | 0.125 |
+| '3'       | -7.344                           | -7.313        | 0.031 |
+| '6'       | -8.938                           | -8.875        | 0.063 |
+| '100'     | -9.000                           | -8.938        | 0.063 |
+
+- **Pearson = 0.9999** ✅
+- **max \|Δ\| = 0.125** ✅
+- **Top-1 '4' 一致** ✅
+- batch=5 generate p50 = 21.1ms（含 cold prefill；进 step 2 prefix caching 命中后预计回到 10-15ms）
+
+**Step 1 PASS，下面进 step 2 (RMClient).**
 
 ---
 
