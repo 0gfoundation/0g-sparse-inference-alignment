@@ -421,7 +421,7 @@ nohup python eval/mmlu_eval.py \
 
 **测试**：开 `RM_PROFILE=True` 在 RM 服务端打印每次 score 的耗时分解（`[RM-pf-miss]` / `[RM-pf-hit]` 等行），为后续优化定位瓶颈。
 **命令来源**：log 头反查 + `doc/rm-profiling-guide.md` §1.1。
-**相关分析**：[`doc/rm-profiling-guide.md`](../doc/rm-profiling-guide.md)。
+**相关分析**：[`doc/rm-profiling-guide.md`](../doc/rm-profiling-guide.md)（profiling 启动指南）、[`doc/profiling-bottleneck-analysis.md`](../doc/profiling-bottleneck-analysis.md)（**基于本组日志的瓶颈分析与下一步优化路径**）。
 
 ```bash
 # 注：RM_PROFILE 默认就是开的；显式写法 RM_PROFILE=1 也可

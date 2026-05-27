@@ -307,6 +307,10 @@ def parse_args():
     p.add_argument("--topk",      type=int,   default=10)
     p.add_argument("--weight",    type=float, default=1.0)
     p.add_argument("--entropy_threshold", type=float, default=None)
+    p.add_argument("--use_token_ids", action="store_true",
+                   help="rm_backend=vllm 时：客户端预先 tokenize 并发 token_ids 到 RM，"
+                        "省服务端 re-tokenize（~3-5ms/call）。需要 RM server 用 "
+                        "scripts/vllm_serve_with_token_ids.py 启动以打 Pydantic 补丁。")
     p.add_argument("--max_model_len", type=int, default=4096)
     p.add_argument("--host", default="0.0.0.0")
     p.add_argument("--port", type=int, default=8000)
@@ -335,7 +339,8 @@ def main():
     print(f"RM mode  : {_args.rm_backend}"
           + (f"  model={_args.rm_model}" if _args.rm_backend == "vllm" else ""))
     print(f"topk={_args.topk}  weight={_args.weight}  "
-          f"entropy_threshold={_args.entropy_threshold}")
+          f"entropy_threshold={_args.entropy_threshold}  "
+          f"use_token_ids={_args.use_token_ids}")
     print(f"Server   : http://{_args.host}:{_args.port}")
     print("=" * 60)
 
@@ -346,6 +351,7 @@ def main():
         entropy_threshold=_args.entropy_threshold,
         rm_backend=_args.rm_backend,
         rm_model=_args.rm_model,
+        use_token_ids=_args.use_token_ids,
     )
 
     print("Loading vLLM AsyncLLMEngine...")

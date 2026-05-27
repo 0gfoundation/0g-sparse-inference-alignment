@@ -11,8 +11,8 @@
 | 符号 | 含义 | 当前实测值 |
 |---|---|---|
 | `L` | LLM 单步 forward 时间（Qwen3-14B, 2 GPUs） | ~11.3ms |
-| `F` | RM `fix_a_token`：1 个 token 的 KV 增量 forward | ~3-5ms（设计目标，需实测） |
-| `S` | RM `get_candidates_scores`：5 candidates × 1 token 批量 forward | ~8ms |
+| `F` | RM `fix_a_token`：1 个 token 的 KV 增量 forward | **7.02ms**（vLLM continuous decode 实测，见 §2.8） |
+| `S` | RM `get_candidates_scores`：5 candidates × 1 token 批量 forward | **6.95ms**（实测，与 F 几乎一致，因为 batch=5 在 memory-bound 区基本免费） |
 | `I` | INTERVENE 率（entropy_threshold=1.0 下实测） | ~28% |
 | `P_flip` | INTERVENE 步内 top-1 token 翻转率（实测） | ~67% |
 | `R_t1` | Tier 1 下 vLLM `/classify` 单次调用代价（同步阻塞） | ~30ms |
@@ -120,6 +120,153 @@ Tier 1 + 2B:   ~74 tok/s     (+45%)
 | **总计** | **~1100 行** |
 
 代价：失去 vLLM 自带的 prefix caching、CUDA graph、continuous batching —— 这些都得在自定义 server 里手工复刻或放弃。
+
+### 2.8 实测 F 值（2026-05-27）：vLLM continuous decode 路径
+
+B2 路线的所有数学都建立在"`F < L`"这个假设上。如果 F > L，B2 完全不工作。所以**在投 1000+ 行代码之前**先做 sanity 测试，直接测 vLLM 对 Qwen3-4B 在 continuous decode 路径下的 per-token 时间。
+
+#### 测试脚本
+
+[`scripts/measure_rm_continuous_decode.py`](../scripts/measure_rm_continuous_decode.py)
+
+核心思路：用 vLLM 的 `LLM.generate()` 对 Qwen3-4B 跑连续 decode，**差分法**消除 prefill 影响：
+
+```
+per-token = (T(max_tokens=110) - T(max_tokens=10)) / 100
+```
+
+测两个 batch size：
+- **batch=1** → 模拟 `fix_a_token`（B2 在 SKIP 步上每步异步推 1 token）
+- **batch=5** → 模拟 `get_candidates_scores`（INTERVENE 步上同时评 5 个候选）
+
+注：用 Qwen3-4B base（生成模型）而非 VM SequenceClassification 版本，因为 vLLM 只能对 generative 模型做 continuous decode；两者层数 / hidden_dim / KV head 数完全相同，per-token decode 时间等价。
+
+#### 复现命令
+
+```bash
+# 前置：清空 GPU
+pkill -9 -f "vllm|sia_vllm_server|VLLM::EngineCore" 2>/dev/null
+sleep 3
+
+# 跑测试（约 3 分钟：加载 2 分钟 + 测试 1 分钟）
+nohup /workspace/SIA/venv2/bin/python scripts/measure_rm_continuous_decode.py \
+    > /tmp/f_vllm_test.log 2>&1 &
+
+# 轮询等结果
+until grep -q "判定（对照" /tmp/f_vllm_test.log 2>/dev/null \
+   || grep -qE "Traceback|Error" /tmp/f_vllm_test.log 2>/dev/null; do
+    sleep 10
+done
+
+# 看结果
+grep -E "T\(max|per-token decode|F \(fix|S \(get|✅|⚠️|❌" /tmp/f_vllm_test.log
+```
+
+#### 实测结果
+
+| 测试 | 实测 | 含义 |
+|---|---:|---|
+| Phase A: batch=1（fix_a_token 等价）| **F = 7.02ms** | ✅ < L=11.3ms |
+| Phase B: batch=5（get_candidates_scores 等价）| **S = 6.95ms** | ✅ < L |
+| T(max_tokens=10, batch=1) 中位 | 64.0ms | 含 prefill |
+| T(max_tokens=110, batch=1) 中位 | 765.9ms | 含 prefill + 100 decode |
+| T(max_tokens=110) − T(max_tokens=10) | 701.9ms / 100 | per-token decode |
+
+#### 关键发现
+
+1. **F=7ms 远小于 L=11.3ms** → B2 路线**完全可行**，`fix_a_token` 能藏在 LLM forward 影子里
+2. **batch=5 几乎等于 batch=1**（6.95ms vs 7.02ms） → SIA workload 在 memory-bound 区，加 batch 几乎免费
+3. **transformers eager 模式同样 forward 测出来 47ms** → vLLM CUDA graph 给出 **6.7× 加速**
+4. **per-token decode 4B 对 14B 比值 ≈ 7/11.3 ≈ 0.62**（不是参数比 4/14 ≈ 0.29）→ 印证 memory-bound 主导，参数量优势打折
+
+#### 修正后的 B2 性能上限
+
+代入 F=7.02ms / S=6.95ms 重算 §2.5 / §2.6：
+
+**2 张独立 GPU + B2**（fix_a_token 异步藏在 LLM 影子里）：
+```
+per-token = (1-I) × L + I × (L + S)         # fix 完全 hidden
+          = 0.72 × 11.3 + 0.28 × (11.3 + 6.95)
+          = 8.14 + 5.11 = 13.25ms
+          → ~75 tok/s   （vs G3 baseline ~30 tok/s, +150%）
+```
+
+**单卡 + B2**（fix_a_token 在同卡 sequentially 跑）：
+```
+per-token = L + F + I × S         # fix 每步都加，无 hiding
+          = 11.3 + 7.02 + 0.28 × 6.95
+          = 20.27ms → ~49 tok/s   （+60% vs G3）
+```
+
+**对比 noSIA 上限 88 tok/s**：
+- 2 卡 B2 → 75 tok/s ≈ **85% of noSIA**
+- 单卡 B2 → 49 tok/s ≈ 55% of noSIA
+- 当前（G3/A2）≈ 30 tok/s ≈ 34% of noSIA
+
+### 2.9 为什么不能"等 vLLM 优化 /classify"，必须自建 B2
+
+读到这里很容易冒出一个问题：**`/classify` 路径不是也可以走 decode 模式 + CUDA graph 吗？为什么不让 vLLM 改 /classify，省得自己造 1100 行？**
+
+#### 答：架构上可以，但同时差两件事——只优化 /classify 救不到 7ms
+
+vLLM v1 把任务分两类，走完全不同代码路径：
+
+| 任务类型 | 触发的执行器 | 模式 | CUDA graph 行为 |
+|---|---|---|---|
+| **Generate / Decode**（`LLM.generate()`、`/v1/completions`） | `execute_model()` 的 generative path | continuous decode loop | ✅ 为 batch_size ∈ {1, 2, 4, …, 512} 都捕获了 decode graph |
+| **Pooling / Classify**（`/classify`、`/pooling`、`/embeddings`） | 同一 `execute_model`，但走 pooling task 分支 | **单次 forward**，按 input 序列长度统一 forward | ⚠️ **没有**为"prefix 命中 + 1-token suffix"路径捕获 decode-style graph |
+
+所以即便 /classify 实际处理的就是"prefix 99% 命中 + 5×3 token suffix"这种**本质等价于 batch=5 decode** 的工作，vLLM 0.10.1.1 仍按 **prefill 模式 + 无 graph** 跑——pooling task 没把"新 token ≤ K 就走 decode fast path"实现。
+
+这是 **vLLM 当前实现的限制，不是 API 设计的根本约束**。
+
+#### 但即便 vLLM 把 /classify forward 优化了，最多救到 ~30ms（仍 >> 7ms）
+
+`/classify` 的 ~52ms 拆开看，**只有 ~30ms 是 forward**；剩下 ~22ms 是**协议层 / 跨进程固定成本**：
+
+```
+即便 /classify 内部用了 decode + CUDA graph，仍要付:
+  HTTP 接收 + JSON parse:        ~3ms
+  Pydantic validate:              ~1ms
+  API server → EngineCore IPC:    ~3ms
+  Engine scheduler 排队 + dispatch:~5-8ms
+  Prefix cache lookup:            ~3ms
+  Forward (decode + graph):        ~6-7ms   ← 这部分救了（30→7）
+  Response + IPC + HTTP send:     ~5ms
+  合计:                          ~26-30ms
+```
+
+**还是 ~4× 慢于 continuous decode 的 7ms**。这 22ms 是**协议层固定成本**，跟 forward 模式无关——HTTP / JSON / 跨进程 IPC / scheduler dispatch 这些都跟模型大小、跟 GPU 算力毫不相干。
+
+#### B2 的本质：同时补两件事，才能逼近 7ms
+
+要拿到 7ms，**必须同时**做：
+
+1. **Forward 走 decode 模式 + CUDA graph**（vLLM 已经在 generate 路径做了，但 /classify 没做）
+2. **去掉跨进程协议层**（in-process 调用，不走 HTTP/IPC）
+
+回头看 B2 的设计：
+
+```
+B2 = vLLM 已有的 decode + CUDA graph fast path（不重写，直接复用）
+   + 我们自己包的 in-process fix_a_token / score_candidates 协议（消掉 HTTP/IPC）
+```
+
+**B2 不是从零造一个 RM server**——而是**用 vLLM 的 `LLM.generate()` decode loop 实现一个 stateful 协议**。1100 行代码大部分是协议层 + 状态管理，**真正的 GPU 优化都在 vLLM 里**。
+
+#### 三个可能的未来路径
+
+| 路径 | 谁来实现 | 工程量 | 性能预期 |
+|---|---|---|---|
+| **A. 等 vLLM 官方优化 /classify** | vLLM 团队 | 等几个版本 | 即便实现，预计也只到 ~30ms（协议层难绕）|
+| **B. 自己 fork vLLM 改 /classify** | 我们 | ~500 行 patch | 同 A，因为协议层仍在 |
+| **C. 自建 B2 服务**（**推荐**） | 我们 | ~1100 行 | **可到 7ms**，因为同时砍 forward + 协议两层 |
+
+#### 一句话总结
+
+> /classify 不是"架构上不支持 decode 模式"，而是 **vLLM 0.10.1.1 没专门为它实现 decode-mode forward 快路径**。即便补这个 fast path，**协议层 ~22ms overhead 仍救不了**——这部分必须 in-process 才能消掉。
+>
+> **B2 = vLLM 已有的 decode 快路径 + 我们自己包的协议层**，两个一起省，才能逼近 7ms 真实下限。**这是 1100 行代码值得投入的理由**。
 
 ---
 
