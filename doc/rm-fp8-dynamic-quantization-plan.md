@@ -727,21 +727,17 @@ python scripts/compare_rm_ab.py --bf16 results/ab_bf16.json --fp8 results/ab_fp8
 
 ### Phase 4：性能 benchmark
 
-通过 Phase 3 后，跑 600 题完整 MMLU 评测：
+跑 600 题完整 MMLU 评测。**RM 沿用 Phase 2 起的实例**（已经在 8001 跑、sanity 过了，没必要重启）；**只需新起 LLM + eval**。两者都 nohup + log 重定向到 `/tmp/`——这样即便交互终端（如 Claude 会话）退出，后台进程仍然继续跑：
 
 ```bash
 TS=$(date +%Y%m%d%H%M)
 
-# RM (FP8_DYNAMIC) - 通过 wrapper 启动以兼容 --use_token_ids
-nohup python scripts/vllm_serve_with_token_ids.py serve \
-      /workspace/SIA/models/VM-Qwen3-4B-merged-fp8-dynamic \
-      --runner pooling --convert classify \
-      --enable-prefix-caching --no-enable-chunked-prefill \
-      --gpu-memory-utilization 0.3 \
-      --max-model-len 2048 --port 8001 \
-      > log_vllm_rm_fp8d_${TS}.txt 2>&1 &
+# === 前置：确认 Phase 2 的 RM 还活着 ===
+# RM log 路径就是 Phase 2 启动时用的（本次实跑是 /tmp/vllm_rm_fp8d_phase2.txt）
+ps aux | grep -E "vllm_serve_with_token_ids|VM-Qwen3-4B-merged-fp8-dynamic" | grep -v grep
+curl -sf http://localhost:8001/health && echo "RM 8001 OK" || { echo "RM 没起，回 Phase 2 先把 RM 跑起来"; exit 1; }
 
-# LLM - C1 自动开 + C2 通过 flag 开
+# === 1) LLM server (C1 自动开 + C2 通过 flag 开) ===
 nohup python src/sia_vllm_server.py \
       --llm /workspace/SIA/models/Qwen3-14B \
       --rm_url http://localhost:8001 \
@@ -751,15 +747,58 @@ nohup python src/sia_vllm_server.py \
       --topk 5 --weight 1.0 --entropy_threshold 1.0 \
       --use_token_ids \
       --host 0.0.0.0 --port 8000 \
-      > log_llm_vllmrm_fp8d_${TS}.txt 2>&1 &
+      > /tmp/sia_llm_fp8d_${TS}.log 2>&1 &
+echo "LLM PID: $!"
 
-# eval
+# 等 LLM ready（启动约 90-120s：weight load 60s + torch.compile 70s + CUDA graph 5s）
+LLM_LOG=/tmp/sia_llm_fp8d_${TS}.log
+until grep -q "Application startup complete\|Uvicorn running" $LLM_LOG 2>/dev/null \
+   || grep -qE "Traceback|Error in|raise " $LLM_LOG 2>/dev/null
+do sleep 5; done
+
+# === 2) MMLU eval ===
+mkdir -p results
 nohup python eval/mmlu_eval.py \
       --base_url http://localhost:8000/v1 \
       --model /workspace/SIA/models/Qwen3-14B \
       --output results/test_vllmrm_fp8d_${TS}.json \
       --limit 20 \
-      > log_SIA_vllmrm_fp8d_${TS}.txt 2>&1 &
+      > /tmp/sia_eval_fp8d_${TS}.log 2>&1 &
+echo "EVAL PID: $!"
+echo "TS=$TS"
+echo "LLM + eval 两个进程后台跑，可安全退出当前会话"
+```
+
+跑完后查结果（注意 RM log 路径与 LLM/eval 不同，因为 RM 是 Phase 2 起的）：
+```bash
+# 查最终吞吐 + accuracy
+tail -20 /tmp/sia_eval_fp8d_${TS}.log
+# 查 profiling aggregate（看 http_post 是否降下来了）
+grep "SIA-pf-summary" /tmp/sia_llm_fp8d_${TS}.log | tail -1
+# 查 RM 端 prefix cache hit rate（RM 的 log 是 Phase 2 那个）
+grep "Prefix cache hit rate" /tmp/vllm_rm_fp8d_phase2.txt | tail -3
+```
+
+**完全冷启动场景**（Phase 2 RM 已经被 kill 或机器重启过）：先回 §Phase 2 起 RM，再回这里。或者一次性把 3 个服务一起起：
+
+```bash
+# === 完全冷启动：3 个进程一起起（备用） ===
+TS=$(date +%Y%m%d%H%M)
+
+# 1) RM
+nohup python scripts/vllm_serve_with_token_ids.py serve \
+      /workspace/SIA/models/VM-Qwen3-4B-merged-fp8-dynamic \
+      --runner pooling --convert classify \
+      --enable-prefix-caching --no-enable-chunked-prefill \
+      --gpu-memory-utilization 0.3 \
+      --max-model-len 2048 --port 8001 \
+      > /tmp/sia_vllm_rm_fp8d_${TS}.log 2>&1 &
+RM_LOG=/tmp/sia_vllm_rm_fp8d_${TS}.log
+until grep -q "Application startup complete" $RM_LOG || \
+      grep -qE "Traceback|Error in|raise " $RM_LOG; do sleep 5; done
+
+# 2) LLM (同上)，3) eval (同上)
+# ……
 ```
 
 **期望读数**：
