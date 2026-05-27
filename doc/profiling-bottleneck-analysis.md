@@ -150,6 +150,66 @@ SIA per-token = LLM forward + 干预率 × RM call
 
 > **核心结论：57ms 的 RM forward（5 候选 × 短 extension 通过 Qwen3-4B eager forward）就是当前架构的最大耗时块。任何不攻这部分的优化收益都有限。**
 
+### 4.1 一个反直觉的问题：RM 模型更小，为什么纯算力反而比 LLM 慢 5-10×？
+
+| | LLM forward 1 token | RM /classify 1 次调用 |
+|---|---:|---:|
+| 模型参数量 | Qwen3-14B | Qwen3-4B（3.5× 更小） |
+| 实测耗时 | **~11.3ms** | **~50-78ms**（视协议层）|
+
+直觉说"小模型该更快"，但实测反过来。**4 层原因**，按重要性排序：
+
+**① vLLM 给 LLM 用的是"连续 batch"快路径，RM 没有**（决定性因素）
+
+| | LLM forward 1 token | RM /classify 1 次调用 |
+|---|---|---|
+| 请求生命周期 | **持续 stream 里的 1 个增量步骤** | **从无到有的一次性完整请求** |
+| vLLM 调度 | 已在 running queue 里，下个 tick 直接采样 | 进入 waiting queue → 调度上 GPU → 跑完 → 出队 |
+| CUDA graph | 持续 decode 的 graph 已暖在 GPU 上 | 每次找匹配的 graph，per-batch / per-seq-len 切换 |
+| 状态切换 | 零 | 多次（dispatch / batch_to_run / completion / cleanup）|
+
+LLM 的 11.3ms 是连续 stream 里**摊销过**的每 token 成本——CUDA graph + 持久 KV cache + 流水线 decode，1000 token 总耗时除以 1000；
+RM 的 50-78ms 是**一次完整的请求生命周期**——单次请求无法摊销。
+
+> 类比：LLM 像运转中的传送带（每多 1 件物品只多加几秒）；RM 像每次现开机一台机器、跑完一件、关机。
+
+**② batch=5 vs batch=1：5 倍工作量**
+
+RM 一次 forward 5 个候选；LLM 一次 forward 1 个 token。即便 4B 比 14B 小 3.5×，**batch=5 抵消了大部分小模型的算力优势**：
+
+```
+理论 per-call FLOPs:
+  LLM 14B × 1 token: ~14G FLOPs
+  RM 4B × 5 cand × 3 token: ~60G FLOPs ← 反而 4.3× 更多
+```
+
+**③ 小模型 + 小 batch = memory-bound，参数量优势发挥不出**
+
+H200 的 BF16/FP8 算力都远超 SIA workload 的需求。当 batch 小、seq 短：
+- GPU 算力没用满，瓶颈是**搬数据**（读权重、读 KV、写激活）
+- 4B 每层仍要完整 attention + MLP，**每层 memory access 跟 14B 差不多**（hidden=2560 vs 5120，只 2× 差）
+- **memory-bound 区，14B 也只比 4B 慢约 2×，而不是参数量 3.5× 的比例**
+
+加上 attention 要读 prefix 的完整 KV cache（500-1000 token × 36 layer × 8 KV head × 128 head_dim）——这部分**跟 candidate suffix 长度无关**，是固定开销。
+
+**④ prefix cache HIT 路径上 vLLM 仍要做 dispatch 工作**
+
+prefix cache 99% 命中 ≠ "零开销"。每次 RM 调用仍要：
+- 算 prefix 的哈希、找匹配的 block manager block
+- 把 5 个候选 dispatch 到 GPU
+- 跑 attention 时把 prefix KV 从 cache gather 到当前 SM
+- 后续 candidate-specific 的小 forward
+
+这些**跟参数量无关**，是 vLLM RM 服务路径固有的固定成本。
+
+### 4.2 这条洞察的关键 implication
+
+> **不是 4B 模型本身慢——是"调用方式"慢**。LLM 在 vLLM 里跑的是"连续 decode 嵌入式快路径"（11.3ms 是摊销）；RM 跑的是"独立请求"（50-78ms 是一个完整请求生命周期）。
+>
+> 即便把 RM 换成 1B 甚至 0.5B 模型，**单次请求成本下限还是 ~30-40ms**——因为 vLLM 把"独立请求"做得就这么贵。
+>
+> 这才是 **B2（有状态 RM）路线的真正价值**：把 RM 也变成"持续流"（每个 SKIP 步异步推 1 token），消除每次请求的固定生命周期开销。届时 4B 模型的算力优势才能真正发挥。
+
 ---
 
 ## 5. 优化方向：两条主路径

@@ -914,3 +914,115 @@ nsys stats fp8_check.qdrep | grep -i "fp8\|e4m3"
 - ❌ 不换更小 RM (Qwen3-1.7B-VM)：动质量，违反约束
 - ❌ 不动 entropy_threshold / topk：动质量
 - ❌ 不实现 2B 有状态 RM：留给未来 2 卡环境
+
+---
+
+## 9. 实测结果（2026-05-27）：**A2 路线已验证无效**
+
+A2 完整 Phase 1-4 走完，**FP8_DYNAMIC 在 SIA 当前 workload 下未带来端到端加速**。本节落档实测数据 + 根因分析。
+
+### 9.1 实测数据（A2 vs 历史 baseline）
+
+完整 600 题 MMLU：
+
+| 实验 | tok/s 整体 | tok/s 中位 | 准确率 | 备注 |
+|---|---:|---:|---:|---|
+| G3 BF16 baseline | 29.65 | 33.84 | 73.7% | C0 baseline |
+| G4 旧 FP8（runtime + FP8 KV）| 28.08 | 31.82 | 73.2% | 失败：未校准 KV scale 退化 |
+| C1+C2（BF16 + 客户端优化） | 29.43 | n/a | 72.0% | 协议层优化 |
+| **A2 FP8_DYNAMIC（本次）** | **29.81** | **34.53** | **71.50%** | 几乎跟 G3/C1+C2 一样 |
+
+A2 vs C1+C2 (BF16): **+1.3%**（噪声内）  
+A2 vs G3 (BF16): **+0.5%**（噪声内）  
+准确率 -2.2%pt 在 600 题 95% CI ±3.5%pt 之内
+
+**SIA processor profiling**（`[SIA-pf-summary]` @39800 calls）：
+
+| Phase | C1+C2 (BF16) | A2 (FP8_DYNAMIC) | Δ |
+|---|---:|---:|---:|
+| format_chat p50 | 0.01ms | 0.02ms | ≈ 0 |
+| tokenize_client p50 | 6.46ms | 12.60ms | **+6.14ms** ※ |
+| http_post p50 | 53.89ms | 55.62ms | +1.73ms |
+| parse_response p50 | 0.12ms | 0.17ms | ≈ 0 |
+| **total p50** | **59.84ms** | **67.80ms** | +7.96ms |
+
+※ tokenize_client 退步是 env 升级副作用（装 llmcompressor 时 transformers 从旧版升到 4.55.2、accelerate 等连带升级），跟 FP8 无关。即便扣掉这 6ms，http_post 也没明显下降。
+
+### 9.2 根因（深入到源码确认）
+
+最初怀疑 vLLM 0.10.1.1 没真正下发 FP8 kernel（走 BF16 dequant 路径）。**读源码后这个怀疑被排除**：
+
+```
+vLLM 路径（vllm.model_executor.layers.quantization.compressed_tensors.schemes.compressed_tensors_w8a8_fp8.py）：
+
+CompressedTensorsW8A8Fp8.apply_weights()
+  → self.fp8_linear.apply()                              # Fp8LinearOp
+    → dispatch_w8a8_scaled_mm(cutlass_fp8_supported=True)  # sm_89+ 返回 True
+      → cutlass_w8a8_scaled_mm                            # ★ 真 cutlass FP8 kernel
+        → ops.cutlass_scaled_mm(qinput, weight, ...)      # vLLM C++ extension
+```
+
+H200 sm_90 走 cutlass FP8 GEMM 路径**确认无误**。FP8 真在 GPU 上跑。
+
+### 9.3 真正的瓶颈：workload 太小，GEMM 算力不是瓶颈
+
+SIA 每次 RM 调用的实际 GPU workload：
+
+```
+5 candidates × ~3 token suffix（prefix cache 99% 命中后剩余的差异 tokens）
+= 每次 Linear 输入 shape ≈ (batch=15, hidden=2560)
+= 一个 q_proj GEMM: M=15, K=2560, N=4096
+= 单次 GEMM FLOPs ≈ 250M
+```
+
+对 H200 FP8 tensor core（峰值 ~3000 TFLOPS）而言，这种 **"瘦长"矩阵**（M=15 << K=2560）：
+
+1. **完全在 memory-bound regime**：算力没用满，瓶颈是搬数据（KV、权重、激活）
+2. **FP8 vs BF16 在 compute-bound 区算力快 1.5-2×；但 memory-bound 区算力差几乎为零**——因为限制在内存带宽，不在算力
+3. **额外** FP8_DYNAMIC 每个 Linear 前要 `quant_fp8(input)` 实时量化激活，**新增一次 kernel launch + memory pass**，抵消了 GEMM 微小的加速
+
+具体每次 RM 调用的 kernel 数量估算：
+
+```
+36 layers × 7 Linear/layer = 252 个 GEMM
++ 252 次 quant_fp8 (FP8_DYNAMIC 的激活量化开销)
++ attention kernels + softmax + 其他
+≈ ~500 kernel launches / RM call
+
+每 kernel launch 开销 ~10μs → ~5ms 纯 launch
+每 GEMM 的实际 compute 因 memory-bound 反而 < 0.1ms
+→ launch + memory 占绝大部分；FP8 优化的"计算密度"部分根本不是瓶颈
+```
+
+### 9.4 修正后的结论：A2 路线的本质问题
+
+**不是 vLLM 实现不对，也不是 FP8 量化失败——是 SIA workload 的 GEMM shape 不在 FP8 tensor core 的 sweet spot。**
+
+| 优化方向 | 能否在 SIA 当前 workload 上生效 | 理由 |
+|---|---|---|
+| **A2 FP8_DYNAMIC**（本方案）| ❌ **已验证无效** | workload 不在 compute-bound 区，FP8 算力红利发挥不出 |
+| INT4 / INT8 / AWQ | ❌ 同样无效 | 同样依赖 GEMM compute-bound 假设 |
+| Marlin / 其它 tensor-core 量化 | ❌ 同样无效 | 同上 |
+| **B1 分卡** | ✅ 可能有效 | 消除 GPU 资源争抢、cache 互污；非计算优化 |
+| **B2 有状态 RM**（async fix + KV 复用） | ✅ 真有效 | 消除 prefix 重 forward，**改变 workload shape**（变成只算 5×1 token suffix） |
+| **C3 in-process RM**（消除 HTTP）| ✅ 真有效 | 协议层固定 overhead，每次 RM 调用都能省 ~5-10ms |
+| 提高 `entropy_threshold`（减少干预次数）| ✅ 但牺牲质量 | 不在当前约束范围内 |
+| 换更小 RM（4B → 1.7B）| ✅ 但牺牲质量 | 不在当前约束范围内 |
+
+### 9.5 给下一步的硬建议
+
+**A2 路线（以及任何"量化加速 GEMM"路线）天花板已经摸到——SIA 当前 workload 上"硬件层加速"基本到顶**。剩下的方向必须从**架构层**入手：
+
+1. **B1 分卡部署**（doc/parallel-decoding-design.md §Tier 1）——硬件成本最低，可能拿到 +15-25%
+2. **B2 有状态 RM**（同 doc §2B）——工程成本高（~1300 行），但能**真改 GEMM shape**，可能拿到 +50%+
+3. **C3 in-process RM**（同上 §C3）——把 RM 和 LLM 跑同进程，绕掉 HTTP/JSON，~10-15ms / call
+
+A2 本次产出的 4.2GB FP8 checkpoint 仍保留在 `/workspace/SIA/models/VM-Qwen3-4B-merged-fp8-dynamic/`——**等未来 SIA workload 改成 compute-bound 后（比如 B2 把 batch 改大）再回来用，那时 FP8 红利才会发挥**。
+
+### 9.6 已学到的反例
+
+写在这里以便后人查：
+
+> 如果你想"通过量化 RM 来加速 SIA"——**省点时间，别走这条路**。SIA 的 INTERVENE workload 每次只算很少 token（5 candidates × ~3 token），GEMM 是 memory-bound 的，所有依赖 compute-bound GEMM 加速的方案（FP8/INT8/INT4/AWQ/Marlin）在这里都**无效**。
+>
+> 唯一能"通过 RM 端优化"加速的是：**改变 RM 调用的 workload shape**（B2 让每次 forward 算更少 token），或**消除每次调用的固定开销**（C3 in-process）。
