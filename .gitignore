@@ -19,6 +19,7 @@ src/log.txt
 # Evaluation outputs
 /results/
 /result_*.txt
+sparse_logs/
 
 # Local model / data dirs (in case they end up tracked accidentally)
 *.pt.tmp
