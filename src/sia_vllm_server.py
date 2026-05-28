@@ -298,11 +298,15 @@ def parse_args():
     p.add_argument("--llm",       required=True)
     p.add_argument("--rm_url",    default="http://localhost:8001",
                    help="RM server 地址（默认 http://localhost:8001）")
-    p.add_argument("--rm_backend", choices=["pytorch", "vllm"], default="pytorch",
+    p.add_argument("--rm_backend",
+                   choices=["pytorch", "vllm", "b2"], default="pytorch",
                    help="RM 后端：pytorch=src/sia_rm_server.py（自定义 /score）；"
-                        "vllm=vllm serve（/classify，推荐：更快更稳）")
+                        "vllm=vllm serve（/classify，推荐：更快更稳）；"
+                        "b2=in-process RMClient（嵌套 vLLM 实例，无 HTTP 开销）")
     p.add_argument("--rm_model",  default=None,
-                   help="rm_backend=vllm 时必填：vllm serve 加载的 model 路径")
+                   help="rm_backend ∈ {vllm, b2} 时必填: RM 模型路径")
+    p.add_argument("--rm_b2_gpu_mem", type=float, default=0.3,
+                   help="b2 backend 下 RM vLLM 实例的 gpu_memory_utilization (默认 0.3)")
     p.add_argument("--llm_gpu_mem", type=float, default=0.5)
     p.add_argument("--topk",      type=int,   default=10)
     p.add_argument("--weight",    type=float, default=1.0)
@@ -317,8 +321,8 @@ def parse_args():
     p.add_argument("--model_id", default=None,
                    help="对外暴露的 model 名称（默认取 --llm 的 basename）")
     args = p.parse_args()
-    if args.rm_backend == "vllm" and not args.rm_model:
-        p.error("--rm_backend vllm 必须同时指定 --rm_model")
+    if args.rm_backend in ("vllm", "b2") and not args.rm_model:
+        p.error(f"--rm_backend {args.rm_backend} 必须同时指定 --rm_model")
     return args
 
 
@@ -352,6 +356,7 @@ def main():
         rm_backend=_args.rm_backend,
         rm_model=_args.rm_model,
         use_token_ids=_args.use_token_ids,
+        rm_b2_gpu_mem=_args.rm_b2_gpu_mem,
     )
 
     print("Loading vLLM AsyncLLMEngine...")

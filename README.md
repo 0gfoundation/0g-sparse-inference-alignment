@@ -13,9 +13,21 @@ SIA（Sparse Inference-time Alignment）per-token 干预推理服务，兼容 Op
 ## 依赖安装
 
 ```bash
-pip install fastapi uvicorn
-pip install "peft<0.15.0"   # transformers 4.57.x 兼容版本
+# 1. 安装运行时依赖（vllm / torch / transformers / fastapi 等共 14 包，
+#    版本钉死在已验证的工作集，详见 requirements.txt 顶部注释）
+pip install -r requirements.txt
+
+# 2. 把 sia_rm 安装为 editable package
+#    必需 —— b2 backend (in-process RM) 通过 pyproject.toml 的
+#    `vllm.general_plugins` entry-point 让 vLLM EngineCore subprocess
+#    自动 register Qwen3WithScoreForCausalLM。
+pip install -e .
 ```
+
+**注意**:
+- 验证环境：Python 3.12 + CUDA 12.x，vLLM 0.10.1.1。不同 CUDA 版本机器需先按 [pytorch.org](https://pytorch.org/get-started/locally/) 装匹配的 torch wheel，再跑 `pip install -r requirements.txt`。
+- `peft` 必须 `>=0.14.0,<0.15.0`（VM-Qwen3-4B LoRA 加载路径要求）。
+- `requirements.txt` 含验证脚本用的 `scipy`，不需要可以注释掉。
 
 ## 启动服务
 
