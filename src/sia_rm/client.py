@@ -72,7 +72,11 @@ class RMClient:
         # Trigger ModelRegistry.register_model (idempotent)
         from . import qwen3_with_score  # noqa: F401
 
-        from vllm import LLM, SamplingParams
+        from vllm import LLM, SamplingParams, TokensPrompt
+
+        # X-5: cache TokensPrompt class ref to avoid re-importing in hot path
+        # (sub-microsecond per call but 100% deterministic, zero risk)
+        self._TokensPrompt = TokensPrompt
 
         self.llm = LLM(
             model=model_path,
@@ -134,10 +138,12 @@ class RMClient:
         if sid not in self._sessions:
             raise ValueError(f"Unknown session id {sid}")
         prefix = self._sessions[sid]
-        from vllm import TokensPrompt
+        TP = self._TokensPrompt  # X-5: local alias avoids self.__dict__ lookup × N
 
+        # X-5: candidate_token_ids comes from SIA processor topk (list[int]),
+        # already Python ints — skip redundant `int(c)` cast.
         prompts = [
-            TokensPrompt(prompt_token_ids=prefix + [int(c)])
+            TP(prompt_token_ids=prefix + [c])
             for c in candidate_token_ids
         ]
         n_expected = len(candidate_token_ids)
