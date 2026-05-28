@@ -1,0 +1,44 @@
+# SIA + B2 (in-process RM) runtime dependencies
+#
+# Install:
+#   pip install -r requirements.txt
+#   pip install -e .                 # install sia_rm as editable package
+#                                    # (registers Qwen3WithScoreForCausalLM
+#                                    #  as vLLM plugin per pyproject.toml)
+#
+# Verified Python 3.12 + CUDA 12.x. Versions pinned to the working set tested
+# on commit 5612850 (M2 step 5: MMLU-Redux 75.7 tok/s, 68.67% accuracy).
+#
+# Notes:
+#   - torch / vllm versions are tied (vllm 0.10.1.1 → torch 2.7.x).
+#     On a different CUDA version, install matching torch wheel from
+#     https://pytorch.org/get-started/locally/ BEFORE running this file.
+#   - peft must be < 0.15 (CLAUDE.md): newer versions break the
+#     VM-Qwen3-4B LoRA load path.
+
+# ---- Core: vLLM + LLM stack -------------------------------------------
+vllm==0.10.1.1
+torch==2.7.1
+transformers==4.55.2
+peft>=0.14.0,<0.15.0
+safetensors==0.7.0
+numpy>=1.26,<3
+
+# ---- HTTP server (src/sia_vllm_server.py) -----------------------------
+fastapi==0.136.1
+uvicorn==0.46.0
+httpx==0.28.1
+pydantic==2.13.4
+
+# ---- Eval client / RM HTTP client -------------------------------------
+# eval/mmlu_eval.py uses requests + datasets + tqdm
+# src/sia_vllm_RM.py uses requests for legacy pytorch/vllm RM backends
+requests==2.32.5
+datasets==4.0.0
+tqdm==4.67.1
+
+# ---- Optional: verify scripts (numerical correlation) -----------------
+# scripts/verify_m2_step1.py uses scipy.stats.pearsonr
+# Comment out if you don't need to re-run the M1b/M2 numerical equivalence
+# checks against the BF16 baseline.
+scipy==1.17.1
