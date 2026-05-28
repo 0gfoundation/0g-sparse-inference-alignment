@@ -202,6 +202,11 @@ def make_sia_processor(
         # SIA 客户端 profiling（区别于 RM_PROFILE 那套服务端 profiling）
         _PROFILE_DETAIL: bool = os.environ.get("SIA_PROFILE", "1") == "1"
         _PF_STATS_INTERVAL: int = int(os.environ.get("SIA_PF_INTERVAL", "100"))
+        # D-1: per-step INTERVENE/SKIP/error print 开关
+        #   verbose (默认) — 保留完整 log, debug 友好
+        #   quiet — 跳过 per-step print, 省 ~0.5-1ms/step (含 format + stdout flush)
+        #   flip 统计 / startup 提示 / DONE / SIA-pf-summary 不受此 var 影响
+        _LOG_LEVEL: str = os.environ.get("SIA_LOG_LEVEL", "verbose")
 
         # ----------------------------------------------------------------
         # 初始化：在 EngineCore 子进程里执行
@@ -689,12 +694,13 @@ def make_sia_processor(
                 entropy = entropy_values[i]
 
                 if not intervene_flags[i]:
-                    print(
-                        f"[SIA] {time.strftime('%H:%M:%S')}.{int(time.time() % 1 * 1_000_000):06d} "
-                        f"step={req_step:3d} req={i} "
-                        f"SKIP (entropy={entropy:.3f} < {self._ENTROPY_THRESHOLD})",
-                        flush=True,
-                    )
+                    if self._LOG_LEVEL == "verbose":
+                        print(
+                            f"[SIA] {time.strftime('%H:%M:%S')}.{int(time.time() % 1 * 1_000_000):06d} "
+                            f"step={req_step:3d} req={i} "
+                            f"SKIP (entropy={entropy:.3f} < {self._ENTROPY_THRESHOLD})",
+                            flush=True,
+                        )
                     continue
 
                 # INTERVENE path
@@ -709,6 +715,7 @@ def make_sia_processor(
                         output_ids,
                     )
                 except Exception as e:
+                    # RM error 始终打印 (rare 且重要, 不受 LOG_LEVEL 影响)
                     print(
                         f"[SIA] {time.strftime('%H:%M:%S')}.{int(time.time() % 1 * 1_000_000):06d} "
                         f"step={req_step:3d} req={i} RM error: {e}",
@@ -727,7 +734,8 @@ def make_sia_processor(
 
                 self._intervened_steps[i] = self._intervened_steps.get(i, 0) + 1
 
-                # top-1 flip 检测：干预前 top-1 = topk_indices_i[0]（已按 logit 降序）；
+                # top-1 flip 检测（保留统计, 不受 LOG_LEVEL 影响）：
+                # 干预前 top-1 = topk_indices_i[0]（已按 logit 降序）；
                 # 干预后 top-1 取 topk 内的 argmax（SIA 加权幅度远小于 topk 内 logit gap，
                 # argmax 极少跳到 topk 外，topk 内排序足够代表实际选中变化）
                 topk_vals_i = topk_values_lists[i]
@@ -745,16 +753,17 @@ def make_sia_processor(
                 if flipped:
                     self._flipped_steps[i] = self._flipped_steps.get(i, 0) + 1
 
-                print(
-                    f"[SIA] {time.strftime('%H:%M:%S')}.{int(time.time() % 1 * 1_000_000):06d} "
-                    f"step={req_step:3d} req={i} INTERVENE "
-                    f"entropy={entropy:.3f} "
-                    f"gen_len={len(output_ids)} "
-                    f"rm=[{rm_scores.min():.3f}, {rm_scores.max():.3f}] "
-                    f"flip={'Y' if flipped else 'N'} "
-                    f"pre_top1={pre_top1} post_top1={post_top1}",
-                    flush=True,
-                )
+                if self._LOG_LEVEL == "verbose":
+                    print(
+                        f"[SIA] {time.strftime('%H:%M:%S')}.{int(time.time() % 1 * 1_000_000):06d} "
+                        f"step={req_step:3d} req={i} INTERVENE "
+                        f"entropy={entropy:.3f} "
+                        f"gen_len={len(output_ids)} "
+                        f"rm=[{rm_scores.min():.3f}, {rm_scores.max():.3f}] "
+                        f"flip={'Y' if flipped else 'N'} "
+                        f"pre_top1={pre_top1} post_top1={post_top1}",
+                        flush=True,
+                    )
 
             return logits
 
