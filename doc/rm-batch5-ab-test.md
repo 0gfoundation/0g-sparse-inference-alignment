@@ -1,5 +1,14 @@
 # A/B Test: Does adding batch=5 to vLLM CUDA graph sizes help Stage B?
 
+> **后续 (2026-05-29)**: 本文的结论"1-2 ms 改善在测量噪声内, batch=5 graph 从未被命中"
+> 是正确的, 但只看到了表象。后续调查找到了**真正的根因**: vLLM 多进程 EngineCore 的
+> ZMQ race condition 才是 1+4 split 的真凶, 跟 cudagraph 配置无关。设
+> `VLLM_ENABLE_V1_MULTIPROCESSING=0` (InprocClient) 让 Stage B GPU forward p50 从
+> **13.29 ms → 4.78 ms (−64%)**, 100% iter 走单一 batch=5 forward。
+>
+> 完整调查: [`vllm-inproc-vs-mp.md`](vllm-inproc-vs-mp.md)
+
+
 **问题**: `score_candidates` 一次提交 5 个 prompt 给 vLLM, 但 [`rm-split-stage-profiling.md`](rm-split-stage-profiling.md) 测出 Stage B 的 5-candidate forward GPU 时间是 ~13 ms — 看起来比理论下限 (~5-7 ms 对 4B 模型, batch=5 decode) 大近 2×。
 
 **怀疑**: vLLM 默认 `cuda_graph_sizes=[1, 2, 4, 8, 16, ..., 512]` **不含 batch=5**, 所以 batch=5 forward 会 round up 到 batch=8 graph + 3 个 padding token, 多浪费时间。

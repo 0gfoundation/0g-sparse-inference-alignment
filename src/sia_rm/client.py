@@ -54,6 +54,7 @@ class RMClient:
         max_model_len: int = 4096,
         reward_file_id: Optional[str] = None,
         cuda_graph_sizes: Optional[list] = None,
+        multiprocessing: bool = False,
     ):
         """
         cuda_graph_sizes: optional list of batch sizes to capture in the
@@ -62,12 +63,32 @@ class RMClient:
         SIA's typical topk=5 will then be padded up to the batch=8 graph.
         Pass e.g. [1, 2, 4, 5, 8, 16, 32, 64, 128] to get a dedicated
         batch=5 graph.
+
+        multiprocessing: when False (default for SIA), force vLLM v1 to use
+        InprocClient (EngineCore in this process; no ZMQ; no busy-loop
+        subprocess). For SIA's pattern of submitting 5 shared-prefix prompts
+        per intervention, this eliminates the 1+4 split that the
+        multiprocess client produces — when EngineCoreProc runs in a
+        separate subprocess, the 5 add_request calls serialize over ZMQ,
+        and req#1 arrives at the EngineCore before req#2-5 do, triggering
+        a single-prompt scheduler step on req#1 alone. InprocClient adds
+        all 5 requests synchronously before _run_engine starts, so the
+        scheduler picks up all 5 in one schedule() and runs a single
+        batch=5 forward (measured: Stage B p50 4.78 ms vs 13.29 ms,
+        wall-clock p50 9.04 ms vs 23.96 ms — see doc/inproc-vs-mp.md).
         """
+        # InprocClient must be enabled via env var BEFORE vllm is imported
+        # (LLMEngine.from_engine_args reads VLLM_ENABLE_V1_MULTIPROCESSING
+        # to decide whether to spawn EngineCoreProc).
+        if not multiprocessing:
+            os.environ["VLLM_ENABLE_V1_MULTIPROCESSING"] = "0"
+        self._multiprocessing = multiprocessing
+
         # Unique reward file id per instance — must be set BEFORE we
-        # import vllm (the env var is read by qwen3_with_score in the
-        # EngineCore subprocess at compute_logits time, so as long as the
-        # var is set before generate() it's fine; but setting it before
-        # LLM() init is cleanest)
+        # import vllm (the env var is read by qwen3_with_score at
+        # compute_logits time. In multiprocess mode this is the EngineCore
+        # subprocess; in inproc mode it's this process. Either way the
+        # mechanism still works since /dev/shm is process-agnostic.)
         self._fid = reward_file_id or f"client_{uuid.uuid4().hex[:8]}"
         os.environ["SIA_REWARD_FILE_ID"] = self._fid
 
