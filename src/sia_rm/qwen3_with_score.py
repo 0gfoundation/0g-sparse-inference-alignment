@@ -100,6 +100,65 @@ def truncate_rewards() -> None:
         os.remove(path)
 
 
+# ---------- Optional split-stage profiling (SIA_RM_PROFILE=1) ----------
+#
+# When SIA_RM_PROFILE=1, each compute_logits call appends a record of
+# (forward_gpu_ms, score_head_gpu_ms, n_input_tokens, n_samples) to a
+# /dev/shm file. RMClient reads this to attribute GPU time across stages.
+#
+# Wall-clock for each Stage is measured client-side by RMClient by
+# splitting score_candidates into separate llm.generate() calls.
+
+_PROFILE_ENABLED = os.environ.get("SIA_RM_PROFILE", "0") == "1"
+
+
+def _timing_path() -> str:
+    d = os.environ.get("SIA_REWARD_DIR", "/dev/shm")
+    fid = os.environ.get("SIA_REWARD_FILE_ID", "default")
+    return os.path.join(d, f"sia_timing_{fid}.bin")
+
+
+def _write_timing(forward_ms: float, score_ms: float,
+                  n_input: int, n_samples: int) -> None:
+    """Append one timing record. Format: [f32 fwd_ms][f32 score_ms]
+    [i32 n_input][i32 n_samples]."""
+    path = _timing_path()
+    rec = struct.pack("<ffii", forward_ms, score_ms, n_input, n_samples)
+    with open(path, "ab") as f:
+        f.write(rec)
+
+
+def read_all_timings() -> list:
+    """Read all timing records since last truncate. Returns list of
+    {'forward_ms', 'score_ms', 'n_input', 'n_samples'}."""
+    path = _timing_path()
+    if not os.path.exists(path):
+        return []
+    out = []
+    rec_size = 4 + 4 + 4 + 4  # ffii = 16 bytes
+    try:
+        with open(path, "rb") as f:
+            data = f.read()
+        for i in range(0, len(data), rec_size):
+            chunk = data[i:i + rec_size]
+            if len(chunk) < rec_size:
+                break
+            fwd, score, n_in, n_smp = struct.unpack("<ffii", chunk)
+            out.append({
+                'forward_ms': fwd, 'score_ms': score,
+                'n_input': n_in, 'n_samples': n_smp,
+            })
+    except Exception:
+        pass
+    return out
+
+
+def truncate_timings() -> None:
+    path = _timing_path()
+    if os.path.exists(path):
+        os.remove(path)
+
+
 class Qwen3WithScoreForCausalLM(Qwen3ForCausalLM):
     """Qwen3ForCausalLM + external score head, used as B2 RM backbone."""
 
@@ -108,6 +167,38 @@ class Qwen3WithScoreForCausalLM(Qwen3ForCausalLM):
         hidden = vllm_config.model_config.hf_config.hidden_size
         # plain nn.Linear — single-card SIA workload, no TP needed
         self.score = nn.Linear(hidden, 1, bias=False)
+        # Profile-mode state. Allocated even if disabled (cheap) so we
+        # don't branch on every call.
+        self._sia_prof_fwd_start: Optional[torch.cuda.Event] = None
+        self._sia_prof_fwd_end: Optional[torch.cuda.Event] = None
+        self._sia_prof_n_input: int = 0
+
+    def forward(
+        self,
+        input_ids,
+        positions,
+        intermediate_tensors=None,
+        inputs_embeds=None,
+    ):
+        # SIA_RM_PROFILE: time the transformer-stack forward (= KV
+        # computation for the new tokens dispatched in this call). The
+        # cuda.Event is recorded on the default stream; compute_logits
+        # reads it after super().forward() completes.
+        if _PROFILE_ENABLED:
+            if input_ids is not None:
+                self._sia_prof_n_input = int(input_ids.shape[0])
+            elif inputs_embeds is not None:
+                self._sia_prof_n_input = int(inputs_embeds.shape[0])
+            self._sia_prof_fwd_start = torch.cuda.Event(enable_timing=True)
+            self._sia_prof_fwd_end = torch.cuda.Event(enable_timing=True)
+            self._sia_prof_fwd_start.record()
+
+        out = super().forward(input_ids, positions, intermediate_tensors,
+                              inputs_embeds)
+
+        if _PROFILE_ENABLED:
+            self._sia_prof_fwd_end.record()
+        return out
 
     def compute_logits(
         self,
@@ -116,13 +207,32 @@ class Qwen3WithScoreForCausalLM(Qwen3ForCausalLM):
     ) -> Optional[torch.Tensor]:
         # hidden_states shape: (n_samples, hidden), already gathered to
         # sample positions by vLLM (one row per request's last token).
+        if _PROFILE_ENABLED:
+            score_start = torch.cuda.Event(enable_timing=True)
+            score_end = torch.cuda.Event(enable_timing=True)
+            score_start.record()
+
         try:
             sw = self.score.weight  # shape (1, hidden), bf16
             rewards = (hidden_states @ sw.T).squeeze(-1)
+            if _PROFILE_ENABLED:
+                score_end.record()
+                # Block until both forward and score events recorded; this
+                # synchronization is the cost of accurate measurement and
+                # is only paid in profile mode.
+                torch.cuda.synchronize()
+                fwd_ms = 0.0
+                if self._sia_prof_fwd_start is not None:
+                    fwd_ms = self._sia_prof_fwd_start.elapsed_time(
+                        self._sia_prof_fwd_end)
+                score_ms = score_start.elapsed_time(score_end)
+                _write_timing(fwd_ms, score_ms,
+                              self._sia_prof_n_input,
+                              int(hidden_states.shape[0]))
             _write_rewards(rewards.detach().to("cpu", torch.float32))
         except Exception:
-            # Don't crash decode if reward write fails — RMClient will
-            # see stale or None and can decide what to do
+            # Don't crash decode if reward/timing write fails — RMClient
+            # will see stale or None and can decide what to do
             pass
 
         # Still run lm_head logits — vLLM scheduler needs them to sample

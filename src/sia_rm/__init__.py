@@ -18,6 +18,8 @@ from .qwen3_with_score import (
     read_rewards,
     read_all_rewards,
     truncate_rewards,
+    read_all_timings,
+    truncate_timings,
 )
 from .client import RMClient
 
@@ -28,4 +30,6 @@ __all__ = [
     "read_rewards",
     "read_all_rewards",
     "truncate_rewards",
+    "read_all_timings",
+    "truncate_timings",
 ]
