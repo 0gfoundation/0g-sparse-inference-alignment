@@ -53,7 +53,16 @@ class RMClient:
         gpu_mem: float = 0.3,
         max_model_len: int = 4096,
         reward_file_id: Optional[str] = None,
+        cuda_graph_sizes: Optional[list] = None,
     ):
+        """
+        cuda_graph_sizes: optional list of batch sizes to capture in the
+        vLLM CUDA graph. When None (default), vLLM uses its built-in
+        default ([1, 2, 4, 8, 16, ...]) which does NOT include batch=5 —
+        SIA's typical topk=5 will then be padded up to the batch=8 graph.
+        Pass e.g. [1, 2, 4, 5, 8, 16, 32, 64, 128] to get a dedicated
+        batch=5 graph.
+        """
         # Unique reward file id per instance — must be set BEFORE we
         # import vllm (the env var is read by qwen3_with_score in the
         # EngineCore subprocess at compute_logits time, so as long as the
@@ -71,7 +80,7 @@ class RMClient:
         # (sub-microsecond per call but 100% deterministic, zero risk)
         self._TokensPrompt = TokensPrompt
 
-        self.llm = LLM(
+        llm_kwargs = dict(
             model=model_path,
             hf_overrides={"architectures": ["Qwen3WithScoreForCausalLM"]},
             dtype="bfloat16",
@@ -81,6 +90,9 @@ class RMClient:
             enforce_eager=False,
             disable_log_stats=True,
         )
+        if cuda_graph_sizes is not None:
+            llm_kwargs["cuda_graph_sizes"] = cuda_graph_sizes
+        self.llm = LLM(**llm_kwargs)
         self._sp = SamplingParams(
             temperature=0.0,
             max_tokens=1,
