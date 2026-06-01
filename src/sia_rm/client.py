@@ -45,6 +45,9 @@ from .qwen3_with_score import (
     truncate_rewards,
     read_all_timings,
     truncate_timings,
+    set_inproc_reward_mode,
+    clear_inproc_rewards,
+    take_inproc_rewards,
 )
 
 
@@ -97,6 +100,11 @@ class RMClient:
         # Trigger ModelRegistry.register_model (idempotent)
         from . import qwen3_with_score  # noqa: F401
 
+        # B-1: select reward channel BEFORE LLM(...) runs cudagraph capture.
+        # capture invokes compute_logits with dummy inputs at every cuda
+        # graph batch size; those calls must already see the correct flag.
+        set_inproc_reward_mode(not multiprocessing)
+
         from vllm import LLM, SamplingParams, TokensPrompt
 
         # X-5: cache TokensPrompt class ref to avoid re-importing in hot path
@@ -136,6 +144,11 @@ class RMClient:
         # Clean any stale reward + timing files from previous runs
         truncate_rewards()
         truncate_timings()
+        # B-1: cudagraph capture above wrote ~67 dummy GPU tensors into
+        # the inproc reward buffer; drop them now so they don't pin GPU
+        # memory until the first real score_candidates() call.
+        if not multiprocessing:
+            clear_inproc_rewards(self._fid)
 
     # ---- session management ----
 
@@ -167,11 +180,16 @@ class RMClient:
         """Score N candidates by running forward on N prompts (prefix+[c])
         and reading the score head outputs.
 
-        Returns: shape (N,) float32 CPU tensor.
+        Returns: shape (N,) float32 tensor.
+        - Inproc mode (default, multiprocessing=False): GPU tensor, same
+          device as the RM. Caller can do mean-norm + index_add_ entirely
+          on GPU.
+        - Multiprocess mode: CPU float32 tensor (read from /dev/shm).
 
         D-1: 直接返回 tensor (而非 list[float]) — 调用方可以直接做 mean-norm /
         scalar mul / .to(gpu) 一次性完成, 避免 `torch.tensor(list)` 重建 + 多次
         host→device transfer。
+        B-1: inproc mode 进一步把 .cpu() sync + /dev/shm 文件 IPC 也省掉。
         """
         if sid not in self._sessions:
             raise ValueError(f"Unknown session id {sid}")
@@ -186,22 +204,36 @@ class RMClient:
         ]
         n_expected = len(candidate_token_ids)
 
-        # Clear reward channel before this call, then generate, then read.
-        truncate_rewards()
+        # B-1: dual reward channel.
+        # Clear before generate (defensive — handles stale state if a
+        # prior call raised between generate() and take/read).
+        if self._multiprocessing:
+            truncate_rewards()
+        else:
+            clear_inproc_rewards(self._fid)
+
         _ = self.llm.generate(prompts, self._sp, use_tqdm=False)
-        rewards = read_rewards()  # concatenates all records
+
+        if self._multiprocessing:
+            rewards = read_rewards()  # CPU tensor, concatenates all records
+        else:
+            rewards = take_inproc_rewards(self._fid)  # GPU tensor (or None)
 
         if rewards is None or rewards.numel() != n_expected:
             n_got = 0 if rewards is None else int(rewards.numel())
-            records = read_all_rewards()
-            shapes = [tuple(r.shape) for r in records]
+            channel = "/dev/shm" if self._multiprocessing else "inproc buffer"
+            if self._multiprocessing:
+                records = read_all_rewards()
+                shapes = [tuple(r.shape) for r in records]
+                detail = f"records seen: {shapes}"
+            else:
+                detail = ""
             raise RuntimeError(
-                f"reward channel returned {n_got} values, expected "
-                f"{n_expected}. records seen: {shapes}. "
+                f"reward channel ({channel}) returned {n_got} values, "
+                f"expected {n_expected}. {detail} "
                 f"Likely SIA_REWARD_FILE_ID mismatch or vLLM reordered "
                 f"prompts."
             )
-        # read_rewards 已经是 CPU float32 tensor (numpy → torch.from_numpy)
         return rewards
 
     # ---- bench / introspection ----

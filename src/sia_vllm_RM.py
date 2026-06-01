@@ -729,16 +729,24 @@ def make_sia_processor(
 
                 # 归一化：减均值，使得 topk 内有相对排序，
                 # 避免全负分时把 topk 全部压低、让 topk 外 token 意外胜出
-                # D-1: mean-norm + weight 都在 CPU 上算完(5 个 float, ~几 μs),
-                #      再一次性 .to(gpu) 拿到 GPU 上的最终 deltas, index_add_ 真原地写回。
                 #
+                # B-1: rm_scores 在 inproc 模式下是 GPU tensor (跟 logits 同 device),
+                #      mean-norm + weight + index_add_ 全程 GPU, 不再有 host→device
+                #      transfer。multiprocess (legacy) 模式下 rm_scores 是 CPU tensor,
+                #      移动到 logits.device 再算。
+                # D-1: mean-norm + weight 一次性算 deltas, 然后 index_add_ 真原地。
                 # CRITICAL: 不能用 `logits[i, idx].add_(...)` — advanced indexing
-                # (tensor index) 返回的是副本而非 view, .add_ 改副本不会写回 logits,
-                # 等于 SIA 干预完全失效但 silent 不报错。改用 index_add_ 真原地。
+                #     (tensor index) 返回副本而非 view, .add_ 改副本不会写回 logits,
+                #     等于 SIA 干预完全失效但 silent 不报错。
                 effective_weight = self._weight_per_req.get(i, self._WEIGHT)
-                rm_deltas_cpu = (rm_scores - rm_scores.mean()) * effective_weight
-                rm_deltas_gpu = rm_deltas_cpu.to(logits.device)
-                logits[i].index_add_(0, topk_indices_gpu, rm_deltas_gpu)
+                # B-1: rm_scores 在 inproc 模式下是 GPU bfloat16 (score head 输出
+                # dtype); legacy 模式下是 CPU float32 (read_rewards 已 cast)。
+                # 统一 cast 到 logits 的 device + dtype, 否则 index_add_ 会因为
+                # source/self dtype 不同 raise (e.g. self=float, source=bfloat16)。
+                if rm_scores.device != logits.device or rm_scores.dtype != logits.dtype:
+                    rm_scores = rm_scores.to(logits.device, dtype=logits.dtype)
+                rm_deltas = (rm_scores - rm_scores.mean()) * effective_weight
+                logits[i].index_add_(0, topk_indices_gpu, rm_deltas)
 
                 self._intervened_steps[i] = self._intervened_steps.get(i, 0) + 1
 
@@ -747,7 +755,7 @@ def make_sia_processor(
                 # 干预后 top-1 取 topk 内的 argmax（SIA 加权幅度远小于 topk 内 logit gap，
                 # argmax 极少跳到 topk 外，topk 内排序足够代表实际选中变化）。
                 # A-3: 改走 GPU argmax 路径, 1 次 int sync 取代原来 5 元素 .tolist() + Python max。
-                modified_topk_vals = topk_result.values[i] + rm_deltas_gpu
+                modified_topk_vals = topk_result.values[i] + rm_deltas
                 post_top1_local = int(modified_topk_vals.argmax().item())
                 pre_top1 = topk_indices_i[0]
                 post_top1 = topk_indices_i[post_top1_local]
@@ -756,8 +764,8 @@ def make_sia_processor(
                     self._flipped_steps[i] = self._flipped_steps.get(i, 0) + 1
 
                 if verbose:
-                    # rm_scores 是 CPU tensor, min/max 不触发 GPU sync。
-                    # pre_top1/post_top1 来自 GPU flip 检测 + topk_indices_lists。
+                    # rm_scores.min()/.max() 在 GPU tensor 上是 reduction,
+                    # 触发 2 次 sync, 但 verbose 默认 quiet, 不影响 hot path。
                     print(
                         f"[SIA] {time.strftime('%H:%M:%S')}.{int(time.time() % 1 * 1_000_000):06d} "
                         f"step={req_step:3d} req={i} INTERVENE "
