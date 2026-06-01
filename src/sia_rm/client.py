@@ -41,6 +41,8 @@ from .qwen3_with_score import (
     read_all_rewards,
     read_rewards,
     truncate_rewards,
+    read_all_timings,
+    truncate_timings,
 )
 
 
@@ -51,12 +53,42 @@ class RMClient:
         gpu_mem: float = 0.3,
         max_model_len: int = 4096,
         reward_file_id: Optional[str] = None,
+        cuda_graph_sizes: Optional[list] = None,
+        multiprocessing: bool = False,
     ):
+        """
+        cuda_graph_sizes: optional list of batch sizes to capture in the
+        vLLM CUDA graph. When None (default), vLLM uses its built-in
+        default ([1, 2, 4, 8, 16, ...]) which does NOT include batch=5 —
+        SIA's typical topk=5 will then be padded up to the batch=8 graph.
+        Pass e.g. [1, 2, 4, 5, 8, 16, 32, 64, 128] to get a dedicated
+        batch=5 graph.
+
+        multiprocessing: when False (default for SIA), force vLLM v1 to use
+        InprocClient (EngineCore in this process; no ZMQ; no busy-loop
+        subprocess). For SIA's pattern of submitting 5 shared-prefix prompts
+        per intervention, this eliminates the 1+4 split that the
+        multiprocess client produces — when EngineCoreProc runs in a
+        separate subprocess, the 5 add_request calls serialize over ZMQ,
+        and req#1 arrives at the EngineCore before req#2-5 do, triggering
+        a single-prompt scheduler step on req#1 alone. InprocClient adds
+        all 5 requests synchronously before _run_engine starts, so the
+        scheduler picks up all 5 in one schedule() and runs a single
+        batch=5 forward (measured: Stage B p50 4.78 ms vs 13.29 ms,
+        wall-clock p50 9.04 ms vs 23.96 ms — see doc/inproc-vs-mp.md).
+        """
+        # InprocClient must be enabled via env var BEFORE vllm is imported
+        # (LLMEngine.from_engine_args reads VLLM_ENABLE_V1_MULTIPROCESSING
+        # to decide whether to spawn EngineCoreProc).
+        if not multiprocessing:
+            os.environ["VLLM_ENABLE_V1_MULTIPROCESSING"] = "0"
+        self._multiprocessing = multiprocessing
+
         # Unique reward file id per instance — must be set BEFORE we
-        # import vllm (the env var is read by qwen3_with_score in the
-        # EngineCore subprocess at compute_logits time, so as long as the
-        # var is set before generate() it's fine; but setting it before
-        # LLM() init is cleanest)
+        # import vllm (the env var is read by qwen3_with_score at
+        # compute_logits time. In multiprocess mode this is the EngineCore
+        # subprocess; in inproc mode it's this process. Either way the
+        # mechanism still works since /dev/shm is process-agnostic.)
         self._fid = reward_file_id or f"client_{uuid.uuid4().hex[:8]}"
         os.environ["SIA_REWARD_FILE_ID"] = self._fid
 
@@ -69,7 +101,7 @@ class RMClient:
         # (sub-microsecond per call but 100% deterministic, zero risk)
         self._TokensPrompt = TokensPrompt
 
-        self.llm = LLM(
+        llm_kwargs = dict(
             model=model_path,
             hf_overrides={"architectures": ["Qwen3WithScoreForCausalLM"]},
             dtype="bfloat16",
@@ -79,6 +111,9 @@ class RMClient:
             enforce_eager=False,
             disable_log_stats=True,
         )
+        if cuda_graph_sizes is not None:
+            llm_kwargs["cuda_graph_sizes"] = cuda_graph_sizes
+        self.llm = LLM(**llm_kwargs)
         self._sp = SamplingParams(
             temperature=0.0,
             max_tokens=1,
@@ -90,8 +125,15 @@ class RMClient:
         self._sessions: dict[int, list[int]] = {}
         self._next_id = 0
 
-        # Clean any stale reward file from previous runs
+        # Profile-mode state: how many tokens of each session's prefix have
+        # already been pushed through a vLLM forward (thus KV-cached).
+        # Used by score_candidates_profiled to know how many new tokens
+        # need a separate "prefill" generate call.
+        self._last_prefilled: dict[int, int] = {}
+
+        # Clean any stale reward + timing files from previous runs
         truncate_rewards()
+        truncate_timings()
 
     # ---- session management ----
 
@@ -163,6 +205,131 @@ class RMClient:
         t0 = time.perf_counter()
         out = self.score_candidates(sid, candidate_token_ids)
         return out, (time.perf_counter() - t0) * 1000.0
+
+    # ---- split-stage profiling for parallelization analysis ----
+
+    def score_candidates_profiled(
+        self,
+        sid: int,
+        candidate_token_ids,
+    ) -> dict:
+        """Profile-mode score_candidates: splits the work into two
+        separate llm.generate() calls so each stage can be timed
+        independently. Designed to feed a "can we overlap RM with main
+        LLM forward?" analysis.
+
+        Stage A — "non-intervention KV":
+            Generate(prefix_only). vLLM uses prefix caching to skip
+            already-processed tokens and only forwards the K tokens
+            added since the last RM call (the SKIP-token tail). The
+            forward time is the cost of catching the RM KV cache up
+            with the latest LLM-generated tokens — this is the work
+            that could potentially overlap with the main LLM forward.
+
+        Stage B — "5 candidate KV + score":
+            Generate(prefix+[c_i] for each c in candidates). All
+            prefix KV is now cached (after Stage A) so vLLM only
+            forwards the 5 candidate tokens. The score head matmul is
+            timed separately inside compute_logits via cuda.Event.
+
+        Requires SIA_RM_PROFILE=1 env var when launching vLLM, otherwise
+        the timing channel is not populated and GPU-side stats will be
+        zero (wall-clock is always returned).
+
+        Returns dict with all stage times:
+            {
+              'rewards': list[float],          # the 5 reward scalars
+              'n_new_prefix': int,             # K (tokens forwarded in Stage A)
+              'n_candidates': int,             # always 5
+              # Wall-clock (client side, includes vLLM dispatch overhead)
+              'a_wall_ms': float,
+              'b_wall_ms': float,
+              # GPU time (from cuda.Event inside compute_logits)
+              'a_forward_gpu_ms': float,       # KV computation for K new tokens
+              'b_forward_gpu_ms': float,       # KV computation for 5 candidates
+              'b_score_gpu_ms': float,         # score head matmul on 5 hidden
+            }
+        """
+        if sid not in self._sessions:
+            raise ValueError(f"Unknown session id {sid}")
+        prefix = self._sessions[sid]
+        TP = self._TokensPrompt
+
+        # Determine how many tokens of prefix vLLM has already KV-cached
+        # for this session. First call: none cached, so Stage A processes
+        # the entire prefix. Subsequent calls: only tokens added since
+        # last call (fix_a_token chain).
+        n_already = self._last_prefilled.get(sid, 0)
+        n_new = len(prefix) - n_already
+
+        # Clear the side channels so the timings we read are only from
+        # this score call.
+        truncate_rewards()
+        truncate_timings()
+
+        # ---- Stage A: prefill new prefix tokens (KV cache catchup) ----
+        a_wall_ms = 0.0
+        if n_new > 0:
+            a_t0 = time.perf_counter()
+            _ = self.llm.generate(
+                [TP(prompt_token_ids=prefix)],
+                self._sp, use_tqdm=False,
+            )
+            a_wall_ms = (time.perf_counter() - a_t0) * 1000.0
+        # Snapshot timing records from Stage A (forward_ms + score_ms,
+        # but score_ms here is on the *single* prefix prompt, not useful)
+        a_timings = read_all_timings()
+        a_forward_gpu_ms = sum(t['forward_ms'] for t in a_timings)
+
+        # ---- Stage B: forward 5 candidates (prefix is now KV-cached) ----
+        # Truncate rewards again so Stage B's reward records start fresh.
+        # (Stage A's reward record is the dummy 1-prompt one, not useful.)
+        truncate_rewards()
+        # Note: don't truncate timings here — we want to subtract Stage A
+        # timings from total to get Stage B incremental. But simpler: take
+        # all timings after Stage A.
+        n_timings_after_a = len(a_timings)
+
+        b_t0 = time.perf_counter()
+        prompts = [TP(prompt_token_ids=prefix + [c])
+                   for c in candidate_token_ids]
+        _ = self.llm.generate(prompts, self._sp, use_tqdm=False)
+        b_wall_ms = (time.perf_counter() - b_t0) * 1000.0
+
+        all_timings = read_all_timings()
+        b_timings = all_timings[n_timings_after_a:]
+        b_forward_gpu_ms = sum(t['forward_ms'] for t in b_timings)
+        # Score head is only meaningful on the 5-sample call; sum across
+        # all forward passes that wrote a record in Stage B.
+        b_score_gpu_ms = sum(t['score_ms'] for t in b_timings)
+
+        rewards = read_rewards()
+        n_expected = len(candidate_token_ids)
+        if rewards is None or rewards.numel() != n_expected:
+            raise RuntimeError(
+                f"reward channel returned "
+                f"{0 if rewards is None else rewards.numel()} "
+                f"values, expected {n_expected} (Stage B). "
+                f"Likely SIA_REWARD_FILE_ID mismatch or vLLM reordered."
+            )
+
+        # Update prefix-prefill bookkeeping. Stage B forwarded prefix
+        # + 1 candidate token per prompt; the candidate tokens are NOT
+        # part of the session prefix (they are scoring branches that
+        # get dropped). So the session prefix is still len(prefix) and
+        # all of it is now KV-cached.
+        self._last_prefilled[sid] = len(prefix)
+
+        return {
+            'rewards': rewards.tolist(),
+            'n_new_prefix': n_new,
+            'n_candidates': n_expected,
+            'a_wall_ms': a_wall_ms,
+            'b_wall_ms': b_wall_ms,
+            'a_forward_gpu_ms': a_forward_gpu_ms,
+            'b_forward_gpu_ms': b_forward_gpu_ms,
+            'b_score_gpu_ms': b_score_gpu_ms,
+        }
 
     def __del__(self):
         try:
