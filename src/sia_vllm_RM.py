@@ -203,10 +203,12 @@ def make_sia_processor(
         _PROFILE_DETAIL: bool = os.environ.get("SIA_PROFILE", "1") == "1"
         _PF_STATS_INTERVAL: int = int(os.environ.get("SIA_PF_INTERVAL", "100"))
         # D-1: per-step INTERVENE/SKIP/error print 开关
-        #   verbose (默认) — 保留完整 log, debug 友好
-        #   quiet — 跳过 per-step print, 省 ~0.5-1ms/step (含 format + stdout flush)
+        #   verbose — 保留完整 log, debug 友好, 多 1 次 cpu().tolist() sync
+        #   quiet (默认) — 跳过 per-step print, 省 ~0.5-1ms/step (含 format + stdout flush
+        #                  + topk_values cpu sync)。flip 检测改走 GPU argmax 路径,
+        #                  仍保留 flip 计数 (per-batch 1 次 int sync, 不是 5 次 float)
         #   flip 统计 / startup 提示 / DONE / SIA-pf-summary 不受此 var 影响
-        _LOG_LEVEL: str = os.environ.get("SIA_LOG_LEVEL", "verbose")
+        _LOG_LEVEL: str = os.environ.get("SIA_LOG_LEVEL", "quiet")
 
         # ----------------------------------------------------------------
         # 初始化：在 EngineCore 子进程里执行
@@ -521,7 +523,8 @@ def make_sia_processor(
                 self._pf_record("b2_score_call",   (t_score   - t_advance) * 1000)
                 self._pf_record("total",           (t_score   - t0)      * 1000)
                 self._pf_summary_if_due()
-            return torch.tensor(rewards, dtype=torch.float32)
+            # D-1: score_candidates 已经返回 CPU float32 tensor, 不再 list→tensor 重建
+            return rewards
 
         def _score_candidates_pytorch(
             self, user_content: str, response_so_far: str,
@@ -675,13 +678,14 @@ def make_sia_processor(
             else:
                 intervene_flags = [True] * batch_size
 
-            # 至少有一个要 INTERVENE 才把 topk_indices/values 拉到 CPU；纯 SKIP 省 sync
+            # 至少有一个要 INTERVENE 才把 topk_indices 拉到 CPU；纯 SKIP 省 sync。
+            # A-2: 不再需要 topk_values_lists — flip 检测改走 GPU argmax 路径,
+            #      verbose log 的 pre_top1/post_top1 只需要 topk_indices_lists。
+            verbose = self._LOG_LEVEL == "verbose"
             if any(intervene_flags):
                 topk_indices_lists = topk_result.indices.cpu().tolist()
-                topk_values_lists = topk_result.values.cpu().tolist()
             else:
                 topk_indices_lists = None
-                topk_values_lists = None
 
             # ==== Per-item loop，循环体里不再有 .item() / .tolist() sync ====
             for i in range(batch_size):
@@ -694,7 +698,7 @@ def make_sia_processor(
                 entropy = entropy_values[i]
 
                 if not intervene_flags[i]:
-                    if self._LOG_LEVEL == "verbose":
+                    if verbose:
                         print(
                             f"[SIA] {time.strftime('%H:%M:%S')}.{int(time.time() % 1 * 1_000_000):06d} "
                             f"step={req_step:3d} req={i} "
@@ -725,35 +729,35 @@ def make_sia_processor(
 
                 # 归一化：减均值，使得 topk 内有相对排序，
                 # 避免全负分时把 topk 全部压低、让 topk 外 token 意外胜出
-                rm_scores = rm_scores - rm_scores.mean()
+                # D-1: mean-norm + weight 都在 CPU 上算完(5 个 float, ~几 μs),
+                #      再一次性 .to(gpu) 拿到 GPU 上的最终 deltas, index_add_ 真原地写回。
+                #
+                # CRITICAL: 不能用 `logits[i, idx].add_(...)` — advanced indexing
+                # (tensor index) 返回的是副本而非 view, .add_ 改副本不会写回 logits,
+                # 等于 SIA 干预完全失效但 silent 不报错。改用 index_add_ 真原地。
                 effective_weight = self._weight_per_req.get(i, self._WEIGHT)
-                logits[i, topk_indices_gpu] = (
-                    logits[i, topk_indices_gpu]
-                    + rm_scores.to(logits.device) * effective_weight
-                )
+                rm_deltas_cpu = (rm_scores - rm_scores.mean()) * effective_weight
+                rm_deltas_gpu = rm_deltas_cpu.to(logits.device)
+                logits[i].index_add_(0, topk_indices_gpu, rm_deltas_gpu)
 
                 self._intervened_steps[i] = self._intervened_steps.get(i, 0) + 1
 
                 # top-1 flip 检测（保留统计, 不受 LOG_LEVEL 影响）：
                 # 干预前 top-1 = topk_indices_i[0]（已按 logit 降序）；
                 # 干预后 top-1 取 topk 内的 argmax（SIA 加权幅度远小于 topk 内 logit gap，
-                # argmax 极少跳到 topk 外，topk 内排序足够代表实际选中变化）
-                topk_vals_i = topk_values_lists[i]
-                rm_list = rm_scores.tolist()
-                modified_vals = [
-                    topk_vals_i[k] + rm_list[k] * effective_weight
-                    for k in range(len(rm_list))
-                ]
-                post_top1_local = max(
-                    range(len(modified_vals)), key=modified_vals.__getitem__
-                )
+                # argmax 极少跳到 topk 外，topk 内排序足够代表实际选中变化）。
+                # A-3: 改走 GPU argmax 路径, 1 次 int sync 取代原来 5 元素 .tolist() + Python max。
+                modified_topk_vals = topk_result.values[i] + rm_deltas_gpu
+                post_top1_local = int(modified_topk_vals.argmax().item())
                 pre_top1 = topk_indices_i[0]
                 post_top1 = topk_indices_i[post_top1_local]
                 flipped = pre_top1 != post_top1
                 if flipped:
                     self._flipped_steps[i] = self._flipped_steps.get(i, 0) + 1
 
-                if self._LOG_LEVEL == "verbose":
+                if verbose:
+                    # rm_scores 是 CPU tensor, min/max 不触发 GPU sync。
+                    # pre_top1/post_top1 来自 GPU flip 检测 + topk_indices_lists。
                     print(
                         f"[SIA] {time.strftime('%H:%M:%S')}.{int(time.time() % 1 * 1_000_000):06d} "
                         f"step={req_step:3d} req={i} INTERVENE "

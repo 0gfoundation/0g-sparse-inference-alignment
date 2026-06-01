@@ -37,6 +37,8 @@ import time
 import uuid
 from typing import Optional
 
+import torch
+
 from .qwen3_with_score import (
     read_all_rewards,
     read_rewards,
@@ -161,9 +163,16 @@ class RMClient:
         self,
         sid: int,
         candidate_token_ids,
-    ) -> list[float]:
+    ) -> torch.Tensor:
         """Score N candidates by running forward on N prompts (prefix+[c])
-        and reading the score head outputs. Returns N floats."""
+        and reading the score head outputs.
+
+        Returns: shape (N,) float32 CPU tensor.
+
+        D-1: 直接返回 tensor (而非 list[float]) — 调用方可以直接做 mean-norm /
+        scalar mul / .to(gpu) 一次性完成, 避免 `torch.tensor(list)` 重建 + 多次
+        host→device transfer。
+        """
         if sid not in self._sessions:
             raise ValueError(f"Unknown session id {sid}")
         prefix = self._sessions[sid]
@@ -192,7 +201,8 @@ class RMClient:
                 f"Likely SIA_REWARD_FILE_ID mismatch or vLLM reordered "
                 f"prompts."
             )
-        return rewards.tolist()
+        # read_rewards 已经是 CPU float32 tensor (numpy → torch.from_numpy)
+        return rewards
 
     # ---- bench / introspection ----
 
@@ -200,7 +210,7 @@ class RMClient:
         self,
         sid: int,
         candidate_token_ids,
-    ) -> tuple[list[float], float]:
+    ) -> tuple[torch.Tensor, float]:
         """Like score_candidates but also returns wall-clock latency in ms."""
         t0 = time.perf_counter()
         out = self.score_candidates(sid, candidate_token_ids)
