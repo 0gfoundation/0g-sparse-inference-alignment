@@ -45,10 +45,10 @@ SIA 文档提纲
 
 
 =============================================================================
-二、性能优化主线：从 11 tok/s 到 75 tok/s 的演进
+二、性能优化主线：从 11 tok/s 到 ~65 tok/s 的演进（当前实测最高）
 =============================================================================
 
-这是整个项目工程工作的主线。按时间顺序共分五个阶段。
+这是整个项目工程工作的主线。按时间顺序共分四个阶段。
 
 
 --- 阶段零：基线测量 --------------------------------------------------------
@@ -95,7 +95,7 @@ SIA 文档提纲
     破局需要双 GPU 独立部署。重要的负面结果。
 
 
---- 阶段三：进程模型优化 — InprocClient（30 → 65 tok/s，+116%）----------
+--- 阶段三：B2 in-process 路线（HTTP baseline ~30 → M2 ~45.5 → InprocClient ~65 tok/s）---
 
 11. SIA 端到端 Profiling 与瓶颈分析                                [****]
     doc/profiling-bottleneck-analysis.md
@@ -113,17 +113,17 @@ SIA 文档提纲
 13. Value Model 调用优化：从 33ms 到 17ms（InprocClient 模式）     [*****]
     doc/inproc-client-optimization-20260531.md
     单行环境变量 VLLM_ENABLE_V1_MULTIPROCESSING=0 将 RM 切为同进程直接调用，
-    消除 ZMQ 竞态。RM 调用从 33ms→17ms（-48%），MMLU 吞吐 46.6→65 tok/s
-    （+38%）。迄今单次代价最小、收益最大的优化。
+    消除 ZMQ 竞态。RM 调用从 33ms→17ms（-48%），Qwen3-14B MMLU 吞吐 46.6
+    → ~65 tok/s（+38%，基于 148/600 部分数据估算，完整结果在 60-65 区间）。
+    迄今单次代价最小、收益最大的优化，目前实测最高点。
 
-
---- 阶段四：B2 路线 — in-process decode kernel（65 → 75+ tok/s）---------
+    【注：以下文档（14-18）是 B2 路线的机制分析与设计记录，时间上早于 13。】
 
 14. B2 Decode 模式 vs Pooling 模式：80ms → 24ms 优化拆解           [***]
     doc/b2-decode-vs-pooling-mode.md
     解释从 HTTP /classify（pooling prefill kernel）到 b2 in-process（decode
     kernel）的延迟改善。decode kernel 取代 prefill kernel 节省约 25ms，是
-    30→45 tok/s 飞跃中最大的单项杠杆（占 45%）。
+    HTTP~30 → b2~45 tok/s 飞跃中最大的单项杠杆（占 45%）。
 
 15. 30→45 tok/s 端到端耗时拆解（b2 vs HTTP /classify）            [***]
     doc/b2-vs-classify-time-breakdown.md
@@ -145,17 +145,18 @@ SIA 文档提纲
 18. B2 M2 设计：stateful RM in-process server                      [****]
     doc/b2-m2-design.md
     M2 阶段的完整实现设计与验证报告。实现 Qwen3WithScoreForCausalLM 自定义
-    model class 和 RMClient stateful API，600 题 MMLU 达 75.7 tok/s（相对
-    HTTP baseline +152%），accuracy 无退化。
+    model class 和 RMClient stateful API。MMLU 300 题以 Qwen3-4B 为主模型
+    测得 75.7 tok/s（vs HTTP baseline +152%）；切换到生产用的 Qwen3-14B 主
+    模型后，M2 阶段基线为 45.5 tok/s，accuracy 无退化。
 
 
---- 阶段五：后续优化候选（实验与规划）--------------------------------------
+--- 阶段四：后续小优化（实际 +~1 tok/s）与未来候选（设计，未实施）----------
 
 19. B2 路径纯工程优化候选（零质量影响）                            [**]
     doc/b2-pure-engineering-optimizations.md
-    M2 完成后的增量优化列表，按收益分三组：Group A（关日志+batch=5 graph，
-    +1.7-3 tok/s）、Group B（dict→list，+0.5-1 tok/s）、Group C（in-process
-    executor，+3.5-5 tok/s 但有风险）。
+    M2 完成后的增量优化列表。Group A（关日志+batch=5 graph+tensor拷贝优化）
+    和 Group B（dict→list）属于工程微调，实际叠加约 +1 tok/s（已实施）。
+    Group C（in-process executor，+3.5-5 tok/s）是尚未实施的较大改动计划。
 
 20. A/B Test: batch=5 加入 vLLM CUDA graph sizes 是否有效          [*]
     doc/rm-batch5-ab-test.md
@@ -170,9 +171,10 @@ SIA 文档提纲
 
 22. 两张 GPU 上 SIA 并行解码三套方案设计                           [**]
     doc/parallel-decoding-design.md
-    双 GPU 部署的三套并行方案：2B（有状态 RM 异步隐藏，+45%）、2C（KV 复用）、
-    2D（推测式 forward with rewind，flip 率 67% 下收益 <2%）。建议 2B+2C
-    组合，预期 75 tok/s。
+    双 GPU 部署的三套并行方案设计文档（尚未实施）：2B（有状态 RM 异步隐藏，
+    估算 +45%）、2C（KV 复用）、2D（推测式 forward with rewind，flip 率 67%
+    下估算收益 <2%）。建议 2B+2C 组合，理论估算 ~75 tok/s，为未来架构演进
+    的候选方向。
 
 23. CUDA Graph 调试经验总结（RM Server）                           [**]
     doc/cuda-graph-debugging-journal.md
@@ -246,7 +248,7 @@ SIA 文档提纲
   profiling-bottleneck-analysis.md — 定量 profiling，奠定优化路线图
   vllm-inproc-vs-mp.md             — 1+4 split 根因 + -64% 修复
   vllm-rm-experiment-report.md     — vLLM RM 架构升级 +19%
-  b2-m2-design.md                  — M2 完整实现，+152% 对 baseline
+  b2-m2-design.md                  — M2 完整实现；Qwen3-4B 测得 +152%，14B 达 45.5 tok/s
   sia-efficiency-claims-analysis.md — 论文 vs 实现的差距分析
 
 *** (10篇)
