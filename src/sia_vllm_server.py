@@ -320,6 +320,12 @@ def parse_args():
     p.add_argument("--port", type=int, default=8000)
     p.add_argument("--model_id", default=None,
                    help="对外暴露的 model 名称（默认取 --llm 的 basename）")
+    p.add_argument("--dummy_processor", choices=[None, "noop", "sync"],
+                   default=None,
+                   help="校准用: 替换 SIA processor 为 dummy. "
+                        "noop=完全 no-op (测 hook 开销); "
+                        "sync=做 entropy+cpu sync 但不做决策 (测 sync 开销). "
+                        "默认 None=用真实 SIA processor.")
     args = p.parse_args()
     if args.rm_backend in ("vllm", "b2") and not args.rm_model:
         p.error(f"--rm_backend {args.rm_backend} 必须同时指定 --rm_model")
@@ -348,16 +354,26 @@ def main():
     print(f"Server   : http://{_args.host}:{_args.port}")
     print("=" * 60)
 
-    SIAProcessor = make_sia_processor(
-        rm_url=_args.rm_url,
-        topk=_args.topk,
-        weight=_args.weight,
-        entropy_threshold=_args.entropy_threshold,
-        rm_backend=_args.rm_backend,
-        rm_model=_args.rm_model,
-        use_token_ids=_args.use_token_ids,
-        rm_b2_gpu_mem=_args.rm_b2_gpu_mem,
-    )
+    if _args.dummy_processor is not None:
+        # Calibration mode: replace SIA processor with a dummy (no RM call).
+        # 用来分离 "SIA sync 开销" 跟 "SIA RM 调用 + 决策开销"。
+        from dummy_lp import make_dummy_processor
+        SIAProcessor = make_dummy_processor(
+            _args.dummy_processor, topk=_args.topk
+        )
+        print(f"[CALIB] dummy_processor={_args.dummy_processor}, "
+              f"NO RM call, NO logits modification", flush=True)
+    else:
+        SIAProcessor = make_sia_processor(
+            rm_url=_args.rm_url,
+            topk=_args.topk,
+            weight=_args.weight,
+            entropy_threshold=_args.entropy_threshold,
+            rm_backend=_args.rm_backend,
+            rm_model=_args.rm_model,
+            use_token_ids=_args.use_token_ids,
+            rm_b2_gpu_mem=_args.rm_b2_gpu_mem,
+        )
 
     print("Loading vLLM AsyncLLMEngine...")
     engine_args = AsyncEngineArgs(
