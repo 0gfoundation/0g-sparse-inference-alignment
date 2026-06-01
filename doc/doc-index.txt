@@ -3,6 +3,8 @@ SIA 文档提纲
 日期: 2026-06-01
 =============================================================================
 
+项目仓库: https://github.com/0gfoundation/0g-sparse-inference-alignment
+
 本文件对 doc/ 目录下 30 份文档进行摘要、分类和重要程度评级，以性能优化主线
 为骨架，辅以效果评估、架构分析、方案设计等分支，方便快速定位文档。
 
@@ -22,24 +24,28 @@ SIA 文档提纲
 
 1. SIA Regression 评测报告                                         [*****]
    doc/eval-report.md
+   https://github.com/0gfoundation/0g-sparse-inference-alignment/blob/main/doc/eval-report.md
    对 MMLU 知识问答（SIA 训练目标无关任务）进行回归测试。90 题和 600 题两组
    结果均显示 accuracy 差值在统计误差内（±1-2%），证明 SIA 对无关任务无损害。
    这是"SIA 不退化"的关键证明。
 
 2. SIA AlpacaEval 评测报告                                         [*****]
    doc/alpaca-eval-report.md
+   https://github.com/0gfoundation/0g-sparse-inference-alignment/blob/main/doc/alpaca-eval-report.md
    用独立 Skywork Reward Model 评分，SIA 在 AlpacaEval 805 题上实现 +13.2%
    的 reward 提升（12.29→13.92），干预率仅 16.14%。与 MMLU 回归测试形成闭
    环：对无关领域无干扰，对目标领域有正向提升。
 
 3. SIA AlpacaEval 样本分析：SIA 在哪里答得更好？                   [****]
    doc/alpaca-eval-case-analysis.md
+   https://github.com/0gfoundation/0g-sparse-inference-alignment/blob/main/doc/alpaca-eval-case-analysis.md
    深入分析 +13.2% 来自哪里。SIA 提升集中在：防止事实幻觉、准确理解意图、
    情感支持。下降的 312 题通常是 Value Model 推向过度谨慎。最大单题幅度显著
    高于下降幅度，证明干预质量高于噪声。
 
 4. 问题：模型低熵但推理错误，SIA 能解决吗？                        [**]
    doc/low_entropy_wrong_result_case_study.md
+   https://github.com/0gfoundation/0g-sparse-inference-alignment/blob/main/doc/low_entropy_wrong_result_case_study.md
    诚实的局限分析：SIA 对"自信的错误"天然无效，只能纠正高熵犹豫点的路径
    选择，无法弥补知识缺陷。Value Model 是风格/对齐引导器，不是事实核查器。
 
@@ -55,12 +61,14 @@ SIA 文档提纲
 
 5. SIA 推理性能测试报告                                            [***]
    doc/performance-report.md
+   https://github.com/0gfoundation/0g-sparse-inference-alignment/blob/main/doc/performance-report.md
    项目第一份完整性能基线：SIA 11.3 tok/s vs noSIA 84.3 tok/s（7.5 倍差距）。
    拆解每步耗时：SKIP 步 16.1ms，INTERVENE 步 281ms（占 27% 时间，拖慢整体）。
    瓶颈明确定位：Value Model 串行 5 次 forward pass，无 batching。
 
 6. SIA 原始实现效率分析                                            [***]
    doc/sia-original-implementation-efficiency-analysis.md
+   https://github.com/0gfoundation/0g-sparse-inference-alignment/blob/main/doc/sia-original-implementation-efficiency-analysis.md
    剖析 hurunyi/SIA 官方代码的三大低效：LLM 无 KV cache（O(T²) 复杂度）、
    RM 无 KV cache、串行无流水线。进程隔离无法弥补算法低效，必须工程优化。
 
@@ -69,6 +77,7 @@ SIA 文档提纲
 
 7. SIA Batch Forward 性能优化实验报告                              [****]
    doc/batch-forward-optimization-report.md
+   https://github.com/0gfoundation/0g-sparse-inference-alignment/blob/main/doc/batch-forward-optimization-report.md
    将 Value Model 打分从串行 5 次改为单次 batch forward。有干预步延迟从
    281ms→119ms（-58%），整体吞吐 11.3→23.0 tok/s（+103%），accuracy 无变化
    （84.16%→83.69%，统计误差内）。零质量代价，最低成本的翻倍优化。
@@ -78,18 +87,21 @@ SIA 文档提纲
 
 8. vLLM RM Backend（架构介绍）                                     [***]
    doc/vllm-rm-backend.md
+   https://github.com/0gfoundation/0g-sparse-inference-alignment/blob/main/doc/vllm-rm-backend.md
    将 RM 从手写 FastAPI 服务替换为 vLLM 原生部署，消除 NaN/崩溃风险，引入
    prefix caching 和 continuous batching。需一次性 checkpoint 转换脚本将
    LoRA+reward_head 合并进 HF 格式，之后启动命令标准化。
 
 9. 实验报告：vLLM RM 端到端性能分析                                [****]
    doc/vllm-rm-experiment-report.md
+   https://github.com/0gfoundation/0g-sparse-inference-alignment/blob/main/doc/vllm-rm-experiment-report.md
    对比 PyTorch RM（G0）与 vLLM RM（G1）在 MMLU 600 题上的结果。吞吐
    25.4→30.2 tok/s（+19%），accuracy +1.5%pt。详解了 prefix caching、
    continuous batching、CUDA graph 各自的贡献。
 
 10. vLLM RM 后续优化实验报告：G2/G3/G4                             [***]
     doc/vllm-rm-followup-optimizations.md
+    https://github.com/0gfoundation/0g-sparse-inference-alignment/blob/main/doc/vllm-rm-followup-optimizations.md
     尝试三轮后续优化（调度参数、客户端三件套、FP8 量化），累计退步 -7%
     （30.2→28.1 tok/s）。结论：单卡共享架构约 30 tok/s 是硬天花板，真正
     破局需要双 GPU 独立部署。重要的负面结果。
@@ -99,12 +111,14 @@ SIA 文档提纲
 
 11. SIA 端到端 Profiling 与瓶颈分析                                [****]
     doc/profiling-bottleneck-analysis.md
+    https://github.com/0gfoundation/0g-sparse-inference-alignment/blob/main/doc/profiling-bottleneck-analysis.md
     基于 97,175 次 RM 调用的详细 profiling。RM forward 占 HIT 路径 81.9%，
     协议+调度占 30ms。提出三组优化路线图（C1+C2+A2, D-5, B-1），为后续所有
     优化奠定数据基础。
 
 12. 消除 vLLM 5-prompt 的 1+4 split — 根因 + 解决方案             [****]
     doc/vllm-inproc-vs-mp.md
+    https://github.com/0gfoundation/0g-sparse-inference-alignment/blob/main/doc/vllm-inproc-vs-mp.md
     调查 vLLM 将 5 个 shared-prefix prompt 强制拆成 1+4 的根因。根因不是
     scheduler 限制，而是多进程 EngineCore 通过 ZMQ 串行接收导致竞态。设置
     VLLM_ENABLE_V1_MULTIPROCESSING=0 后 Stage B GPU forward p50 从 13.3ms
@@ -112,6 +126,7 @@ SIA 文档提纲
 
 13. Value Model 调用优化：从 33ms 到 17ms（InprocClient 模式）     [*****]
     doc/inproc-client-optimization-20260531.md
+    https://github.com/0gfoundation/0g-sparse-inference-alignment/blob/main/doc/inproc-client-optimization-20260531.md
     单行环境变量 VLLM_ENABLE_V1_MULTIPROCESSING=0 将 RM 切为同进程直接调用，
     消除 ZMQ 竞态。RM 调用从 33ms→17ms（-48%），Qwen3-14B MMLU 吞吐 46.6
     → ~65 tok/s（+38%，基于 148/600 部分数据估算，完整结果在 60-65 区间）。
@@ -121,29 +136,34 @@ SIA 文档提纲
 
 14. B2 Decode 模式 vs Pooling 模式：80ms → 24ms 优化拆解           [***]
     doc/b2-decode-vs-pooling-mode.md
+    https://github.com/0gfoundation/0g-sparse-inference-alignment/blob/main/doc/b2-decode-vs-pooling-mode.md
     解释从 HTTP /classify（pooling prefill kernel）到 b2 in-process（decode
     kernel）的延迟改善。decode kernel 取代 prefill kernel 节省约 25ms，是
     HTTP~30 → b2~45 tok/s 飞跃中最大的单项杠杆（占 45%）。
 
 15. 30→45 tok/s 端到端耗时拆解（b2 vs HTTP /classify）            [***]
     doc/b2-vs-classify-time-breakdown.md
+    https://github.com/0gfoundation/0g-sparse-inference-alignment/blob/main/doc/b2-vs-classify-time-breakdown.md
     四层拆解：decode kernel（-25ms，45%）、去 HTTP 协议（-15ms）、token-level
     session（-10ms）、scheduler 简化（-10ms）。定量说明每项优化来源。
 
 16. B2 Decode-Mode 可行性分析 + M1a/M1b PoC 计划                  [**]
     doc/b2-decode-mode-poc-plan.md
+    https://github.com/0gfoundation/0g-sparse-inference-alignment/blob/main/doc/b2-decode-mode-poc-plan.md
     早期可行性分析文档。验证 Qwen3-4B decode 时间 7.02ms 远小于 LLM 11.3ms，
     为异步隐藏设计奠定基础。两阶段 PoC 计划（M1a 提取 hidden state，M1b 验证
     score 数值）。
 
 17. RM Split-Stage Profiling — 并行化可行性测量                    [***]
     doc/rm-split-stage-profiling.md
+    https://github.com/0gfoundation/0g-sparse-inference-alignment/blob/main/doc/rm-split-stage-profiling.md
     将 INTERVENE 内 RM 调用拆成 Stage A（5.1ms）和 Stage B（13ms）测量。
     Stage A < LLM forward（11.3ms），完全可隐藏；Stage B 在关键路径上不可并
     行。量化了并行化的上限和限制。
 
 18. B2 M2 设计：stateful RM in-process server                      [****]
     doc/b2-m2-design.md
+    https://github.com/0gfoundation/0g-sparse-inference-alignment/blob/main/doc/b2-m2-design.md
     M2 阶段的完整实现设计与验证报告。实现 Qwen3WithScoreForCausalLM 自定义
     model class 和 RMClient stateful API。MMLU 300 题以 Qwen3-4B 为主模型
     测得 75.7 tok/s（vs HTTP baseline +152%）；切换到生产用的 Qwen3-14B 主
@@ -154,23 +174,27 @@ SIA 文档提纲
 
 19. B2 路径纯工程优化候选（零质量影响）                            [**]
     doc/b2-pure-engineering-optimizations.md
+    https://github.com/0gfoundation/0g-sparse-inference-alignment/blob/main/doc/b2-pure-engineering-optimizations.md
     M2 完成后的增量优化列表。Group A（关日志+batch=5 graph+tensor拷贝优化）
     和 Group B（dict→list）属于工程微调，实际叠加约 +1 tok/s（已实施）。
     Group C（in-process executor，+3.5-5 tok/s）是尚未实施的较大改动计划。
 
 20. A/B Test: batch=5 加入 vLLM CUDA graph sizes 是否有效          [*]
     doc/rm-batch5-ab-test.md
+    https://github.com/0gfoundation/0g-sparse-inference-alignment/blob/main/doc/rm-batch5-ab-test.md
     测试显式添加 batch=5 CUDA graph 对 Stage B 的影响。结论：无收益。batch=5
     graph 几乎从未被命中（vLLM 内部强制 1+4 split）。真正根因是 ZMQ 竞态。
 
 21. Value Model FP8_DYNAMIC 量化方案（A2 路线）                    [**]
     doc/rm-fp8-dynamic-quantization-plan.md
+    https://github.com/0gfoundation/0g-sparse-inference-alignment/blob/main/doc/rm-fp8-dynamic-quantization-plan.md
     规划将 RM 量化为 FP8_DYNAMIC，预期 +10-22% 吞吐。已实证无效：SIA workload
     为 memory-bound（GEMM 规模 M=15），FP8 算力优化无法兑现。保留作为失败路
     线记录。
 
 22. 两张 GPU 上 SIA 并行解码三套方案设计                           [**]
     doc/parallel-decoding-design.md
+    https://github.com/0gfoundation/0g-sparse-inference-alignment/blob/main/doc/parallel-decoding-design.md
     双 GPU 部署的三套并行方案设计文档（尚未实施）：2B（有状态 RM 异步隐藏，
     估算 +45%）、2C（KV 复用）、2D（推测式 forward with rewind，flip 率 67%
     下估算收益 <2%）。建议 2B+2C 组合，理论估算 ~75 tok/s，为未来架构演进
@@ -178,6 +202,7 @@ SIA 文档提纲
 
 23. CUDA Graph 调试经验总结（RM Server）                           [**]
     doc/cuda-graph-debugging-journal.md
+    https://github.com/0gfoundation/0g-sparse-inference-alignment/blob/main/doc/cuda-graph-debugging-journal.md
     记录为 RM Server 引入 CUDA graph 的 12 个踩坑与解决方案。核心经验：
     capture 期间 SDPA backend 选择不稳定，需 capture-then-restore 模式，最
     终 mem_efficient backend 实现 38% 相对加速。
@@ -189,24 +214,28 @@ SIA 文档提纲
 
 24. SIA 论文效率声明深度剖析                                       [****]
     doc/sia-efficiency-claims-analysis.md
+    https://github.com/0gfoundation/0g-sparse-inference-alignment/blob/main/doc/sia-efficiency-claims-analysis.md
     揭示论文效率结论与官方代码之间的鸿沟：论文假设 KV cache（O(1)/步），实
     际代码无 KV cache（O(T²)），导致实测性能与论文方向相反。理想实现下理论
     仍支持论文结论，但工程实现是必要前提。
 
 25. noSIA MMLU-Redux 600 三模型对比                                [***]
     doc/noSIA-three-model-comparison.md
+    https://github.com/0gfoundation/0g-sparse-inference-alignment/blob/main/doc/noSIA-three-model-comparison.md
     对比 Qwen3-4B（75%, 166.5 tok/s）、Qwen3-14B（75%, 88.4 tok/s）和
     Qwen3-VL-30B-A3B（83%, 134.7 tok/s）。MoE A3B 架构精度最高+速度最快，
     14B 被完全支配。为 SIA 基底模型选型提供数据依据。
 
 26. Alignment 方法综述：论文中的分类与对比                         [***]
     doc/alignment-methods-comparison.md
+    https://github.com/0gfoundation/0g-sparse-inference-alignment/blob/main/doc/alignment-methods-comparison.md
     系统梳理训练时方法（RLHF/DPO/SFT）与推理时方法（prompt/search/refine/
     token steering），定位 SIA 在方法空间中的位置。SIA 相比 BoN-8 计算开销
     低约 4 倍，提供最优成本-效果权衡。
 
 27. Alignment 与 Value Model：为什么不直接 Fine-tune 基础模型？    [***]
     doc/alignment-vs-finetune.md
+    https://github.com/0gfoundation/0g-sparse-inference-alignment/blob/main/doc/alignment-vs-finetune.md
     阐述 Value Model 方案相比微调的核心优势：低训练成本、无 alignment tax、
     即插即用、支持 weak-to-strong 泛化（4B VM 引导 14B LLM）。是对外解释
     项目价值的重要背景文档。
@@ -218,17 +247,20 @@ SIA 文档提纲
 
 28. SIA 集成方案分析                                               [**]
     doc/sia-integration-plan.md
+    https://github.com/0gfoundation/0g-sparse-inference-alignment/blob/main/doc/sia-integration-plan.md
     为 0g 平台提供四套集成方案（方案一：用现成 VM；方案二：重训扩数据；方案
     三：用户自训 VM；方案四：平台提供训练功能）。建议先推方案一快速落地，数
     据驱动后续路径。
 
 29. 跑 SIA + vLLM RM 评测的命令手册                               [*]
     doc/run-sia-vllm-rm.md
+    https://github.com/0gfoundation/0g-sparse-inference-alignment/blob/main/doc/run-sia-vllm-rm.md
     端到端操作手册，包含 RM 转换、自动化启动脚本、监控命令、常见问题。是实
     际部署 SIA+vLLM RM 的操作参考，无分析价值，纯工具文档。
 
 30. RM Server Profiling 指南                                       [*]
     doc/rm-profiling-guide.md
+    https://github.com/0gfoundation/0g-sparse-inference-alignment/blob/main/doc/rm-profiling-guide.md
     说明 sia_rm_server.py 的 profiling 工具使用方法：四种启动模式、日志格式、
     六种典型性能信号及应对策略。纯工具文档。
 
