@@ -256,18 +256,33 @@ def make_sia_processor(
                 )
 
             # 客户端 profiling 累积
+            # 注: SIA-pf-summary @N 中 N 是 _pf_intervene_calls (只 INTERVENE 计数).
+            # SKIP / apply_entry 等阶段在每个 token 都会记 (不只是 INTERVENE), 所以这些
+            # phase 的样本数会 >> N。p50/p95 仍然是这些 phase 自己样本的分位数。
             self._pf_stats: dict[str, list] = {
-                "format_chat":      [],   # 拼 chat template prefix/suffix 的耗时
-                "tokenize_client":  [],   # use_token_ids 时客户端 tokenize 耗时
-                "http_post":        [],   # HTTP roundtrip + 服务端处理
-                "parse_response":   [],   # 解析 JSON 响应
-                # b2 backend phases
-                "b2_session_init":  [],   # new_session + apply_chat_template (只第 1 步非 0)
+                # vllm http backend phases (legacy, not used by b2)
+                "format_chat":      [],
+                "tokenize_client":  [],
+                "http_post":        [],
+                "parse_response":   [],
+                # b2 backend phases (RMClient call internals — 一次 INTERVENE 内)
+                "b2_session_init":  [],   # new_session + apply_chat_template
                 "b2_prefix_adv":    [],   # fix_a_token loop 推进 session
-                "b2_score_call":    [],   # RMClient.score_candidates (主要开销)
-                "total":            [],   # 端到端
+                "b2_score_call":    [],   # RMClient.score_candidates 端到端
+                "total":            [],   # 一次 INTERVENE 端到端
+
+                # === apply() 内分段 (per-token) — 2026-06-01 新增 ===
+                # 每次 apply() 调用都记的 phase:
+                "apply_total":      [],   # apply() 端到端 (含 INTERVENE 或 SKIP)
+                "apply_topk_ent":   [],   # torch.topk + log_softmax + entropy (GPU)
+                "apply_cpu_sync":   [],   # entropy.cpu().tolist() (GPU→CPU sync wait)
+                "skip_step":        [],   # 仅 SKIP 路径 (上面 sync 后到 apply return)
+                # 仅 INTERVENE 路径的额外分段 (subset of apply() time):
+                "intv_prepare":     [],   # topk_indices.cpu().tolist() + output_ids/user_content 取
+                "intv_apply_logits":[],   # mean-norm + .to(gpu) + index_add_ + flip
             }
             self._pf_intervene_calls: int = 0
+            self._pf_apply_calls: int = 0  # 每次 apply 都计数 (用来定 per-token level interval)
 
             # B2 backend: in-process RMClient + per-request session 表
             # 假设 LLM 和 RM 用同一个 tokenizer (B2 路径前提)，所以 token_id 通用
@@ -654,6 +669,10 @@ def make_sia_processor(
         # apply：每个 token 生成前被 vllm 调用一次
         # ----------------------------------------------------------------
         def apply(self, logits: torch.Tensor) -> torch.Tensor:
+            # === per-token profiling 起点 ===
+            pf_on = self._PROFILE_DETAIL
+            t_apply_start = time.perf_counter() if pf_on else 0.0
+
             batch_size = logits.shape[0]
 
             # ==== Batch-wide topk + entropy（一次提交所有 GPU 工作）====
@@ -667,8 +686,14 @@ def make_sia_processor(
             probs = log_probs.exp()
             entropies = -(probs * log_probs).sum(dim=-1)  # (batch,)
 
+            # 注: 上面 GPU work 还没 sync, 真正 sync 在下面 .cpu().tolist()。
+            # 拆分 timer: t_after_gpu_dispatch = topk+entropy "Python dispatch" 完成
+            # (但 GPU 还在算); t_after_sync = .cpu() 触发的 GPU pipeline wait 完成
+            t_after_gpu_dispatch = time.perf_counter() if pf_on else 0.0
+
             # 一次性 GPU→CPU sync（取代原代码中 per-item 的 .item()）
             entropy_values = entropies.cpu().tolist()
+            t_after_sync = time.perf_counter() if pf_on else 0.0
 
             # 在 CPU 上做 SKIP/INTERVENE 决策（不再触发 sync）
             if self._ENTROPY_THRESHOLD is not None:
@@ -688,17 +713,21 @@ def make_sia_processor(
                 topk_indices_lists = None
 
             # ==== Per-item loop，循环体里不再有 .item() / .tolist() sync ====
+            #
+            # SKIP path Python 清理 (2026-06-02):
+            # 把 output_ids 的 list copy O(N) 和 user_content dict access 移到
+            # INTERVENE 分支内 — SKIP path 不读这两个值, 原来每个 token 都做
+            # 是无用功 (output_ids 长度累积到 700+ token, list copy 不是免费的).
+            # _total_steps 仍每 token 更新 (统计需要); req_step 只在 verbose 时取
+            # 用于 log, 推迟到 SKIP/INTERVENE 各自的 print 分支内。
             for i in range(batch_size):
-                output_ids = list(self._output_ids.get(i, []))
-                user_content = self._prompt_user.get(i, "")
-
                 self._total_steps[i] = self._total_steps.get(i, 0) + 1
-                req_step = self._total_steps[i]
 
                 entropy = entropy_values[i]
 
                 if not intervene_flags[i]:
                     if verbose:
+                        req_step = self._total_steps[i]
                         print(
                             f"[SIA] {time.strftime('%H:%M:%S')}.{int(time.time() % 1 * 1_000_000):06d} "
                             f"step={req_step:3d} req={i} "
@@ -707,11 +736,19 @@ def make_sia_processor(
                         )
                     continue
 
-                # INTERVENE path
+                # === INTERVENE path 计时起点 ===
+                t_intv_start = time.perf_counter() if pf_on else 0.0
+
+                # INTERVENE path 才需要的状态: 推迟到这里取, SKIP 不付。
+                output_ids = list(self._output_ids.get(i, []))
+                user_content = self._prompt_user.get(i, "")
+                req_step = self._total_steps[i]
+
                 topk_indices_i = topk_indices_lists[i]            # list[int] (CPU)
                 topk_indices_gpu = topk_result.indices[i]         # GPU view，用于索引 logits
 
                 response_so_far = self._get_response_so_far(i, output_ids)
+                t_intv_prepare_end = time.perf_counter() if pf_on else 0.0
 
                 try:
                     rm_scores = self._score_candidates(
@@ -738,6 +775,9 @@ def make_sia_processor(
                 # CRITICAL: 不能用 `logits[i, idx].add_(...)` — advanced indexing
                 #     (tensor index) 返回副本而非 view, .add_ 改副本不会写回 logits,
                 #     等于 SIA 干预完全失效但 silent 不报错。
+                # === apply_logits 计时起点 (RM call 之后) ===
+                t_intv_apply_start = time.perf_counter() if pf_on else 0.0
+
                 effective_weight = self._weight_per_req.get(i, self._WEIGHT)
                 # B-1: rm_scores 在 inproc 模式下是 GPU bfloat16 (score head 输出
                 # dtype); legacy 模式下是 CPU float32 (read_rewards 已 cast)。
@@ -776,6 +816,32 @@ def make_sia_processor(
                         f"pre_top1={pre_top1} post_top1={post_top1}",
                         flush=True,
                     )
+
+                # === intv_apply_logits 结束计时 ===
+                if pf_on:
+                    t_intv_apply_end = time.perf_counter()
+                    self._pf_record("intv_prepare",
+                                    (t_intv_prepare_end - t_intv_start) * 1000)
+                    self._pf_record("intv_apply_logits",
+                                    (t_intv_apply_end - t_intv_apply_start) * 1000)
+
+            # === apply() 出口: 记录整体 + SKIP/INTERVENE 路径区分 ===
+            if pf_on:
+                t_apply_end = time.perf_counter()
+                self._pf_record("apply_total",
+                                (t_apply_end - t_apply_start) * 1000)
+                self._pf_record("apply_topk_ent",
+                                (t_after_gpu_dispatch - t_apply_start) * 1000)
+                self._pf_record("apply_cpu_sync",
+                                (t_after_sync - t_after_gpu_dispatch) * 1000)
+                # 如果这一步是纯 SKIP (没人 intervene), 记 skip_step (apply() 总耗时)
+                if not any(intervene_flags):
+                    self._pf_record("skip_step",
+                                    (t_apply_end - t_apply_start) * 1000)
+                self._pf_apply_calls += 1
+                # apply 比 INTERVENE 多 ~3x (干预率 33%), 等 INTERVENE-driven
+                # summary 触发即可: 那时 apply 已经累计 300+ 次, SKIP 数据足够
+                # 收敛。新 phase (apply_*, intv_*, skip_step) 自然被 summary 一并打。
 
             return logits
 
