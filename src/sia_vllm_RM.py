@@ -210,6 +210,15 @@ def make_sia_processor(
         #   flip 统计 / startup 提示 / DONE / SIA-pf-summary 不受此 var 影响
         _LOG_LEVEL: str = os.environ.get("SIA_LOG_LEVEL", "quiet")
 
+        # ===== SIA DEBUG HISTOGRAM START =====
+        # 用于诊断"为什么干预率低"。开 SIA_DEBUG_HIST=1 后, 每个请求 DONE 时打:
+        #   - ENTROPY_HIST: top-5 重归一化 entropy 的 16-bin 直方图 [0..1.6 step=0.1]
+        #   - GAP_HIST: top-1 vs top-2 logit gap 的 16-bin 直方图 [0..8.0 step=0.5]
+        #   - ENTROPY_INTHINK / ENTROPY_OUTTHINK: 按 <think>/</think> 边界分桶
+        # 默认 SIA_DEBUG_HIST=0 → 零 hot-path 成本。
+        # 整段代码以 SIA DEBUG HISTOGRAM START/END 注释包围, 便于手动回滚 (grep + sed)。
+        _DEBUG_HIST: bool = os.environ.get("SIA_DEBUG_HIST", "0") == "1"
+        # ===== SIA DEBUG HISTOGRAM END =====
 
         # ----------------------------------------------------------------
         # 初始化：在 EngineCore 子进程里执行
@@ -285,6 +294,34 @@ def make_sia_processor(
             self._pf_intervene_calls: int = 0
             self._pf_apply_calls: int = 0  # 每次 apply 都计数 (用来定 per-token level interval)
 
+            # ===== SIA DEBUG HISTOGRAM START =====
+            # debug state (only used when SIA_DEBUG_HIST=1; empty dicts are zero-cost)
+            self._dbg_entropy_hist: dict[int, list[int]] = {}        # req_idx -> 16 bins [0..1.6]
+            self._dbg_gap_hist: dict[int, list[int]] = {}            # req_idx -> 16 bins [0..8.0]
+            self._dbg_entropy_hist_inthink: dict[int, list[int]] = {}  # 仅 <think>...</think> 内的 entropy
+            self._dbg_entropy_hist_outthink: dict[int, list[int]] = {} # </think> 之后的 entropy
+            self._dbg_in_think: dict[int, bool] = {}                 # req_idx -> 当前是否在 think 内
+            self._think_open_ids: set[int] = set()
+            self._think_close_ids: set[int] = set()
+            if self._DEBUG_HIST:
+                # 探测 <think> / </think> 是否是单 token (Qwen3.5 thinking models 一般是)
+                # 多 token 的话桶化逻辑会跳过 (last_tok 永远 not in set), 全部归 inthink
+                for marker, target_set in (
+                    ("<think>", self._think_open_ids),
+                    ("</think>", self._think_close_ids),
+                ):
+                    try:
+                        ids = self._llm_tok.encode(marker, add_special_tokens=False)
+                        if len(ids) == 1:
+                            target_set.add(ids[0])
+                    except Exception:
+                        pass
+                print(
+                    f"[SIA-debug] SIA_DEBUG_HIST=1 启用; "
+                    f"think_open_ids={self._think_open_ids}, think_close_ids={self._think_close_ids}",
+                    flush=True,
+                )
+            # ===== SIA DEBUG HISTOGRAM END =====
 
             # B2 backend: in-process RMClient + per-request session 表
             # 假设 LLM 和 RM 用同一个 tokenizer (B2 路径前提)，所以 token_id 通用
@@ -709,8 +746,47 @@ def make_sia_processor(
             t_after_gpu_dispatch = time.perf_counter() if pf_on else 0.0
 
             # 一次性 GPU→CPU sync（取代原代码中 per-item 的 .item()）
+            # ===== SIA DEBUG HISTOGRAM START =====
+            # 开 SIA_DEBUG_HIST=1 时, 把 entropy + top1/top2 gap 合并到一次 sync 里
+            # (避免引入额外的 CUDA sync round-trip)。
+            if self._DEBUG_HIST:
+                gap_tensor = topk_result.values[:, 0] - topk_result.values[:, 1]  # (batch,)
+                # 一次性同步 entropy + gap, 比独立 .cpu() 省一次 round-trip
+                combined = torch.stack([entropies, gap_tensor], dim=1)  # (batch, 2)
+                combined_cpu = combined.cpu().tolist()
+                entropy_values = [m[0] for m in combined_cpu]
+                gap_values = [m[1] for m in combined_cpu]
+            else:
+                entropy_values = entropies.cpu().tolist()
+                gap_values = None  # type: ignore[assignment]
+            # ===== SIA DEBUG HISTOGRAM END =====
             t_after_sync = time.perf_counter() if pf_on else 0.0
 
+            # ===== SIA DEBUG HISTOGRAM START =====
+            # 桶化 (在 entropy_values 已 sync 到 CPU 后做, 不引入新 sync)
+            if self._DEBUG_HIST:
+                for bi in range(batch_size):
+                    # 推进 <think> / </think> 状态: 看当前已生成的最后一个 token
+                    out_ids = self._output_ids.get(bi, [])
+                    if out_ids:
+                        last_tok = out_ids[-1]
+                        if last_tok in self._think_open_ids:
+                            self._dbg_in_think[bi] = True
+                        elif last_tok in self._think_close_ids:
+                            self._dbg_in_think[bi] = False
+                    in_think = self._dbg_in_think.setdefault(bi, True)
+
+                    e = entropy_values[bi]
+                    g = gap_values[bi]
+                    eb = min(int(e * 10), 15)         # 16 bins, step=0.1
+                    gb = min(int(g * 2), 15)          # 16 bins, step=0.5
+                    self._dbg_entropy_hist.setdefault(bi, [0]*16)[eb] += 1
+                    self._dbg_gap_hist.setdefault(bi, [0]*16)[gb] += 1
+                    if in_think:
+                        self._dbg_entropy_hist_inthink.setdefault(bi, [0]*16)[eb] += 1
+                    else:
+                        self._dbg_entropy_hist_outthink.setdefault(bi, [0]*16)[eb] += 1
+            # ===== SIA DEBUG HISTOGRAM END =====
 
             # 在 CPU 上做 SKIP/INTERVENE 决策（不再触发 sync）
             if self._ENTROPY_THRESHOLD is not None:
@@ -884,6 +960,30 @@ def make_sia_processor(
                     f"top1_flip={flipped}/{intervened} ({flip_ratio:.1%})",
                     flush=True,
                 )
+                # ===== SIA DEBUG HISTOGRAM START =====
+                if self._DEBUG_HIST:
+                    eh = self._dbg_entropy_hist.pop(idx, None)
+                    gh = self._dbg_gap_hist.pop(idx, None)
+                    eh_in = self._dbg_entropy_hist_inthink.pop(idx, None)
+                    eh_out = self._dbg_entropy_hist_outthink.pop(idx, None)
+                    self._dbg_in_think.pop(idx, None)
+                    if eh and total > 0:
+                        # 计算 >= threshold 的 step 比例, 跟 ratio 对账
+                        thr = self._ENTROPY_THRESHOLD or 1.0
+                        thr_bin = min(int(thr * 10), 15)
+                        ge_thr = sum(eh[thr_bin:])
+                        ge_thr_pct = ge_thr / total * 100
+                        in_total = sum(eh_in or [])
+                        out_total = sum(eh_out or [])
+                        print(
+                            f"[SIA-debug] req={idx} ENTROPY_HIST [0..1.6 step=0.1] = {eh}  "
+                            f"(ge_{thr:.1f}={ge_thr}/{total}={ge_thr_pct:.2f}%)\n"
+                            f"[SIA-debug] req={idx} GAP_HIST     [0..8.0 step=0.5] = {gh}\n"
+                            f"[SIA-debug] req={idx} ENTROPY_INTHINK  (n={in_total}): {eh_in}\n"
+                            f"[SIA-debug] req={idx} ENTROPY_OUTTHINK (n={out_total}): {eh_out}",
+                            flush=True,
+                        )
+                # ===== SIA DEBUG HISTOGRAM END =====
                 self._output_ids.pop(idx, None)
                 self._prompt_user.pop(idx, None)
                 self._weight_per_req.pop(idx, None)
@@ -974,6 +1074,15 @@ def make_sia_processor(
             for idx, params, prompt_ids, output_ids in batch_update.added:
                 self._output_ids[idx] = output_ids
                 self._prompt_user[idx] = self._extract_user_content(list(prompt_ids))
+                # ===== SIA DEBUG HISTOGRAM START =====
+                # 新请求进 slot, 清除前一个请求残留的 dbg state (兜底, 正常 removed 已清)
+                if self._DEBUG_HIST:
+                    self._dbg_entropy_hist.pop(idx, None)
+                    self._dbg_gap_hist.pop(idx, None)
+                    self._dbg_entropy_hist_inthink.pop(idx, None)
+                    self._dbg_entropy_hist_outthink.pop(idx, None)
+                    self._dbg_in_think[idx] = True   # 默认在 think 内 (chat template 开头有 <think>)
+                # ===== SIA DEBUG HISTOGRAM END =====
 
     return SIALogitsProcessor
 
