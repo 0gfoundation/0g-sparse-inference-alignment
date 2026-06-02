@@ -683,6 +683,17 @@ def make_sia_processor(
             # vLLM 不保证返回顺序，按 index 排序
             data_sorted = sorted(data, key=lambda x: x.get("index", 0))
             scores = [d["probs"][0] for d in data_sorted]
+            # vllm 0.19 的 /classify endpoint 即便传 activation=False 也强制 sigmoid,
+            # 返回的 probs 是 sigmoid(raw_logits) ∈ [0,1]。SIA 论文 + 官方代码用 raw
+            # logits (`rm_out.logits` 直接, 无 sigmoid), 数值范围 ~[-7,+7]; sigmoid
+            # 后压缩到 [0,1], delta magnitude 被压缩 ~10×, flip 率从 67% 跌到 ~3%。
+            # 这里做反 sigmoid (logit function), 把数值还原到 raw logit 域, 跟官方等价。
+            import math
+            EPS = 1e-6
+            scores = [
+                math.log(max(min(p, 1 - EPS), EPS) / max(min(1 - p, 1 - EPS), EPS))
+                for p in scores
+            ]
             result = torch.tensor(scores, dtype=torch.float32)
             t_parse = time.perf_counter() if pf_on else 0.0
 
@@ -874,12 +885,25 @@ def make_sia_processor(
                 effective_weight = self._weight_per_req.get(i, self._WEIGHT)
                 # B-1: rm_scores 在 inproc 模式下是 GPU bfloat16 (score head 输出
                 # dtype); legacy 模式下是 CPU float32 (read_rewards 已 cast)。
-                # 统一 cast 到 logits 的 device + dtype, 否则 index_add_ 会因为
+                # 统一 cast 到 logits 的 device + dtype, 否则后续 op 会因为
                 # source/self dtype 不同 raise (e.g. self=float, source=bfloat16)。
                 if rm_scores.device != logits.device or rm_scores.dtype != logits.dtype:
                     rm_scores = rm_scores.to(logits.device, dtype=logits.dtype)
                 rm_deltas = (rm_scores - rm_scores.mean()) * effective_weight
-                logits[i].index_add_(0, topk_indices_gpu, rm_deltas)
+
+                # === 2026-06-02: 跟官方/论文 baseline 严格对齐 ===
+                # 官方 src/sia.py:286-313 的语义:
+                #   rewards = -inf 处处, 仅 top-k 位置 = raw RM logits
+                #   combined = rewards * weight + orig_logits
+                #   → 非 top-k 位置永远是 -inf, softmax 后 prob=0, sampling 只能从 top-k 选
+                # 我们之前只 index_add 到 top-k, 不 mask 非 top-k, 让 vllm sampler 看到
+                # 完整 vocab → 干预语义偏离官方。
+                # Fix: weight != 0 时, 把所有非 top-k 位置 set 到 -inf, 跟官方等价。
+                if effective_weight != 0.0:
+                    modified_top5 = topk_result.values[i] + rm_deltas
+                    logits[i].fill_(float('-inf'))
+                    logits[i].index_copy_(0, topk_indices_gpu, modified_top5)
+                # else: weight=0 (noSIA semantics) → 保留原 logits 不变
 
                 self._intervened_steps[i] = self._intervened_steps.get(i, 0) + 1
 
