@@ -720,3 +720,139 @@ nohup /workspace/SIA/venv2/bin/python eval/mmlu_eval.py \
     > mmlu_0gm_600q_sia_20260602_032711.log 2>&1 &
 ```
 
+---
+
+## 2026-06-02 09:38 — **0GM-SIA thr=0.7 old code** (debug instrumentation, 60Q)
+
+**测试**：探索 entropy_threshold=0.7 (vs 历史 1.0) 在 0GM 上的效果。代码版本是 commit `b72764e` (含 SIA_DEBUG_HIST instrumentation, **但还没有 Step1+2 sigmoid fix**)。
+**结果**：accuracy = **76.7%** (46/60), intervene rate **20.68%**, flip rate (of iv) **2.57%**, throughput **33.4 tok/s**。
+**相关分析**: [`doc/sia-fix-and-vm-ablation-0gm-35b-20260602.md`](../doc/sia-fix-and-vm-ablation-0gm-35b-20260602.md) 实验 A
+
+**相关文件**:
+- main LLM SIA server log: [`0gm_sia_server_thr07_old_20260602_093803.log`](0gm_sia_server_thr07_old_20260602_093803.log)
+- eval log: [`mmlu_0gm_60q_sia_thr07_old_20260602_093803.log`](mmlu_0gm_60q_sia_thr07_old_20260602_093803.log)
+- results JSON: [`mmlu_redux_0gm_60q_sia_thr07_old_20260602_093803.json`](mmlu_redux_0gm_60q_sia_thr07_old_20260602_093803.json)
+
+```bash
+# RM server 复用 2026-06-02 03:23 实验启动的 (VM-Qwen3-4B-merged-for-vllm, port 8001)
+
+# 主 LLM SIA server (entropy_threshold 改 0.7)
+nohup env SIA_DEBUG_HIST=1 /workspace/SIA/venv4/bin/python src/sia_vllm_server.py \
+    --llm /workspace/SIA/models/0GM-1.0-35B-A3B-0427 \
+    --rm_backend vllm \
+    --rm_url http://localhost:8001 \
+    --rm_model /workspace/SIA/models/VM-Qwen3-4B-merged-for-vllm \
+    --llm_gpu_mem 0.72 --max_model_len 4096 \
+    --topk 5 --weight 1.0 --entropy_threshold 0.7 \
+    --host 0.0.0.0 --port 8000 \
+    > 0gm_sia_server_thr07_old_20260602_093803.log 2>&1 &
+
+# 60Q eval (3 subjects × 20Q)
+nohup /workspace/SIA/venv2/bin/python eval/mmlu_eval.py \
+    --base_url http://localhost:8000/v1 \
+    --model 0GM-1.0-35B-A3B-0427 \
+    --subjects astronomy electrical_engineering high_school_geography \
+    --limit 20 \
+    --temperature 1.0 --top_p 0.95 --top_k 20 --repetition_penalty 1.0 \
+    --output mmlu_redux_0gm_60q_sia_thr07_old_20260602_093803.json \
+    > mmlu_0gm_60q_sia_thr07_old_20260602_093803.log 2>&1 &
+```
+
+---
+
+## 2026-06-02 10:43 — **0GM-SIA thr=0.8 FIX (RM=4B)** (commit e1d150e, 30Q)
+
+**测试**：commit `e1d150e` 的 Step1+2 fix 验证。Step 1 = logit() 反 sigmoid (vllm /classify 强制 sigmoid 问题), Step 2 = 非 top-k 置 -inf (匹配官方代码语义)。同样的 RM=Qwen3-4B, entropy_threshold=0.8。
+**结果**：accuracy = **70.0%** (21/30), intervene rate **17.84%**, **flip rate (of iv) 16.40%** (6.4× 跳升 vs old code), throughput **37.3 tok/s**。**flip rate 修复成功但 accuracy 反而更差 (-12.2pp vs noSIA)** — 暴露 ML 层面 VM-Qwen3-4B 跟 0GM-35B 跨家族 OOD 问题。
+**相关分析**: [`doc/sia-fix-and-vm-ablation-0gm-35b-20260602.md`](../doc/sia-fix-and-vm-ablation-0gm-35b-20260602.md) 实验 B
+
+**相关文件**:
+- main LLM SIA server log: [`0gm_sia_server_thr08_fix_rm4b_20260602_104310.log`](0gm_sia_server_thr08_fix_rm4b_20260602_104310.log)
+- eval log: [`mmlu_0gm_30q_sia_thr08_fix_rm4b_20260602_104310.log`](mmlu_0gm_30q_sia_thr08_fix_rm4b_20260602_104310.log)
+- results JSON: [`mmlu_redux_0gm_30q_sia_thr08_fix_rm4b_20260602_104310.json`](mmlu_redux_0gm_30q_sia_thr08_fix_rm4b_20260602_104310.json)
+
+```bash
+# RM 4B server 同上 (port 8001)
+# 主 LLM SIA server (thr=0.8, 新代码 e1d150e)
+nohup env SIA_DEBUG_HIST=1 /workspace/SIA/venv4/bin/python src/sia_vllm_server.py \
+    --llm /workspace/SIA/models/0GM-1.0-35B-A3B-0427 \
+    --rm_backend vllm \
+    --rm_url http://localhost:8001 \
+    --rm_model /workspace/SIA/models/VM-Qwen3-4B-merged-for-vllm \
+    --llm_gpu_mem 0.72 --max_model_len 4096 \
+    --topk 5 --weight 1.0 --entropy_threshold 0.8 \
+    --host 0.0.0.0 --port 8000 \
+    > 0gm_sia_server_thr08_fix_rm4b_20260602_104310.log 2>&1 &
+
+# 30Q eval (3 subjects × 10Q)
+nohup /workspace/SIA/venv2/bin/python eval/mmlu_eval.py \
+    --base_url http://localhost:8000/v1 \
+    --model 0GM-1.0-35B-A3B-0427 \
+    --subjects astronomy electrical_engineering high_school_geography \
+    --limit 10 \
+    --temperature 1.0 --top_p 0.95 --top_k 20 --repetition_penalty 1.0 \
+    --output mmlu_redux_0gm_30q_sia_thr08_fix_rm4b_20260602_104310.json \
+    > mmlu_0gm_30q_sia_thr08_fix_rm4b_20260602_104310.log 2>&1 &
+```
+
+---
+
+## 2026-06-02 11:18 — **0GM-SIA thr=0.8 FIX + VM=1.7B** (VM size ablation, 30Q)
+
+**测试**：换更小的 Value Model — **VM-Qwen3-1.7B**, 验证 SIA 论文 §5.3 weak-to-strong 假设 ("smaller VMs contain sufficient directional information")。同样 thr=0.8 + Step1+2 fix。
+**结果**：accuracy = **76.7%** (23/30, **+6.7pp** vs RM=4B), intervene rate **18.03%**, **flip rate (of iv) 5.93%** (比 4B 的 16.4% **减半**), throughput **39.4 tok/s**。**astronomy +20pp** (70→90), **EE +10pp** (50→60), geography -10pp (single Q noise)。
+**关键发现**: 在 **cross-family** (0GM Qwen3.5/3.6 thinking × VM Qwen3 base) 场景下, **小 VM 反而比大 VM 更好** — 给出更温和的 reward signal, 损失减半。
+**相关分析**: [`doc/sia-fix-and-vm-ablation-0gm-35b-20260602.md`](../doc/sia-fix-and-vm-ablation-0gm-35b-20260602.md) 实验 C
+
+**模型准备**:
+- 下载 VM-Qwen3-1.7B-Base LoRA + token_reward_head 从 `huggingface.co/Runyi-Hu/SIA/tree/main/VM-Qwen3-1.7B-Base`
+- 用 `scripts/convert_rm_for_vllm.py` 转成 vllm 兼容 merged checkpoint:
+  ```bash
+  /workspace/SIA/venv2/bin/python scripts/convert_rm_for_vllm.py \
+    --rm /workspace/SIA/models/Qwen3-1.7B-Base \
+    --rm_lora /workspace/SIA/models/VM-Qwen3-1.7B-Base \
+    --output /workspace/SIA/models/VM-Qwen3-1.7B-merged-for-vllm
+  ```
+- 转换后 3.2 GB (比 4B 的 7.6 GB 小 2.4×)
+
+**相关文件**:
+- RM 1.7B server log: [`rm_vllm_1.7B_20260602_111853.log`](rm_vllm_1.7B_20260602_111853.log)
+- main LLM SIA server log: [`0gm_sia_server_thr08_fix_rm1.7b_20260602_111853.log`](0gm_sia_server_thr08_fix_rm1.7b_20260602_111853.log)
+- eval log: [`mmlu_0gm_30q_sia_thr08_fix_rm1.7b_20260602_111853.log`](mmlu_0gm_30q_sia_thr08_fix_rm1.7b_20260602_111853.log)
+- results JSON: [`mmlu_redux_0gm_30q_sia_thr08_fix_rm1.7b_20260602_111853.json`](mmlu_redux_0gm_30q_sia_thr08_fix_rm1.7b_20260602_111853.json)
+
+```bash
+# kill 之前的 RM 4B server, 起 1.7B RM (gpu_mem 0.22→0.12, 节省 15GB)
+nohup /workspace/SIA/venv4/bin/vllm serve \
+    /workspace/SIA/models/VM-Qwen3-1.7B-merged-for-vllm \
+    --runner pooling --convert classify \
+    --hf-overrides '{"architectures":["Qwen3WithScoreForCausalLM"]}' \
+    --enable-prefix-caching \
+    --gpu-memory-utilization 0.12 \
+    --max-model-len 2048 \
+    --port 8001 --host 0.0.0.0 \
+    --disable-log-stats \
+    > rm_vllm_1.7B_20260602_111853.log 2>&1 &
+
+# 主 LLM SIA server 接 1.7B RM, gpu_mem 0.72→0.78 (RM 释放出 15GB)
+nohup env SIA_DEBUG_HIST=1 /workspace/SIA/venv4/bin/python src/sia_vllm_server.py \
+    --llm /workspace/SIA/models/0GM-1.0-35B-A3B-0427 \
+    --rm_backend vllm \
+    --rm_url http://localhost:8001 \
+    --rm_model /workspace/SIA/models/VM-Qwen3-1.7B-merged-for-vllm \
+    --llm_gpu_mem 0.78 --max_model_len 4096 \
+    --topk 5 --weight 1.0 --entropy_threshold 0.8 \
+    --host 0.0.0.0 --port 8000 \
+    > 0gm_sia_server_thr08_fix_rm1.7b_20260602_111853.log 2>&1 &
+
+# 30Q eval 同上 (3 subjects × 10Q)
+nohup /workspace/SIA/venv2/bin/python eval/mmlu_eval.py \
+    --base_url http://localhost:8000/v1 \
+    --model 0GM-1.0-35B-A3B-0427 \
+    --subjects astronomy electrical_engineering high_school_geography \
+    --limit 10 \
+    --temperature 1.0 --top_p 0.95 --top_k 20 --repetition_penalty 1.0 \
+    --output mmlu_redux_0gm_30q_sia_thr08_fix_rm1.7b_20260602_111853.json \
+    > mmlu_0gm_30q_sia_thr08_fix_rm1.7b_20260602_111853.log 2>&1 &
+```
+
