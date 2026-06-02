@@ -32,7 +32,12 @@ import torch
 from torch import nn
 from vllm import ModelRegistry
 from vllm.model_executor.models.qwen3 import Qwen3ForCausalLM
-from vllm.model_executor.sampling_metadata import SamplingMetadata
+try:
+    # vLLM 0.10.x (old path)
+    from vllm.model_executor.sampling_metadata import SamplingMetadata
+except ImportError:
+    # vLLM 0.17+ moved it under v1
+    from vllm.v1.sample.metadata import SamplingMetadata
 
 
 def _reward_path() -> str:
@@ -268,10 +273,13 @@ class Qwen3WithScoreForCausalLM(Qwen3ForCausalLM):
     def compute_logits(
         self,
         hidden_states: torch.Tensor,
-        sampling_metadata: SamplingMetadata,
+        sampling_metadata: Optional[SamplingMetadata] = None,
     ) -> Optional[torch.Tensor]:
         # hidden_states shape: (n_samples, hidden), already gathered to
         # sample positions by vLLM (one row per request's last token).
+        # sampling_metadata: vllm 0.10.x 必传; vllm 0.17+ 改为只传 hidden_states,
+        # 这里设成 Optional 以兼容两版。super().compute_logits 在新 vllm 也只接受
+        # hidden_states, 旧 vllm 才接受 sampling_metadata。
         if _PROFILE_ENABLED:
             score_start = torch.cuda.Event(enable_timing=True)
             score_end = torch.cuda.Event(enable_timing=True)
@@ -316,6 +324,10 @@ class Qwen3WithScoreForCausalLM(Qwen3ForCausalLM):
 
         # Still run lm_head logits — vLLM scheduler needs them to sample
         # (a dummy) token to keep the request alive.
+        # vllm 0.10.x: super().compute_logits(hidden_states, sampling_metadata)
+        # vllm 0.17+:  super().compute_logits(hidden_states)
+        if sampling_metadata is None:
+            return super().compute_logits(hidden_states)
         return super().compute_logits(hidden_states, sampling_metadata)
 
 

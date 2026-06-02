@@ -626,3 +626,97 @@ nohup python eval/mmlu_eval.py \
     > log_SIA_vllmrm_202605261030.txt 2>&1 &
 ```
 
+---
+
+## 2026-06-01 15:25 — **0GM-noSIA**：0GM-1.0-35B-A3B-0427 MMLU baseline (900 题)
+
+**测试**：换主推理模型为 0GM-1.0-35B-A3B-0427 (Qwen3.5/3.6 MoE 架构, vocab=248044), 跑 noSIA baseline。模型 vllm 0.10/0.15 不支持此 architecture, 必须用 **venv4 (vllm 0.19.0)**, 直接 `vllm serve`, 不走 SIA processor。
+**相关文件**：
+- server log: [`0gm_server_nosia_20260601_152538.log`](0gm_server_nosia_20260601_152538.log)
+- eval log: [`mmlu_0gm_900q_nosia_20260601_152538.log`](mmlu_0gm_900q_nosia_20260601_152538.log)
+- results JSON: [`mmlu_redux_0gm_900q_nosia_20260601_152538.json`](mmlu_redux_0gm_900q_nosia_20260601_152538.json)
+- meta: [`0gm_nosia_meta_20260601_152538.txt`](0gm_nosia_meta_20260601_152538.txt)
+
+**关键结果**: accuracy = **75.6%** (680/900), throughput **108.9 tok/s**。
+
+```bash
+nohup /workspace/SIA/venv4/bin/vllm serve \
+    /workspace/SIA/models/0GM-1.0-35B-A3B-0427 \
+    --served-model-name 0GM-1.0-35B-A3B \
+    --gpu-memory-utilization 0.85 \
+    --max-model-len 4096 \
+    --enable-prefix-caching \
+    --host 0.0.0.0 --port 8000 \
+    > 0gm_server_nosia_20260601_152538.log 2>&1 &
+
+nohup /workspace/SIA/venv2/bin/python eval/mmlu_eval.py \
+    --base_url http://localhost:8000/v1 \
+    --model 0GM-1.0-35B-A3B \
+    --temperature 1.0 \
+    --limit 30 \
+    --output mmlu_redux_0gm_900q_nosia_20260601_152538.json \
+    > mmlu_0gm_900q_nosia_20260601_152538.log 2>&1 &
+```
+
+---
+
+## 2026-06-02 03:23 — **0GM-SIA**：0GM-1.0-35B-A3B + Qwen3-4B-RM 跨进程 SIA (600 题)
+
+**测试**：在 0GM-noSIA baseline 上加 SIA 干预 (跨进程 RM)。由于 vllm 0.19 的 cudagraph 全局 capturing flag, **必须跨进程**部署 RM (b2 inproc 不可行)。RM 用独立 `vllm serve` 进程 (port 8001), 主 LLM SIA server (port 8000) 通过 `--rm_backend vllm` HTTP 调用。
+
+**关键事件链 (本次实验过程中发现的 bug + 修复)**:
+1. 最初 `sia_vllm_server.py` 硬编码 `top_p=1.0, top_k=-1, repetition_penalty=1.3` → 0GM 248K vocab 在 thinking 模式下漂到 OOV 多语言 token, **输出乱码 0/6 全错**
+2. 修复: server 加 `top_k` / `repetition_penalty` 字段透传, eval client 加 `--top_k 20 --top_p 0.95 --repetition_penalty 1.0` (跟 0GM `generation_config.json` 一致), 14B baseline 不受影响 (默认值保留)
+
+**相关文件**：
+- RM server log: [`0gm_rm_vllm_serve_20260602_032711.log`](0gm_rm_vllm_serve_20260602_032711.log)
+- 主 LLM SIA server log: [`0gm_llm_sia_server_20260602_032711.log`](0gm_llm_sia_server_20260602_032711.log)
+- eval log: [`mmlu_0gm_600q_sia_20260602_032711.log`](mmlu_0gm_600q_sia_20260602_032711.log)
+- results JSON: [`mmlu_redux_0gm_600q_sia_20260602_032711.json`](mmlu_redux_0gm_600q_sia_20260602_032711.json)
+- 详细分析: [`doc/0gm-35b-sia-vs-nosia-eval-20260602.md`](../doc/0gm-35b-sia-vs-nosia-eval-20260602.md)
+- 工程路径分析: [`doc/0gm-35b-sia-rm-inproc-path-20260602.md`](../doc/0gm-35b-sia-rm-inproc-path-20260602.md)
+
+**关键结果**:
+- accuracy = **74.3%** (446/600, matched subjects vs noSIA 30 subj × 30Q = 75.6%, **Δ = -1.2 pp**)
+- throughput = **51.4 tok/s** (vs noSIA 108.9 tok/s, **slowdown 52.8%**)
+- 干预率 **8.34%** (跟 14B 的 30%+ 明显不同, 详见 doc 分析 — 主因是 35B 更自信 + thinking 模式低熵 prose 占多数)
+- top-1 flip 仅 **0.287%** of total steps
+
+```bash
+# (1) RM server: vllm serve 独立进程, port 8001
+nohup /workspace/SIA/venv4/bin/vllm serve \
+    /workspace/SIA/models/VM-Qwen3-4B-merged-for-vllm \
+    --runner pooling --convert classify \
+    --hf-overrides '{"architectures":["Qwen3WithScoreForCausalLM"]}' \
+    --enable-prefix-caching \
+    --gpu-memory-utilization 0.22 \
+    --max-model-len 2048 \
+    --port 8001 --host 0.0.0.0 \
+    --disable-log-stats \
+    > 0gm_rm_vllm_serve_20260602_032711.log 2>&1 &
+
+# (2) 主 LLM SIA server: 跨进程调 RM, port 8000
+nohup /workspace/SIA/venv4/bin/python src/sia_vllm_server.py \
+    --llm /workspace/SIA/models/0GM-1.0-35B-A3B-0427 \
+    --rm_backend vllm \
+    --rm_url http://localhost:8001 \
+    --rm_model /workspace/SIA/models/VM-Qwen3-4B-merged-for-vllm \
+    --llm_gpu_mem 0.72 \
+    --max_model_len 4096 \
+    --topk 5 --weight 1.0 --entropy_threshold 1.0 \
+    --host 0.0.0.0 --port 8000 \
+    > 0gm_llm_sia_server_20260602_032711.log 2>&1 &
+
+# (3) Eval client: 显式传 0GM-friendly sampling 参数 (top_k=20, top_p=0.95, rep_penalty=1.0)
+nohup /workspace/SIA/venv2/bin/python eval/mmlu_eval.py \
+    --base_url http://localhost:8000/v1 \
+    --model 0GM-1.0-35B-A3B-0427 \
+    --limit 20 \
+    --temperature 1.0 \
+    --top_p 0.95 \
+    --top_k 20 \
+    --repetition_penalty 1.0 \
+    --output mmlu_redux_0gm_600q_sia_20260602_032711.json \
+    > mmlu_0gm_600q_sia_20260602_032711.log 2>&1 &
+```
+

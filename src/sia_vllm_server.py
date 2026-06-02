@@ -83,6 +83,8 @@ class ChatCompletionRequest(BaseModel):
     stream: Optional[bool] = False
     stop: Optional[list[str]] = None
     top_p: Optional[float] = 1.0
+    top_k: Optional[int] = None
+    repetition_penalty: Optional[float] = None
     presence_penalty: Optional[float] = 0.0
     frequency_penalty: Optional[float] = 0.0
     n: Optional[int] = 1
@@ -120,13 +122,24 @@ def _messages_to_prompt(messages: list[ChatMessage]) -> dict:
 
 
 def _build_sampling_params(req: ChatCompletionRequest) -> SamplingParams:
-    return SamplingParams(
+    # Defaults preserve legacy Qwen14B+Qwen3-4B-RM baseline (top_k unset = vllm
+    # default -1, repetition_penalty=1.3). Clients targeting models with broad
+    # multilingual vocab (e.g. 0GM 248K vocab) should set top_k and
+    # repetition_penalty explicitly via the request to match the model's
+    # generation_config.json — otherwise weak/rare tokens dominate after
+    # repetition_penalty pushes common tokens down.
+    kwargs = dict(
         temperature=req.temperature if req.temperature is not None else 0.7,
         max_tokens=req.max_tokens if req.max_tokens is not None else 512,
         top_p=req.top_p if req.top_p is not None else 1.0,
         stop=req.stop or [],
-        repetition_penalty=1.3,
+        repetition_penalty=(
+            req.repetition_penalty if req.repetition_penalty is not None else 1.3
+        ),
     )
+    if req.top_k is not None:
+        kwargs["top_k"] = req.top_k
+    return SamplingParams(**kwargs)
 
 
 def _make_chunk(
@@ -376,13 +389,30 @@ def main():
         )
 
     print("Loading vLLM AsyncLLMEngine...")
-    engine_args = AsyncEngineArgs(
+    engine_kwargs = dict(
         model=_args.llm,
         max_model_len=_args.max_model_len,
         gpu_memory_utilization=_args.llm_gpu_mem,
         logits_processors=[SIAProcessor],
         disable_log_stats=True,
     )
+    # Optional main-LLM cudagraph override. Default = vllm's default (keeps
+    # legacy Qwen14B / vllm 0.10 path untouched). Set to "piecewise" when
+    # running a nested-vllm RM under vllm >= 0.15: FULL_AND_PIECEWISE on the
+    # main LLM raises a global cudagraph-capturing flag that breaks RM forward.
+    llm_cg = os.environ.get("SIA_LLM_CUDAGRAPH", "default").lower()
+    if llm_cg in ("piecewise", "none", "eager"):
+        try:
+            from vllm.config import CompilationConfig  # vllm >= 0.13
+            if llm_cg == "piecewise":
+                engine_kwargs["compilation_config"] = CompilationConfig(cudagraph_mode=1)
+                print("[SIA] main LLM cudagraph_mode=PIECEWISE (SIA_LLM_CUDAGRAPH=piecewise)")
+            else:
+                engine_kwargs["enforce_eager"] = True
+                print("[SIA] main LLM enforce_eager=True (SIA_LLM_CUDAGRAPH=none)")
+        except ImportError:
+            print("[SIA] SIA_LLM_CUDAGRAPH ignored (vllm too old to support compilation_config)")
+    engine_args = AsyncEngineArgs(**engine_kwargs)
     _engine = AsyncLLMEngine.from_engine_args(engine_args)
     print("LLM loaded.\n")
 

@@ -210,6 +210,7 @@ def make_sia_processor(
         #   flip 统计 / startup 提示 / DONE / SIA-pf-summary 不受此 var 影响
         _LOG_LEVEL: str = os.environ.get("SIA_LOG_LEVEL", "quiet")
 
+
         # ----------------------------------------------------------------
         # 初始化：在 EngineCore 子进程里执行
         # ----------------------------------------------------------------
@@ -284,6 +285,7 @@ def make_sia_processor(
             self._pf_intervene_calls: int = 0
             self._pf_apply_calls: int = 0  # 每次 apply 都计数 (用来定 per-token level interval)
 
+
             # B2 backend: in-process RMClient + per-request session 表
             # 假设 LLM 和 RM 用同一个 tokenizer (B2 路径前提)，所以 token_id 通用
             self._rm: Optional[object] = None
@@ -295,10 +297,25 @@ def make_sia_processor(
                 # 这里会再 fork 一个 vLLM EngineCore subprocess (RM 用)
                 # 该过程跑在 LLM EngineCore subprocess 里, 嵌套但可行
                 from sia_rm import RMClient
+                # vllm 0.19 + MoE 主 LLM (e.g. 0GM-35B): InprocClient 模式让 RM
+                # 跟主 LLM 同进程共享全局 workspace, RM 先 init 后 lock workspace,
+                # 主 LLM MoE forward 需要更大 workspace 但 grow 被阻 → AssertionError.
+                # 用 env var SIA_RM_MULTIPROCESS=1 强制 RM 子进程化以隔离 workspace。
+                # 代价: 1+4 split 复活, b2_score_call ~9ms → ~24ms。
+                rm_mp = os.environ.get("SIA_RM_MULTIPROCESS", "0") == "1"
+                if rm_mp:
+                    print(f"[SIA-b2] RMClient using multiprocessing=True "
+                          f"(workspace isolation for MoE main LLM)", flush=True)
+                # 传 LLM tokenizer 进 RMClient: 若跟 RM 自己的 tokenizer
+                # 不一致 (例如 0GM-35B 用 Qwen3.5 248K vocab vs RM Qwen3 151K),
+                # RMClient 内部启用 cross-tokenizer bridge (decode→encode);
+                # 一致时 (例如 Qwen3-14B + VM-Qwen3-4B) 不开桥, 零 overhead。
                 self._rm = RMClient(
                     model_path=self._RM_MODEL,
                     gpu_mem=self._RM_B2_GPU_MEM,
                     max_model_len=2048,
+                    multiprocessing=rm_mp,
+                    llm_tokenizer=self._llm_tok,
                 )
                 print(f"[SIA-b2] RMClient ready", flush=True)
 
@@ -692,8 +709,8 @@ def make_sia_processor(
             t_after_gpu_dispatch = time.perf_counter() if pf_on else 0.0
 
             # 一次性 GPU→CPU sync（取代原代码中 per-item 的 .item()）
-            entropy_values = entropies.cpu().tolist()
             t_after_sync = time.perf_counter() if pf_on else 0.0
+
 
             # 在 CPU 上做 SKIP/INTERVENE 决策（不再触发 sync）
             if self._ENTROPY_THRESHOLD is not None:
