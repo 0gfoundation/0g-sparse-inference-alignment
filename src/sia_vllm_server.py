@@ -90,6 +90,25 @@ class ChatCompletionRequest(BaseModel):
     n: Optional[int] = 1
 
 
+class CompletionRequest(BaseModel):
+    """raw text completion request (跟 OpenAI /v1/completions 一致, 不走 chat_template)。
+    适用场景: 需要 raw prompt (e.g. 'Human:\\n...\\nAssistant:\\n') 而非 chat-templated 的场景,
+    例如对齐论文 evaluate.py 的 prompt 格式。"""
+    model: Optional[str] = None
+    prompt: str
+    temperature: Optional[float] = 0.7
+    max_tokens: Optional[int] = 512
+    stream: Optional[bool] = False
+    stop: Optional[list[str]] = None
+    top_p: Optional[float] = 1.0
+    top_k: Optional[int] = None
+    repetition_penalty: Optional[float] = None
+    bad_words: Optional[list[str]] = None  # vllm SamplingParams.bad_words —
+                                            # 禁止 sampler 选这些 token
+                                            # (e.g., ["<think>","</think>"] 强制不进 thinking 模式)
+    n: Optional[int] = 1
+
+
 # ---------------------------------------------------------------------------
 # 工具函数
 # ---------------------------------------------------------------------------
@@ -300,6 +319,69 @@ async def chat_completions_v1(req: ChatCompletionRequest):
 @app.post("/chat/completions")
 async def chat_completions(req: ChatCompletionRequest):
     return await _handle_chat(req)
+
+
+async def _handle_completion(req: CompletionRequest):
+    """Raw text completion (跳过 chat_template)。SIA logits processor 仍按
+    每个 decode step 触发, 跟 chat_completion 完全一样。"""
+    await _log_rm_status()
+    # 直接用 raw prompt — tokenize 走 vllm 内部 (它接受 string prompt)
+    prompt = req.prompt
+    # 构造 SamplingParams: 复用 _build_sampling_params 逻辑, 但 req 是 CompletionRequest
+    # 不是 ChatCompletionRequest, 这里直接构造
+    kwargs = dict(
+        temperature=req.temperature if req.temperature is not None else 0.7,
+        max_tokens=req.max_tokens if req.max_tokens is not None else 512,
+        top_p=req.top_p if req.top_p is not None else 1.0,
+        stop=req.stop or [],
+        repetition_penalty=(
+            req.repetition_penalty if req.repetition_penalty is not None else 1.3
+        ),
+    )
+    if req.top_k is not None:
+        kwargs["top_k"] = req.top_k
+    if req.bad_words:
+        kwargs["bad_words"] = req.bad_words
+    sampling_params = SamplingParams(**kwargs)
+    model = req.model or _model_id
+    request_id = f"cmpl-{uuid.uuid4().hex[:12]}"
+    created = int(time.time())
+
+    final = None
+    async for output in _engine.generate(prompt, sampling_params, request_id):
+        final = output
+
+    text = final.outputs[0].text if final else ""
+    finish_reason = (final.outputs[0].finish_reason or "stop") if final else "stop"
+    prompt_tokens = len(final.prompt_token_ids)
+    completion_tokens = len(final.outputs[0].token_ids)
+
+    return JSONResponse({
+        "id": request_id,
+        "object": "text_completion",
+        "created": created,
+        "model": model,
+        "choices": [{
+            "index": 0,
+            "text": text,
+            "finish_reason": finish_reason,
+        }],
+        "usage": {
+            "prompt_tokens": prompt_tokens,
+            "completion_tokens": completion_tokens,
+            "total_tokens": prompt_tokens + completion_tokens,
+        },
+    })
+
+
+@app.post("/v1/completions")
+async def completions_v1(req: CompletionRequest):
+    return await _handle_completion(req)
+
+
+@app.post("/completions")
+async def completions(req: CompletionRequest):
+    return await _handle_completion(req)
 
 
 # ---------------------------------------------------------------------------

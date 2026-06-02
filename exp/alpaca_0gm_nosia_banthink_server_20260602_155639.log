@@ -1,0 +1,403 @@
+The tokenizer you are loading from '/workspace/SIA/models/0GM-1.0-35B-A3B-0427' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.
+Loading tokenizer: /workspace/SIA/models/0GM-1.0-35B-A3B-0427 ...
+Tokenizer loaded.
+============================================================
+Model ID : 0GM-1.0-35B-A3B-0427
+LLM      : /workspace/SIA/models/0GM-1.0-35B-A3B-0427
+RM URL   : http://localhost:8001
+RM mode  : vllm  model=/workspace/SIA/models/VM-Qwen3-4B-merged-for-vllm
+topk=5  weight=0.0  entropy_threshold=999999.0  use_token_ids=False
+Server   : http://0.0.0.0:8000
+============================================================
+Loading vLLM AsyncLLMEngine...
+INFO 06-02 15:53:39 [model.py:549] Resolved architecture: Qwen3_5MoeForConditionalGeneration
+INFO 06-02 15:53:39 [model.py:1678] Using max model len 4096
+INFO 06-02 15:53:39 [scheduler.py:238] Chunked prefill is enabled with max_num_batched_tokens=2048.
+INFO 06-02 15:53:39 [config.py:281] Setting attention block size to 1056 tokens to ensure that attention page size is >= mamba page size.
+INFO 06-02 15:53:39 [config.py:312] Padding mamba page size by 0.76% to ensure that mamba page size and attention page size are exactly equal.
+INFO 06-02 15:53:39 [vllm.py:790] Asynchronous scheduling is enabled.
+The tokenizer you are loading from '/workspace/SIA/models/0GM-1.0-35B-A3B-0427' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.
+The tokenizer you are loading from '/workspace/SIA/models/0GM-1.0-35B-A3B-0427' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.
+The tokenizer you are loading from '/workspace/SIA/models/0GM-1.0-35B-A3B-0427' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.
+WARNING 06-02 15:53:47 [system_utils.py:152] We must use the `spawn` multiprocessing start method. Overriding VLLM_WORKER_MULTIPROC_METHOD to 'spawn'. See https://docs.vllm.ai/en/latest/usage/troubleshooting.html#python-multiprocessing for more information. Reasons: CUDA is initialized
+(EngineCore pid=1149699) INFO 06-02 15:53:54 [core.py:105] Initializing a V1 LLM engine (v0.19.0) with config: model='/workspace/SIA/models/0GM-1.0-35B-A3B-0427', speculative_config=None, tokenizer='/workspace/SIA/models/0GM-1.0-35B-A3B-0427', skip_tokenizer_init=False, tokenizer_mode=auto, revision=None, tokenizer_revision=None, trust_remote_code=False, dtype=torch.bfloat16, max_seq_len=4096, download_dir=None, load_format=auto, tensor_parallel_size=1, pipeline_parallel_size=1, data_parallel_size=1, decode_context_parallel_size=1, dcp_comm_backend=ag_rs, disable_custom_all_reduce=False, quantization=None, enforce_eager=False, enable_return_routed_experts=False, kv_cache_dtype=auto, device_config=cuda, structured_outputs_config=StructuredOutputsConfig(backend='auto', disable_any_whitespace=False, disable_additional_properties=False, reasoning_parser='', reasoning_parser_plugin='', enable_in_reasoning=False), observability_config=ObservabilityConfig(show_hidden_metrics_for_version=None, otlp_traces_endpoint=None, collect_detailed_traces=None, kv_cache_metrics=False, kv_cache_metrics_sample=0.01, cudagraph_metrics=False, enable_layerwise_nvtx_tracing=False, enable_mfu_metrics=False, enable_mm_processor_stats=False, enable_logging_iteration_details=False), seed=0, served_model_name=/workspace/SIA/models/0GM-1.0-35B-A3B-0427, enable_prefix_caching=False, enable_chunked_prefill=True, pooler_config=None, compilation_config={'mode': <CompilationMode.VLLM_COMPILE: 3>, 'debug_dump_path': None, 'cache_dir': '', 'compile_cache_save_format': 'binary', 'backend': 'inductor', 'custom_ops': ['none'], 'splitting_ops': ['vllm::unified_attention', 'vllm::unified_attention_with_output', 'vllm::unified_mla_attention', 'vllm::unified_mla_attention_with_output', 'vllm::mamba_mixer2', 'vllm::mamba_mixer', 'vllm::short_conv', 'vllm::linear_attention', 'vllm::plamo2_mamba_mixer', 'vllm::gdn_attention_core', 'vllm::olmo_hybrid_gdn_full_forward', 'vllm::kda_attention', 'vllm::sparse_attn_indexer', 'vllm::rocm_aiter_sparse_attn_indexer', 'vllm::unified_kv_cache_update', 'vllm::unified_mla_kv_cache_update'], 'compile_mm_encoder': False, 'cudagraph_mm_encoder': False, 'encoder_cudagraph_token_budgets': [], 'encoder_cudagraph_max_images_per_batch': 0, 'compile_sizes': [], 'compile_ranges_endpoints': [2048], 'inductor_compile_config': {'enable_auto_functionalized_v2': False, 'size_asserts': False, 'alignment_asserts': False, 'scalar_asserts': False, 'combo_kernels': True, 'benchmark_combo_kernel': True}, 'inductor_passes': {}, 'cudagraph_mode': <CUDAGraphMode.FULL_AND_PIECEWISE: (2, 1)>, 'cudagraph_num_of_warmups': 1, 'cudagraph_capture_sizes': [1, 2, 4, 8, 16, 24, 32, 40, 48, 56, 64, 72, 80, 88, 96, 104, 112, 120, 128, 136, 144, 152, 160, 168, 176, 184, 192, 200, 208, 216, 224, 232, 240, 248, 256], 'cudagraph_copy_inputs': False, 'cudagraph_specialize_lora': True, 'use_inductor_graph_partition': False, 'pass_config': {'fuse_norm_quant': False, 'fuse_act_quant': False, 'fuse_attn_quant': False, 'enable_sp': False, 'fuse_gemm_comms': False, 'fuse_allreduce_rms': False}, 'max_cudagraph_capture_size': 256, 'dynamic_shapes_config': {'type': <DynamicShapesType.BACKED: 'backed'>, 'evaluate_guards': False, 'assume_32_bit_indexing': False}, 'local_cache_dir': None, 'fast_moe_cold_start': True, 'static_all_moe_layers': []}
+(EngineCore pid=1149699) The tokenizer you are loading from '/workspace/SIA/models/0GM-1.0-35B-A3B-0427' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.
+(EngineCore pid=1149699) INFO 06-02 15:53:55 [parallel_state.py:1400] world_size=1 rank=0 local_rank=0 distributed_init_method=tcp://172.17.0.2:56651 backend=nccl
+(EngineCore pid=1149699) INFO 06-02 15:53:55 [parallel_state.py:1716] rank 0 in world size 1 is assigned as DP rank 0, PP rank 0, PCP rank 0, TP rank 0, EP rank 0, EPLB rank N/A
+(EngineCore pid=1149699) [SIA] Loading LLM tokenizer: /workspace/SIA/models/0GM-1.0-35B-A3B-0427
+(EngineCore pid=1149699) The tokenizer you are loading from '/workspace/SIA/models/0GM-1.0-35B-A3B-0427' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.
+(EngineCore pid=1149699) [SIA] RM URL: http://localhost:8001
+(EngineCore pid=1149699) The tokenizer you are loading from '/workspace/SIA/models/0GM-1.0-35B-A3B-0427' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.
+(EngineCore pid=1149699) The tokenizer you are loading from '/workspace/SIA/models/0GM-1.0-35B-A3B-0427' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.
+(EngineCore pid=1149699) INFO 06-02 15:54:03 [gpu_model_runner.py:4735] Starting to load model /workspace/SIA/models/0GM-1.0-35B-A3B-0427...
+(EngineCore pid=1149699) INFO 06-02 15:54:04 [cuda.py:390] Using backend AttentionBackendEnum.FLASH_ATTN for vit attention
+(EngineCore pid=1149699) INFO 06-02 15:54:04 [mm_encoder_attention.py:230] Using AttentionBackendEnum.FLASH_ATTN for MMEncoderAttention.
+(EngineCore pid=1149699) INFO 06-02 15:54:04 [gdn_linear_attn.py:139] Using FlashInfer GDN prefill kernel
+(EngineCore pid=1149699) INFO 06-02 15:54:04 [gdn_linear_attn.py:140] FlashInfer GDN prefill kernel is JIT-compiled; first run may take a while to compile. Set `--gdn-prefill-backend triton` to avoid JIT compile time.
+(EngineCore pid=1149699) INFO 06-02 15:54:04 [unquantized.py:186] Using TRITON backend for Unquantized MoE
+(EngineCore pid=1149699) INFO 06-02 15:54:04 [cuda.py:334] Using FLASH_ATTN attention backend out of potential backends: ['FLASH_ATTN', 'FLASHINFER', 'TRITON_ATTN', 'FLEX_ATTENTION'].
+(EngineCore pid=1149699) INFO 06-02 15:54:04 [flash_attn.py:596] Using FlashAttention version 3
+(EngineCore pid=1149699) <frozen importlib._bootstrap_external>:1297: FutureWarning: The cuda.cudart module is deprecated and will be removed in a future release, please switch to use the cuda.bindings.runtime module instead.
+(EngineCore pid=1149699) <frozen importlib._bootstrap_external>:1297: FutureWarning: The cuda.nvrtc module is deprecated and will be removed in a future release, please switch to use the cuda.bindings.nvrtc module instead.
+(EngineCore pid=1149699) Loading safetensors checkpoint shards:   0% Completed | 0/26 [00:00<?, ?it/s]
+(EngineCore pid=1149699) Loading safetensors checkpoint shards:   4% Completed | 1/26 [00:07<02:56,  7.06s/it]
+(EngineCore pid=1149699) Loading safetensors checkpoint shards:   8% Completed | 2/26 [00:09<01:42,  4.26s/it]
+(EngineCore pid=1149699) Loading safetensors checkpoint shards:  12% Completed | 3/26 [00:15<01:55,  5.02s/it]
+(EngineCore pid=1149699) Loading safetensors checkpoint shards:  15% Completed | 4/26 [00:21<01:58,  5.38s/it]
+(EngineCore pid=1149699) Loading safetensors checkpoint shards:  19% Completed | 5/26 [00:27<01:56,  5.57s/it]
+(EngineCore pid=1149699) Loading safetensors checkpoint shards:  23% Completed | 6/26 [00:34<02:00,  6.04s/it]
+(EngineCore pid=1149699) Loading safetensors checkpoint shards:  27% Completed | 7/26 [00:36<01:29,  4.71s/it]
+(EngineCore pid=1149699) Loading safetensors checkpoint shards:  31% Completed | 8/26 [00:42<01:36,  5.37s/it]
+(EngineCore pid=1149699) Loading safetensors checkpoint shards:  35% Completed | 9/26 [00:44<01:13,  4.33s/it]
+(EngineCore pid=1149699) Loading safetensors checkpoint shards:  38% Completed | 10/26 [00:51<01:21,  5.07s/it]
+(EngineCore pid=1149699) Loading safetensors checkpoint shards:  42% Completed | 11/26 [00:53<01:02,  4.14s/it]
+(EngineCore pid=1149699) Loading safetensors checkpoint shards:  46% Completed | 12/26 [00:59<01:05,  4.71s/it]
+(EngineCore pid=1149699) Loading safetensors checkpoint shards:  50% Completed | 13/26 [01:02<00:53,  4.14s/it]
+(EngineCore pid=1149699) Loading safetensors checkpoint shards:  54% Completed | 14/26 [01:08<00:55,  4.59s/it]
+(EngineCore pid=1149699) Loading safetensors checkpoint shards:  58% Completed | 15/26 [01:11<00:45,  4.13s/it]
+(EngineCore pid=1149699) Loading safetensors checkpoint shards:  62% Completed | 16/26 [01:19<00:53,  5.33s/it]
+(EngineCore pid=1149699) Loading safetensors checkpoint shards:  65% Completed | 17/26 [01:20<00:37,  4.21s/it]
+(EngineCore pid=1149699) Loading safetensors checkpoint shards:  69% Completed | 18/26 [01:26<00:38,  4.78s/it]
+(EngineCore pid=1149699) Loading safetensors checkpoint shards:  73% Completed | 19/26 [01:29<00:28,  4.04s/it]
+(EngineCore pid=1149699) Loading safetensors checkpoint shards:  77% Completed | 20/26 [01:34<00:25,  4.33s/it]
+(EngineCore pid=1149699) Loading safetensors checkpoint shards:  81% Completed | 21/26 [01:37<00:19,  3.93s/it]
+(EngineCore pid=1149699) Loading safetensors checkpoint shards:  85% Completed | 22/26 [01:43<00:18,  4.51s/it]
+(EngineCore pid=1149699) Loading safetensors checkpoint shards:  88% Completed | 23/26 [01:49<00:14,  4.95s/it]
+(EngineCore pid=1149699) Loading safetensors checkpoint shards:  92% Completed | 24/26 [01:55<00:10,  5.25s/it]
+(EngineCore pid=1149699) Loading safetensors checkpoint shards:  96% Completed | 25/26 [01:59<00:05,  5.13s/it]
+(EngineCore pid=1149699) Loading safetensors checkpoint shards: 100% Completed | 26/26 [02:02<00:00,  4.43s/it]
+(EngineCore pid=1149699) Loading safetensors checkpoint shards: 100% Completed | 26/26 [02:02<00:00,  4.72s/it]
+(EngineCore pid=1149699) 
+(EngineCore pid=1149699) INFO 06-02 15:56:07 [default_loader.py:384] Loading weights took 122.80 seconds
+(EngineCore pid=1149699) INFO 06-02 15:56:08 [gpu_model_runner.py:4820] Model loading took 65.53 GiB memory and 123.623537 seconds
+(EngineCore pid=1149699) INFO 06-02 15:56:08 [gpu_model_runner.py:5753] Encoder cache will be initialized with a budget of 16384 tokens, and profiled with 1 image items of the maximum feature size.
+(EngineCore pid=1149699) INFO 06-02 15:56:13 [backends.py:1051] Using cache directory: /root/.cache/vllm/torch_compile_cache/4e3d590cc6/rank_0_0/backbone for vLLM's torch.compile
+(EngineCore pid=1149699) INFO 06-02 15:56:13 [backends.py:1111] Dynamo bytecode transform time: 2.57 s
+(EngineCore pid=1149699) INFO 06-02 15:56:15 [backends.py:285] Directly load the compiled graph(s) for compile range (1, 2048) from the cache, took 1.503 s
+(EngineCore pid=1149699) INFO 06-02 15:56:15 [decorators.py:303] Directly load AOT compilation from path /root/.cache/vllm/torch_compile_cache/torch_aot_compile/b55ebfcc82f770aa0bc2f1727d4f3ab4015e454fb7133a28c6150c08986a8833/rank_0_0/model
+(EngineCore pid=1149699) INFO 06-02 15:56:15 [monitor.py:48] torch.compile took 4.40 s in total
+(EngineCore pid=1149699) WARNING 06-02 15:56:15 [fused_moe.py:1090] Using default MoE config. Performance might be sub-optimal! Config file not found at /workspace/SIA/venv4/lib/python3.12/site-packages/vllm/model_executor/layers/fused_moe/configs/E=256,N=512,device_name=NVIDIA_H200.json
+(EngineCore pid=1149699) INFO 06-02 15:56:16 [monitor.py:76] Initial profiling/warmup run took 0.68 s
+(EngineCore pid=1149699) INFO 06-02 15:56:16 [kv_cache_utils.py:829] Overriding num_gpu_blocks=0 with num_gpu_blocks_override=256
+(EngineCore pid=1149699) INFO 06-02 15:56:16 [gpu_model_runner.py:5876] Profiling CUDA graph memory: PIECEWISE=35 (largest=256), FULL=19 (largest=128)
+(EngineCore pid=1149699) INFO 06-02 15:56:18 [gpu_model_runner.py:5955] Estimated CUDA graph memory: 0.82 GiB total
+(EngineCore pid=1149699) INFO 06-02 15:56:18 [gpu_worker.py:436] Available KV cache memory: 32.61 GiB
+(EngineCore pid=1149699) INFO 06-02 15:56:18 [gpu_worker.py:470] In v0.19, CUDA graph memory profiling will be enabled by default (VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS=1), which more accurately accounts for CUDA graph memory during KV cache allocation. To try it now, set VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS=1 and increase --gpu-memory-utilization from 0.7200 to 0.7259 to maintain the same effective KV cache size.
+(EngineCore pid=1149699) INFO 06-02 15:56:18 [kv_cache_utils.py:1319] GPU KV cache size: 426,624 tokens
+(EngineCore pid=1149699) INFO 06-02 15:56:18 [kv_cache_utils.py:1324] Maximum concurrency for 4,096 tokens per request: 231.14x
+(EngineCore pid=1149699) 2026-06-02 15:56:18,501 - INFO - autotuner.py:262 - flashinfer.jit: [Autotuner]: Autotuning process starts ...
+(EngineCore pid=1149699) 2026-06-02 15:56:18,569 - INFO - autotuner.py:268 - flashinfer.jit: [Autotuner]: Autotuning process ends
+(EngineCore pid=1149699) Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):   0%|          | 0/35 [00:00<?, ?it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):   3%|▎         | 1/35 [00:00<00:05,  6.30it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):   6%|▌         | 2/35 [00:00<00:05,  6.39it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):   9%|▊         | 3/35 [00:00<00:05,  6.10it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  11%|█▏        | 4/35 [00:00<00:05,  6.01it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  14%|█▍        | 5/35 [00:00<00:05,  5.88it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  17%|█▋        | 6/35 [00:01<00:06,  4.23it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  20%|██        | 7/35 [00:01<00:06,  4.56it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  23%|██▎       | 8/35 [00:01<00:05,  4.85it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  26%|██▌       | 9/35 [00:01<00:06,  3.89it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  29%|██▊       | 10/35 [00:02<00:05,  4.33it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  31%|███▏      | 11/35 [00:02<00:06,  3.68it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  34%|███▍      | 12/35 [00:02<00:05,  4.11it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  37%|███▋      | 13/35 [00:02<00:04,  4.46it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  40%|████      | 14/35 [00:03<00:05,  3.78it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  43%|████▎     | 15/35 [00:03<00:04,  4.17it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  46%|████▌     | 16/35 [00:03<00:04,  4.55it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  49%|████▊     | 17/35 [00:03<00:04,  4.01it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  51%|█████▏    | 18/35 [00:04<00:03,  4.48it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  54%|█████▍    | 19/35 [00:04<00:03,  4.76it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  57%|█████▋    | 20/35 [00:04<00:03,  3.93it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  60%|██████    | 21/35 [00:04<00:03,  4.25it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  63%|██████▎   | 22/35 [00:05<00:03,  3.65it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  66%|██████▌   | 23/35 [00:05<00:02,  4.05it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  69%|██████▊   | 24/35 [00:05<00:02,  4.41it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  71%|███████▏  | 25/35 [00:05<00:02,  3.78it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  74%|███████▍  | 26/35 [00:06<00:02,  4.19it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  77%|███████▋  | 27/35 [00:06<00:01,  4.51it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  80%|████████  | 28/35 [00:06<00:01,  3.71it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  83%|████████▎ | 29/35 [00:06<00:01,  4.09it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  86%|████████▌ | 30/35 [00:07<00:01,  3.60it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  89%|████████▊ | 31/35 [00:07<00:00,  4.02it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  91%|█████████▏| 32/35 [00:07<00:00,  4.42it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  94%|█████████▍| 33/35 [00:07<00:00,  3.81it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  97%|█████████▋| 34/35 [00:07<00:00,  4.25it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE): 100%|██████████| 35/35 [00:08<00:00,  4.01it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE): 100%|██████████| 35/35 [00:08<00:00,  4.23it/s]
+(EngineCore pid=1149699) Capturing CUDA graphs (decode, FULL):   0%|          | 0/19 [00:00<?, ?it/s]Capturing CUDA graphs (decode, FULL):   5%|▌         | 1/19 [00:00<00:05,  3.16it/s]Capturing CUDA graphs (decode, FULL):  11%|█         | 2/19 [00:00<00:03,  4.46it/s]Capturing CUDA graphs (decode, FULL):  16%|█▌        | 3/19 [00:00<00:03,  5.17it/s]Capturing CUDA graphs (decode, FULL):  21%|██        | 4/19 [00:00<00:02,  5.58it/s]Capturing CUDA graphs (decode, FULL):  26%|██▋       | 5/19 [00:00<00:02,  5.83it/s]Capturing CUDA graphs (decode, FULL):  32%|███▏      | 6/19 [00:01<00:02,  6.02it/s]Capturing CUDA graphs (decode, FULL):  37%|███▋      | 7/19 [00:01<00:01,  6.11it/s]Capturing CUDA graphs (decode, FULL):  42%|████▏     | 8/19 [00:01<00:02,  4.44it/s]Capturing CUDA graphs (decode, FULL):  47%|████▋     | 9/19 [00:01<00:02,  4.91it/s]Capturing CUDA graphs (decode, FULL):  53%|█████▎    | 10/19 [00:01<00:01,  5.28it/s]Capturing CUDA graphs (decode, FULL):  58%|█████▊    | 11/19 [00:02<00:01,  5.58it/s]Capturing CUDA graphs (decode, FULL):  63%|██████▎   | 12/19 [00:02<00:01,  5.80it/s]Capturing CUDA graphs (decode, FULL):  68%|██████▊   | 13/19 [00:02<00:01,  5.98it/s]Capturing CUDA graphs (decode, FULL):  74%|███████▎  | 14/19 [00:02<00:00,  6.11it/s]Capturing CUDA graphs (decode, FULL):  79%|███████▉  | 15/19 [00:02<00:00,  6.20it/s]Capturing CUDA graphs (decode, FULL):  84%|████████▍ | 16/19 [00:03<00:00,  4.63it/s]Capturing CUDA graphs (decode, FULL):  89%|████████▉ | 17/19 [00:03<00:00,  4.98it/s]Capturing CUDA graphs (decode, FULL):  95%|█████████▍| 18/19 [00:03<00:00,  5.25it/s]Capturing CUDA graphs (decode, FULL): 100%|██████████| 19/19 [00:03<00:00,  5.41it/s]Capturing CUDA graphs (decode, FULL): 100%|██████████| 19/19 [00:03<00:00,  5.34it/s]
+(EngineCore pid=1149699) INFO 06-02 15:56:30 [gpu_model_runner.py:6046] Graph capturing finished in 12 secs, took 0.95 GiB
+(EngineCore pid=1149699) INFO 06-02 15:56:30 [gpu_worker.py:597] CUDA graph pool memory: 0.95 GiB (actual), 0.82 GiB (estimated), difference: 0.13 GiB (13.6%).
+(EngineCore pid=1149699) INFO 06-02 15:56:31 [core.py:283] init engine (profile, create kv cache, warmup model) took 23.01 seconds
+(EngineCore pid=1149699) INFO 06-02 15:56:31 [vllm.py:790] Asynchronous scheduling is enabled.
+LLM loaded.
+
+Starting HTTP server on http://0.0.0.0:8000 ...
+INFO:     Started server process [1149494]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+[SIA] RM status query failed: All connection attempts failed
+WARNING 06-02 15:56:39 [input_processor.py:235] Passing raw prompts to InputProcessor is deprecated and will be removed in v0.18. You should instead pass the outputs of Renderer.render_cmpl() or Renderer.render_chat().
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/62  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:39116 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/228  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:39122 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/277  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:39128 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/251  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:55292 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/290  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:55308 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/313  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:55310 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/145  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:58306 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/133  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:58318 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/335  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:58328 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/509  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:58338 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/267  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:38378 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/240  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:38380 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/365  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:38394 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/161  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:50432 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/118  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:50440 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/345  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:50452 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/215  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:50458 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/425  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:50470 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/99  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:38910 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/476  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:38924 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/22  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:38926 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/74  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:37916 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/69  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:37922 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/152  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:37930 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/6  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:37944 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/86  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:37960 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/131  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:37964 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/370  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:37980 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/383  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:37996 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/306  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:52740 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/34  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:52746 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/33  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:52750 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/388  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:52756 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/77  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:38550 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/10  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:38564 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/246  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:38574 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/72  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:38578 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/135  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:38592 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/317  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:38606 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/413  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:38616 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/27  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:40908 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/32  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:40916 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/330  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:40918 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/111  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:40930 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/353  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:40938 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/90  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:48954 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/264  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:48960 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/419  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:48964 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/98  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:48974 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/337  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:39864 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/32  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:39868 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/4  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:39874 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/431  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:39888 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/188  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:39896 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/194  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:39910 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/59  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:34396 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/322  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:34410 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/337  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:34420 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/253  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:34422 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/118  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:59176 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/256  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:59192 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/100  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:59196 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/476  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:59206 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/116  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:35496 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/399  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:35508 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/60  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:35512 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/577  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:35520 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/209  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:52572 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/416  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:52584 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/250  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:52590 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/48  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:39754 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/8  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:39764 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/217  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:39770 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/331  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:39782 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/134  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:39796 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/142  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:39806 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/399  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:49046 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/310  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:49060 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/181  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:49072 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/601  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:49086 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/320  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:38620 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/577  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:38630 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/605  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:41240 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/116  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:41246 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/321  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:41262 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/350  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:55326 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/164  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:55330 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/357  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:55344 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/146  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:42948 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/271  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:42958 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/30  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:42960 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/8  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:42962 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/573  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:42974 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/62  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:43206 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/206  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:43210 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/482  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:43222 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/158  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:43230 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/4  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:43236 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/415  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:43250 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1149699) [SIA] req=0 DONE  intervened=0/89  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:48564 - "POST /v1/completions HTTP/1.1" 200 OK

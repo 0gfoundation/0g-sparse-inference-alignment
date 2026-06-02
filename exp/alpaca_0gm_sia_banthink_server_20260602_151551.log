@@ -1,0 +1,883 @@
+The tokenizer you are loading from '/workspace/SIA/models/0GM-1.0-35B-A3B-0427' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.
+Loading tokenizer: /workspace/SIA/models/0GM-1.0-35B-A3B-0427 ...
+Tokenizer loaded.
+============================================================
+Model ID : 0GM-1.0-35B-A3B-0427
+LLM      : /workspace/SIA/models/0GM-1.0-35B-A3B-0427
+RM URL   : http://localhost:8001
+RM mode  : vllm  model=/workspace/SIA/models/VM-Qwen3-4B-merged-for-vllm
+topk=5  weight=1.0  entropy_threshold=0.8  use_token_ids=False
+Server   : http://0.0.0.0:8000
+============================================================
+Loading vLLM AsyncLLMEngine...
+INFO 06-02 15:12:15 [model.py:549] Resolved architecture: Qwen3_5MoeForConditionalGeneration
+INFO 06-02 15:12:15 [model.py:1678] Using max model len 4096
+INFO 06-02 15:12:15 [scheduler.py:238] Chunked prefill is enabled with max_num_batched_tokens=2048.
+INFO 06-02 15:12:15 [config.py:281] Setting attention block size to 1056 tokens to ensure that attention page size is >= mamba page size.
+INFO 06-02 15:12:15 [config.py:312] Padding mamba page size by 0.76% to ensure that mamba page size and attention page size are exactly equal.
+INFO 06-02 15:12:15 [vllm.py:790] Asynchronous scheduling is enabled.
+The tokenizer you are loading from '/workspace/SIA/models/0GM-1.0-35B-A3B-0427' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.
+The tokenizer you are loading from '/workspace/SIA/models/0GM-1.0-35B-A3B-0427' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.
+The tokenizer you are loading from '/workspace/SIA/models/0GM-1.0-35B-A3B-0427' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.
+WARNING 06-02 15:12:23 [system_utils.py:152] We must use the `spawn` multiprocessing start method. Overriding VLLM_WORKER_MULTIPROC_METHOD to 'spawn'. See https://docs.vllm.ai/en/latest/usage/troubleshooting.html#python-multiprocessing for more information. Reasons: CUDA is initialized
+(EngineCore pid=1137007) INFO 06-02 15:12:30 [core.py:105] Initializing a V1 LLM engine (v0.19.0) with config: model='/workspace/SIA/models/0GM-1.0-35B-A3B-0427', speculative_config=None, tokenizer='/workspace/SIA/models/0GM-1.0-35B-A3B-0427', skip_tokenizer_init=False, tokenizer_mode=auto, revision=None, tokenizer_revision=None, trust_remote_code=False, dtype=torch.bfloat16, max_seq_len=4096, download_dir=None, load_format=auto, tensor_parallel_size=1, pipeline_parallel_size=1, data_parallel_size=1, decode_context_parallel_size=1, dcp_comm_backend=ag_rs, disable_custom_all_reduce=False, quantization=None, enforce_eager=False, enable_return_routed_experts=False, kv_cache_dtype=auto, device_config=cuda, structured_outputs_config=StructuredOutputsConfig(backend='auto', disable_any_whitespace=False, disable_additional_properties=False, reasoning_parser='', reasoning_parser_plugin='', enable_in_reasoning=False), observability_config=ObservabilityConfig(show_hidden_metrics_for_version=None, otlp_traces_endpoint=None, collect_detailed_traces=None, kv_cache_metrics=False, kv_cache_metrics_sample=0.01, cudagraph_metrics=False, enable_layerwise_nvtx_tracing=False, enable_mfu_metrics=False, enable_mm_processor_stats=False, enable_logging_iteration_details=False), seed=0, served_model_name=/workspace/SIA/models/0GM-1.0-35B-A3B-0427, enable_prefix_caching=False, enable_chunked_prefill=True, pooler_config=None, compilation_config={'mode': <CompilationMode.VLLM_COMPILE: 3>, 'debug_dump_path': None, 'cache_dir': '', 'compile_cache_save_format': 'binary', 'backend': 'inductor', 'custom_ops': ['none'], 'splitting_ops': ['vllm::unified_attention', 'vllm::unified_attention_with_output', 'vllm::unified_mla_attention', 'vllm::unified_mla_attention_with_output', 'vllm::mamba_mixer2', 'vllm::mamba_mixer', 'vllm::short_conv', 'vllm::linear_attention', 'vllm::plamo2_mamba_mixer', 'vllm::gdn_attention_core', 'vllm::olmo_hybrid_gdn_full_forward', 'vllm::kda_attention', 'vllm::sparse_attn_indexer', 'vllm::rocm_aiter_sparse_attn_indexer', 'vllm::unified_kv_cache_update', 'vllm::unified_mla_kv_cache_update'], 'compile_mm_encoder': False, 'cudagraph_mm_encoder': False, 'encoder_cudagraph_token_budgets': [], 'encoder_cudagraph_max_images_per_batch': 0, 'compile_sizes': [], 'compile_ranges_endpoints': [2048], 'inductor_compile_config': {'enable_auto_functionalized_v2': False, 'size_asserts': False, 'alignment_asserts': False, 'scalar_asserts': False, 'combo_kernels': True, 'benchmark_combo_kernel': True}, 'inductor_passes': {}, 'cudagraph_mode': <CUDAGraphMode.FULL_AND_PIECEWISE: (2, 1)>, 'cudagraph_num_of_warmups': 1, 'cudagraph_capture_sizes': [1, 2, 4, 8, 16, 24, 32, 40, 48, 56, 64, 72, 80, 88, 96, 104, 112, 120, 128, 136, 144, 152, 160, 168, 176, 184, 192, 200, 208, 216, 224, 232, 240, 248, 256], 'cudagraph_copy_inputs': False, 'cudagraph_specialize_lora': True, 'use_inductor_graph_partition': False, 'pass_config': {'fuse_norm_quant': False, 'fuse_act_quant': False, 'fuse_attn_quant': False, 'enable_sp': False, 'fuse_gemm_comms': False, 'fuse_allreduce_rms': False}, 'max_cudagraph_capture_size': 256, 'dynamic_shapes_config': {'type': <DynamicShapesType.BACKED: 'backed'>, 'evaluate_guards': False, 'assume_32_bit_indexing': False}, 'local_cache_dir': None, 'fast_moe_cold_start': True, 'static_all_moe_layers': []}
+(EngineCore pid=1137007) The tokenizer you are loading from '/workspace/SIA/models/0GM-1.0-35B-A3B-0427' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.
+(EngineCore pid=1137007) INFO 06-02 15:12:31 [parallel_state.py:1400] world_size=1 rank=0 local_rank=0 distributed_init_method=tcp://172.17.0.2:45021 backend=nccl
+(EngineCore pid=1137007) INFO 06-02 15:12:31 [parallel_state.py:1716] rank 0 in world size 1 is assigned as DP rank 0, PP rank 0, PCP rank 0, TP rank 0, EP rank 0, EPLB rank N/A
+(EngineCore pid=1137007) [SIA] Loading LLM tokenizer: /workspace/SIA/models/0GM-1.0-35B-A3B-0427
+(EngineCore pid=1137007) The tokenizer you are loading from '/workspace/SIA/models/0GM-1.0-35B-A3B-0427' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.
+(EngineCore pid=1137007) [SIA] RM URL: http://localhost:8001
+(EngineCore pid=1137007) [SIA-debug] SIA_DEBUG_HIST=1 启用; think_open_ids={248068}, think_close_ids={248069}
+(EngineCore pid=1137007) The tokenizer you are loading from '/workspace/SIA/models/0GM-1.0-35B-A3B-0427' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.
+(EngineCore pid=1137007) The tokenizer you are loading from '/workspace/SIA/models/0GM-1.0-35B-A3B-0427' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.
+(EngineCore pid=1137007) INFO 06-02 15:12:40 [gpu_model_runner.py:4735] Starting to load model /workspace/SIA/models/0GM-1.0-35B-A3B-0427...
+(EngineCore pid=1137007) INFO 06-02 15:12:40 [cuda.py:390] Using backend AttentionBackendEnum.FLASH_ATTN for vit attention
+(EngineCore pid=1137007) INFO 06-02 15:12:40 [mm_encoder_attention.py:230] Using AttentionBackendEnum.FLASH_ATTN for MMEncoderAttention.
+(EngineCore pid=1137007) INFO 06-02 15:12:40 [gdn_linear_attn.py:139] Using FlashInfer GDN prefill kernel
+(EngineCore pid=1137007) INFO 06-02 15:12:40 [gdn_linear_attn.py:140] FlashInfer GDN prefill kernel is JIT-compiled; first run may take a while to compile. Set `--gdn-prefill-backend triton` to avoid JIT compile time.
+(EngineCore pid=1137007) INFO 06-02 15:12:40 [unquantized.py:186] Using TRITON backend for Unquantized MoE
+(EngineCore pid=1137007) INFO 06-02 15:12:40 [cuda.py:334] Using FLASH_ATTN attention backend out of potential backends: ['FLASH_ATTN', 'FLASHINFER', 'TRITON_ATTN', 'FLEX_ATTENTION'].
+(EngineCore pid=1137007) INFO 06-02 15:12:40 [flash_attn.py:596] Using FlashAttention version 3
+(EngineCore pid=1137007) <frozen importlib._bootstrap_external>:1297: FutureWarning: The cuda.cudart module is deprecated and will be removed in a future release, please switch to use the cuda.bindings.runtime module instead.
+(EngineCore pid=1137007) <frozen importlib._bootstrap_external>:1297: FutureWarning: The cuda.nvrtc module is deprecated and will be removed in a future release, please switch to use the cuda.bindings.nvrtc module instead.
+(EngineCore pid=1137007) Loading safetensors checkpoint shards:   0% Completed | 0/26 [00:00<?, ?it/s]
+(EngineCore pid=1137007) Loading safetensors checkpoint shards:   4% Completed | 1/26 [00:06<02:54,  6.99s/it]
+(EngineCore pid=1137007) Loading safetensors checkpoint shards:   8% Completed | 2/26 [00:09<01:41,  4.22s/it]
+(EngineCore pid=1137007) Loading safetensors checkpoint shards:  12% Completed | 3/26 [00:15<01:54,  4.98s/it]
+(EngineCore pid=1137007) Loading safetensors checkpoint shards:  15% Completed | 4/26 [00:21<01:57,  5.33s/it]
+(EngineCore pid=1137007) Loading safetensors checkpoint shards:  19% Completed | 5/26 [00:26<01:55,  5.51s/it]
+(EngineCore pid=1137007) Loading safetensors checkpoint shards:  23% Completed | 6/26 [00:33<01:59,  5.98s/it]
+(EngineCore pid=1137007) Loading safetensors checkpoint shards:  27% Completed | 7/26 [00:35<01:28,  4.67s/it]
+(EngineCore pid=1137007) Loading safetensors checkpoint shards:  31% Completed | 8/26 [00:42<01:36,  5.37s/it]
+(EngineCore pid=1137007) Loading safetensors checkpoint shards:  35% Completed | 9/26 [00:44<01:13,  4.33s/it]
+(EngineCore pid=1137007) Loading safetensors checkpoint shards:  38% Completed | 10/26 [00:51<01:20,  5.05s/it]
+(EngineCore pid=1137007) Loading safetensors checkpoint shards:  42% Completed | 11/26 [00:53<01:02,  4.17s/it]
+(EngineCore pid=1137007) Loading safetensors checkpoint shards:  46% Completed | 12/26 [00:59<01:07,  4.82s/it]
+(EngineCore pid=1137007) Loading safetensors checkpoint shards:  50% Completed | 13/26 [01:03<00:56,  4.36s/it]
+(EngineCore pid=1137007) Loading safetensors checkpoint shards:  54% Completed | 14/26 [01:10<01:02,  5.19s/it]
+(EngineCore pid=1137007) Loading safetensors checkpoint shards:  58% Completed | 15/26 [01:13<00:49,  4.50s/it]
+(EngineCore pid=1137007) Loading safetensors checkpoint shards:  62% Completed | 16/26 [01:19<00:52,  5.22s/it]
+(EngineCore pid=1137007) Loading safetensors checkpoint shards:  65% Completed | 17/26 [01:22<00:38,  4.29s/it]
+(EngineCore pid=1137007) Loading safetensors checkpoint shards:  69% Completed | 18/26 [01:27<00:38,  4.76s/it]
+(EngineCore pid=1137007) Loading safetensors checkpoint shards:  73% Completed | 19/26 [01:29<00:27,  3.86s/it]
+(EngineCore pid=1137007) Loading safetensors checkpoint shards:  77% Completed | 20/26 [01:34<00:24,  4.03s/it]
+(EngineCore pid=1137007) Loading safetensors checkpoint shards:  81% Completed | 21/26 [01:37<00:18,  3.73s/it]
+(EngineCore pid=1137007) Loading safetensors checkpoint shards:  85% Completed | 22/26 [01:43<00:17,  4.40s/it]
+(EngineCore pid=1137007) Loading safetensors checkpoint shards:  88% Completed | 23/26 [01:49<00:14,  4.87s/it]
+(EngineCore pid=1137007) Loading safetensors checkpoint shards:  92% Completed | 24/26 [01:55<00:10,  5.19s/it]
+(EngineCore pid=1137007) Loading safetensors checkpoint shards:  96% Completed | 25/26 [01:59<00:05,  5.09s/it]
+(EngineCore pid=1137007) Loading safetensors checkpoint shards: 100% Completed | 26/26 [02:02<00:00,  4.44s/it]
+(EngineCore pid=1137007) Loading safetensors checkpoint shards: 100% Completed | 26/26 [02:02<00:00,  4.72s/it]
+(EngineCore pid=1137007) 
+(EngineCore pid=1137007) INFO 06-02 15:14:44 [default_loader.py:384] Loading weights took 122.86 seconds
+(EngineCore pid=1137007) INFO 06-02 15:14:44 [gpu_model_runner.py:4820] Model loading took 65.53 GiB memory and 123.693201 seconds
+(EngineCore pid=1137007) INFO 06-02 15:14:44 [gpu_model_runner.py:5753] Encoder cache will be initialized with a budget of 16384 tokens, and profiled with 1 image items of the maximum feature size.
+(EngineCore pid=1137007) INFO 06-02 15:14:50 [backends.py:1051] Using cache directory: /root/.cache/vllm/torch_compile_cache/4e3d590cc6/rank_0_0/backbone for vLLM's torch.compile
+(EngineCore pid=1137007) INFO 06-02 15:14:50 [backends.py:1111] Dynamo bytecode transform time: 2.54 s
+(EngineCore pid=1137007) INFO 06-02 15:14:51 [backends.py:285] Directly load the compiled graph(s) for compile range (1, 2048) from the cache, took 1.538 s
+(EngineCore pid=1137007) INFO 06-02 15:14:51 [decorators.py:303] Directly load AOT compilation from path /root/.cache/vllm/torch_compile_cache/torch_aot_compile/b55ebfcc82f770aa0bc2f1727d4f3ab4015e454fb7133a28c6150c08986a8833/rank_0_0/model
+(EngineCore pid=1137007) INFO 06-02 15:14:51 [monitor.py:48] torch.compile took 4.42 s in total
+(EngineCore pid=1137007) WARNING 06-02 15:14:52 [fused_moe.py:1090] Using default MoE config. Performance might be sub-optimal! Config file not found at /workspace/SIA/venv4/lib/python3.12/site-packages/vllm/model_executor/layers/fused_moe/configs/E=256,N=512,device_name=NVIDIA_H200.json
+(EngineCore pid=1137007) INFO 06-02 15:14:52 [monitor.py:76] Initial profiling/warmup run took 0.69 s
+(EngineCore pid=1137007) INFO 06-02 15:14:53 [kv_cache_utils.py:829] Overriding num_gpu_blocks=0 with num_gpu_blocks_override=256
+(EngineCore pid=1137007) INFO 06-02 15:14:53 [gpu_model_runner.py:5876] Profiling CUDA graph memory: PIECEWISE=35 (largest=256), FULL=19 (largest=128)
+(EngineCore pid=1137007) INFO 06-02 15:14:54 [gpu_model_runner.py:5955] Estimated CUDA graph memory: 0.82 GiB total
+(EngineCore pid=1137007) INFO 06-02 15:14:54 [gpu_worker.py:436] Available KV cache memory: 32.61 GiB
+(EngineCore pid=1137007) INFO 06-02 15:14:54 [gpu_worker.py:470] In v0.19, CUDA graph memory profiling will be enabled by default (VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS=1), which more accurately accounts for CUDA graph memory during KV cache allocation. To try it now, set VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS=1 and increase --gpu-memory-utilization from 0.7200 to 0.7259 to maintain the same effective KV cache size.
+(EngineCore pid=1137007) INFO 06-02 15:14:54 [kv_cache_utils.py:1319] GPU KV cache size: 426,624 tokens
+(EngineCore pid=1137007) INFO 06-02 15:14:54 [kv_cache_utils.py:1324] Maximum concurrency for 4,096 tokens per request: 231.14x
+(EngineCore pid=1137007) 2026-06-02 15:14:54,971 - INFO - autotuner.py:262 - flashinfer.jit: [Autotuner]: Autotuning process starts ...
+(EngineCore pid=1137007) 2026-06-02 15:14:55,039 - INFO - autotuner.py:268 - flashinfer.jit: [Autotuner]: Autotuning process ends
+(EngineCore pid=1137007) Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):   0%|          | 0/35 [00:00<?, ?it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):   3%|▎         | 1/35 [00:00<00:05,  6.30it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):   6%|▌         | 2/35 [00:00<00:05,  5.60it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):   9%|▊         | 3/35 [00:00<00:05,  5.63it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  11%|█▏        | 4/35 [00:00<00:05,  5.67it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  14%|█▍        | 5/35 [00:00<00:05,  5.62it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  17%|█▋        | 6/35 [00:01<00:07,  4.10it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  20%|██        | 7/35 [00:01<00:06,  4.45it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  23%|██▎       | 8/35 [00:01<00:05,  4.72it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  26%|██▌       | 9/35 [00:01<00:06,  3.82it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  29%|██▊       | 10/35 [00:02<00:05,  4.25it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  31%|███▏      | 11/35 [00:02<00:06,  3.60it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  34%|███▍      | 12/35 [00:02<00:05,  4.01it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  37%|███▋      | 13/35 [00:02<00:05,  4.34it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  40%|████      | 14/35 [00:03<00:05,  3.71it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  43%|████▎     | 15/35 [00:03<00:04,  4.09it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  46%|████▌     | 16/35 [00:03<00:04,  4.45it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  49%|████▊     | 17/35 [00:04<00:04,  3.77it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  51%|█████▏    | 18/35 [00:04<00:04,  4.23it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  54%|█████▍    | 19/35 [00:04<00:03,  4.53it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  57%|█████▋    | 20/35 [00:04<00:03,  3.79it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  60%|██████    | 21/35 [00:04<00:03,  4.10it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  63%|██████▎   | 22/35 [00:05<00:03,  3.48it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  66%|██████▌   | 23/35 [00:05<00:03,  3.87it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  69%|██████▊   | 24/35 [00:05<00:02,  4.24it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  71%|███████▏  | 25/35 [00:06<00:02,  3.54it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  74%|███████▍  | 26/35 [00:06<00:02,  3.96it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  77%|███████▋  | 27/35 [00:06<00:01,  4.29it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  80%|████████  | 28/35 [00:06<00:01,  3.55it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  83%|████████▎ | 29/35 [00:07<00:01,  3.93it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  86%|████████▌ | 30/35 [00:07<00:01,  3.47it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  89%|████████▊ | 31/35 [00:07<00:01,  3.89it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  91%|█████████▏| 32/35 [00:07<00:00,  4.28it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  94%|█████████▍| 33/35 [00:08<00:00,  3.60it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  97%|█████████▋| 34/35 [00:08<00:00,  4.05it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE): 100%|██████████| 35/35 [00:08<00:00,  3.87it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE): 100%|██████████| 35/35 [00:08<00:00,  4.07it/s]
+(EngineCore pid=1137007) Capturing CUDA graphs (decode, FULL):   0%|          | 0/19 [00:00<?, ?it/s]Capturing CUDA graphs (decode, FULL):   5%|▌         | 1/19 [00:00<00:06,  2.65it/s]Capturing CUDA graphs (decode, FULL):  11%|█         | 2/19 [00:00<00:04,  3.99it/s]Capturing CUDA graphs (decode, FULL):  16%|█▌        | 3/19 [00:00<00:03,  4.76it/s]Capturing CUDA graphs (decode, FULL):  21%|██        | 4/19 [00:00<00:02,  5.23it/s]Capturing CUDA graphs (decode, FULL):  26%|██▋       | 5/19 [00:01<00:02,  5.53it/s]Capturing CUDA graphs (decode, FULL):  32%|███▏      | 6/19 [00:01<00:02,  5.73it/s]Capturing CUDA graphs (decode, FULL):  37%|███▋      | 7/19 [00:01<00:02,  5.86it/s]Capturing CUDA graphs (decode, FULL):  42%|████▏     | 8/19 [00:01<00:02,  4.32it/s]Capturing CUDA graphs (decode, FULL):  47%|████▋     | 9/19 [00:01<00:02,  4.77it/s]Capturing CUDA graphs (decode, FULL):  53%|█████▎    | 10/19 [00:02<00:01,  5.14it/s]Capturing CUDA graphs (decode, FULL):  58%|█████▊    | 11/19 [00:02<00:01,  5.43it/s]Capturing CUDA graphs (decode, FULL):  63%|██████▎   | 12/19 [00:02<00:01,  5.62it/s]Capturing CUDA graphs (decode, FULL):  68%|██████▊   | 13/19 [00:02<00:01,  5.79it/s]Capturing CUDA graphs (decode, FULL):  74%|███████▎  | 14/19 [00:02<00:00,  5.92it/s]Capturing CUDA graphs (decode, FULL):  79%|███████▉  | 15/19 [00:02<00:00,  6.01it/s]Capturing CUDA graphs (decode, FULL):  84%|████████▍ | 16/19 [00:03<00:00,  4.39it/s]Capturing CUDA graphs (decode, FULL):  89%|████████▉ | 17/19 [00:03<00:00,  4.81it/s]Capturing CUDA graphs (decode, FULL):  95%|█████████▍| 18/19 [00:03<00:00,  5.15it/s]Capturing CUDA graphs (decode, FULL): 100%|██████████| 19/19 [00:03<00:00,  5.41it/s]Capturing CUDA graphs (decode, FULL): 100%|██████████| 19/19 [00:03<00:00,  5.14it/s]
+(EngineCore pid=1137007) INFO 06-02 15:15:07 [gpu_model_runner.py:6046] Graph capturing finished in 13 secs, took 0.95 GiB
+(EngineCore pid=1137007) INFO 06-02 15:15:07 [gpu_worker.py:597] CUDA graph pool memory: 0.95 GiB (actual), 0.82 GiB (estimated), difference: 0.13 GiB (13.6%).
+(EngineCore pid=1137007) INFO 06-02 15:15:08 [core.py:283] init engine (profile, create kv cache, warmup model) took 23.38 seconds
+(EngineCore pid=1137007) INFO 06-02 15:15:08 [vllm.py:790] Asynchronous scheduling is enabled.
+LLM loaded.
+
+Starting HTTP server on http://0.0.0.0:8000 ...
+INFO:     Started server process [1136845]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+[SIA] RM status: None  rm=None  rm_lora=none
+WARNING 06-02 15:15:18 [input_processor.py:235] Passing raw prompts to InputProcessor is deprecated and will be removed in v0.18. You should instead pass the outputs of Renderer.render_cmpl() or Renderer.render_chat().
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=28/100  ratio=28.0%  top1_flip=1/28 (3.6%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [35, 6, 7, 5, 3, 3, 8, 5, 3, 4, 3, 4, 4, 6, 1, 3]  (ge_0.8=28/100=28.00%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [12, 12, 11, 7, 5, 4, 4, 5, 5, 3, 3, 4, 2, 3, 1, 19]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=100): [35, 6, 7, 5, 3, 3, 8, 5, 3, 4, 3, 4, 4, 6, 1, 3]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:41308 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA-pf-summary @100] format_chat: p50=0.01 p95=0.01 max=0.34 | tokenize_client: p50=0.00 p95=0.00 max=0.00 | http_post: p50=57.18 p95=78.50 max=80.11 | parse_response: p50=0.13 p95=0.30 max=0.36 | total: p50=57.27 p95=78.62 max=80.31 | apply_total: p50=1.05 p95=74.29 max=99.62 | apply_topk_ent: p50=0.57 p95=1.21 max=61.45 | apply_cpu_sync: p50=0.15 p95=0.35 max=0.46 | skip_step: p50=0.76 p95=1.59 max=61.72 | intv_prepare: p50=0.08 p95=0.22 max=0.27 | intv_apply_logits: p50=0.89 p95=1.39 max=23.95
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=98/308  ratio=31.8%  top1_flip=3/98 (3.1%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [104, 22, 17, 8, 11, 8, 19, 21, 13, 16, 15, 12, 11, 17, 8, 6]  (ge_0.8=98/308=31.82%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [45, 33, 30, 27, 15, 21, 11, 5, 16, 12, 9, 12, 10, 8, 8, 46]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=308): [104, 22, 17, 8, 11, 8, 19, 21, 13, 16, 15, 12, 11, 17, 8, 6]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:55866 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=29/92  ratio=31.5%  top1_flip=2/29 (6.9%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [30, 7, 8, 3, 5, 0, 5, 5, 4, 6, 5, 4, 2, 4, 2, 2]  (ge_0.8=29/92=31.52%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [14, 10, 7, 7, 4, 2, 6, 7, 5, 4, 2, 4, 2, 3, 3, 12]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=92): [30, 7, 8, 3, 5, 0, 5, 5, 4, 6, 5, 4, 2, 4, 2, 2]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:53962 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA-pf-summary @200] format_chat: p50=0.01 p95=0.02 max=0.34 | tokenize_client: p50=0.00 p95=0.00 max=0.00 | http_post: p50=53.53 p95=77.97 max=82.36 | parse_response: p50=0.12 p95=0.30 max=0.36 | total: p50=53.70 p95=78.19 max=82.60 | apply_total: p50=1.00 p95=74.20 max=99.62 | apply_topk_ent: p50=0.54 p95=1.21 max=61.45 | apply_cpu_sync: p50=0.15 p95=0.35 max=0.46 | skip_step: p50=0.71 p95=1.58 max=61.72 | intv_prepare: p50=0.07 p95=0.21 max=0.27 | intv_apply_logits: p50=0.71 p95=1.39 max=23.95
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=124/320  ratio=38.8%  top1_flip=10/124 (8.1%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [75, 25, 14, 10, 13, 17, 24, 18, 13, 14, 16, 20, 20, 18, 11, 12]  (ge_0.8=124/320=38.75%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [52, 45, 35, 28, 28, 15, 19, 12, 7, 12, 6, 8, 6, 7, 9, 31]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=320): [75, 25, 14, 10, 13, 17, 24, 18, 13, 14, 16, 20, 20, 18, 11, 12]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:53964 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=2/5  ratio=40.0%  top1_flip=0/2 (0.0%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0]  (ge_0.8=2/5=40.00%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [0, 2, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 1, 0, 0, 0]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=5): [1, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 0]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:59274 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA-pf-summary @300] format_chat: p50=0.01 p95=0.02 max=0.37 | tokenize_client: p50=0.00 p95=0.00 max=0.12 | http_post: p50=61.08 p95=80.11 max=88.01 | parse_response: p50=0.20 p95=0.34 max=0.45 | total: p50=61.34 p95=80.31 max=88.24 | apply_total: p50=1.24 p95=79.41 max=99.62 | apply_topk_ent: p50=0.62 p95=1.25 max=61.45 | apply_cpu_sync: p50=0.17 p95=0.39 max=0.46 | skip_step: p50=0.81 p95=1.64 max=61.72 | intv_prepare: p50=0.10 p95=0.23 max=0.27 | intv_apply_logits: p50=1.11 p95=1.42 max=23.95
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=60/172  ratio=34.9%  top1_flip=9/60 (15.0%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [50, 13, 9, 7, 8, 8, 10, 7, 7, 7, 9, 9, 10, 5, 8, 5]  (ge_0.8=60/172=34.88%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [32, 12, 16, 15, 10, 8, 11, 9, 9, 7, 6, 3, 1, 4, 2, 27]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=172): [50, 13, 9, 7, 8, 8, 10, 7, 7, 7, 9, 9, 10, 5, 8, 5]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:59278 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=57/149  ratio=38.3%  top1_flip=11/57 (19.3%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [37, 13, 5, 8, 6, 8, 6, 9, 14, 12, 12, 2, 1, 8, 4, 4]  (ge_0.8=57/149=38.26%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [19, 20, 13, 20, 12, 9, 3, 10, 4, 8, 8, 7, 6, 3, 1, 6]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=149): [37, 13, 5, 8, 6, 8, 6, 9, 14, 12, 12, 2, 1, 8, 4, 4]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:59294 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA-pf-summary @400] format_chat: p50=0.01 p95=0.02 max=0.37 | tokenize_client: p50=0.00 p95=0.00 max=0.12 | http_post: p50=58.71 p95=79.11 max=88.01 | parse_response: p50=0.19 p95=0.32 max=0.45 | total: p50=58.94 p95=79.33 max=88.24 | apply_total: p50=1.25 p95=78.39 max=99.62 | apply_topk_ent: p50=0.61 p95=1.23 max=61.45 | apply_cpu_sync: p50=0.16 p95=0.39 max=0.48 | skip_step: p50=0.78 p95=1.64 max=61.72 | intv_prepare: p50=0.10 p95=0.23 max=0.28 | intv_apply_logits: p50=1.05 p95=1.43 max=23.95
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=8/32  ratio=25.0%  top1_flip=5/8 (62.5%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [5, 4, 2, 1, 3, 2, 3, 4, 0, 2, 1, 0, 1, 1, 2, 1]  (ge_0.8=8/32=25.00%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [3, 4, 1, 5, 5, 2, 1, 5, 1, 1, 2, 1, 0, 0, 0, 1]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=32): [5, 4, 2, 1, 3, 2, 3, 4, 0, 2, 1, 0, 1, 1, 2, 1]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:33770 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=52/110  ratio=47.3%  top1_flip=10/52 (19.2%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [24, 4, 5, 3, 6, 7, 8, 1, 3, 6, 6, 7, 3, 15, 4, 8]  (ge_0.8=52/110=47.27%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [16, 21, 12, 11, 7, 9, 5, 2, 1, 0, 4, 6, 1, 1, 2, 12]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=110): [24, 4, 5, 3, 6, 7, 8, 1, 3, 6, 6, 7, 3, 15, 4, 8]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:33778 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=8/25  ratio=32.0%  top1_flip=0/8 (0.0%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [5, 1, 3, 2, 2, 0, 1, 3, 1, 1, 1, 1, 1, 0, 2, 1]  (ge_0.8=8/25=32.00%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [5, 1, 2, 3, 3, 3, 2, 0, 2, 0, 0, 0, 1, 0, 0, 3]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=25): [5, 1, 3, 2, 2, 0, 1, 3, 1, 1, 1, 1, 1, 0, 2, 1]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:33788 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA-pf-summary @500] format_chat: p50=0.01 p95=0.02 max=0.40 | tokenize_client: p50=0.00 p95=0.00 max=0.12 | http_post: p50=60.33 p95=79.07 max=88.15 | parse_response: p50=0.21 p95=0.33 max=0.45 | total: p50=60.65 p95=79.23 max=88.38 | apply_total: p50=1.25 p95=77.91 max=99.62 | apply_topk_ent: p50=0.64 p95=1.24 max=61.45 | apply_cpu_sync: p50=0.17 p95=0.38 max=0.50 | skip_step: p50=0.83 p95=1.64 max=61.72 | intv_prepare: p50=0.10 p95=0.23 max=0.28 | intv_apply_logits: p50=1.20 p95=1.43 max=23.95
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=100/598  ratio=16.7%  top1_flip=5/100 (5.0%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [262, 37, 28, 36, 28, 33, 35, 39, 25, 17, 15, 14, 7, 12, 7, 3]  (ge_0.8=100/598=16.72%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [41, 51, 45, 63, 42, 32, 25, 22, 19, 17, 26, 25, 15, 15, 20, 140]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=598): [262, 37, 28, 36, 28, 33, 35, 39, 25, 17, 15, 14, 7, 12, 7, 3]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:33790 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA-pf-summary @600] format_chat: p50=0.01 p95=0.02 max=0.40 | tokenize_client: p50=0.00 p95=0.00 max=0.12 | http_post: p50=63.51 p95=88.49 max=105.67 | parse_response: p50=0.21 p95=0.34 max=0.45 | total: p50=63.70 p95=88.72 max=105.98 | apply_total: p50=1.16 p95=80.01 max=109.22 | apply_topk_ent: p50=0.63 p95=1.23 max=61.45 | apply_cpu_sync: p50=0.17 p95=0.38 max=0.50 | skip_step: p50=0.81 p95=1.64 max=61.72 | intv_prepare: p50=0.10 p95=0.23 max=0.28 | intv_apply_logits: p50=1.21 p95=1.44 max=23.95
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=70/184  ratio=38.0%  top1_flip=3/70 (4.3%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [47, 14, 7, 8, 8, 10, 8, 12, 16, 10, 11, 8, 6, 12, 5, 2]  (ge_0.8=70/184=38.04%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [27, 29, 20, 20, 9, 5, 11, 8, 8, 5, 7, 5, 7, 6, 2, 15]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=184): [47, 14, 7, 8, 8, 10, 8, 12, 16, 10, 11, 8, 6, 12, 5, 2]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:44856 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA-pf-summary @700] format_chat: p50=0.01 p95=0.02 max=0.40 | tokenize_client: p50=0.00 p95=0.00 max=0.12 | http_post: p50=64.44 p95=88.09 max=105.67 | parse_response: p50=0.21 p95=0.34 max=0.45 | total: p50=64.60 p95=88.36 max=105.98 | apply_total: p50=1.20 p95=80.05 max=109.22 | apply_topk_ent: p50=0.69 p95=1.25 max=2.04 | apply_cpu_sync: p50=0.19 p95=0.39 max=0.50 | skip_step: p50=0.84 p95=1.64 max=61.72 | intv_prepare: p50=0.11 p95=0.23 max=0.28 | intv_apply_logits: p50=1.25 p95=1.45 max=23.95
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=109/272  ratio=40.1%  top1_flip=3/109 (2.8%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [59, 20, 15, 10, 12, 14, 17, 16, 17, 5, 10, 15, 14, 14, 18, 16]  (ge_0.8=109/272=40.07%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [48, 42, 29, 23, 19, 14, 20, 9, 7, 6, 9, 8, 5, 9, 10, 14]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=272): [59, 20, 15, 10, 12, 14, 17, 16, 17, 5, 10, 15, 14, 14, 18, 16]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:41322 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA-pf-summary @800] format_chat: p50=0.01 p95=0.02 max=0.40 | tokenize_client: p50=0.00 p95=0.00 max=0.12 | http_post: p50=64.84 p95=87.76 max=105.67 | parse_response: p50=0.21 p95=0.34 max=0.45 | total: p50=65.10 p95=88.09 max=105.98 | apply_total: p50=1.26 p95=79.93 max=109.22 | apply_topk_ent: p50=0.74 p95=1.25 max=2.04 | apply_cpu_sync: p50=0.21 p95=0.39 max=0.50 | skip_step: p50=0.87 p95=1.64 max=61.72 | intv_prepare: p50=0.11 p95=0.23 max=0.30 | intv_apply_logits: p50=1.27 p95=1.45 max=23.95
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=71/235  ratio=30.2%  top1_flip=3/71 (4.2%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [71, 16, 12, 9, 12, 12, 21, 11, 8, 14, 13, 10, 12, 4, 7, 3]  (ge_0.8=71/235=30.21%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [30, 32, 24, 17, 15, 17, 13, 9, 7, 7, 11, 6, 7, 2, 3, 35]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=235): [71, 16, 12, 9, 12, 12, 21, 11, 8, 14, 13, 10, 12, 4, 7, 3]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:50450 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA-pf-summary @900] format_chat: p50=0.01 p95=0.02 max=0.40 | tokenize_client: p50=0.00 p95=0.00 max=0.12 | http_post: p50=64.44 p95=85.52 max=105.67 | parse_response: p50=0.21 p95=0.34 max=0.45 | total: p50=64.60 p95=85.69 max=105.98 | apply_total: p50=1.23 p95=79.74 max=109.22 | apply_topk_ent: p50=0.72 p95=1.25 max=2.04 | apply_cpu_sync: p50=0.20 p95=0.39 max=0.52 | skip_step: p50=0.91 p95=1.65 max=2.14 | intv_prepare: p50=0.11 p95=0.22 max=0.30 | intv_apply_logits: p50=1.26 p95=1.44 max=23.95
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=88/349  ratio=25.2%  top1_flip=3/88 (3.4%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [118, 26, 18, 18, 16, 21, 21, 23, 14, 18, 13, 15, 14, 10, 4, 0]  (ge_0.8=88/349=25.21%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [25, 50, 38, 25, 21, 27, 18, 15, 15, 14, 12, 11, 7, 10, 11, 50]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=349): [118, 26, 18, 18, 16, 21, 21, 23, 14, 18, 13, 15, 14, 10, 4, 0]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:51482 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=66/144  ratio=45.8%  top1_flip=8/66 (12.1%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [31, 8, 4, 8, 3, 10, 5, 9, 4, 10, 4, 7, 10, 9, 13, 9]  (ge_0.8=66/144=45.83%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [27, 23, 14, 17, 6, 9, 8, 4, 5, 8, 1, 4, 2, 0, 3, 13]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=144): [31, 8, 4, 8, 3, 10, 5, 9, 4, 10, 4, 7, 10, 9, 13, 9]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:39128 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA-pf-summary @1000] format_chat: p50=0.01 p95=0.02 max=0.40 | tokenize_client: p50=0.00 p95=0.00 max=0.12 | http_post: p50=64.72 p95=85.37 max=105.67 | parse_response: p50=0.21 p95=0.34 max=0.45 | total: p50=64.97 p95=85.50 max=105.98 | apply_total: p50=1.43 p95=78.70 max=104.96 | apply_topk_ent: p50=0.83 p95=1.26 max=1.67 | apply_cpu_sync: p50=0.22 p95=0.39 max=0.52 | skip_step: p50=0.98 p95=1.65 max=2.14 | intv_prepare: p50=0.11 p95=0.23 max=0.30 | intv_apply_logits: p50=1.27 p95=1.45 max=23.95
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=99/335  ratio=29.6%  top1_flip=5/99 (5.1%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [93, 30, 18, 19, 16, 19, 21, 20, 23, 11, 15, 15, 14, 9, 7, 5]  (ge_0.8=99/335=29.55%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [47, 30, 40, 32, 27, 18, 15, 11, 19, 21, 10, 19, 13, 9, 9, 15]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=335): [93, 30, 18, 19, 16, 19, 21, 20, 23, 11, 15, 15, 14, 9, 7, 5]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:39134 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA-pf-summary @1100] format_chat: p50=0.01 p95=0.02 max=0.40 | tokenize_client: p50=0.00 p95=0.00 max=0.12 | http_post: p50=65.14 p95=85.01 max=105.67 | parse_response: p50=0.21 p95=0.34 max=0.45 | total: p50=65.41 p95=85.22 max=105.98 | apply_total: p50=1.44 p95=79.79 max=104.96 | apply_topk_ent: p50=0.82 p95=1.26 max=1.67 | apply_cpu_sync: p50=0.23 p95=0.39 max=0.52 | skip_step: p50=1.01 p95=1.65 max=2.14 | intv_prepare: p50=0.11 p95=0.23 max=0.30 | intv_apply_logits: p50=1.27 p95=1.46 max=23.95
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=129/288  ratio=44.8%  top1_flip=6/129 (4.7%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [66, 17, 15, 6, 12, 13, 12, 18, 11, 13, 20, 13, 21, 23, 16, 12]  (ge_0.8=129/288=44.79%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [51, 45, 33, 25, 19, 14, 13, 9, 12, 4, 10, 4, 4, 1, 4, 40]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=288): [66, 17, 15, 6, 12, 13, 12, 18, 11, 13, 20, 13, 21, 23, 16, 12]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:54530 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA-pf-summary @1200] format_chat: p50=0.01 p95=0.02 max=0.40 | tokenize_client: p50=0.00 p95=0.00 max=0.13 | http_post: p50=65.46 p95=84.76 max=105.67 | parse_response: p50=0.21 p95=0.34 max=0.45 | total: p50=65.73 p95=84.99 max=105.98 | apply_total: p50=1.47 p95=80.65 max=104.96 | apply_topk_ent: p50=0.84 p95=1.27 max=1.67 | apply_cpu_sync: p50=0.23 p95=0.39 max=0.52 | skip_step: p50=1.02 p95=1.65 max=2.14 | intv_prepare: p50=0.11 p95=0.24 max=0.30 | intv_apply_logits: p50=1.28 p95=1.46 max=23.95
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=23/68  ratio=33.8%  top1_flip=3/23 (13.0%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [21, 5, 4, 3, 1, 3, 3, 5, 1, 3, 4, 2, 5, 4, 4, 0]  (ge_0.8=23/68=33.82%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [9, 9, 4, 5, 7, 3, 2, 6, 2, 0, 1, 3, 1, 4, 0, 12]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=68): [21, 5, 4, 3, 1, 3, 3, 5, 1, 3, 4, 2, 5, 4, 4, 0]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:48182 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=26/52  ratio=50.0%  top1_flip=9/26 (34.6%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [10, 2, 0, 0, 1, 5, 1, 7, 3, 5, 1, 5, 4, 5, 3, 0]  (ge_0.8=26/52=50.00%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [9, 10, 9, 3, 5, 4, 0, 1, 2, 1, 3, 2, 0, 0, 0, 3]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=52): [10, 2, 0, 0, 1, 5, 1, 7, 3, 5, 1, 5, 4, 5, 3, 0]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:48196 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA-pf-summary @1300] format_chat: p50=0.01 p95=0.02 max=0.40 | tokenize_client: p50=0.00 p95=0.00 max=0.13 | http_post: p50=65.56 p95=84.47 max=105.67 | parse_response: p50=0.22 p95=0.34 max=0.45 | total: p50=65.79 p95=84.78 max=105.98 | apply_total: p50=1.53 p95=80.11 max=104.96 | apply_topk_ent: p50=0.86 p95=1.28 max=1.67 | apply_cpu_sync: p50=0.24 p95=0.40 max=0.60 | skip_step: p50=1.03 p95=1.65 max=2.14 | intv_prepare: p50=0.11 p95=0.24 max=0.30 | intv_apply_logits: p50=1.28 p95=1.46 max=23.95
+(EngineCore pid=1137007) [SIA-pf-summary @1400] format_chat: p50=0.01 p95=0.02 max=0.40 | tokenize_client: p50=0.00 p95=0.00 max=0.13 | http_post: p50=65.93 p95=84.44 max=105.67 | parse_response: p50=0.22 p95=0.34 max=0.45 | total: p50=66.15 p95=84.58 max=105.98 | apply_total: p50=1.59 p95=82.53 max=94.65 | apply_topk_ent: p50=0.93 p95=1.30 max=1.98 | apply_cpu_sync: p50=0.26 p95=0.41 max=0.68 | skip_step: p50=1.07 p95=1.66 max=2.70 | intv_prepare: p50=0.12 p95=0.24 max=0.31 | intv_apply_logits: p50=1.29 p95=1.46 max=23.95
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=198/453  ratio=43.7%  top1_flip=6/198 (3.0%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [102, 26, 29, 19, 15, 17, 31, 16, 29, 22, 32, 28, 27, 26, 22, 12]  (ge_0.8=198/453=43.71%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [61, 69, 68, 32, 38, 24, 20, 24, 12, 15, 9, 11, 10, 11, 4, 45]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=453): [102, 26, 29, 19, 15, 17, 31, 16, 29, 22, 32, 28, 27, 26, 22, 12]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:48198 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=19/36  ratio=52.8%  top1_flip=2/19 (10.5%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [4, 2, 2, 0, 0, 3, 1, 5, 3, 1, 1, 4, 1, 5, 3, 1]  (ge_0.8=19/36=52.78%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [5, 9, 4, 2, 3, 5, 1, 2, 1, 0, 2, 0, 0, 0, 1, 1]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=36): [4, 2, 2, 0, 0, 3, 1, 5, 3, 1, 1, 4, 1, 5, 3, 1]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:52066 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA-pf-summary @1500] format_chat: p50=0.01 p95=0.02 max=0.40 | tokenize_client: p50=0.00 p95=0.00 max=0.13 | http_post: p50=65.82 p95=85.38 max=105.67 | parse_response: p50=0.22 p95=0.34 max=0.45 | total: p50=66.04 p95=85.62 max=105.98 | apply_total: p50=1.59 p95=84.09 max=104.47 | apply_topk_ent: p50=0.91 p95=1.29 max=1.98 | apply_cpu_sync: p50=0.25 p95=0.40 max=0.68 | skip_step: p50=1.05 p95=1.66 max=2.70 | intv_prepare: p50=0.12 p95=0.24 max=0.31 | intv_apply_logits: p50=1.29 p95=1.46 max=23.95
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=132/354  ratio=37.3%  top1_flip=5/132 (3.8%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [103, 25, 15, 13, 13, 15, 18, 20, 19, 8, 27, 17, 15, 9, 23, 14]  (ge_0.8=132/354=37.29%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [50, 53, 39, 33, 17, 15, 13, 16, 12, 8, 5, 10, 14, 7, 8, 54]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=354): [103, 25, 15, 13, 13, 15, 18, 20, 19, 8, 27, 17, 15, 9, 23, 14]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:39482 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=3/12  ratio=25.0%  top1_flip=1/3 (33.3%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [6, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 0, 1, 1, 0, 0]  (ge_0.8=3/12=25.00%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [1, 2, 0, 0, 1, 1, 1, 0, 0, 2, 1, 1, 0, 0, 0, 2]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=12): [6, 0, 0, 0, 1, 1, 1, 0, 0, 0, 1, 0, 1, 1, 0, 0]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:57092 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA-pf-summary @1600] format_chat: p50=0.01 p95=0.02 max=0.40 | tokenize_client: p50=0.00 p95=0.00 max=0.13 | http_post: p50=65.05 p95=85.15 max=105.67 | parse_response: p50=0.21 p95=0.34 max=0.45 | total: p50=65.28 p95=85.45 max=105.98 | apply_total: p50=1.58 p95=83.21 max=104.47 | apply_topk_ent: p50=0.83 p95=1.28 max=1.98 | apply_cpu_sync: p50=0.23 p95=0.40 max=0.68 | skip_step: p50=1.09 p95=1.66 max=2.70 | intv_prepare: p50=0.11 p95=0.24 max=0.31 | intv_apply_logits: p50=1.28 p95=1.46 max=23.95
+(EngineCore pid=1137007) [SIA-pf-summary @1700] format_chat: p50=0.01 p95=0.02 max=0.40 | tokenize_client: p50=0.00 p95=0.00 max=0.13 | http_post: p50=64.73 p95=85.01 max=105.67 | parse_response: p50=0.21 p95=0.34 max=0.45 | total: p50=64.96 p95=85.22 max=105.98 | apply_total: p50=1.17 p95=83.21 max=104.47 | apply_topk_ent: p50=0.44 p95=1.23 max=1.98 | apply_cpu_sync: p50=0.13 p95=0.38 max=0.68 | skip_step: p50=0.90 p95=1.65 max=2.70 | intv_prepare: p50=0.11 p95=0.24 max=0.31 | intv_apply_logits: p50=1.26 p95=1.46 max=23.95
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=109/368  ratio=29.6%  top1_flip=8/109 (7.3%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [103, 30, 22, 13, 22, 18, 24, 27, 16, 13, 17, 9, 16, 15, 17, 6]  (ge_0.8=109/368=29.62%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [51, 49, 40, 18, 30, 26, 18, 16, 15, 16, 16, 6, 7, 14, 14, 32]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=368): [103, 30, 22, 13, 22, 18, 24, 27, 16, 13, 17, 9, 16, 15, 17, 6]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:57108 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=2/7  ratio=28.6%  top1_flip=0/2 (0.0%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [2, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1]  (ge_0.8=2/7=28.57%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [2, 1, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 1]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=7): [2, 1, 0, 0, 1, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:39290 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=30/129  ratio=23.3%  top1_flip=3/30 (10.0%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [56, 2, 7, 6, 11, 5, 8, 4, 3, 3, 8, 6, 3, 3, 4, 0]  (ge_0.8=30/129=23.26%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [8, 15, 9, 11, 9, 12, 4, 4, 3, 4, 4, 3, 1, 7, 2, 33]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=129): [56, 2, 7, 6, 11, 5, 8, 4, 3, 3, 8, 6, 3, 3, 4, 0]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:39304 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=51/203  ratio=25.1%  top1_flip=10/51 (19.6%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [70, 11, 5, 16, 10, 12, 12, 16, 12, 5, 10, 10, 4, 4, 5, 1]  (ge_0.8=51/203=25.12%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [25, 18, 23, 13, 19, 11, 11, 7, 7, 6, 11, 7, 8, 3, 3, 31]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=203): [70, 11, 5, 16, 10, 12, 12, 16, 12, 5, 10, 10, 4, 4, 5, 1]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:39308 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA-pf-summary @1800] format_chat: p50=0.01 p95=0.02 max=0.40 | tokenize_client: p50=0.00 p95=0.00 max=0.13 | http_post: p50=64.53 p95=84.70 max=105.67 | parse_response: p50=0.21 p95=0.33 max=0.45 | total: p50=64.74 p95=84.92 max=105.98 | apply_total: p50=1.01 p95=80.62 max=104.47 | apply_topk_ent: p50=0.45 p95=1.22 max=1.98 | apply_cpu_sync: p50=0.14 p95=0.37 max=0.68 | skip_step: p50=0.85 p95=1.64 max=2.70 | intv_prepare: p50=0.11 p95=0.24 max=0.31 | intv_apply_logits: p50=1.26 p95=1.45 max=23.95
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=82/237  ratio=34.6%  top1_flip=1/82 (1.2%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [69, 14, 14, 12, 10, 8, 19, 9, 15, 9, 9, 15, 13, 14, 6, 1]  (ge_0.8=82/237=34.60%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [24, 32, 25, 22, 17, 14, 11, 13, 12, 8, 6, 8, 10, 6, 5, 24]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=237): [69, 14, 14, 12, 10, 8, 19, 9, 15, 9, 9, 15, 13, 14, 6, 1]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:40144 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA-pf-summary @1900] format_chat: p50=0.01 p95=0.02 max=0.40 | tokenize_client: p50=0.00 p95=0.00 max=0.13 | http_post: p50=64.46 p95=84.44 max=105.67 | parse_response: p50=0.21 p95=0.33 max=0.45 | total: p50=64.67 p95=84.66 max=105.98 | apply_total: p50=1.10 p95=79.99 max=104.47 | apply_topk_ent: p50=0.48 p95=1.23 max=1.98 | apply_cpu_sync: p50=0.14 p95=0.38 max=0.68 | skip_step: p50=0.85 p95=1.63 max=2.70 | intv_prepare: p50=0.11 p95=0.24 max=0.31 | intv_apply_logits: p50=1.26 p95=1.45 max=23.95
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=101/254  ratio=39.8%  top1_flip=14/101 (13.9%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [51, 16, 9, 14, 18, 10, 15, 20, 14, 13, 22, 13, 9, 15, 9, 6]  (ge_0.8=101/254=39.76%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [40, 37, 28, 27, 19, 16, 12, 15, 10, 10, 11, 7, 6, 4, 3, 9]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=254): [51, 16, 9, 14, 18, 10, 15, 20, 14, 13, 22, 13, 9, 15, 9, 6]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:40152 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA-pf-summary @2000] format_chat: p50=0.01 p95=0.02 max=0.40 | tokenize_client: p50=0.00 p95=0.00 max=0.13 | http_post: p50=64.63 p95=84.10 max=105.67 | parse_response: p50=0.21 p95=0.34 max=0.45 | total: p50=64.79 p95=84.33 max=105.98 | apply_total: p50=1.23 p95=79.79 max=104.47 | apply_topk_ent: p50=0.55 p95=1.24 max=1.98 | apply_cpu_sync: p50=0.15 p95=0.38 max=0.68 | skip_step: p50=0.88 p95=1.64 max=2.70 | intv_prepare: p50=0.11 p95=0.24 max=0.31 | intv_apply_logits: p50=1.26 p95=1.45 max=23.95
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=86/246  ratio=35.0%  top1_flip=7/86 (8.1%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [76, 12, 13, 14, 9, 9, 11, 16, 19, 10, 16, 7, 15, 7, 9, 3]  (ge_0.8=86/246=34.96%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [31, 37, 27, 17, 20, 10, 11, 7, 8, 13, 8, 10, 9, 9, 6, 23]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=246): [76, 12, 13, 14, 9, 9, 11, 16, 19, 10, 16, 7, 15, 7, 9, 3]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:55836 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=35/89  ratio=39.3%  top1_flip=2/35 (5.7%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [16, 4, 8, 4, 5, 3, 8, 6, 7, 4, 3, 1, 5, 7, 3, 5]  (ge_0.8=35/89=39.33%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [15, 9, 9, 11, 8, 8, 8, 5, 1, 0, 2, 1, 1, 1, 1, 9]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=89): [16, 4, 8, 4, 5, 3, 8, 6, 7, 4, 3, 1, 5, 7, 3, 5]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:36462 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA-pf-summary @2100] format_chat: p50=0.01 p95=0.02 max=0.37 | tokenize_client: p50=0.00 p95=0.00 max=0.13 | http_post: p50=64.81 p95=83.02 max=102.05 | parse_response: p50=0.21 p95=0.33 max=0.41 | total: p50=64.96 p95=83.29 max=102.34 | apply_total: p50=1.29 p95=77.61 max=93.08 | apply_topk_ent: p50=0.69 p95=1.28 max=1.99 | apply_cpu_sync: p50=0.19 p95=0.39 max=0.64 | skip_step: p50=0.71 p95=1.62 max=2.48 | intv_prepare: p50=0.11 p95=0.24 max=0.31 | intv_apply_logits: p50=1.24 p95=1.46 max=1.88
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=54/262  ratio=20.6%  top1_flip=10/54 (18.5%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [116, 21, 21, 13, 8, 6, 10, 13, 13, 4, 9, 5, 8, 5, 6, 4]  (ge_0.8=54/262=20.61%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [29, 23, 13, 12, 15, 12, 20, 10, 15, 10, 19, 6, 12, 12, 12, 42]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=262): [116, 21, 21, 13, 8, 6, 10, 13, 13, 4, 9, 5, 8, 5, 6, 4]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:39372 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=4/5  ratio=80.0%  top1_flip=3/4 (75.0%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 1, 0, 1]  (ge_0.8=4/5=80.00%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [2, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=5): [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 1, 0, 1]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:39384 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA-pf-summary @2200] format_chat: p50=0.01 p95=0.02 max=0.37 | tokenize_client: p50=0.00 p95=0.00 max=0.13 | http_post: p50=64.11 p95=82.53 max=102.05 | parse_response: p50=0.21 p95=0.33 max=0.41 | total: p50=64.32 p95=82.76 max=102.34 | apply_total: p50=1.15 p95=76.88 max=93.08 | apply_topk_ent: p50=0.65 p95=1.26 max=1.99 | apply_cpu_sync: p50=0.18 p95=0.38 max=0.64 | skip_step: p50=0.70 p95=1.61 max=2.48 | intv_prepare: p50=0.11 p95=0.24 max=0.31 | intv_apply_logits: p50=1.22 p95=1.45 max=1.88
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=68/200  ratio=34.0%  top1_flip=7/68 (10.3%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [62, 7, 11, 6, 9, 10, 14, 13, 9, 9, 6, 11, 14, 7, 4, 8]  (ge_0.8=68/200=34.00%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [28, 25, 20, 16, 22, 12, 8, 2, 6, 2, 9, 7, 5, 6, 2, 30]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=200): [62, 7, 11, 6, 9, 10, 14, 13, 9, 9, 6, 11, 14, 7, 4, 8]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:39386 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=1/13  ratio=7.7%  top1_flip=1/1 (100.0%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [7, 0, 0, 1, 1, 2, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0]  (ge_0.8=1/13=7.69%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [2, 0, 0, 0, 0, 1, 3, 0, 0, 1, 1, 1, 1, 0, 0, 3]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=13): [7, 0, 0, 1, 1, 2, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:56798 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=8/15  ratio=53.3%  top1_flip=3/8 (37.5%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [3, 0, 2, 1, 1, 0, 0, 0, 0, 3, 1, 2, 0, 1, 0, 1]  (ge_0.8=8/15=53.33%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [2, 3, 1, 0, 3, 0, 1, 2, 0, 2, 0, 0, 0, 1, 0, 0]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=15): [3, 0, 2, 1, 1, 0, 0, 0, 0, 3, 1, 2, 0, 1, 0, 1]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:56810 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=32/73  ratio=43.8%  top1_flip=1/32 (3.1%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [17, 4, 2, 1, 1, 2, 6, 8, 4, 3, 4, 3, 3, 8, 7, 0]  (ge_0.8=32/73=43.84%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [13, 12, 9, 10, 3, 2, 4, 0, 1, 3, 1, 2, 1, 2, 2, 8]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=73): [17, 4, 2, 1, 1, 2, 6, 8, 4, 3, 4, 3, 3, 8, 7, 0]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:56818 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=34/87  ratio=39.1%  top1_flip=4/34 (11.8%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [22, 3, 2, 6, 5, 3, 6, 6, 3, 5, 4, 6, 5, 2, 8, 1]  (ge_0.8=34/87=39.08%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [16, 8, 10, 11, 8, 3, 3, 5, 0, 3, 1, 4, 3, 0, 1, 11]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=87): [22, 3, 2, 6, 5, 3, 6, 6, 3, 5, 4, 6, 5, 2, 8, 1]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:56826 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA-pf-summary @2300] format_chat: p50=0.01 p95=0.02 max=0.44 | tokenize_client: p50=0.00 p95=0.00 max=0.13 | http_post: p50=63.38 p95=82.25 max=102.05 | parse_response: p50=0.21 p95=0.33 max=0.41 | total: p50=63.67 p95=82.51 max=102.34 | apply_total: p50=1.17 p95=76.20 max=93.08 | apply_topk_ent: p50=0.64 p95=1.26 max=1.99 | apply_cpu_sync: p50=0.17 p95=0.38 max=0.64 | skip_step: p50=0.70 p95=1.62 max=2.48 | intv_prepare: p50=0.11 p95=0.24 max=0.31 | intv_apply_logits: p50=1.22 p95=1.45 max=1.97
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=42/249  ratio=16.9%  top1_flip=7/42 (16.7%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [110, 19, 13, 12, 14, 9, 14, 16, 9, 6, 8, 4, 9, 3, 3, 0]  (ge_0.8=42/249=16.87%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [21, 17, 18, 21, 15, 14, 13, 11, 11, 6, 12, 11, 5, 2, 9, 63]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=249): [110, 19, 13, 12, 14, 9, 14, 16, 9, 6, 8, 4, 9, 3, 3, 0]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:33140 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=2/3  ratio=66.7%  top1_flip=2/2 (100.0%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2]  (ge_0.8=2/3=66.67%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=3): [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 2]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:33148 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=3/7  ratio=42.9%  top1_flip=0/3 (0.0%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [2, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 0, 1, 0, 0]  (ge_0.8=3/7=42.86%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [1, 1, 1, 0, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=7): [2, 1, 0, 0, 0, 0, 0, 1, 1, 0, 0, 1, 0, 1, 0, 0]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:33160 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA-pf-summary @2400] format_chat: p50=0.01 p95=0.02 max=0.44 | tokenize_client: p50=0.00 p95=0.00 max=0.13 | http_post: p50=63.36 p95=81.90 max=102.05 | parse_response: p50=0.21 p95=0.33 max=0.41 | total: p50=63.62 p95=82.24 max=102.34 | apply_total: p50=1.11 p95=74.11 max=85.11 | apply_topk_ent: p50=0.62 p95=1.26 max=1.77 | apply_cpu_sync: p50=0.17 p95=0.38 max=0.64 | skip_step: p50=0.73 p95=1.62 max=2.48 | intv_prepare: p50=0.11 p95=0.23 max=0.31 | intv_apply_logits: p50=1.23 p95=1.45 max=1.97
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=93/259  ratio=35.9%  top1_flip=10/93 (10.8%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [72, 13, 19, 8, 10, 16, 10, 18, 17, 11, 17, 10, 7, 5, 18, 8]  (ge_0.8=93/259=35.91%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [31, 36, 23, 28, 19, 20, 12, 6, 10, 7, 11, 10, 12, 9, 8, 17]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=259): [72, 13, 19, 8, 10, 16, 10, 18, 17, 11, 17, 10, 7, 5, 18, 8]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:33174 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA-pf-summary @2500] format_chat: p50=0.01 p95=0.02 max=0.44 | tokenize_client: p50=0.00 p95=0.00 max=0.13 | http_post: p50=63.31 p95=81.67 max=102.05 | parse_response: p50=0.21 p95=0.33 max=0.41 | total: p50=63.59 p95=81.90 max=102.34 | apply_total: p50=1.17 p95=75.36 max=86.90 | apply_topk_ent: p50=0.66 p95=1.26 max=1.77 | apply_cpu_sync: p50=0.18 p95=0.38 max=0.64 | skip_step: p50=0.82 p95=1.64 max=2.35 | intv_prepare: p50=0.11 p95=0.24 max=0.31 | intv_apply_logits: p50=1.24 p95=1.45 max=1.97
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=95/263  ratio=36.1%  top1_flip=5/95 (5.3%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [83, 15, 10, 14, 13, 13, 7, 13, 12, 20, 14, 7, 10, 14, 11, 7]  (ge_0.8=95/263=36.12%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [36, 29, 39, 19, 16, 13, 8, 11, 8, 11, 6, 4, 10, 2, 12, 39]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=263): [83, 15, 10, 14, 13, 13, 7, 13, 12, 20, 14, 7, 10, 14, 11, 7]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:59032 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=30/58  ratio=51.7%  top1_flip=7/30 (23.3%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [7, 5, 1, 4, 3, 1, 2, 5, 7, 0, 4, 6, 3, 4, 4, 2]  (ge_0.8=30/58=51.72%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [10, 13, 6, 5, 6, 3, 3, 2, 2, 0, 2, 1, 1, 1, 0, 3]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=58): [7, 5, 1, 4, 3, 1, 2, 5, 7, 0, 4, 6, 3, 4, 4, 2]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:56614 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA-pf-summary @2600] format_chat: p50=0.01 p95=0.02 max=0.44 | tokenize_client: p50=0.00 p95=0.00 max=0.13 | http_post: p50=63.31 p95=81.54 max=102.05 | parse_response: p50=0.21 p95=0.33 max=0.41 | total: p50=63.59 p95=81.77 max=102.34 | apply_total: p50=1.22 p95=75.60 max=87.24 | apply_topk_ent: p50=0.67 p95=1.26 max=1.77 | apply_cpu_sync: p50=0.18 p95=0.38 max=0.64 | skip_step: p50=0.83 p95=1.63 max=2.35 | intv_prepare: p50=0.11 p95=0.24 max=0.31 | intv_apply_logits: p50=1.24 p95=1.45 max=1.97
+(EngineCore pid=1137007) [SIA-pf-summary @2700] format_chat: p50=0.01 p95=0.02 max=0.44 | tokenize_client: p50=0.00 p95=0.00 max=0.13 | http_post: p50=63.36 p95=81.92 max=102.05 | parse_response: p50=0.21 p95=0.33 max=0.46 | total: p50=63.64 p95=82.26 max=102.34 | apply_total: p50=1.54 p95=78.70 max=93.05 | apply_topk_ent: p50=0.83 p95=1.26 max=1.61 | apply_cpu_sync: p50=0.23 p95=0.39 max=0.51 | skip_step: p50=0.87 p95=1.64 max=2.35 | intv_prepare: p50=0.11 p95=0.24 max=0.31 | intv_apply_logits: p50=1.25 p95=1.45 max=1.97
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=153/335  ratio=45.7%  top1_flip=13/153 (8.5%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [69, 15, 15, 6, 15, 17, 22, 23, 19, 19, 20, 21, 19, 19, 22, 14]  (ge_0.8=153/335=45.67%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [55, 52, 45, 36, 34, 8, 12, 14, 12, 5, 8, 4, 13, 8, 9, 20]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=335): [69, 15, 15, 6, 15, 17, 22, 23, 19, 19, 20, 21, 19, 19, 22, 14]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:56616 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA-pf-summary @2800] format_chat: p50=0.01 p95=0.02 max=0.44 | tokenize_client: p50=0.00 p95=0.00 max=0.13 | http_post: p50=63.66 p95=82.23 max=102.05 | parse_response: p50=0.21 p95=0.33 max=0.46 | total: p50=63.96 p95=82.47 max=102.34 | apply_total: p50=1.56 p95=79.47 max=102.93 | apply_topk_ent: p50=0.87 p95=1.28 max=1.61 | apply_cpu_sync: p50=0.24 p95=0.39 max=0.51 | skip_step: p50=0.93 p95=1.66 max=2.35 | intv_prepare: p50=0.11 p95=0.24 max=0.31 | intv_apply_logits: p50=1.26 p95=1.44 max=1.97
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=133/330  ratio=40.3%  top1_flip=7/133 (5.3%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [69, 21, 23, 9, 18, 16, 19, 22, 12, 21, 25, 24, 12, 14, 12, 13]  (ge_0.8=133/330=40.30%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [58, 39, 34, 31, 28, 23, 20, 17, 8, 12, 6, 9, 8, 2, 4, 31]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=330): [69, 21, 23, 9, 18, 16, 19, 22, 12, 21, 25, 24, 12, 14, 12, 13]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:40880 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=39/66  ratio=59.1%  top1_flip=7/39 (17.9%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [9, 2, 2, 3, 3, 3, 2, 3, 6, 6, 5, 4, 4, 5, 8, 1]  (ge_0.8=39/66=59.09%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [13, 15, 9, 5, 4, 3, 5, 1, 1, 2, 1, 2, 0, 0, 1, 4]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=66): [9, 2, 2, 3, 3, 3, 2, 3, 6, 6, 5, 4, 4, 5, 8, 1]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:59850 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA-pf-summary @2900] format_chat: p50=0.01 p95=0.02 max=0.44 | tokenize_client: p50=0.00 p95=0.00 max=0.13 | http_post: p50=63.69 p95=82.25 max=102.05 | parse_response: p50=0.21 p95=0.33 max=0.46 | total: p50=64.00 p95=82.51 max=102.34 | apply_total: p50=1.56 p95=79.86 max=102.93 | apply_topk_ent: p50=0.88 p95=1.28 max=1.61 | apply_cpu_sync: p50=0.24 p95=0.39 max=0.51 | skip_step: p50=0.95 p95=1.66 max=2.35 | intv_prepare: p50=0.11 p95=0.24 max=0.31 | intv_apply_logits: p50=1.26 p95=1.44 max=1.97
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=105/445  ratio=23.6%  top1_flip=11/105 (10.5%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [181, 28, 28, 12, 21, 18, 25, 27, 21, 18, 18, 10, 14, 8, 10, 6]  (ge_0.8=105/445=23.60%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [46, 61, 29, 24, 36, 17, 16, 18, 15, 20, 13, 18, 15, 22, 22, 73]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=445): [181, 28, 28, 12, 21, 18, 25, 27, 21, 18, 18, 10, 14, 8, 10, 6]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:38200 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA-pf-summary @3000] format_chat: p50=0.01 p95=0.02 max=0.44 | tokenize_client: p50=0.00 p95=0.00 max=0.13 | http_post: p50=64.18 p95=83.16 max=102.05 | parse_response: p50=0.21 p95=0.33 max=0.46 | total: p50=64.45 p95=83.40 max=102.34 | apply_total: p50=1.53 p95=81.45 max=102.93 | apply_topk_ent: p50=0.86 p95=1.27 max=1.71 | apply_cpu_sync: p50=0.24 p95=0.39 max=0.51 | skip_step: p50=0.97 p95=1.65 max=2.35 | intv_prepare: p50=0.11 p95=0.24 max=0.41 | intv_apply_logits: p50=1.27 p95=1.44 max=1.97
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=28/92  ratio=30.4%  top1_flip=5/28 (17.9%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [22, 5, 3, 6, 7, 5, 8, 8, 5, 4, 6, 4, 3, 2, 1, 3]  (ge_0.8=28/92=30.43%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [13, 11, 8, 12, 5, 11, 3, 5, 2, 4, 2, 3, 3, 1, 1, 8]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=92): [22, 5, 3, 6, 7, 5, 8, 8, 5, 4, 6, 4, 3, 2, 1, 3]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:49178 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA-pf-summary @3100] format_chat: p50=0.01 p95=0.02 max=0.44 | tokenize_client: p50=0.00 p95=0.00 max=0.12 | http_post: p50=64.20 p95=82.68 max=99.34 | parse_response: p50=0.22 p95=0.33 max=0.46 | total: p50=64.45 p95=83.02 max=99.61 | apply_total: p50=1.53 p95=83.12 max=102.93 | apply_topk_ent: p50=0.89 p95=1.28 max=1.71 | apply_cpu_sync: p50=0.25 p95=0.39 max=0.60 | skip_step: p50=1.13 p95=1.66 max=2.21 | intv_prepare: p50=0.11 p95=0.23 max=0.41 | intv_apply_logits: p50=1.29 p95=1.44 max=1.97
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=132/330  ratio=40.0%  top1_flip=4/132 (3.0%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [83, 24, 20, 13, 10, 9, 19, 20, 22, 22, 21, 15, 19, 18, 9, 6]  (ge_0.8=132/330=40.00%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [50, 48, 36, 32, 21, 18, 14, 17, 12, 6, 5, 8, 10, 3, 5, 45]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=330): [83, 24, 20, 13, 10, 9, 19, 20, 22, 22, 21, 15, 19, 18, 9, 6]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:49062 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=1/7  ratio=14.3%  top1_flip=0/1 (0.0%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [1, 2, 1, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0]  (ge_0.8=1/7=14.29%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [0, 0, 2, 0, 0, 1, 1, 1, 1, 0, 0, 0, 0, 0, 1, 0]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=7): [1, 2, 1, 1, 0, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:50546 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=1/4  ratio=25.0%  top1_flip=0/1 (0.0%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [1, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0]  (ge_0.8=1/4=25.00%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=4): [1, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:50548 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA-pf-summary @3200] format_chat: p50=0.01 p95=0.02 max=0.44 | tokenize_client: p50=0.00 p95=0.00 max=0.12 | http_post: p50=64.50 p95=82.65 max=99.34 | parse_response: p50=0.22 p95=0.33 max=0.46 | total: p50=64.76 p95=82.97 max=99.61 | apply_total: p50=1.54 p95=82.85 max=102.93 | apply_topk_ent: p50=0.88 p95=1.28 max=1.71 | apply_cpu_sync: p50=0.24 p95=0.39 max=0.60 | skip_step: p50=1.11 p95=1.66 max=2.21 | intv_prepare: p50=0.11 p95=0.23 max=0.41 | intv_apply_logits: p50=1.29 p95=1.44 max=1.97
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=132/497  ratio=26.6%  top1_flip=13/132 (9.8%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [165, 35, 31, 24, 30, 21, 30, 29, 23, 25, 19, 20, 16, 11, 11, 7]  (ge_0.8=132/497=26.56%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [55, 50, 46, 45, 34, 36, 29, 20, 17, 12, 19, 16, 25, 17, 13, 63]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=497): [165, 35, 31, 24, 30, 21, 30, 29, 23, 25, 19, 20, 16, 11, 11, 7]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:50564 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA-pf-summary @3300] format_chat: p50=0.01 p95=0.02 max=0.44 | tokenize_client: p50=0.00 p95=0.00 max=0.12 | http_post: p50=64.66 p95=83.90 max=99.34 | parse_response: p50=0.22 p95=0.33 max=0.46 | total: p50=64.91 p95=84.13 max=99.61 | apply_total: p50=1.43 p95=83.43 max=102.93 | apply_topk_ent: p50=0.84 p95=1.28 max=11.42 | apply_cpu_sync: p50=0.22 p95=0.39 max=0.60 | skip_step: p50=1.07 p95=1.66 max=11.60 | intv_prepare: p50=0.11 p95=0.23 max=0.41 | intv_apply_logits: p50=1.29 p95=1.44 max=1.97
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=114/310  ratio=36.8%  top1_flip=5/114 (4.4%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [102, 14, 11, 6, 16, 8, 20, 19, 23, 10, 13, 17, 14, 13, 12, 12]  (ge_0.8=114/310=36.77%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [47, 37, 32, 28, 21, 13, 16, 5, 8, 11, 12, 9, 2, 7, 7, 55]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=310): [102, 14, 11, 6, 16, 8, 20, 19, 23, 10, 13, 17, 14, 13, 12, 12]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:52970 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA-pf-summary @3400] format_chat: p50=0.01 p95=0.02 max=0.44 | tokenize_client: p50=0.00 p95=0.00 max=0.12 | http_post: p50=65.02 p95=83.83 max=99.34 | parse_response: p50=0.22 p95=0.33 max=0.46 | total: p50=65.20 p95=84.03 max=99.61 | apply_total: p50=1.43 p95=82.68 max=102.21 | apply_topk_ent: p50=0.81 p95=1.27 max=11.42 | apply_cpu_sync: p50=0.22 p95=0.38 max=0.52 | skip_step: p50=1.07 p95=1.66 max=11.60 | intv_prepare: p50=0.12 p95=0.24 max=0.41 | intv_apply_logits: p50=1.29 p95=1.44 max=1.97
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=37/159  ratio=23.3%  top1_flip=5/37 (13.5%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [72, 11, 6, 1, 8, 7, 7, 10, 9, 6, 6, 7, 4, 2, 2, 1]  (ge_0.8=37/159=23.27%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [14, 19, 15, 8, 11, 5, 5, 7, 4, 4, 8, 7, 5, 3, 5, 39]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=159): [72, 11, 6, 1, 8, 7, 7, 10, 9, 6, 6, 7, 4, 2, 2, 1]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:35572 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=5/27  ratio=18.5%  top1_flip=0/5 (0.0%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [16, 2, 1, 1, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 2, 2]  (ge_0.8=5/27=18.52%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [3, 2, 1, 0, 1, 0, 1, 1, 2, 2, 0, 3, 1, 0, 1, 9]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=27): [16, 2, 1, 1, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 2, 2]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:35574 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA-pf-summary @3500] format_chat: p50=0.01 p95=0.02 max=0.44 | tokenize_client: p50=0.00 p95=0.00 max=0.12 | http_post: p50=65.01 p95=83.61 max=99.34 | parse_response: p50=0.22 p95=0.33 max=0.46 | total: p50=65.19 p95=83.81 max=99.61 | apply_total: p50=1.43 p95=81.46 max=102.21 | apply_topk_ent: p50=0.81 p95=1.27 max=11.42 | apply_cpu_sync: p50=0.22 p95=0.39 max=0.52 | skip_step: p50=1.07 p95=1.66 max=11.60 | intv_prepare: p50=0.11 p95=0.23 max=0.41 | intv_apply_logits: p50=1.29 p95=1.44 max=1.97
+(EngineCore pid=1137007) [SIA-pf-summary @3600] format_chat: p50=0.01 p95=0.02 max=0.44 | tokenize_client: p50=0.00 p95=0.00 max=0.12 | http_post: p50=65.63 p95=83.96 max=102.50 | parse_response: p50=0.22 p95=0.33 max=0.46 | total: p50=65.94 p95=84.18 max=102.73 | apply_total: p50=1.49 p95=82.75 max=105.50 | apply_topk_ent: p50=0.85 p95=1.28 max=11.42 | apply_cpu_sync: p50=0.23 p95=0.39 max=0.56 | skip_step: p50=1.07 p95=1.67 max=11.60 | intv_prepare: p50=0.12 p95=0.24 max=0.41 | intv_apply_logits: p50=1.30 p95=1.44 max=1.97
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=205/473  ratio=43.3%  top1_flip=9/205 (4.4%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [88, 31, 24, 21, 22, 25, 30, 27, 34, 22, 32, 35, 24, 22, 22, 14]  (ge_0.8=205/473=43.34%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [66, 67, 69, 47, 39, 34, 28, 15, 13, 16, 21, 9, 11, 11, 4, 23]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=473): [88, 31, 24, 21, 22, 25, 30, 27, 34, 22, 32, 35, 24, 22, 22, 14]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:35578 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA-pf-summary @3700] format_chat: p50=0.01 p95=0.02 max=0.44 | tokenize_client: p50=0.00 p95=0.00 max=0.12 | http_post: p50=65.96 p95=85.57 max=102.50 | parse_response: p50=0.22 p95=0.33 max=0.46 | total: p50=66.27 p95=85.80 max=102.73 | apply_total: p50=1.52 p95=84.32 max=105.50 | apply_topk_ent: p50=0.86 p95=1.29 max=11.42 | apply_cpu_sync: p50=0.23 p95=0.39 max=0.56 | skip_step: p50=1.08 p95=1.68 max=11.60 | intv_prepare: p50=0.12 p95=0.24 max=0.41 | intv_apply_logits: p50=1.30 p95=1.44 max=2.20
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=93/331  ratio=28.1%  top1_flip=10/93 (10.8%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [122, 20, 17, 12, 13, 16, 22, 16, 16, 11, 15, 11, 13, 10, 12, 5]  (ge_0.8=93/331=28.10%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [40, 41, 26, 33, 16, 14, 15, 14, 8, 10, 11, 13, 14, 9, 7, 60]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=331): [122, 20, 17, 12, 13, 16, 22, 16, 16, 11, 15, 11, 13, 10, 12, 5]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:35054 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=35/142  ratio=24.6%  top1_flip=6/35 (17.1%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [56, 5, 8, 9, 9, 3, 9, 8, 5, 5, 6, 4, 6, 2, 5, 2]  (ge_0.8=35/142=24.65%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [12, 13, 13, 16, 9, 9, 3, 5, 6, 0, 3, 5, 7, 4, 3, 34]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=142): [56, 5, 8, 9, 9, 3, 9, 8, 5, 5, 6, 4, 6, 2, 5, 2]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:60926 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=16/45  ratio=35.6%  top1_flip=2/16 (12.5%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [17, 1, 1, 5, 1, 2, 0, 2, 1, 6, 3, 1, 1, 1, 3, 0]  (ge_0.8=16/45=35.56%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [8, 4, 5, 1, 2, 4, 3, 0, 2, 0, 0, 2, 3, 0, 0, 11]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=45): [17, 1, 1, 5, 1, 2, 0, 2, 1, 6, 3, 1, 1, 1, 3, 0]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:60928 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA-pf-summary @3800] format_chat: p50=0.01 p95=0.02 max=0.75 | tokenize_client: p50=0.00 p95=0.00 max=0.12 | http_post: p50=66.17 p95=85.30 max=102.50 | parse_response: p50=0.22 p95=0.33 max=0.46 | total: p50=66.48 p95=85.62 max=102.73 | apply_total: p50=1.45 p95=84.47 max=105.50 | apply_topk_ent: p50=0.85 p95=1.28 max=2.18 | apply_cpu_sync: p50=0.23 p95=0.40 max=0.56 | skip_step: p50=1.04 p95=1.67 max=11.60 | intv_prepare: p50=0.12 p95=0.24 max=0.41 | intv_apply_logits: p50=1.30 p95=1.44 max=2.20
+(EngineCore pid=1137007) [SIA-pf-summary @3900] format_chat: p50=0.01 p95=0.02 max=0.75 | tokenize_client: p50=0.00 p95=0.00 max=0.12 | http_post: p50=66.85 p95=85.64 max=102.50 | parse_response: p50=0.22 p95=0.33 max=0.46 | total: p50=67.09 p95=85.91 max=102.73 | apply_total: p50=1.44 p95=84.77 max=105.50 | apply_topk_ent: p50=0.86 p95=1.29 max=2.18 | apply_cpu_sync: p50=0.23 p95=0.40 max=0.56 | skip_step: p50=1.05 p95=1.68 max=11.60 | intv_prepare: p50=0.12 p95=0.24 max=0.41 | intv_apply_logits: p50=1.30 p95=1.44 max=2.20
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=137/423  ratio=32.4%  top1_flip=8/137 (5.8%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [134, 26, 19, 22, 13, 20, 18, 34, 26, 20, 16, 17, 21, 14, 11, 12]  (ge_0.8=137/423=32.39%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [61, 54, 40, 30, 28, 29, 15, 18, 11, 15, 13, 9, 8, 11, 5, 76]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=423): [134, 26, 19, 22, 13, 20, 18, 34, 26, 20, 16, 17, 21, 14, 11, 12]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:60930 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA-pf-summary @4000] format_chat: p50=0.01 p95=0.02 max=0.75 | tokenize_client: p50=0.00 p95=0.00 max=0.12 | http_post: p50=66.54 p95=85.93 max=102.50 | parse_response: p50=0.22 p95=0.33 max=0.46 | total: p50=66.75 p95=86.15 max=102.73 | apply_total: p50=1.42 p95=85.69 max=114.13 | apply_topk_ent: p50=0.80 p95=1.28 max=2.18 | apply_cpu_sync: p50=0.22 p95=0.39 max=0.56 | skip_step: p50=1.00 p95=1.67 max=11.60 | intv_prepare: p50=0.12 p95=0.24 max=0.41 | intv_apply_logits: p50=1.29 p95=1.44 max=2.20
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=87/235  ratio=37.0%  top1_flip=2/87 (2.3%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [60, 15, 10, 16, 12, 9, 12, 14, 18, 19, 13, 11, 7, 9, 7, 3]  (ge_0.8=87/235=37.02%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [29, 28, 24, 31, 18, 19, 9, 6, 9, 7, 10, 5, 5, 3, 8, 24]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=235): [60, 15, 10, 16, 12, 9, 12, 14, 18, 19, 13, 11, 7, 9, 7, 3]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:33926 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA-pf-summary @4100] format_chat: p50=0.01 p95=0.02 max=0.75 | tokenize_client: p50=0.00 p95=0.00 max=0.09 | http_post: p50=68.71 p95=87.44 max=102.50 | parse_response: p50=0.22 p95=0.33 max=0.45 | total: p50=68.93 p95=87.75 max=102.73 | apply_total: p50=1.27 p95=83.54 max=114.13 | apply_topk_ent: p50=0.71 p95=1.27 max=1.79 | apply_cpu_sync: p50=0.19 p95=0.38 max=0.50 | skip_step: p50=0.99 p95=1.67 max=2.71 | intv_prepare: p50=0.12 p95=0.24 max=0.34 | intv_apply_logits: p50=1.30 p95=1.45 max=2.20
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=169/367  ratio=46.0%  top1_flip=6/169 (3.6%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [99, 19, 13, 9, 14, 15, 13, 16, 23, 24, 16, 24, 19, 27, 22, 14]  (ge_0.8=169/367=46.05%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [71, 40, 49, 34, 24, 14, 11, 14, 11, 9, 8, 6, 3, 11, 5, 57]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=367): [99, 19, 13, 9, 14, 15, 13, 16, 23, 24, 16, 24, 19, 27, 22, 14]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:38446 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA-pf-summary @4200] format_chat: p50=0.01 p95=0.02 max=0.75 | tokenize_client: p50=0.00 p95=0.00 max=0.09 | http_post: p50=69.02 p95=88.20 max=102.50 | parse_response: p50=0.22 p95=0.34 max=0.45 | total: p50=69.24 p95=88.43 max=102.73 | apply_total: p50=1.42 p95=86.19 max=114.13 | apply_topk_ent: p50=0.78 p95=1.29 max=1.82 | apply_cpu_sync: p50=0.21 p95=0.38 max=0.57 | skip_step: p50=1.01 p95=1.68 max=2.71 | intv_prepare: p50=0.12 p95=0.24 max=0.35 | intv_apply_logits: p50=1.30 p95=1.45 max=2.20
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=77/289  ratio=26.6%  top1_flip=1/77 (1.3%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [94, 18, 22, 13, 18, 14, 15, 18, 12, 12, 12, 12, 13, 8, 5, 3]  (ge_0.8=77/289=26.64%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [27, 32, 26, 26, 30, 15, 19, 11, 10, 13, 10, 6, 5, 7, 6, 46]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=289): [94, 18, 22, 13, 18, 14, 15, 18, 12, 12, 12, 12, 13, 8, 5, 3]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:46782 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA-pf-summary @4300] format_chat: p50=0.01 p95=0.02 max=0.75 | tokenize_client: p50=0.00 p95=0.00 max=0.09 | http_post: p50=68.74 p95=87.76 max=102.50 | parse_response: p50=0.22 p95=0.33 max=0.45 | total: p50=68.97 p95=88.00 max=102.73 | apply_total: p50=1.32 p95=84.12 max=114.13 | apply_topk_ent: p50=0.73 p95=1.27 max=1.82 | apply_cpu_sync: p50=0.20 p95=0.38 max=0.57 | skip_step: p50=0.97 p95=1.67 max=2.71 | intv_prepare: p50=0.12 p95=0.24 max=0.35 | intv_apply_logits: p50=1.30 p95=1.45 max=2.20
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=81/372  ratio=21.8%  top1_flip=6/81 (7.4%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [142, 26, 29, 18, 18, 13, 23, 22, 14, 17, 16, 11, 10, 2, 6, 5]  (ge_0.8=81/372=21.77%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [41, 36, 27, 26, 25, 20, 22, 17, 14, 16, 11, 12, 4, 12, 8, 81]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=372): [142, 26, 29, 18, 18, 13, 23, 22, 14, 17, 16, 11, 10, 2, 6, 5]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:58216 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA-pf-summary @4400] format_chat: p50=0.01 p95=0.02 max=0.75 | tokenize_client: p50=0.00 p95=0.00 max=0.09 | http_post: p50=68.83 p95=87.76 max=102.50 | parse_response: p50=0.22 p95=0.34 max=0.45 | total: p50=69.09 p95=88.00 max=102.73 | apply_total: p50=1.46 p95=83.86 max=100.51 | apply_topk_ent: p50=0.85 p95=1.27 max=1.82 | apply_cpu_sync: p50=0.23 p95=0.41 max=0.57 | skip_step: p50=1.00 p95=1.67 max=2.71 | intv_prepare: p50=0.12 p95=0.24 max=0.35 | intv_apply_logits: p50=1.30 p95=1.45 max=2.20
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=70/179  ratio=39.1%  top1_flip=10/70 (14.3%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [46, 17, 6, 7, 4, 11, 10, 8, 11, 9, 14, 13, 5, 6, 8, 4]  (ge_0.8=70/179=39.11%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [32, 21, 22, 13, 14, 5, 8, 11, 5, 6, 1, 5, 4, 3, 2, 27]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=179): [46, 17, 6, 7, 4, 11, 10, 8, 11, 9, 14, 13, 5, 6, 8, 4]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:49332 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=35/55  ratio=63.6%  top1_flip=1/35 (2.9%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [8, 2, 1, 2, 1, 3, 1, 2, 2, 2, 3, 5, 8, 3, 5, 7]  (ge_0.8=35/55=63.64%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [9, 13, 8, 6, 4, 2, 3, 0, 1, 0, 5, 0, 0, 0, 1, 3]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=55): [8, 2, 1, 2, 1, 3, 1, 2, 2, 2, 3, 5, 8, 3, 5, 7]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:39122 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA-pf-summary @4500] format_chat: p50=0.01 p95=0.02 max=0.75 | tokenize_client: p50=0.00 p95=0.00 max=0.09 | http_post: p50=68.65 p95=87.44 max=102.50 | parse_response: p50=0.22 p95=0.34 max=0.45 | total: p50=68.88 p95=87.75 max=102.73 | apply_total: p50=1.46 p95=82.72 max=100.51 | apply_topk_ent: p50=0.86 p95=1.27 max=1.82 | apply_cpu_sync: p50=0.24 p95=0.40 max=0.57 | skip_step: p50=1.00 p95=1.67 max=2.71 | intv_prepare: p50=0.12 p95=0.24 max=0.35 | intv_apply_logits: p50=1.30 p95=1.45 max=2.20
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=120/490  ratio=24.5%  top1_flip=9/120 (7.5%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [191, 37, 27, 13, 18, 22, 25, 37, 14, 24, 24, 17, 13, 13, 8, 7]  (ge_0.8=120/490=24.49%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [53, 52, 44, 38, 25, 26, 19, 23, 13, 15, 25, 18, 17, 14, 18, 90]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=490): [191, 37, 27, 13, 18, 22, 25, 37, 14, 24, 24, 17, 13, 13, 8, 7]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:39138 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA-pf-summary @4600] format_chat: p50=0.01 p95=0.02 max=0.75 | tokenize_client: p50=0.00 p95=0.00 max=0.09 | http_post: p50=68.75 p95=88.22 max=102.50 | parse_response: p50=0.21 p95=0.34 max=0.45 | total: p50=68.99 p95=88.43 max=102.73 | apply_total: p50=1.38 p95=83.70 max=100.51 | apply_topk_ent: p50=0.82 p95=1.27 max=1.82 | apply_cpu_sync: p50=0.23 p95=0.39 max=0.57 | skip_step: p50=1.02 p95=1.66 max=2.35 | intv_prepare: p50=0.12 p95=0.24 max=0.35 | intv_apply_logits: p50=1.30 p95=1.45 max=2.20
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=82/190  ratio=43.2%  top1_flip=4/82 (4.9%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [51, 8, 9, 7, 6, 10, 6, 11, 11, 8, 11, 13, 11, 8, 13, 7]  (ge_0.8=82/190=43.16%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [35, 24, 20, 20, 14, 6, 12, 4, 6, 1, 5, 4, 7, 3, 2, 27]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=190): [51, 8, 9, 7, 6, 10, 6, 11, 11, 8, 11, 13, 11, 8, 13, 7]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:56706 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA-pf-summary @4700] format_chat: p50=0.01 p95=0.02 max=0.75 | tokenize_client: p50=0.00 p95=0.00 max=0.09 | http_post: p50=68.42 p95=88.10 max=102.50 | parse_response: p50=0.21 p95=0.34 max=0.45 | total: p50=68.68 p95=88.25 max=102.73 | apply_total: p50=1.43 p95=80.67 max=96.47 | apply_topk_ent: p50=0.83 p95=1.27 max=1.70 | apply_cpu_sync: p50=0.23 p95=0.40 max=0.51 | skip_step: p50=1.03 p95=1.66 max=2.35 | intv_prepare: p50=0.12 p95=0.24 max=0.35 | intv_apply_logits: p50=1.30 p95=1.45 max=2.20
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=88/275  ratio=32.0%  top1_flip=10/88 (11.4%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [89, 14, 11, 16, 13, 15, 7, 22, 17, 23, 16, 13, 5, 7, 5, 2]  (ge_0.8=88/275=32.00%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [31, 39, 30, 26, 19, 9, 18, 11, 11, 9, 10, 7, 4, 8, 8, 35]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=275): [89, 14, 11, 16, 13, 15, 7, 22, 17, 23, 16, 13, 5, 7, 5, 2]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:55888 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=5/31  ratio=16.1%  top1_flip=2/5 (40.0%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [21, 1, 0, 0, 1, 0, 1, 2, 0, 1, 0, 1, 0, 2, 1, 0]  (ge_0.8=5/31=16.13%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [0, 4, 1, 2, 1, 0, 1, 0, 1, 0, 2, 2, 1, 1, 1, 14]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=31): [21, 1, 0, 0, 1, 0, 1, 2, 0, 1, 0, 1, 0, 2, 1, 0]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:40996 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=7/17  ratio=41.2%  top1_flip=4/7 (57.1%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [3, 1, 0, 1, 1, 1, 0, 3, 1, 4, 0, 1, 0, 0, 0, 1]  (ge_0.8=7/17=41.18%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [3, 2, 3, 2, 2, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 0]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=17): [3, 1, 0, 1, 1, 1, 0, 3, 1, 4, 0, 1, 0, 0, 0, 1]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:41012 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=27/82  ratio=32.9%  top1_flip=6/27 (22.2%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [36, 3, 5, 1, 2, 1, 1, 6, 2, 3, 6, 4, 5, 3, 3, 1]  (ge_0.8=27/82=32.93%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [8, 14, 5, 7, 2, 3, 3, 2, 1, 5, 3, 1, 1, 3, 2, 22]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=82): [36, 3, 5, 1, 2, 1, 1, 6, 2, 3, 6, 4, 5, 3, 3, 1]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:41022 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=8/13  ratio=61.5%  top1_flip=5/8 (62.5%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [2, 0, 0, 0, 1, 1, 0, 1, 0, 1, 2, 0, 2, 1, 2, 0]  (ge_0.8=8/13=61.54%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [3, 4, 0, 2, 1, 1, 0, 0, 0, 0, 1, 1, 0, 0, 0, 0]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=13): [2, 0, 0, 0, 1, 1, 0, 1, 0, 1, 2, 0, 2, 1, 2, 0]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:41026 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA-pf-summary @4800] format_chat: p50=0.01 p95=0.02 max=0.75 | tokenize_client: p50=0.00 p95=0.00 max=0.09 | http_post: p50=68.38 p95=87.66 max=102.50 | parse_response: p50=0.22 p95=0.34 max=0.45 | total: p50=68.68 p95=87.91 max=102.73 | apply_total: p50=1.46 p95=81.13 max=96.47 | apply_topk_ent: p50=0.84 p95=1.27 max=1.79 | apply_cpu_sync: p50=0.24 p95=0.39 max=0.51 | skip_step: p50=1.05 p95=1.66 max=2.35 | intv_prepare: p50=0.12 p95=0.24 max=0.35 | intv_apply_logits: p50=1.30 p95=1.45 max=2.20
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=64/110  ratio=58.2%  top1_flip=5/64 (7.8%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [14, 6, 5, 2, 2, 6, 4, 7, 9, 3, 7, 5, 11, 11, 7, 11]  (ge_0.8=64/110=58.18%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [24, 24, 12, 12, 9, 4, 6, 3, 3, 1, 2, 1, 0, 0, 1, 8]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=110): [14, 6, 5, 2, 2, 6, 4, 7, 9, 3, 7, 5, 11, 11, 7, 11]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:41042 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=34/69  ratio=49.3%  top1_flip=3/34 (8.8%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [11, 4, 2, 2, 5, 1, 2, 8, 8, 6, 2, 5, 3, 1, 2, 7]  (ge_0.8=34/69=49.28%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [13, 12, 8, 9, 8, 1, 3, 3, 2, 0, 0, 2, 2, 2, 0, 4]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=69): [11, 4, 2, 2, 5, 1, 2, 8, 8, 6, 2, 5, 3, 1, 2, 7]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:33180 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA-pf-summary @4900] format_chat: p50=0.01 p95=0.02 max=0.75 | tokenize_client: p50=0.00 p95=0.00 max=0.09 | http_post: p50=68.11 p95=87.34 max=102.50 | parse_response: p50=0.22 p95=0.34 max=0.45 | total: p50=68.40 p95=87.56 max=102.73 | apply_total: p50=1.52 p95=80.20 max=97.05 | apply_topk_ent: p50=0.86 p95=1.29 max=1.79 | apply_cpu_sync: p50=0.24 p95=0.41 max=0.60 | skip_step: p50=1.07 p95=1.67 max=17.82 | intv_prepare: p50=0.12 p95=0.24 max=0.35 | intv_apply_logits: p50=1.30 p95=1.45 max=2.20
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=74/390  ratio=19.0%  top1_flip=1/74 (1.4%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [178, 23, 22, 11, 8, 24, 23, 27, 22, 13, 12, 10, 3, 6, 5, 3]  (ge_0.8=74/390=18.97%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [30, 31, 39, 31, 26, 19, 17, 9, 13, 12, 9, 15, 15, 17, 15, 92]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=390): [178, 23, 22, 11, 8, 24, 23, 27, 22, 13, 12, 10, 3, 6, 5, 3]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:33188 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA-pf-summary @5000] format_chat: p50=0.01 p95=0.02 max=0.75 | tokenize_client: p50=0.00 p95=0.00 max=0.09 | http_post: p50=68.34 p95=87.42 max=102.50 | parse_response: p50=0.21 p95=0.34 max=0.93 | total: p50=68.65 p95=87.57 max=102.73 | apply_total: p50=1.25 p95=79.36 max=100.38 | apply_topk_ent: p50=0.76 p95=1.28 max=1.79 | apply_cpu_sync: p50=0.21 p95=0.39 max=0.60 | skip_step: p50=0.94 p95=1.67 max=17.82 | intv_prepare: p50=0.12 p95=0.24 max=0.35 | intv_apply_logits: p50=1.30 p95=1.45 max=2.20
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=67/307  ratio=21.8%  top1_flip=6/67 (9.0%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [137, 19, 11, 16, 10, 13, 17, 17, 14, 9, 10, 13, 8, 6, 4, 3]  (ge_0.8=67/307=21.82%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [26, 28, 32, 19, 19, 9, 11, 13, 11, 25, 23, 19, 15, 10, 5, 42]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=307): [137, 19, 11, 16, 10, 13, 17, 17, 14, 9, 10, 13, 8, 6, 4, 3]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:41536 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA-pf-summary @5100] format_chat: p50=0.01 p95=0.02 max=0.39 | tokenize_client: p50=0.00 p95=0.00 max=0.09 | http_post: p50=67.43 p95=86.29 max=97.56 | parse_response: p50=0.21 p95=0.34 max=0.93 | total: p50=67.65 p95=86.60 max=97.79 | apply_total: p50=1.26 p95=78.62 max=100.38 | apply_topk_ent: p50=0.74 p95=1.26 max=1.79 | apply_cpu_sync: p50=0.20 p95=0.39 max=0.60 | skip_step: p50=0.92 p95=1.65 max=17.82 | intv_prepare: p50=0.12 p95=0.24 max=0.35 | intv_apply_logits: p50=1.29 p95=1.44 max=1.98
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=88/226  ratio=38.9%  top1_flip=5/88 (5.7%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [46, 17, 10, 13, 11, 16, 12, 13, 9, 15, 10, 12, 11, 12, 13, 6]  (ge_0.8=88/226=38.94%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [41, 27, 32, 16, 25, 8, 12, 8, 14, 6, 4, 5, 2, 2, 2, 22]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=226): [46, 17, 10, 13, 11, 16, 12, 13, 9, 15, 10, 12, 11, 12, 13, 6]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:38034 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA-pf-summary @5200] format_chat: p50=0.01 p95=0.02 max=0.39 | tokenize_client: p50=0.00 p95=0.00 max=0.09 | http_post: p50=66.94 p95=85.87 max=97.56 | parse_response: p50=0.21 p95=0.34 max=0.93 | total: p50=67.28 p95=86.14 max=97.79 | apply_total: p50=1.31 p95=78.72 max=100.38 | apply_topk_ent: p50=0.76 p95=1.26 max=1.79 | apply_cpu_sync: p50=0.21 p95=0.39 max=0.60 | skip_step: p50=0.93 p95=1.65 max=17.82 | intv_prepare: p50=0.12 p95=0.24 max=0.35 | intv_apply_logits: p50=1.29 p95=1.44 max=1.98
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=108/296  ratio=36.5%  top1_flip=6/108 (5.6%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [72, 17, 19, 19, 11, 9, 19, 22, 19, 11, 14, 9, 16, 15, 16, 8]  (ge_0.8=108/296=36.49%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [50, 30, 38, 26, 23, 9, 21, 15, 10, 10, 10, 5, 9, 4, 1, 35]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=296): [72, 17, 19, 19, 11, 9, 19, 22, 19, 11, 14, 9, 16, 15, 16, 8]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:45046 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=79/195  ratio=40.5%  top1_flip=5/79 (6.3%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [49, 13, 6, 6, 10, 7, 8, 17, 10, 9, 8, 11, 13, 15, 5, 8]  (ge_0.8=79/195=40.51%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [26, 29, 24, 22, 15, 9, 6, 5, 7, 6, 5, 6, 7, 4, 3, 21]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=195): [49, 13, 6, 6, 10, 7, 8, 17, 10, 9, 8, 11, 13, 15, 5, 8]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:37250 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA-pf-summary @5300] format_chat: p50=0.01 p95=0.02 max=0.59 | tokenize_client: p50=0.00 p95=0.00 max=0.09 | http_post: p50=66.76 p95=85.47 max=97.56 | parse_response: p50=0.22 p95=0.34 max=0.93 | total: p50=67.01 p95=85.83 max=97.79 | apply_total: p50=1.35 p95=79.03 max=100.38 | apply_topk_ent: p50=0.78 p95=1.27 max=1.79 | apply_cpu_sync: p50=0.22 p95=0.39 max=0.60 | skip_step: p50=0.98 p95=1.65 max=17.82 | intv_prepare: p50=0.12 p95=0.24 max=0.35 | intv_apply_logits: p50=1.29 p95=1.44 max=1.98
+(EngineCore pid=1137007) [SIA-pf-summary @5400] format_chat: p50=0.01 p95=0.02 max=0.59 | tokenize_client: p50=0.00 p95=0.00 max=0.09 | http_post: p50=66.95 p95=84.79 max=100.40 | parse_response: p50=0.22 p95=0.34 max=0.93 | total: p50=67.29 p95=85.16 max=100.66 | apply_total: p50=1.47 p95=78.98 max=103.46 | apply_topk_ent: p50=0.82 p95=1.27 max=1.58 | apply_cpu_sync: p50=0.22 p95=0.39 max=0.90 | skip_step: p50=1.00 p95=1.65 max=17.82 | intv_prepare: p50=0.12 p95=0.24 max=0.35 | intv_apply_logits: p50=1.30 p95=1.44 max=1.98
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=125/344  ratio=36.3%  top1_flip=3/125 (2.4%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [111, 22, 15, 15, 14, 14, 16, 12, 9, 13, 17, 20, 21, 22, 18, 5]  (ge_0.8=125/344=36.34%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [50, 44, 32, 21, 22, 22, 21, 12, 6, 12, 9, 11, 6, 2, 10, 64]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=344): [111, 22, 15, 15, 14, 14, 16, 12, 9, 13, 17, 20, 21, 22, 18, 5]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:44956 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA-pf-summary @5500] format_chat: p50=0.01 p95=0.02 max=0.59 | tokenize_client: p50=0.00 p95=0.00 max=0.09 | http_post: p50=67.45 p95=85.37 max=100.40 | parse_response: p50=0.22 p95=0.34 max=0.93 | total: p50=67.67 p95=85.64 max=100.66 | apply_total: p50=1.48 p95=80.08 max=103.46 | apply_topk_ent: p50=0.83 p95=1.27 max=1.70 | apply_cpu_sync: p50=0.22 p95=0.39 max=0.90 | skip_step: p50=1.01 p95=1.65 max=17.82 | intv_prepare: p50=0.12 p95=0.24 max=0.35 | intv_apply_logits: p50=1.30 p95=1.44 max=1.98
+(EngineCore pid=1137007) [SIA-pf-summary @5600] format_chat: p50=0.01 p95=0.02 max=0.59 | tokenize_client: p50=0.00 p95=0.00 max=0.09 | http_post: p50=67.99 p95=86.95 max=105.27 | parse_response: p50=0.22 p95=0.34 max=0.93 | total: p50=68.25 p95=87.24 max=105.50 | apply_total: p50=1.50 p95=83.88 max=107.83 | apply_topk_ent: p50=0.85 p95=1.27 max=1.75 | apply_cpu_sync: p50=0.24 p95=0.40 max=0.90 | skip_step: p50=1.07 p95=1.65 max=2.35 | intv_prepare: p50=0.13 p95=0.24 max=0.35 | intv_apply_logits: p50=1.30 p95=1.44 max=1.98
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=228/648  ratio=35.2%  top1_flip=6/228 (2.6%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [169, 42, 27, 36, 32, 28, 38, 48, 28, 35, 39, 23, 31, 31, 20, 21]  (ge_0.8=228/648=35.19%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [100, 84, 61, 57, 60, 45, 26, 25, 25, 15, 16, 15, 11, 11, 13, 84]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=648): [169, 42, 27, 36, 32, 28, 38, 48, 28, 35, 39, 23, 31, 31, 20, 21]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:40120 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=3/5  ratio=60.0%  top1_flip=3/3 (100.0%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1]  (ge_0.8=3/5=60.00%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [1, 1, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=5): [1, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:39544 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA-pf-summary @5700] format_chat: p50=0.01 p95=0.02 max=0.59 | tokenize_client: p50=0.00 p95=0.00 max=0.09 | http_post: p50=68.18 p95=89.16 max=110.33 | parse_response: p50=0.22 p95=0.34 max=0.93 | total: p50=68.46 p95=89.40 max=110.55 | apply_total: p50=1.55 p95=91.54 max=112.89 | apply_topk_ent: p50=0.89 p95=1.29 max=1.75 | apply_cpu_sync: p50=0.26 p95=0.43 max=0.90 | skip_step: p50=1.08 p95=1.66 max=2.35 | intv_prepare: p50=0.12 p95=0.24 max=0.35 | intv_apply_logits: p50=1.30 p95=1.44 max=1.98
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=112/296  ratio=37.8%  top1_flip=5/112 (4.5%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [83, 20, 11, 8, 18, 13, 19, 12, 9, 19, 9, 19, 14, 13, 18, 11]  (ge_0.8=112/296=37.84%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [45, 40, 34, 27, 19, 12, 12, 16, 6, 6, 7, 9, 5, 6, 6, 46]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=296): [83, 20, 11, 8, 18, 13, 19, 12, 9, 19, 9, 19, 14, 13, 18, 11]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:39560 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA-pf-summary @5800] format_chat: p50=0.01 p95=0.02 max=0.59 | tokenize_client: p50=0.00 p95=0.00 max=0.09 | http_post: p50=67.94 p95=88.63 max=110.33 | parse_response: p50=0.22 p95=0.34 max=0.93 | total: p50=68.18 p95=88.89 max=110.55 | apply_total: p50=1.54 p95=89.76 max=112.89 | apply_topk_ent: p50=0.88 p95=1.28 max=1.75 | apply_cpu_sync: p50=0.25 p95=0.42 max=0.90 | skip_step: p50=1.08 p95=1.66 max=2.35 | intv_prepare: p50=0.12 p95=0.24 max=0.35 | intv_apply_logits: p50=1.30 p95=1.44 max=1.98
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=85/370  ratio=23.0%  top1_flip=12/85 (14.1%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [140, 21, 17, 18, 22, 12, 23, 32, 14, 13, 11, 13, 13, 6, 10, 5]  (ge_0.8=85/370=22.97%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [41, 43, 23, 38, 18, 30, 14, 11, 17, 7, 13, 12, 13, 15, 15, 60]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=370): [140, 21, 17, 18, 22, 12, 23, 32, 14, 13, 11, 13, 13, 6, 10, 5]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:53264 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA-pf-summary @5900] format_chat: p50=0.01 p95=0.02 max=0.59 | tokenize_client: p50=0.00 p95=0.00 max=0.09 | http_post: p50=67.94 p95=88.57 max=110.33 | parse_response: p50=0.22 p95=0.34 max=0.93 | total: p50=68.17 p95=88.77 max=110.55 | apply_total: p50=1.51 p95=87.97 max=112.89 | apply_topk_ent: p50=0.87 p95=1.28 max=2.09 | apply_cpu_sync: p50=0.25 p95=0.42 max=0.90 | skip_step: p50=1.08 p95=1.66 max=2.75 | intv_prepare: p50=0.13 p95=0.24 max=0.35 | intv_apply_logits: p50=1.30 p95=1.45 max=1.98
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=130/380  ratio=34.2%  top1_flip=7/130 (5.4%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [101, 28, 25, 22, 21, 12, 18, 23, 16, 19, 14, 23, 15, 19, 14, 10]  (ge_0.8=130/380=34.21%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [47, 49, 46, 28, 27, 18, 28, 15, 19, 14, 19, 25, 17, 15, 5, 8]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=380): [101, 28, 25, 22, 21, 12, 18, 23, 16, 19, 14, 23, 15, 19, 14, 10]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:34516 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA-pf-summary @6000] format_chat: p50=0.01 p95=0.02 max=0.59 | tokenize_client: p50=0.00 p95=0.00 max=0.09 | http_post: p50=68.08 p95=88.51 max=110.33 | parse_response: p50=0.22 p95=0.34 max=0.93 | total: p50=68.35 p95=88.73 max=110.55 | apply_total: p50=1.37 p95=81.03 max=96.13 | apply_topk_ent: p50=0.84 p95=1.28 max=2.09 | apply_cpu_sync: p50=0.24 p95=0.42 max=0.71 | skip_step: p50=1.10 p95=1.69 max=2.75 | intv_prepare: p50=0.12 p95=0.24 max=0.35 | intv_apply_logits: p50=1.30 p95=1.45 max=1.98
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=103/327  ratio=31.5%  top1_flip=7/103 (6.8%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [101, 14, 12, 15, 17, 25, 16, 24, 16, 15, 19, 14, 11, 10, 14, 4]  (ge_0.8=103/327=31.50%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [44, 38, 31, 39, 24, 23, 10, 5, 14, 11, 10, 12, 8, 11, 7, 40]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=327): [101, 14, 12, 15, 17, 25, 16, 24, 16, 15, 19, 14, 11, 10, 14, 4]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:51070 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=7/11  ratio=63.6%  top1_flip=4/7 (57.1%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [2, 1, 1, 0, 0, 0, 0, 0, 4, 1, 0, 0, 2, 0, 0, 0]  (ge_0.8=7/11=63.64%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [1, 1, 1, 4, 0, 0, 0, 1, 0, 1, 0, 0, 0, 1, 0, 1]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=11): [2, 1, 1, 0, 0, 0, 0, 0, 4, 1, 0, 0, 2, 0, 0, 0]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:58672 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA-pf-summary @6100] format_chat: p50=0.01 p95=0.02 max=0.59 | tokenize_client: p50=0.00 p95=0.00 max=0.06 | http_post: p50=68.64 p95=89.68 max=110.33 | parse_response: p50=0.22 p95=0.34 max=0.50 | total: p50=68.96 p95=89.91 max=110.55 | apply_total: p50=1.41 p95=81.80 max=96.13 | apply_topk_ent: p50=0.86 p95=1.29 max=2.09 | apply_cpu_sync: p50=0.24 p95=0.43 max=0.71 | skip_step: p50=1.10 p95=1.69 max=2.75 | intv_prepare: p50=0.13 p95=0.24 max=0.34 | intv_apply_logits: p50=1.30 p95=1.46 max=1.81
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=21/57  ratio=36.8%  top1_flip=2/21 (9.5%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [21, 1, 1, 2, 4, 3, 2, 2, 1, 3, 6, 4, 1, 2, 1, 3]  (ge_0.8=21/57=36.84%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [9, 6, 5, 9, 2, 1, 3, 1, 1, 3, 4, 4, 0, 1, 1, 7]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=57): [21, 1, 1, 2, 4, 3, 2, 2, 1, 3, 6, 4, 1, 2, 1, 3]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:58688 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=18/53  ratio=34.0%  top1_flip=4/18 (22.2%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [27, 4, 0, 2, 1, 1, 0, 0, 2, 2, 3, 5, 1, 0, 1, 4]  (ge_0.8=18/53=33.96%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [8, 4, 4, 2, 1, 2, 1, 0, 2, 3, 1, 2, 0, 3, 4, 16]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=53): [27, 4, 0, 2, 1, 1, 0, 0, 2, 2, 3, 5, 1, 0, 1, 4]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:58694 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=1/7  ratio=14.3%  top1_flip=0/1 (0.0%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [2, 1, 0, 1, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0]  (ge_0.8=1/7=14.29%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [1, 0, 0, 0, 2, 1, 0, 0, 1, 1, 0, 0, 0, 0, 0, 1]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=7): [2, 1, 0, 1, 1, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:34930 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA-pf-summary @6200] format_chat: p50=0.01 p95=0.02 max=0.59 | tokenize_client: p50=0.00 p95=0.00 max=0.06 | http_post: p50=68.00 p95=89.16 max=110.33 | parse_response: p50=0.22 p95=0.34 max=0.50 | total: p50=68.22 p95=89.38 max=110.55 | apply_total: p50=1.32 p95=80.92 max=96.13 | apply_topk_ent: p50=0.80 p95=1.28 max=2.09 | apply_cpu_sync: p50=0.22 p95=0.42 max=0.71 | skip_step: p50=1.04 p95=1.68 max=2.75 | intv_prepare: p50=0.13 p95=0.24 max=0.34 | intv_apply_logits: p50=1.30 p95=1.46 max=1.81
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=88/417  ratio=21.1%  top1_flip=13/88 (14.8%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [168, 30, 24, 17, 10, 21, 30, 29, 26, 10, 13, 11, 12, 7, 8, 1]  (ge_0.8=88/417=21.10%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [38, 41, 43, 27, 23, 20, 22, 21, 14, 20, 12, 14, 8, 9, 12, 93]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=417): [168, 30, 24, 17, 10, 21, 30, 29, 26, 10, 13, 11, 12, 7, 8, 1]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:34934 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=3/7  ratio=42.9%  top1_flip=2/3 (66.7%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [0, 1, 1, 0, 0, 1, 0, 1, 1, 1, 0, 1, 0, 0, 0, 0]  (ge_0.8=3/7=42.86%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [0, 1, 2, 1, 0, 0, 2, 0, 1, 0, 0, 0, 0, 0, 0, 0]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=7): [0, 1, 1, 0, 0, 1, 0, 1, 1, 1, 0, 1, 0, 0, 0, 0]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:34882 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=54/161  ratio=33.5%  top1_flip=8/54 (14.8%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [42, 12, 7, 12, 7, 8, 7, 12, 6, 9, 4, 10, 13, 7, 4, 1]  (ge_0.8=54/161=33.54%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [18, 19, 24, 13, 7, 12, 11, 5, 7, 5, 6, 7, 5, 1, 8, 13]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=161): [42, 12, 7, 12, 7, 8, 7, 12, 6, 9, 4, 10, 13, 7, 4, 1]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:34888 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA-pf-summary @6300] format_chat: p50=0.01 p95=0.02 max=0.59 | tokenize_client: p50=0.00 p95=0.00 max=0.06 | http_post: p50=67.76 p95=88.77 max=110.33 | parse_response: p50=0.22 p95=0.35 max=0.50 | total: p50=67.99 p95=88.91 max=110.55 | apply_total: p50=1.23 p95=80.85 max=93.20 | apply_topk_ent: p50=0.74 p95=1.28 max=1.79 | apply_cpu_sync: p50=0.21 p95=0.41 max=0.56 | skip_step: p50=1.04 p95=1.68 max=2.75 | intv_prepare: p50=0.12 p95=0.24 max=0.34 | intv_apply_logits: p50=1.30 p95=1.45 max=1.81
+(EngineCore pid=1137007) [SIA-pf-summary @6400] format_chat: p50=0.01 p95=0.02 max=0.59 | tokenize_client: p50=0.00 p95=0.00 max=0.06 | http_post: p50=67.23 p95=88.27 max=110.33 | parse_response: p50=0.22 p95=0.34 max=0.50 | total: p50=67.49 p95=88.41 max=110.55 | apply_total: p50=1.29 p95=80.52 max=93.20 | apply_topk_ent: p50=0.77 p95=1.28 max=1.79 | apply_cpu_sync: p50=0.21 p95=0.40 max=0.56 | skip_step: p50=1.05 p95=1.67 max=2.75 | intv_prepare: p50=0.12 p95=0.24 max=0.34 | intv_apply_logits: p50=1.30 p95=1.45 max=1.81
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=140/360  ratio=38.9%  top1_flip=12/140 (8.6%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [81, 26, 15, 18, 20, 20, 20, 20, 21, 14, 21, 24, 17, 10, 25, 8]  (ge_0.8=140/360=38.89%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [53, 42, 44, 48, 23, 21, 22, 12, 13, 12, 5, 6, 10, 16, 5, 28]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=360): [81, 26, 15, 18, 20, 20, 20, 20, 21, 14, 21, 24, 17, 10, 25, 8]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:34900 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA-pf-summary @6500] format_chat: p50=0.01 p95=0.02 max=0.59 | tokenize_client: p50=0.00 p95=0.00 max=0.06 | http_post: p50=67.20 p95=87.86 max=110.33 | parse_response: p50=0.22 p95=0.35 max=0.50 | total: p50=67.43 p95=88.18 max=110.55 | apply_total: p50=1.42 p95=80.53 max=93.20 | apply_topk_ent: p50=0.81 p95=1.29 max=1.97 | apply_cpu_sync: p50=0.22 p95=0.42 max=0.73 | skip_step: p50=1.01 p95=1.68 max=2.75 | intv_prepare: p50=0.13 p95=0.24 max=0.34 | intv_apply_logits: p50=1.30 p95=1.46 max=1.96
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=97/190  ratio=51.1%  top1_flip=5/97 (5.2%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [37, 7, 5, 6, 6, 9, 10, 13, 5, 17, 6, 10, 15, 17, 19, 8]  (ge_0.8=97/190=51.05%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [39, 28, 31, 21, 15, 5, 6, 3, 4, 9, 1, 3, 3, 4, 5, 13]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=190): [37, 7, 5, 6, 6, 9, 10, 13, 5, 17, 6, 10, 15, 17, 19, 8]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:33608 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=10/13  ratio=76.9%  top1_flip=4/10 (40.0%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [0, 0, 1, 1, 1, 0, 0, 0, 1, 3, 3, 0, 0, 1, 2, 0]  (ge_0.8=10/13=76.92%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [1, 3, 2, 2, 2, 0, 3, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=13): [0, 0, 1, 1, 1, 0, 0, 0, 1, 3, 3, 0, 0, 1, 2, 0]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:46576 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA-pf-summary @6600] format_chat: p50=0.01 p95=0.02 max=0.59 | tokenize_client: p50=0.00 p95=0.00 max=0.06 | http_post: p50=66.82 p95=87.60 max=110.33 | parse_response: p50=0.22 p95=0.35 max=0.50 | total: p50=67.06 p95=87.79 max=110.55 | apply_total: p50=1.44 p95=80.06 max=94.82 | apply_topk_ent: p50=0.82 p95=1.29 max=1.97 | apply_cpu_sync: p50=0.23 p95=0.42 max=0.73 | skip_step: p50=1.03 p95=1.68 max=2.75 | intv_prepare: p50=0.13 p95=0.24 max=0.34 | intv_apply_logits: p50=1.30 p95=1.45 max=1.96
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=96/288  ratio=33.3%  top1_flip=5/96 (5.2%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [92, 14, 20, 17, 10, 9, 15, 15, 16, 14, 14, 16, 16, 4, 11, 5]  (ge_0.8=96/288=33.33%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [36, 31, 29, 21, 25, 17, 13, 10, 15, 10, 13, 13, 17, 10, 6, 22]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=288): [92, 14, 20, 17, 10, 9, 15, 15, 16, 14, 14, 16, 16, 4, 11, 5]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:46586 - "POST /v1/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=1137007) [SIA] req=0 DONE  intervened=22/71  ratio=31.0%  top1_flip=5/22 (22.7%)
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_HIST [0..1.6 step=0.1] = [26, 5, 3, 5, 7, 1, 1, 1, 2, 3, 3, 3, 5, 1, 3, 2]  (ge_0.8=22/71=30.99%)
+(EngineCore pid=1137007) [SIA-debug] req=0 GAP_HIST     [0..8.0 step=0.5] = [9, 5, 6, 7, 1, 5, 4, 4, 2, 5, 4, 1, 2, 2, 3, 11]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_INTHINK  (n=71): [26, 5, 3, 5, 7, 1, 1, 1, 2, 3, 3, 3, 5, 1, 3, 2]
+(EngineCore pid=1137007) [SIA-debug] req=0 ENTROPY_OUTTHINK (n=0): None
+INFO:     127.0.0.1:42110 - "POST /v1/completions HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [1136845]
+/usr/lib/python3.12/multiprocessing/resource_tracker.py:254: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '

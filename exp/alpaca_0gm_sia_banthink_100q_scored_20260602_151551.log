@@ -1,0 +1,17 @@
+loading Skywork RM: /workspace/SIA/models/Skywork-Reward-V2-Llama-3.1-8B
+Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:  25%|██▌       | 1/4 [00:02<00:08,  2.68s/it]Loading checkpoint shards:  50%|█████     | 2/4 [00:04<00:04,  2.05s/it]Loading checkpoint shards:  75%|███████▌  | 3/4 [00:06<00:01,  1.96s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:06<00:00,  1.36s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:06<00:00,  1.64s/it]
+RM ready on cuda:0
+scoring 100 samples from /tmp/alpaca_0gm_sia_banthink_100q_20260602_151551.json
+strip_think = False
+  [50/100] scored 48 (skip_err=2 skip_long=0), cur_mean_reward=9.4863
+  [100/100] scored 98 (skip_err=2 skip_long=0), cur_mean_reward=8.7755
+
+=== summary ===
+  total samples: 100
+  scored: 98
+  skipped (error/empty): 2
+  skipped (too long > 2048): 0
+  mean reward: 8.7755
+  p50: 9.3750
+  min: -13.3750  max: 42.2500
+  saved scored JSON to: /tmp/alpaca_0gm_sia_banthink_scored_20260602_161059.json

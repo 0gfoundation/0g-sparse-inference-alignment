@@ -1,0 +1,19 @@
+loading Skywork RM: /workspace/SIA/models/Skywork-Reward-V2-Llama-3.1-8B
+Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:  25%|██▌       | 1/4 [00:10<00:30, 10.30s/it]Loading checkpoint shards:  50%|█████     | 2/4 [00:19<00:19,  9.94s/it]Loading checkpoint shards:  75%|███████▌  | 3/4 [00:29<00:09,  9.58s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:29<00:00,  5.99s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:29<00:00,  7.41s/it]
+RM ready on cuda:0
+scoring 200 samples from /tmp/alpaca_0gm_nosia_200q_20260602_122922.json
+strip_think = False
+  [50/200] scored 50 (skip_err=0 skip_long=0), cur_mean_reward=18.4966
+  [100/200] scored 100 (skip_err=0 skip_long=0), cur_mean_reward=16.9988
+  [150/200] scored 150 (skip_err=0 skip_long=0), cur_mean_reward=17.4266
+  [200/200] scored 200 (skip_err=0 skip_long=0), cur_mean_reward=18.0551
+
+=== summary ===
+  total samples: 200
+  scored: 200
+  skipped (error/empty): 0
+  skipped (too long > 2048): 0
+  mean reward: 18.0551
+  p50: 17.2500
+  min: -6.2188  max: 44.2500
+  saved scored JSON to: /tmp/alpaca_0gm_nosia_200q_scored.json
