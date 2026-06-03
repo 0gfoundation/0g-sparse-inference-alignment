@@ -608,7 +608,7 @@ def make_sia_processor(
                     "candidate_texts": candidate_texts,
                     "request_id": hashlib.md5(user_content.encode()).hexdigest()[:16],
                 },
-                timeout=30,
+                timeout=120,
             )
             resp.raise_for_status()
             scores = resp.json()["scores"]
@@ -632,27 +632,33 @@ def make_sia_processor(
             t0 = time.perf_counter() if pf_on else 0.0
 
             # ==== Step 1: 拼 chat-formatted 文本 ====
-            prefix, suffix = self._get_chat_template_parts(req_idx, user_content)
-            if prefix is not None and suffix is not None:
-                # Fast path: 缓存命中，纯字符串拼接
+            # Fix #1 (2026-06-03): 对齐官方 ValueModel 路径 — 不在 candidate 后加
+            # 任何 `<|im_end|>` 关闭 tag。官方 src/sia.py:280-281 ValueModel 分支
+            # 直接 forward `flat_rm_trme` (用户 turn + assistant header + partial
+            # response + candidate), 末尾**没有 close tag**。我们之前 `+ suffix`
+            # 加了 `<|im_end|>\n`, 把 partial-response value model 推到训练分布外,
+            # 系统性扭曲 RM score。
+            prefix, _suffix_unused = self._get_chat_template_parts(req_idx, user_content)
+            if prefix is not None:
+                # Fast path: 缓存命中, prefix 末尾已是 `<|im_start|>assistant\n`
                 formatted_texts = [
-                    prefix + response_so_far + ct + suffix
+                    prefix + response_so_far + ct
                     for ct in candidate_texts
                 ]
             else:
-                # Fallback: SENTINEL 分割失败，回到每候选 apply_chat_template
-                formatted_texts = []
+                # Fallback: 用 add_generation_prompt=True 拿到 user-only prefix
+                # (末尾是 assistant header, 无 close tag), 再拼 response + candidate
                 bos = self._llm_tok.bos_token
-                for ct in candidate_texts:
-                    response_with_cand = response_so_far + ct
-                    convs = [
-                        {"role": "user",      "content": user_content},
-                        {"role": "assistant", "content": response_with_cand},
-                    ]
-                    text = self._llm_tok.apply_chat_template(convs, tokenize=False)
-                    if bos and text.startswith(bos):
-                        text = text[len(bos):]
-                    formatted_texts.append(text)
+                fallback_prefix = self._llm_tok.apply_chat_template(
+                    [{"role": "user", "content": user_content}],
+                    tokenize=False, add_generation_prompt=True,
+                )
+                if bos and fallback_prefix.startswith(bos):
+                    fallback_prefix = fallback_prefix[len(bos):]
+                formatted_texts = [
+                    fallback_prefix + response_so_far + ct
+                    for ct in candidate_texts
+                ]
             t_format = time.perf_counter() if pf_on else 0.0
 
             # ==== Step 2: 选择发字符串还是 token_ids ====
@@ -673,7 +679,7 @@ def make_sia_processor(
                     "input": input_payload,
                     "activation": False,   # 关键：关 sigmoid，拿原始 logit
                 },
-                timeout=30,
+                timeout=120,
             )
             resp.raise_for_status()
             t_http = time.perf_counter() if pf_on else 0.0
@@ -868,14 +874,14 @@ def make_sia_processor(
                     )
                     continue
 
-                # 归一化：减均值，使得 topk 内有相对排序，
-                # 避免全负分时把 topk 全部压低、让 topk 外 token 意外胜出
+                # Fix #4 (2026-06-03): 去掉 mean-norm, 严格匹配官方公式
+                #   combined[top-k] = orig_logits + rm_scores * weight
+                # 官方 src/sia.py:313 是 `combined_scores = rewards * weight + orig_scores`,
+                # 不做归一化。我们之前的 `(rm_scores - mean) * weight` 虽然在 -inf mask +
+                # softmax 下理论 shift-invariant, 但**改变了 RM 信号相对于 orig_logits
+                # 的混合 scale** — raw_rm magnitude 大时 RM 主导, 归一化后被 stdev
+                # 缩到统一尺度, 不利于跨样本一致性。
                 #
-                # B-1: rm_scores 在 inproc 模式下是 GPU tensor (跟 logits 同 device),
-                #      mean-norm + weight + index_add_ 全程 GPU, 不再有 host→device
-                #      transfer。multiprocess (legacy) 模式下 rm_scores 是 CPU tensor,
-                #      移动到 logits.device 再算。
-                # D-1: mean-norm + weight 一次性算 deltas, 然后 index_add_ 真原地。
                 # CRITICAL: 不能用 `logits[i, idx].add_(...)` — advanced indexing
                 #     (tensor index) 返回副本而非 view, .add_ 改副本不会写回 logits,
                 #     等于 SIA 干预完全失效但 silent 不报错。
@@ -889,7 +895,7 @@ def make_sia_processor(
                 # source/self dtype 不同 raise (e.g. self=float, source=bfloat16)。
                 if rm_scores.device != logits.device or rm_scores.dtype != logits.dtype:
                     rm_scores = rm_scores.to(logits.device, dtype=logits.dtype)
-                rm_deltas = (rm_scores - rm_scores.mean()) * effective_weight
+                rm_deltas = rm_scores * effective_weight
 
                 # === 2026-06-02: 跟官方/论文 baseline 严格对齐 ===
                 # 官方 src/sia.py:286-313 的语义:

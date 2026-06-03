@@ -240,8 +240,11 @@ async def _handle_chat(req: ChatCompletionRequest):
             },
         )
 
-    # 非流式：等待生成完成，超过 60 秒或检测到 Answer: 则立即中止
-    REQUEST_TIMEOUT = 60
+    # 非流式：等待生成完成，超过 REQUEST_TIMEOUT 秒或检测到 Answer: 则立即中止
+    # 2026-06-03: 60s 默认在 PyTorch RM backend (慢) 下会截断 AlpacaEval 长生成,
+    # 导致 SIA arm 跟 noSIA arm (raw vllm 无此 timeout) 比较不公平 — 改 600s
+    # 让 max_tokens=2048 真正能跑到; MMLU 类短答案不受影响 (Answer: A 几秒就触发 abort)
+    REQUEST_TIMEOUT = 600
     start_time = time.time()
     final = None
     async for output in _engine.generate(prompt, sampling_params, request_id):

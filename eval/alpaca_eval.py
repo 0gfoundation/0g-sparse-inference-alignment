@@ -27,7 +27,7 @@ def chat_completion(base_url, model, instruction, *,
                     top_p=None, top_k=None, repetition_penalty=None,
                     disable_thinking=False, no_think_prompt=False,
                     ban_think_token=False, brief_instruction=False,
-                    timeout=300):
+                    timeout=700):
     """
     POST 到 /v1/chat/completions (常规, 走 chat_template) 或者
     /v1/completions (raw prompt 模式, 跳过 chat_template — no_think_prompt=True 用此路径)。
