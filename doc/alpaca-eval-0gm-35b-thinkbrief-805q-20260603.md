@@ -126,9 +126,31 @@ intv_prepare:           p50=0.13ms
 intv_apply_logits:      p50=1.3ms
 ```
 
-→ 大部分 token entropy < 0.8 走 skip, 干预率较低 (~10-15% 估)。
+### 3.6 干预率 / Flip 率 / 吞吐 (聚合 794 个 req DONE 行)
 
-### 3.6 Skywork 打分
+| 指标 | 值 |
+|------|----|
+| **tokens/s (client throughput)** | **35.3 tok/s** |
+| 总 wall time | 19,824s (330.4 min, **5.51h**) |
+| 总生成 tokens | 700,396 (client side) / 701,345 (server DONE 聚合) |
+| 有 DONE 行的 req | 794 / 805 (11 个没 DONE 行 — 早终止/state 释放早于打印) |
+| total intervened tokens | 133,196 |
+| total flipped tokens | 22,270 |
+| **干预率 (全局, ∑intv/∑tot)** | **18.99%** |
+| 干预率 per-req | p25=15.1%, **p50=19.4%**, p75=23.8%, min=2.4%, max=50.0% |
+| **Top-1 Flip 率 (干预 step 中, ∑flip/∑intv)** | **16.72%** |
+| Top-1 Flip per-req | p25=13.1%, **p50=17.5%**, p75=24.0%, min=0%, max=75.0% |
+| **整体 Flip 率 (改变 top-1 / 总 token)** | **3.18%** |
+
+**解读**:
+- 干预率 19% vs 此前 100Q `--no_think_prompt + --ban_think_token` 的 33% — 本次更低, 因为:
+  - thinking 模式下 token 分布更陡 (大量低 entropy step → 走 skip)
+  - 上次 ban `<think>` 后 top-5 重排引起伪 entropy 上升 (见 [summary doc §11.3 可疑 #3](alpaca-eval-0gm-35b-summary-20260602.md))
+- Flip 率 17% (干预 step 中实际改变 sampling 顺序的 ratio): 干预 step 里约 1/6 真的影响了 top-1 决策
+- 整体 Flip 3.18% — 全部 700K token 中, 仅约 22K (3%) 因 SIA 改变了采样, 这是 SIA 真正"动了"模型行为的物理范围
+- 35.3 tok/s — 比 raw vLLM 0GM-35B 慢 ~3-5×, 主要瓶颈 = 每干预 step 的 ~86ms RM call (干预率 19% × 86ms 摊到每 token ≈ 16ms overhead/token)
+
+### 3.7 Skywork 打分
 
 kill SIA server + RM server (释放 ~120GB GPU), 用 `venv` (有 accelerate) + `--strip_think`:
 
