@@ -183,7 +183,7 @@ min / max           : -17.6250 / 35.7500
 
 ---
 
-## 4. noSIA arm — 跑中
+## 4. noSIA arm — 已完成
 
 ### 4.1 raw vllm serve (port 8000, 无 SIA)
 
@@ -201,7 +201,7 @@ nohup /workspace/SIA/venv4/bin/vllm serve \
 ```
 
 - PID 1302846, log [`/tmp/0gm_nosia_thinkbrief_srv_20260603_000821.log`](file:///tmp/0gm_nosia_thinkbrief_srv_20260603_000821.log)
-- 注意: `--gpu-memory-utilization 0.85` (比 SIA arm 高, 因为没有 RM 共占), 不影响吞吐对比 (此实验目标是 reward 不是吞吐)
+- 注意: `--gpu-memory-utilization 0.85` (比 SIA arm 高, 因为没有 RM 共占), 不影响 reward 对比
 
 ### 4.2 跑 805Q AlpacaEval (同 SIA 所有 client flags)
 
@@ -217,24 +217,48 @@ nohup /workspace/SIA/venv2/bin/python \
   > /tmp/alpaca_0gm_nosia_thinkbrief_805q_20260603_001206.log 2>&1 &
 ```
 
-- PID 1304510 (启动于 2026-06-03 00:12)
-- 预计 ~3.5h (无 RM 调用开销, 比 SIA 快约 2h)
-- LOG (预): [`/tmp/alpaca_0gm_nosia_thinkbrief_805q_20260603_001206.log`](file:///tmp/alpaca_0gm_nosia_thinkbrief_805q_20260603_001206.log)
-- JSON (预): [`/tmp/alpaca_0gm_nosia_thinkbrief_805q_20260603_001206.json`](file:///tmp/alpaca_0gm_nosia_thinkbrief_805q_20260603_001206.json)
+- PID 1304510, 启动 2026-06-03 00:12, **结束 02:17 (用时 125 min, 2.1h)**
+- 0 errors, 805/805 ✅
+- LOG: [`/tmp/alpaca_0gm_nosia_thinkbrief_805q_20260603_001206.log`](file:///tmp/alpaca_0gm_nosia_thinkbrief_805q_20260603_001206.log)
+- JSON: [`/tmp/alpaca_0gm_nosia_thinkbrief_805q_20260603_001206.json`](file:///tmp/alpaca_0gm_nosia_thinkbrief_805q_20260603_001206.json)
 
-### 4.3 待跑: Skywork 打分 (与 SIA 同方式)
+### 4.3 noSIA 生成统计
+
+| 指标 | noSIA (805) | SIA (805) | 对比 |
+|------|-------------|-----------|------|
+| 总 wall time | 125 min | 330 min | **noSIA 快 2.6×** |
+| client throughput | 108.6 tok/s | 35.3 tok/s | **noSIA 快 3.0×** |
+| 总 tokens | 816,206 | 700,396 | noSIA 多 +17% |
+| tokens (mean per Q) | 1,012 | 870 | noSIA 多 16% |
+| **触顶 2048 cap** | **122 / 805 (15.2%)** | **37 / 805 (4.6%)** | **noSIA 触顶率 3.3×** |
+| `</think>` 闭合率 | 87.2% | 92.2% | noSIA 略低 |
+| 无 final answer | 75 / 805 (9.3%) | 63 / 805 (7.8%) | noSIA 略高 |
+| **嵌套 think tag** (`</think>` 后又 `<think>`) | **33.5%** (270/805) | ~? (未统计但远低于 noSIA) | noSIA 输出结构更乱 |
+| 用自创 `<thinking>`/`<reasoning>` tag | 9.2% (74/805) | ? | noSIA 显著更多 |
+| `I cannot/Sorry` 拒答 | 0 | 0 | ✓ |
+
+→ noSIA 输出结构**比 SIA 更乱** (触顶率 3.3×, 嵌套 think 33.5%, 自创 tag 9.2%)。这暗示 **SIA 起到了轻度"格式收敛"作用**, 让 0GM 更乖地按标准 `<think>...</think>` 格式生成。
+
+### 4.4 Skywork 打分 (kill raw vllm serve 后)
+
+⚠️ **首轮 (broken strip)**: 第一次打分时 `_THINK_RE = r"<think>.*?</think>"` 这个正则**在约 50% 样本上没有真正剥到 thinking** — 因为 0GM chat_template 把开头 `<think>` 放在 **prompt 末尾** (不在 output 里), output 实际形如 `{thinking content}</think>{answer}`, 没有开 tag → 配对正则不匹配。详见 §10。
+
+**首轮结果 (旧 broken strip, 已弃用)**:
 
 ```bash
-# kill raw vllm serve (释放 GPU) 后:
 nohup /workspace/SIA/venv/bin/python \
   /workspace/git/0g-sparse-inference-alignment/scripts/measure_alpaca_reward.py \
   --input_file /tmp/alpaca_0gm_nosia_thinkbrief_805q_20260603_001206.json \
-  --output_file /tmp/alpaca_0gm_nosia_thinkbrief_805q_scored_<TS>.json \
+  --output_file /tmp/alpaca_0gm_nosia_thinkbrief_805q_scored_20260603_022222.json \
   --rm /workspace/SIA/models/Skywork-Reward-V2-Llama-3.1-8B \
-  --device cuda:0 \
-  --strip_think \
-  > /tmp/skywork_score_nosia_thinkbrief_<TS>.log 2>&1 &
+  --device cuda:0 --strip_think \
+  > /tmp/skywork_score_nosia_thinkbrief_20260603_022222.log 2>&1 &
 ```
+
+- noSIA scored=796/805, **mean reward = 11.66** (含约 55% thinking 残留污染)
+- 配对 vs SIA (broken): Δ = -0.50 (-4.3%), t = -1.72 (p ≈ 0.09, **不显著**) ← **测量假象**
+
+详见 §11 "Δ 对比正式结论"。
 
 ---
 
@@ -258,20 +282,12 @@ nohup /workspace/SIA/venv/bin/python \
 
 ---
 
-## 6. 预期判读
-
-跑完 noSIA + 打分后, 得到 SIA mean (11.16) vs noSIA mean (待出) 的 Δ:
-
-| 情景 | 含义 |
-|------|------|
-| **Δ > 0** (SIA > noSIA) | SIA 在原生 thinking 模式下成功提升 reward — 推翻此前 100Q -13% 结论, 说明问题不是 SIA 本身, 而是 100Q 跑的 `--no_think_prompt + --ban_think_token` 把 0GM 推到了 OOD 模式 |
-| **Δ ≈ 0** | SIA 在 thinking 模式下不显著 — 用 4B VM 在 0GM-35B (Qwen3.6) 上 cross-family OOD 太大, RM 信号噪声主导 |
-| **Δ < 0** (SIA < noSIA) | SIA 在 thinking 模式仍伤 reward, 与 100Q 结论一致 — 这才是 0GM-35B SIA 的真实问题, 建议下一步: 换 1.7B 同家族 VM 或 weight=0.5 |
+## 6. 配置混淆变量审计
 
 可能的混淆变量:
 - `--gpu-memory-utilization` 不同 (SIA 0.72 / noSIA 0.85) 是否影响生成结果? **不会** — 它只影响 KV cache 大小, 模型权重/计算一致, batch size 不同最多影响延迟不影响逻辑
 - noSIA 没有 `SIA_DEBUG_HIST` (但这只是 print debug, 不进 sampling)
-- ⚠️ 此前 100Q SIA 用 1.7B VM (commit b6b433c 实验), 这次 805Q 又换回 4B VM — 因为 [`sia-fix-and-vm-ablation-0gm-35b-20260602.md`](sia-fix-and-vm-ablation-0gm-35b-20260602.md) 没有结论选 1.7B; 后续 Δ 不理想可考虑再用 1.7B 跑
+- ⚠️ 此前 100Q SIA 用 1.7B VM (commit b6b433c 实验), 这次 805Q 又换回 4B VM — 因为 [`sia-fix-and-vm-ablation-0gm-35b-20260602.md`](sia-fix-and-vm-ablation-0gm-35b-20260602.md) 没有明确结论选 1.7B; 见 §12 后续优先级
 
 ---
 
@@ -287,18 +303,22 @@ nohup /workspace/SIA/venv/bin/python \
 | `/tmp/skywork_score_sia_thinkbrief_20260602_235645.log` | Skywork 打分 stdout |
 | `/tmp/alpaca_0gm_sia_thinkbrief_805q_scored_20260602_235645.json` | 805Q SIA + reward 字段 |
 
-### 跑中 (noSIA arm)
+### 已生成 (noSIA arm)
 | 文件 | 角色 |
 |------|------|
 | `/tmp/0gm_nosia_thinkbrief_srv_20260603_000821.log` | raw vllm serve log |
 | `/tmp/alpaca_0gm_nosia_thinkbrief_805q_20260603_001206.log` | eval client stdout (805Q noSIA) |
 | `/tmp/alpaca_0gm_nosia_thinkbrief_805q_20260603_001206.json` | 805Q noSIA 输出 JSON |
+| `/tmp/skywork_score_nosia_thinkbrief_20260603_022222.log` | Skywork 打分 stdout (旧 broken strip, **已弃用**) |
+| `/tmp/alpaca_0gm_nosia_thinkbrief_805q_scored_20260603_022222.json` | 805Q noSIA + reward (旧 broken strip, **已弃用**) |
 
-### 待生成 (noSIA Skywork 打分阶段)
+### 重新打分 (修 strip 后, 是当前真实结果)
 | 文件 | 角色 |
 |------|------|
-| `/tmp/skywork_score_nosia_thinkbrief_<TS>.log` | Skywork 打分 stdout |
-| `/tmp/alpaca_0gm_nosia_thinkbrief_805q_scored_<TS>.json` | 805Q noSIA + reward 字段 |
+| `/tmp/skywork_score_sia_thinkbrief_v2_20260603_023431.log` | SIA Skywork 打分 (fixed strip) |
+| `/tmp/alpaca_0gm_sia_thinkbrief_805q_scored_v2_20260603_023431.json` | SIA + reward (fixed strip) |
+| `/tmp/skywork_score_nosia_thinkbrief_v2_20260603_023431.log` | noSIA Skywork 打分 (fixed strip) |
+| `/tmp/alpaca_0gm_nosia_thinkbrief_805q_scored_v2_20260603_023431.json` | noSIA + reward (fixed strip) |
 
 ### 失败的 SIA 启动尝试 (保留以备 troubleshooting)
 | 文件 | 备注 |
@@ -314,10 +334,144 @@ nohup /workspace/SIA/venv/bin/python \
 | 问题 | 表现 | 原因 | 修复 |
 |------|------|------|------|
 | SIA server 启动后立即崩 | "[Errno 98] address already in use" | 旧 SIA server (PID 1149494, noSIA --weight 0 配置) 残留, EngineCore 死了但 FastAPI 仍 listen → 新 server 死 | `kill -9 1149494` 后重启 |
-| 用 1.7B VM 还是 4B VM | 之前 ablation 没明确结论 | (待决) | 本次先用 4B (与 0427 的 history 一致), 若 Δ 不理想再换 1.7B 跑 |
+| Skywork `--strip_think` 大半样本未生效 | 旧正则 `<think>.*?</think>` 不匹配缺失开 tag 的 leading thinking | 0GM chat_template 把开头 `<think>` 注入 prompt 末尾 → output 实际形如 `{thinking}</think>{answer}` 缺开 tag → 正则不匹配 | 改用两段正则: ①  `^.*?</think(?:ing)?>\s*` 剥 leading thinking ② `<think(?:ing)?>.*?</think(?:ing)?>\s*` 剥嵌套块 (commit 见 §10) |
+| 用 1.7B VM 还是 4B VM | 之前 ablation 没明确结论 | (待决) | 本次先用 4B (与 0427 的 history 一致), Δ = -13% 后, 优先级 #1 切 1.7B 重跑 |
 
 ---
 
 ## 9. 一句话现状
 
-> 0GM-35B AlpacaEval 805Q 在 thinking + brief instruction + max_tokens=2048 下, **SIA mean reward = 11.16 (798/805 scored)**; noSIA arm 跑中, 完成后做 Δ 对比, 验证 SIA 在原生 thinking 模式下到底是 +/-/平。
+> 0GM-35B AlpacaEval 805Q 在 thinking + brief + max_tokens=2048 下, **SIA Δ reward = -13.2% (n=795, t=-4.61, p<0.0001, 统计上极显著)**。修复 `--strip_think` 失效 bug 之后, 真相浮现: SIA 与 VM-4B 在 0GM-35B 上**稳定伤害 reward 约 13-14%**, 跟此前 100Q `--no_think_prompt + --ban_think_token` 结论 (-13%) 高度一致, 推翻了 "100Q 大负 Δ 是压制 thinking 引起" 的此前解读。下一步优先级 #1: 换 **VM-Qwen3-1.7B-Base** 同家族 RM 重跑, 验证是否 cross-family OOD 是根因。
+
+---
+
+## 10. `--strip_think` 失效 bug 与修复
+
+### 10.1 Bug 描述
+
+`scripts/measure_alpaca_reward.py` 原 strip 正则:
+
+```python
+_THINK_RE = re.compile(r"<think>.*?</think>\s*", flags=re.DOTALL)
+```
+
+这个正则**要求 `<think>` 开 tag 出现在 output 中**。但 0GM chat_template 在 prompt 末尾自动注入 `<think>\n`, 所以**模型 output 实际**形如:
+
+```
+{thinking content}\n</think>\n\n{final answer}
+```
+
+→ output 里**没有 `<think>` 开 tag**, 只有 `</think>` 闭 tag。配对正则不匹配 → **整段 thinking 内容连同 `</think>` tag 都保留在打分输入里**。
+
+### 10.2 影响面 (805 题 SIA + 805 题 noSIA)
+
+|  | 旧 broken strip 真正剥到 thinking 的样本 | 余下 (含 thinking 残留) |
+|--|------|------|
+| **SIA**   | 402 / 805 (49.9%) | **403 (50.1%)** ⚠️ |
+| **noSIA** | 364 / 805 (45.2%) | **441 (54.8%)** ⚠️ |
+
+→ 约 **50-55% 样本**的 Skywork 打分输入**混杂了 thinking 内容**。
+
+### 10.3 修复 (`scripts/measure_alpaca_reward.py`)
+
+新增 `_LEAD_THINK_END_RE` 处理 leading thinking 情况:
+
+```python
+_PAIR_THINK_RE     = re.compile(r"<think(?:ing)?>.*?</think(?:ing)?>\s*", flags=re.DOTALL)
+_LEAD_THINK_END_RE = re.compile(r"^.*?</think(?:ing)?>\s*",               flags=re.DOTALL)
+
+def maybe_strip_think(text, strip):
+    if not strip: return text
+    # Step 1: 剥 leading thinking (chat_template 注入的开 tag 在 prompt, 不在 output)
+    text = _LEAD_THINK_END_RE.sub("", text, count=1)
+    # Step 2: 剥任何剩余嵌套配对 think/thinking 块
+    return _PAIR_THINK_RE.sub("", text)
+```
+
+新逻辑覆盖 4 类 case:
+
+| 输出结构 | 处理 |
+|----------|------|
+| `{think}</think>{answer}` (标准, 缺开 tag) | Step 1 剥 thinking + `</think>` |
+| `{think1}</think>{<think>nest</think>}{answer}` (嵌套) | Step 1 剥到第一个 `</think>`, Step 2 剥嵌套 |
+| `{think}</thinking>{answer}` (自创 tag) | Step 1 用 `</think(?:ing)?>` 命中 |
+| 无 `</think>` (thinking 占满 cap) | 无匹配, 原样保留 — Skywork 看到整段 thinking-style 文本, 给低分 (符合"thinking 占满未出 answer"应得低分) |
+
+修复 dry-run 验证: 平均每题剥掉 **~2200 chars** (vs 旧 strip 约 0)。
+
+---
+
+## 11. Δ 对比正式结论 (修 strip 后, **当前真值**)
+
+### 11.1 整体均值
+
+| 配置 | scored | mean reward |
+|------|--------|-------------|
+| **SIA  (fixed strip)** | 800 / 805 | **11.99** |
+| **noSIA (fixed strip)** | 798 / 805 | **13.82** |
+
+### 11.2 配对统计 4 种切法
+
+|  | n_pairs | SIA mean | noSIA mean | Δ | 相对 | t-stat | p-value | 显著? |
+|--|---------|----------|------------|---|------|--------|---------|------|
+| 旧 broken — 全配对 | 792 | 11.13 | 11.63 | -0.50 | -4.3% | -1.72 | ~0.086 | ❌ |
+| 旧 broken — 排除任一触顶 | 663 | 11.81 | 12.36 | -0.56 | -4.5% | -1.89 | ~0.059 | ❌ |
+| **新 fixed — 全配对** | **795** | **11.97** | **13.79** | **-1.82** | **-13.2%** | **-4.61** | **<0.0001** | ✅ |
+| **新 fixed — 排除任一触顶** | **664** | **12.83** | **14.93** | **-2.10** | **-14.0%** | **-5.16** | **<1e-6** | ✅ |
+
+→ **修复后 Δ 翻 3 倍, 从"边缘不显著" 到 "极显著"**。
+
+### 11.3 noSIA mean 涨幅 > SIA 涨幅 — 为什么?
+
+|  | 旧 broken | 新 fixed | 差 |
+|--|-----------|----------|------|
+| SIA  mean   | 11.16 | 11.99 | +0.83 |
+| noSIA mean | 11.66 | 13.82 | **+2.16** |
+
+noSIA mean 涨幅 (+2.16) > SIA (+0.83) 的原因:
+
+- noSIA 输出**结构更乱** (33.5% 嵌套 think + 9.2% 自创 tag + 15.2% 触顶), 这些 thinking 残留会让 Skywork 看到"凌乱的 thinking-style 文本" → 打低分
+- 旧 broken strip 让 noSIA 这些**结构噪声**直接污染打分, 拉低 mean → 显得 SIA 跟 noSIA 差距小
+- 修复后 noSIA 只剩 clean final answer 打分, mean 大幅上升 → 暴露了 SIA 实际差距
+
+### 11.4 Win/Tie/Loss (fixed, n=795, |Δ|>0.5)
+
+| | 计数 | 占比 |
+|--|------|------|
+| **SIA wins**  | **315** | **39.6%** |
+| Tie | 53 | 6.7% |
+| **SIA loses** | **427** | **53.7%** |
+
+排除触顶后 (n=664): SIA wins 256 (38.6%) / loses 363 (54.7%) — 差距更大。
+
+### 11.5 跟此前 100Q 实验对比
+
+| 实验 | 模式 | Δ | n | 显著? |
+|------|------|---|----|------|
+| 100Q `--no_think_prompt + --ban_think_token` | 强制 no thinking | -13.0% | 98 | 边缘 |
+| 805Q broken strip (本次旧 strip) | thinking + brief | -4.3% | 792 | ❌ |
+| **805Q fixed strip (本次真相)** | thinking + brief | **-13.2%** | **795** | **✅ p<0.0001** |
+
+→ **100Q 和 805Q 两次实验 Δ 数字惊人一致 (~ -13%)**, 修 strip 之前看到的"thinking 模式只 -4.5%"是**测量假象**。
+
+**真相**: SIA 在 0GM-35B (Qwen3.6) + VM-Qwen3-4B-Base (Qwen3) 组合下**稳定伤害 reward 约 13-14%**, 与 thinking 模式开关**无关**。
+
+### 11.6 推翻此前 §6 的解读
+
+§6 (现已删除) 曾推测: "100Q -13% 是 `--no_think_prompt + --ban_think_token` 压制 thinking 把 0GM 推到了 OOD 模式"。
+
+**这个推测被本次实验推翻** — 即使在 0GM 原生 thinking + brief 模式下, SIA 仍带来同样幅度 (-13%) 的 reward 损失。
+
+→ **真正根因更可能是 cross-family OOD** (VM-Qwen3-4B-Base 训练于 Qwen3 / SFT 数据, 应用于 Qwen3.5/3.6 thinking 模型 0GM-35B 时跨家族 RM 信号噪声主导)。
+
+---
+
+## 12. 下一步优先级 (基于修正后的真相)
+
+| 优先级 | 行动 | 期望 / 验证假设 |
+|--------|------|---------------|
+| 🚨 **1** | **VM-Qwen3-1.7B-Base** 重跑 SIA 805Q (与本次完全同 config) | 若 1.7B 同家族 RM 让 Δ 接近 0 或转正, 确认 cross-family OOD 是 4B 失败的根因 |
+| **2** | topk=10 (官方默认, 当前 topk=5) | 候选池翻倍, SIA 影响范围 ×2; 若 -13% 缩到 -7% 说明 topk=5 占一半"损失" |
+| **3** | 去 mean-norm 让代码完全匹配官方 | 修 [`summary doc §11.3 可疑 #1`](alpaca-eval-0gm-35b-summary-20260602.md) 的 mean-norm + `<think>` top-5 污染问题 |
+| 4 | weight=0.5 弱化干预 | 若 weight=0.5 让 Δ 减半, 说明 SIA 干预方向是错的 (做"更少 SIA"比做完整 SIA 好) |
+| 5 | 用 0GM 自家训的 VM (cross-family OOD 终极 ML 层解决) | 长期方向, 需训练成本 |

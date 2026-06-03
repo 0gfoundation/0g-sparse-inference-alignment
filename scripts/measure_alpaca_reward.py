@@ -22,14 +22,22 @@ import torch
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
 
-# `<think>...</think>` 内容 (含两侧 tag); 支持多行
-_THINK_RE = re.compile(r"<think>.*?</think>\s*", flags=re.DOTALL)
+# 处理 thinking 模型的 output 剥离, 涵盖两类情况:
+# 1) 配对块 `<think>...</think>` 或 `<thinking>...</thinking>` (含嵌套/自创变体)
+# 2) Leading thinking — 当 chat_template 把 opening `<think>` 注入 prompt 末尾时, output
+#    实际形如 "{thinking content}</think>{answer}", 没有开 tag → 旧的配对正则不匹配。
+#    用 `_LEAD_THINK_END_RE` 找第一个 `</think>` (或变体), 把它之前的所有内容剥掉。
+_PAIR_THINK_RE = re.compile(r"<think(?:ing)?>.*?</think(?:ing)?>\s*", flags=re.DOTALL)
+_LEAD_THINK_END_RE = re.compile(r"^.*?</think(?:ing)?>\s*", flags=re.DOTALL)
 
 
 def maybe_strip_think(text: str, strip: bool) -> str:
     if not strip:
         return text
-    return _THINK_RE.sub("", text)
+    # Step 1: 剥 leading thinking (chat_template-injected <think> 在 prompt 末尾的产物)
+    text = _LEAD_THINK_END_RE.sub("", text, count=1)
+    # Step 2: 剥任何剩余的嵌套配对 think/thinking 块
+    return _PAIR_THINK_RE.sub("", text)
 
 
 def main():
