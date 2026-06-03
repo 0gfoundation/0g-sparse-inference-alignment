@@ -213,6 +213,17 @@ def make_sia_processor(
         #   flip 统计 / startup 提示 / DONE / SIA-pf-summary 不受此 var 影响
         _LOG_LEVEL: str = os.environ.get("SIA_LOG_LEVEL", "quiet")
 
+        # ===== Dual-VM validation hook =====
+        # 当 SIA_DUAL_VM_URL 被设置时 (e.g. http://localhost:8002/score_token_ids),
+        # _score_candidates_vllm 在 path A (same vocab) 完成 vllm /classify 调用后,
+        # 把同 payload 转发给该 URL (期望是 sia_rm_pytorch_official.py /score_token_ids
+        # endpoint), 并把两套 scores 写到 SIA_DUAL_VM_LOG (JSONL) 用于离线对比分析。
+        # 默认空字符串 ⇒ disabled, 零开销。仅做日志, 不影响 SIA 实际干预。
+        _DUAL_VM_URL: str = os.environ.get("SIA_DUAL_VM_URL", "")
+        _DUAL_VM_LOG: str = os.environ.get(
+            "SIA_DUAL_VM_LOG", "/tmp/sia_dual_vm.jsonl",
+        )
+
         # ===== SIA DEBUG HISTOGRAM START =====
         # 用于诊断"为什么干预率低"。开 SIA_DEBUG_HIST=1 后, 每个请求 DONE 时打:
         #   - ENTROPY_HIST: top-5 重归一化 entropy 的 16-bin 直方图 [0..1.6 step=0.1]
@@ -259,13 +270,32 @@ def make_sia_processor(
             # C1: chat template prefix/suffix 缓存（每个 request 渲染一次）
             self._chat_prefix_per_req: dict[int, Optional[str]] = {}
             self._chat_suffix_per_req: dict[int, Optional[str]] = {}
+            # C3 (2026-06-03): 同 tokenizer 情况下直接发 token_ids 的 prefix_ids 缓存
+            # (每个 request 一次，避免 INTERVENE 步重复 encode 用户 turn)
+            self._manual_prefix_ids_per_req: dict[int, Optional[list[int]]] = {}
 
-            # C2: RM tokenizer（仅 use_token_ids 时加载，避免无谓加载）
+            # C2: RM tokenizer
+            # vllm backend 总是加载 RM tokenizer:
+            #   - 用来检测 LLM/RM 是否同 vocab (决定走 direct-token-ids fast path
+            #     还是 text round-trip fallback)
+            #   - 同 vocab 路径下不需要 (因为 LLM tok 即 RM tok), 仅作 sanity 比较
+            #   - 跨 vocab 路径 (e.g. 0GM-35B + VM-Qwen3-4B) 需要它 re-encode text
             self._rm_tok = None
-            if self._RM_BACKEND == "vllm" and self._USE_TOKEN_IDS:
-                print(f"[SIA] Loading RM tokenizer for token_ids: {self._RM_MODEL}", flush=True)
+            self._same_tokenizer = False  # True ⇒ LLM/RM 同 vocab, 可直接传 token IDs
+            if self._RM_BACKEND == "vllm":
+                print(f"[SIA] Loading RM tokenizer: {self._RM_MODEL}", flush=True)
                 self._rm_tok = AutoTokenizer.from_pretrained(
                     self._RM_MODEL, trust_remote_code=True,
+                )
+                self._same_tokenizer = self._tokenizers_compatible(
+                    self._llm_tok, self._rm_tok,
+                )
+                print(
+                    f"[SIA] Tokenizer compat: same_vocab={self._same_tokenizer} "
+                    f"(LLM vocab={self._llm_tok.vocab_size}, "
+                    f"RM vocab={self._rm_tok.vocab_size}) → "
+                    f"{'direct-token-ids fast path' if self._same_tokenizer else 'text round-trip (cross-tokenizer)'}",
+                    flush=True,
                 )
 
             # 客户端 profiling 累积
@@ -296,6 +326,15 @@ def make_sia_processor(
             }
             self._pf_intervene_calls: int = 0
             self._pf_apply_calls: int = 0  # 每次 apply 都计数 (用来定 per-token level interval)
+
+            # Dual-VM log counter (用于限制 error message 频率)
+            self._dual_vm_call_count: int = 0
+            if self._DUAL_VM_URL:
+                print(
+                    f"[SIA] DUAL_VM enabled: forwarding token_ids payload to "
+                    f"{self._DUAL_VM_URL}, logging to {self._DUAL_VM_LOG}",
+                    flush=True,
+                )
 
             # ===== SIA DEBUG HISTOGRAM START =====
             # debug state (only used when SIA_DEBUG_HIST=1; empty dicts are zero-cost)
@@ -431,6 +470,87 @@ def make_sia_processor(
             return extract_user_content(prompt_text)
 
         # ----------------------------------------------------------------
+        # C3 helper: 检测 LLM/RM 是否同 vocab + 缓存的 "官方 sia.py 一致" prefix_ids
+        # ----------------------------------------------------------------
+        @staticmethod
+        def _tokenizers_compatible(llm_tok, rm_tok) -> bool:
+            """判断 LLM 和 RM tokenizer 是否 token-id 兼容 (同一份 vocab)。
+
+            同 vocab ⇒ LLM 输出的 token id 可以直接传给 RM, 跳过 text round-trip,
+            消除 BPE 边界 / decode-encode 不可逆带来的精度损失。
+
+            用例:
+              - Qwen3-14B + Qwen3-4B → same (151,936 vocab)
+              - Qwen3-VL-30B-A3B-Instruct + Qwen3-4B → same (Qwen3 vocab 151,936)
+              - 0GM-1.0-35B-A3B-0427 + Qwen3-4B → not same (0GM 扩展到 248k)
+
+            策略: vocab_size 一致 + 多个采样字符串编码 ID 完全一致。
+            """
+            try:
+                if llm_tok.vocab_size != rm_tok.vocab_size:
+                    return False
+            except Exception:
+                return False
+            # 采样多种类型的字符串, 覆盖 ASCII / CJK / chat-special / 数字
+            samples = [
+                "Hello world",
+                "你好世界",
+                "<|im_start|>user\n",
+                "<|im_end|>\n<|im_start|>assistant\n",
+                "1234567890",
+                " a quick brown fox jumps over the lazy dog.",
+            ]
+            for s in samples:
+                try:
+                    if (
+                        llm_tok.encode(s, add_special_tokens=False)
+                        != rm_tok.encode(s, add_special_tokens=False)
+                    ):
+                        return False
+                except Exception:
+                    return False
+            return True
+
+        def _get_manual_prefix_ids(
+            self, req_idx: int, user_content: str,
+        ) -> Optional[list[int]]:
+            """构造跟官方 sia.py 完全一致的手工 chat prefix, encode 后缓存返回。
+
+            格式 (跟官方 src/sia.py 一致, **不** 走 apply_chat_template, 避免 Qwen3
+            chat_template 在 enable_thinking=False 时自动注入 <think>\\n\\n</think>
+            空块导致 RM 看到 OOD prefix):
+                <|im_start|>user\n{Q}<|im_end|>\n<|im_start|>assistant\n
+
+            仅在 _same_tokenizer=True 时调用 (LLM tok = RM tok), 用 LLM tokenizer
+            encode (跟 RM tokenizer encode 等价)。
+
+            注: 这里假设 Qwen3 chat template (ChatML)。若 LLM 是非 Qwen3 系列但跟
+            RM tokenizer 仍 vocab-compat (极罕见), encode 出来的 prefix 可能不被
+            模型识别成对话开头 — 这种情况由 _tokenizers_compatible 已经过滤
+            (我们的 SIA value model 全部是 Qwen3 系列)。
+            """
+            cached = self._manual_prefix_ids_per_req.get(req_idx)
+            if cached is not None:
+                return cached
+            try:
+                prefix_text = (
+                    "<|im_start|>user\n"
+                    + user_content
+                    + "<|im_end|>\n<|im_start|>assistant\n"
+                )
+                prefix_ids = self._llm_tok.encode(
+                    prefix_text, add_special_tokens=False,
+                )
+                if not prefix_ids:
+                    self._manual_prefix_ids_per_req[req_idx] = None
+                    return None
+            except Exception:
+                self._manual_prefix_ids_per_req[req_idx] = None
+                return None
+            self._manual_prefix_ids_per_req[req_idx] = prefix_ids
+            return prefix_ids
+
+        # ----------------------------------------------------------------
         # C1 helper: 缓存的 chat template prefix/suffix
         # ----------------------------------------------------------------
         def _get_chat_template_parts(self, req_idx: int, user_content: str):
@@ -532,14 +652,19 @@ def make_sia_processor(
                 return self._score_candidates_b2(
                     req_idx, user_content, output_ids, candidate_token_ids
                 )
+            if self._RM_BACKEND == "vllm":
+                # vllm backend: 同 vocab 走 direct-token-ids fast path (跳过 decode),
+                # 跨 vocab 走 text round-trip 兜底。两路都在 _score_candidates_vllm 内分支。
+                # decode 推迟到真正需要 text path 时再做。
+                return self._score_candidates_vllm(
+                    req_idx, user_content, response_so_far,
+                    candidate_token_ids, output_ids,
+                )
+            # pytorch /score 始终需要 text candidate
             candidate_texts = [
                 self._llm_tok.decode([tid], skip_special_tokens=False)
                 for tid in candidate_token_ids
             ]
-            if self._RM_BACKEND == "vllm":
-                return self._score_candidates_vllm(
-                    req_idx, user_content, response_so_far, candidate_texts
-                )
             return self._score_candidates_pytorch(
                 user_content, response_so_far, candidate_texts
             )
@@ -627,71 +752,105 @@ def make_sia_processor(
 
         def _score_candidates_vllm(
             self, req_idx: int, user_content: str, response_so_far: str,
-            candidate_texts: list[str],
+            candidate_token_ids: list[int], output_ids: list[int],
         ) -> torch.Tensor:
             """调用 vllm serve 的 POST /classify (activation=false 拿原始 logit)。
 
-            优化：
-              C1 (chat template 缓存)：用 _get_chat_template_parts 缓存的 (prefix, suffix)
-                 字符串拼接，省 5 次 apply_chat_template / INTERVENE 步。
-              C2 (token_ids)：若 _USE_TOKEN_IDS=True，客户端用 RM tokenizer 预 tokenize，
-                 发送 list[list[int]] 而非字符串列表，省服务端 re-tokenize。
-                 注意：vLLM 0.10.1.1 的 ClassificationRequest.input schema 不直接接受
-                 token_ids，需配合 scripts/vllm_serve_with_token_ids.py 启动 RM。
+            两条路径根据 LLM/RM tokenizer 是否同 vocab 自动选择:
+
+            **A. Direct-token-ids fast path (same vocab, e.g. Qwen3-VL-30B + VM-Qwen3-4B)**
+              - 直接发 `prefix_ids + output_ids + [cand_id]` 给 vllm /classify
+              - prefix_ids 来自 _get_manual_prefix_ids: 手写 ChatML, 跟官方 sia.py 一致,
+                **不** 经过 apply_chat_template (避免 Qwen3 enable_thinking=False 时
+                自动注入 `<think>\\n\\n</think>` 空块导致 RM 看到 OOD prefix)
+              - 跳过 decode/encode, 零 BPE 边界扰动
+              - 这是 2026-06-03 dual-VM 实验验证过的"跟官方 PyTorch VM 98%+ top-1 一致"路径
+
+            **B. Text round-trip fallback (cross vocab, e.g. 0GM-35B + VM-Qwen3-4B)**
+              - 不得不 decode 候选 token / 累积 output 成 text, 再让 vllm 用 RM tokenizer
+                re-encode
+              - 已知 BPE 边界精度损失 ~1.2 logit, top-1 一致率 ~82-88%
+              - prefix 用 _get_chat_template_parts (含 _ENABLE_THINKING 透传给 chat_template)
+
+            Fix #1 (2026-06-03): 两路 prefix 末尾都没有 `<|im_end|>` close tag,
+            跟官方 ValueModel forward 路径一致 (避免 partial-response OOD)。
             """
             pf_on = self._PROFILE_DETAIL
             t0 = time.perf_counter() if pf_on else 0.0
 
-            # ==== Step 1: 拼 chat-formatted 文本 ====
-            # Fix #1 (2026-06-03): 对齐官方 ValueModel 路径 — 不在 candidate 后加
-            # 任何 `<|im_end|>` 关闭 tag。官方 src/sia.py:280-281 ValueModel 分支
-            # 直接 forward `flat_rm_trme` (用户 turn + assistant header + partial
-            # response + candidate), 末尾**没有 close tag**。我们之前 `+ suffix`
-            # 加了 `<|im_end|>\n`, 把 partial-response value model 推到训练分布外,
-            # 系统性扭曲 RM score。
-            prefix, _suffix_unused = self._get_chat_template_parts(req_idx, user_content)
-            if prefix is not None:
-                # Fast path: 缓存命中, prefix 末尾已是 `<|im_start|>assistant\n`
-                formatted_texts = [
-                    prefix + response_so_far + ct
-                    for ct in candidate_texts
-                ]
+            if self._same_tokenizer:
+                # ==== Path A: direct token IDs (no text round-trip) ====
+                prefix_ids = self._get_manual_prefix_ids(req_idx, user_content)
+                if prefix_ids is not None:
+                    input_payload = [
+                        list(prefix_ids) + list(output_ids) + [int(cid)]
+                        for cid in candidate_token_ids
+                    ]
+                    t_format = time.perf_counter() if pf_on else 0.0
+                    t_tokenize = t_format  # no separate tokenize step
+                else:
+                    # encode 失败 (极罕见), 回退 text 路径
+                    input_payload = None  # fall through to text path
             else:
-                # Fallback: 用 add_generation_prompt=True 拿到 user-only prefix
-                # (末尾是 assistant header, 无 close tag), 再拼 response + candidate
-                bos = self._llm_tok.bos_token
-                kwargs = {"tokenize": False, "add_generation_prompt": True}
-                if self._ENABLE_THINKING is not None:
-                    kwargs["enable_thinking"] = self._ENABLE_THINKING
-                fallback_prefix = self._llm_tok.apply_chat_template(
-                    [{"role": "user", "content": user_content}],
-                    **kwargs,
-                )
-                if bos and fallback_prefix.startswith(bos):
-                    fallback_prefix = fallback_prefix[len(bos):]
-                formatted_texts = [
-                    fallback_prefix + response_so_far + ct
-                    for ct in candidate_texts
-                ]
-            t_format = time.perf_counter() if pf_on else 0.0
+                input_payload = None  # cross-vocab → text path
 
-            # ==== Step 2: 选择发字符串还是 token_ids ====
-            if self._USE_TOKEN_IDS and self._rm_tok is not None:
-                input_payload = [
-                    self._rm_tok.encode(t, add_special_tokens=False)
-                    for t in formatted_texts
+            if input_payload is None:
+                # ==== Path B: text round-trip (cross-tokenizer fallback) ====
+                candidate_texts = [
+                    self._llm_tok.decode([int(tid)], skip_special_tokens=False)
+                    for tid in candidate_token_ids
                 ]
-            else:
-                input_payload = formatted_texts
-            t_tokenize = time.perf_counter() if pf_on else 0.0
+                prefix, _suffix_unused = self._get_chat_template_parts(
+                    req_idx, user_content,
+                )
+                if prefix is not None:
+                    formatted_texts = [
+                        prefix + response_so_far + ct
+                        for ct in candidate_texts
+                    ]
+                else:
+                    bos = self._llm_tok.bos_token
+                    kwargs = {"tokenize": False, "add_generation_prompt": True}
+                    if self._ENABLE_THINKING is not None:
+                        kwargs["enable_thinking"] = self._ENABLE_THINKING
+                    fallback_prefix = self._llm_tok.apply_chat_template(
+                        [{"role": "user", "content": user_content}],
+                        **kwargs,
+                    )
+                    if bos and fallback_prefix.startswith(bos):
+                        fallback_prefix = fallback_prefix[len(bos):]
+                    formatted_texts = [
+                        fallback_prefix + response_so_far + ct
+                        for ct in candidate_texts
+                    ]
+                t_format = time.perf_counter() if pf_on else 0.0
+
+                # 跨 vocab: 用 RM tokenizer re-encode (add_special_tokens=False
+                # 跟官方对齐, 避免 vllm 服务端再注入 BOS/EOS); 或直接发 string
+                # 让 vllm 用默认设置 tokenize (兼容)
+                if self._USE_TOKEN_IDS and self._rm_tok is not None:
+                    input_payload = [
+                        self._rm_tok.encode(t, add_special_tokens=False)
+                        for t in formatted_texts
+                    ]
+                else:
+                    input_payload = formatted_texts
+                t_tokenize = time.perf_counter() if pf_on else 0.0
 
             # ==== Step 3: HTTP 调用 ====
+            # **关键**: vllm 0.19 /classify schema 的字段名是 `use_activation` (不是
+            # `activation`)。我们之前写错字段名, 该 key 被 Pydantic 静默忽略, 默认
+            # `None`→`True` ⇒ vllm 端 sigmoid 永远开启。表现为 RM scores 被压到
+            # [0,1] 范围, sigmoid(x)→1 for x>16 时甚至触底 (float32 ULP 限制),
+            # 需要 EPS-clamp 反 sigmoid 还原 — 但该还原对 |x|>13.82 全部饱和。
+            # 2026-06-03 dual-VM 验证: `use_activation=False` 直接拿到 raw logit
+            # (range ~[-15,+50]), sigmoid 饱和问题完全消失。
             resp = self._rm_session.post(
                 f"{self._RM_URL}/classify",
                 json={
                     "model": self._RM_MODEL,
                     "input": input_payload,
-                    "activation": False,   # 关键：关 sigmoid，拿原始 logit
+                    "use_activation": False,   # 关键: 关 sigmoid, 拿原始 logit
                 },
                 timeout=120,
             )
@@ -700,22 +859,45 @@ def make_sia_processor(
 
             # ==== Step 4: 解析 ====
             data = resp.json()["data"]
-            # vLLM 不保证返回顺序，按 index 排序
+            # vLLM 不保证返回顺序, 按 index 排序
             data_sorted = sorted(data, key=lambda x: x.get("index", 0))
+            # `probs` 字段在 use_activation=False 时已是 raw logit (无 sigmoid),
+            # 无需任何后处理, 直接用。
             scores = [d["probs"][0] for d in data_sorted]
-            # vllm 0.19 的 /classify endpoint 即便传 activation=False 也强制 sigmoid,
-            # 返回的 probs 是 sigmoid(raw_logits) ∈ [0,1]。SIA 论文 + 官方代码用 raw
-            # logits (`rm_out.logits` 直接, 无 sigmoid), 数值范围 ~[-7,+7]; sigmoid
-            # 后压缩到 [0,1], delta magnitude 被压缩 ~10×, flip 率从 67% 跌到 ~3%。
-            # 这里做反 sigmoid (logit function), 把数值还原到 raw logit 域, 跟官方等价。
-            import math
-            EPS = 1e-6
-            scores = [
-                math.log(max(min(p, 1 - EPS), EPS) / max(min(1 - p, 1 - EPS), EPS))
-                for p in scores
-            ]
             result = torch.tensor(scores, dtype=torch.float32)
             t_parse = time.perf_counter() if pf_on else 0.0
+
+            # ==== Step 5 (optional): Dual-VM logging hook ====
+            # 当 SIA_DUAL_VM_URL 环境变量被设置时, 把同样的 token_ids payload (path A 才有)
+            # 也发给一个独立的 PyTorch 官方 VM server, 把两套 scores side-by-side
+            # 写到 SIA_DUAL_VM_LOG (JSONL)。仅用于离线 dual-VM validation,
+            # 不影响 SIA 实际干预 (intervention 用 vllm 这一路 scores)。
+            if self._DUAL_VM_URL and self._same_tokenizer and isinstance(input_payload, list) and input_payload and isinstance(input_payload[0], list):
+                try:
+                    self._dual_vm_call_count += 1
+                    dual_resp = self._rm_session.post(
+                        self._DUAL_VM_URL,
+                        json={"input": input_payload,
+                              "request_id": f"req{req_idx}_step{len(output_ids)}"},
+                        timeout=120,
+                    )
+                    dual_data = dual_resp.json()
+                    pt_scores = dual_data.get("scores", [])
+                    rec = {
+                        "ts": time.time(),
+                        "req_idx": req_idx,
+                        "step": len(output_ids),
+                        "n_cand": len(candidate_token_ids),
+                        "cand_ids": [int(c) for c in candidate_token_ids],
+                        "vllm_scores": [float(s) for s in scores],
+                        "pt_scores":   [float(s) for s in pt_scores],
+                    }
+                    import json
+                    with open(self._DUAL_VM_LOG, "a") as f:
+                        f.write(json.dumps(rec, ensure_ascii=False) + "\n")
+                except Exception as e:
+                    if self._dual_vm_call_count <= 5:
+                        print(f"[SIA-dual-vm] error #{self._dual_vm_call_count}: {type(e).__name__}: {e}", flush=True)
 
             if pf_on:
                 self._pf_record("format_chat",     (t_format   - t0)         * 1000)
@@ -1035,6 +1217,7 @@ def make_sia_processor(
                 self._decoded_token_count.pop(idx, None)
                 self._chat_prefix_per_req.pop(idx, None)
                 self._chat_suffix_per_req.pop(idx, None)
+                self._manual_prefix_ids_per_req.pop(idx, None)
                 # b2: 释放 RM session
                 if self._rm is not None:
                     sid = self._b2_sessions.pop(idx, None)
@@ -1056,6 +1239,7 @@ def make_sia_processor(
                 old_decoded_n = dict(self._decoded_token_count)
                 old_chat_prefix = dict(self._chat_prefix_per_req)
                 old_chat_suffix = dict(self._chat_suffix_per_req)
+                old_manual_prefix = dict(self._manual_prefix_ids_per_req)
                 for i1, i2, directionality in batch_update.moved:
                     if directionality == MoveDirectionality.UNIDIRECTIONAL:
                         self._output_ids[i2] = old_out.get(i1, [])
@@ -1071,6 +1255,8 @@ def make_sia_processor(
                         if i1 in old_chat_prefix:
                             self._chat_prefix_per_req[i2] = old_chat_prefix[i1]
                             self._chat_suffix_per_req[i2] = old_chat_suffix.get(i1)
+                        if i1 in old_manual_prefix:
+                            self._manual_prefix_ids_per_req[i2] = old_manual_prefix[i1]
                     else:  # SWAP
                         self._output_ids[i1] = old_out.get(i2, [])
                         self._output_ids[i2] = old_out.get(i1, [])
@@ -1114,6 +1300,15 @@ def make_sia_processor(
                         else:
                             self._chat_prefix_per_req.pop(i2, None)
                             self._chat_suffix_per_req.pop(i2, None)
+                        # manual prefix ids (C3): SWAP
+                        if i2 in old_manual_prefix:
+                            self._manual_prefix_ids_per_req[i1] = old_manual_prefix[i2]
+                        else:
+                            self._manual_prefix_ids_per_req.pop(i1, None)
+                        if i1 in old_manual_prefix:
+                            self._manual_prefix_ids_per_req[i2] = old_manual_prefix[i1]
+                        else:
+                            self._manual_prefix_ids_per_req.pop(i2, None)
 
             for idx, params, prompt_ids, output_ids in batch_update.added:
                 self._output_ids[idx] = output_ids

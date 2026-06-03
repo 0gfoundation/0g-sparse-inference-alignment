@@ -46,6 +46,15 @@ class ScoreRequest(BaseModel):
     request_id: Optional[str] = None
 
 
+class ScoreTokenIdsRequest(BaseModel):
+    """跟 vllm /classify (path A direct-token-ids) 完全同 payload schema 对齐:
+    input = list[list[int]], 每个内 list = 一个候选完整序列 (prefix + gen + cand)。
+    request_id 仅用于 dual-VM 日志关联。
+    """
+    input: list[list[int]]
+    request_id: Optional[str] = None
+
+
 @app.get("/health")
 def health():
     return {"status": "ok", "backend": "pytorch-official-value-model"}
@@ -108,6 +117,57 @@ def _score_impl(req: ScoreRequest):
 
     t_total = time.time() - t0
     return {"scores": scores, "elapsed_ms": round(t_total * 1000, 2)}
+
+
+@app.post("/score_token_ids")
+def score_token_ids(req: ScoreTokenIdsRequest):
+    """token-ids 直传版本: input = list[list[int]] 候选完整序列。
+
+    用法: dual-VM 对比 — 跟 vllm /classify (path A direct-token-ids) 接收完全
+    一致的 payload (LLM 生成的 token_ids + 候选 cand_id), 跑官方 ValueModel.forward
+    + 取最后非 pad token 的 reward, 返回 raw logit list[float]。
+
+    跟 /score 的区别: 完全跳过 apply_chat_template / re-tokenize 路径, 用上游
+    传来的 token_ids 直接 forward, 100% 对齐 vllm /classify 的输入分布。
+    """
+    try:
+        t0 = time.time()
+        token_id_lists = req.input
+        if not token_id_lists:
+            return {"scores": [], "elapsed_ms": 0.0}
+
+        # Pad 到最长
+        max_len = max(len(ids) for ids in token_id_lists)
+        pad_id = TOK.pad_token_id
+        input_ids = torch.full(
+            (len(token_id_lists), max_len), pad_id,
+            dtype=torch.long, device=DEVICE,
+        )
+        attention_mask = torch.zeros(
+            (len(token_id_lists), max_len),
+            dtype=torch.long, device=DEVICE,
+        )
+        for i, ids in enumerate(token_id_lists):
+            n = len(ids)
+            input_ids[i, :n] = torch.tensor(ids, dtype=torch.long, device=DEVICE)
+            attention_mask[i, :n] = 1
+
+        with torch.no_grad():
+            out = VM(input_ids=input_ids, attention_mask=attention_mask)
+            token_rewards = out.token_rewards
+            seq_lens = attention_mask.sum(dim=1) - 1   # (batch,)
+            idx = torch.arange(token_rewards.size(0), device=DEVICE)
+            last_rewards = token_rewards[idx, seq_lens]
+
+        scores = last_rewards.float().cpu().tolist()
+        t_total = time.time() - t0
+        return {"scores": scores, "elapsed_ms": round(t_total * 1000, 2)}
+    except Exception as e:
+        import traceback
+        tb = traceback.format_exc()
+        print(f"[RM-token-ids-error] {type(e).__name__}: {e}\n{tb}", flush=True)
+        n = len(req.input) if req.input else 5
+        return {"scores": [0.0] * n, "error": f"{type(e).__name__}: {e}"}
 
 
 def main():
