@@ -88,6 +88,9 @@ class ChatCompletionRequest(BaseModel):
     presence_penalty: Optional[float] = 0.0
     frequency_penalty: Optional[float] = 0.0
     n: Optional[int] = 1
+    # 透传给 apply_chat_template 的额外 kwargs (e.g. {"enable_thinking": False})
+    # 用法: 跟 OpenAI 兼容 — eval client 传 chat_template_kwargs={"enable_thinking": False}
+    chat_template_kwargs: Optional[dict] = None
 
 
 class CompletionRequest(BaseModel):
@@ -113,18 +116,24 @@ class CompletionRequest(BaseModel):
 # 工具函数
 # ---------------------------------------------------------------------------
 
-def _messages_to_prompt(messages: list[ChatMessage]) -> dict:
+def _messages_to_prompt(messages: list[ChatMessage],
+                        chat_template_kwargs: Optional[dict] = None) -> dict:
     """
     将 OpenAI messages 转为 vLLM prompt dict（token IDs）。
     有 chat_template 时用标准 chat template（适合 Instruct 模型）；
     无 chat_template 时 fallback 到 Human/Assistant 纯文本格式（适合 Base 模型）。
+
+    chat_template_kwargs: 透传给 apply_chat_template 的额外 kwargs。
+        典型用法: {"enable_thinking": False} 对 Qwen3 Instruct 关掉 thinking 模式。
     """
     msgs = [{"role": m.role, "content": m.content} for m in messages]
     if getattr(_llm_tok, "chat_template", None):
+        extra = chat_template_kwargs or {}
         token_ids = _llm_tok.apply_chat_template(
             msgs,
             tokenize=True,
             add_generation_prompt=True,
+            **extra,
         )
     else:
         parts = []
@@ -224,7 +233,7 @@ async def _log_rm_status():
 
 async def _handle_chat(req: ChatCompletionRequest):
     await _log_rm_status()
-    prompt = _messages_to_prompt(req.messages)
+    prompt = _messages_to_prompt(req.messages, req.chat_template_kwargs)
     sampling_params = _build_sampling_params(req)
     model = req.model or _model_id
     request_id = f"chatcmpl-{uuid.uuid4().hex[:12]}"
@@ -414,6 +423,11 @@ def parse_args():
                         "省服务端 re-tokenize（~3-5ms/call）。需要 RM server 用 "
                         "scripts/vllm_serve_with_token_ids.py 启动以打 Pydantic 补丁。")
     p.add_argument("--max_model_len", type=int, default=4096)
+    p.add_argument("--enable_thinking", choices=["true", "false"], default=None,
+                   help="透传 enable_thinking 给 RM prefix 构造, 跟 LLM 实际看到的 prompt 100% 一致。"
+                        "Qwen3 Instruct 模型 default=true (含 <think> 注入); "
+                        "传 false 跟 eval client --disable_thinking 一致; "
+                        "default=None 表示不传 (用 chat_template 默认值, 也即模型本身默认)。")
     p.add_argument("--host", default="0.0.0.0")
     p.add_argument("--port", type=int, default=8000)
     p.add_argument("--model_id", default=None,
@@ -462,6 +476,12 @@ def main():
         print(f"[CALIB] dummy_processor={_args.dummy_processor}, "
               f"NO RM call, NO logits modification", flush=True)
     else:
+        # 把 "true"/"false" 字符串转成 bool / None
+        _enable_thinking = (
+            True if _args.enable_thinking == "true"
+            else False if _args.enable_thinking == "false"
+            else None
+        )
         SIAProcessor = make_sia_processor(
             rm_url=_args.rm_url,
             topk=_args.topk,
@@ -471,6 +491,7 @@ def main():
             rm_model=_args.rm_model,
             use_token_ids=_args.use_token_ids,
             rm_b2_gpu_mem=_args.rm_b2_gpu_mem,
+            enable_thinking=_enable_thinking,
         )
 
     print("Loading vLLM AsyncLLMEngine...")

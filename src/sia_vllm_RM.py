@@ -163,6 +163,8 @@ def make_sia_processor(
     rm_model: Optional[str] = None,    # rm_backend ∈ {"vllm","b2"} 时必填：RM 模型路径
     use_token_ids: bool = False,       # C2: 客户端预先 tokenize，直接发 token_ids 给 RM
     rm_b2_gpu_mem: float = 0.3,        # b2 backend: RM vLLM 实例的 gpu_memory_utilization
+    enable_thinking: Optional[bool] = None,   # chat_template enable_thinking 透传给 RM prefix 构造,
+                                              # 跟 LLM 实际看到的 prompt 100% 一致 (None=不传)
 ):
     """
     返回一个 SIALogitsProcessor 类（不是实例）。
@@ -198,6 +200,7 @@ def make_sia_processor(
         _ENTROPY_THRESHOLD = entropy_threshold
         _USE_TOKEN_IDS = use_token_ids
         _RM_B2_GPU_MEM = rm_b2_gpu_mem
+        _ENABLE_THINKING = enable_thinking   # None / True / False
 
         # SIA 客户端 profiling（区别于 RM_PROFILE 那套服务端 profiling）
         _PROFILE_DETAIL: bool = os.environ.get("SIA_PROFILE", "1") == "1"
@@ -431,38 +434,46 @@ def make_sia_processor(
         # C1 helper: 缓存的 chat template prefix/suffix
         # ----------------------------------------------------------------
         def _get_chat_template_parts(self, req_idx: int, user_content: str):
-            """每个 request 渲染一次 chat template，缓存 user 部分前缀和 assistant 关闭后缀。
+            """每个 request 渲染一次 chat template，缓存跟 LLM 实际看到的完全一致的 prefix。
 
-            后续 INTERVENE 步只需 `prefix + response_so_far + candidate + suffix` 字符串拼接，
-            省掉重复的 apply_chat_template 调用（5 candidates × 每步）。
+            2026-06-03 修复: 之前用 [user, assistant=SENTINEL] + 分割的方式, 得到的 prefix
+            **不含** chat_template 的 generation_prompt 注入 (例如 Qwen3 enable_thinking 时
+            的 `<think>\\n` 或 enable_thinking=False 时的 `<think>\\n\\n</think>\\n\\n` 空块)。
+            这导致 RM 看到的 context 跟 LLM 实际生成时看到的不一致, RM 评分 OOD。
 
-            返回 (prefix, suffix)；若 SENTINEL 分割失败则返回 (None, None) 触发 fallback。
+            新做法: 用 `apply_chat_template(user, add_generation_prompt=True, enable_thinking=X)`
+            得到跟 LLM-side 100% 一致的 prefix。suffix 永远是 "" (Fix #1 已去 close tag)。
+
+            后续 INTERVENE 步只需 `prefix + response_so_far + candidate` 字符串拼接。
+            返回 (prefix, suffix=""); 若 apply_chat_template 失败返回 (None, None) 触发 fallback。
             """
             if req_idx in self._chat_prefix_per_req:
                 return self._chat_prefix_per_req[req_idx], self._chat_suffix_per_req[req_idx]
 
-            SENTINEL = "ZSIACHATTEMPLATESENTINELZ"
             try:
-                convs = [
-                    {"role": "user",      "content": user_content},
-                    {"role": "assistant", "content": SENTINEL},
-                ]
-                text = self._llm_tok.apply_chat_template(convs, tokenize=False)
+                # 关键: 跟 LLM 同样的 apply_chat_template 调用 (add_generation_prompt=True
+                # + 同 enable_thinking), 这样 RM 看到的 prefix 跟 LLM 实际看到的 100% 一致
+                kwargs = {
+                    "tokenize": False,
+                    "add_generation_prompt": True,
+                }
+                if self._ENABLE_THINKING is not None:
+                    kwargs["enable_thinking"] = self._ENABLE_THINKING
+                prefix = self._llm_tok.apply_chat_template(
+                    [{"role": "user", "content": user_content}],
+                    **kwargs,
+                )
             except Exception:
                 self._chat_prefix_per_req[req_idx] = None
                 self._chat_suffix_per_req[req_idx] = None
                 return None, None
 
-            if SENTINEL not in text:
-                self._chat_prefix_per_req[req_idx] = None
-                self._chat_suffix_per_req[req_idx] = None
-                return None, None
-
-            prefix, suffix = text.split(SENTINEL, 1)
-            # 与原代码一致：去掉 leading BOS（如果有）
+            # 去掉 leading BOS（如果有）
             bos = self._llm_tok.bos_token
             if bos and prefix.startswith(bos):
                 prefix = prefix[len(bos):]
+            # Suffix 永远是空 (Fix #1 后我们不在 RM 输入末尾加 close tag)
+            suffix = ""
             self._chat_prefix_per_req[req_idx] = prefix
             self._chat_suffix_per_req[req_idx] = suffix
             return prefix, suffix
@@ -649,9 +660,12 @@ def make_sia_processor(
                 # Fallback: 用 add_generation_prompt=True 拿到 user-only prefix
                 # (末尾是 assistant header, 无 close tag), 再拼 response + candidate
                 bos = self._llm_tok.bos_token
+                kwargs = {"tokenize": False, "add_generation_prompt": True}
+                if self._ENABLE_THINKING is not None:
+                    kwargs["enable_thinking"] = self._ENABLE_THINKING
                 fallback_prefix = self._llm_tok.apply_chat_template(
                     [{"role": "user", "content": user_content}],
-                    tokenize=False, add_generation_prompt=True,
+                    **kwargs,
                 )
                 if bos and fallback_prefix.startswith(bos):
                     fallback_prefix = fallback_prefix[len(bos):]
