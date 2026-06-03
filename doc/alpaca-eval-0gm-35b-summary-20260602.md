@@ -347,3 +347,107 @@ sleep 6
 1. **跑 RM=1.7B + AlpacaEval 100Q** (跟本次 RM=4B 对照): MMLU 30Q 上 1.7B 比 4B 好 +6.7pp acc, AlpacaEval 上预期类似 (小 VM 更温和, 跨家族损失更小)
 2. (可选) 跑完整 805Q + RM=4B + `--no_think_prompt --ban_think_token`, 把 N=98 提升到 N=805 减少 sample noise
 3. 训一个专门为 0GM 训的 VM (cross-family 问题的 ML 层解决)
+
+---
+
+## 11. 跟官网代码 (`/workspace/SIA/git/SIA/`) 的偏差审计
+
+### 11.1 SIA vs noSIA **内部公平性** — ✅ 通过
+
+| 维度 | SIA | noSIA |
+|------|-----|-------|
+| Prompts | 前 100 题 alpaca_eval.json | 前 100 题 alpaca_eval.json ✓ |
+| max_tokens / temp / top_p / top_k / rep_pen | 2048 / 1.0 / 0.95 / 20 / 1.0 | 2048 / 1.0 / 0.95 / 20 / 1.0 ✓ |
+| no_think_prompt / ban_think_token | True / True | True / True ✓ |
+| Server 代码路径 | sia_vllm_server.py /v1/completions | sia_vllm_server.py /v1/completions ✓ |
+| **唯一差异** | weight=1.0, thr=0.8 | **weight=0.0, thr=999999** (SIA processor 注册但永不 INTERVENE) |
+
+两 arm 同代码、同 prompt、同 sampling 配置, 唯一差异是 SIA processor 是否真正干预。**内部对比公平。**
+
+### 11.2 跟官网默认配置的偏差
+
+| 维度 | 官网 (`evaluate.py` / `sia.py`) | 我们 | 影响评估 |
+|------|---------------------------------|------|----------|
+| **topk** (RM 候选数) | **10** | **5** | ⚠️ 候选池减半, SIA 有效干预空间窄一倍 (历史 14B b2 baseline 为加速也用 5) |
+| weight | 1.0 | 1.0 | ✓ 相同 |
+| entropy_threshold | None / 1.0 (论文) | **0.8** | 略低让干预率高, 不影响公平性, 仅 hyperparameter 选择 |
+| max_new_token | 128 (default) / 256 (14B A1) | **2048** | 让 0GM thinking 有空间, 但设置差很大 |
+| **top_p** | **无** | **0.95** | ⚠️ 官方 sia.py 0 occurrence of top_p, 我们多了 nucleus 截断 |
+| **top_k (sampling)** | **无** | **20** | ⚠️ 同上, 官方采样无二次截断 |
+| **repetition_penalty** | **无** | **1.0** (= 关闭) | 1.0 实际是 no-op, 不实质影响 |
+| **bad_words** | **无** | **["<think>","</think>"]** | 0GM 训练先验强自发 emit `<think>`, 必须禁; 官方 14B 用 raw `Human/Assistant` 不进 thinking, 不需要 |
+| RM score 数值范围 | raw logits (~[-7,+7]) | sigmoid prob 反变换回 raw logits (commit `e1d150e` Step 1) | ✓ 数值等价 |
+| 非 top-k mask | -inf | -inf (commit `e1d150e` Step 2) | ✓ 等价 |
+| mean-norm | **无** (`combined = rewards * weight + orig`) | **有** (`rm_deltas = (rm_scores - mean) * weight`) | softmax shift-invariant under -inf mask, **数学等价** (top-5 内部 ordering 不变) |
+| SKIP path (weight=0) | `combined = orig_scores`, softmax(/T), multinomial (无 top_p/top_k filter) | logits 不动, vllm sampler apply temp + top_p + top_k + bad_words + multinomial | ⚠️ **微妙差异**: 我们 SKIP 仍走二次 filter, 官方不走 |
+
+### 11.3 🚨 真正可疑的几处
+
+#### 可疑 #1 — **mean-norm + `<think>` 在 top-5 的污染**
+
+当 `<think>` (id=248068) 在 0GM top-5 内 (因训练先验, 概率很高):
+1. SIA 把 `<think>` 当 candidate 之一, RM 给它打分
+2. RM 训练时没见过 `<think>` 当 candidate 的场景, 分数偏 noise (可能很高或很低)
+3. **mean-norm 时 `<think>` 的分数被算进 mean** → mean 被污染 → **影响其他 4 个 candidate's delta**
+4. -inf mask 后 logits[`<think>`] = orig_logit + delta (modified)
+5. vllm sampler 的 bad_words 把 `<think>` 又设回 -inf → `<think>` 永远不被采到
+6. **但步骤 3 的 mean 污染**已经扭曲了其他 candidate 的 logit
+
+→ **官方代码没有这个问题** (无 mean-norm + 14B 不自发 emit `<think>`)。我们的 setup 引入此噪声, 估算每次 INTERVENE 都受影响 (假设 `<think>` 在 top-5 的概率 ~50-80%)。
+
+#### 可疑 #2 — **topk=5 vs 官方 10**
+
+历史 14B baseline 用 topk=5 (b2 InprocClient 时代为减少 RM call 加速)。论文实验和官方 evaluate.py default 都用 10。**RM 候选池减半, SIA 直接影响力减半**。如果 SIA on 0GM 真有效, 用 topk=10 可能恢复部分效果。
+
+#### 可疑 #3 — **干预率 33% 是 ban_think_token 副作用**
+
+`bad_words` 把 `<think>` (高频 top-1) banned 后, 排名后挪, top-1 不再压倒性, top-5 internal entropy 拉高 → **更多 step 跨过 threshold=0.8 触发 INTERVENE**。
+
+→ 这跟论文"sparse junction" 语义略不同: 论文期望干预集中在**模型真正不确定的关键决策点**, 我们的 33% 干预率部分是 setup-induced (ban_think 后 top-5 重排引起的伪 entropy 上升)。
+
+#### 可疑 #4 — **noSIA 仍走二次 filter, 跟官方 pure noSIA 不同**
+
+官方 noSIA (weight ≤ 0.1) 是 `combined = orig_scores`, softmax(/T), multinomial, 没有 top_p/top_k/rep_pen 二次截断。我们的 noSIA arm 用 sia_vllm_server.py 走 vllm sampler 全套 (top_p=0.95, top_k=20, bad_words)。**SIA 跟我们 noSIA 内部公平**, 但**跟官方 pure noSIA 数字不可比**。
+
+### 11.4 优先级排序的修复建议
+
+按"对当前结论 (-13% reward) 影响大小"排序:
+
+#### 优先级 1 — **改 `topk=10` 重跑 100Q** (跟官方对齐)
+
+理由:
+- 候选池翻倍, SIA 真正影响范围大一倍
+- 历史 14B A1 (官方 topk=10) +13.2% reward, 我们用 topk=5 已可能弱了一半的 SIA 效力
+- 修复成本: 1 行 CLI 参数, ~15-20 min 重跑 SIA 100Q (noSIA arm 不变, 因为 noSIA 不调 RM)
+- 预期: 若 topk=10 让 SIA 改善至 -5% 或转正, 说明 topk=5 是主要 bottleneck
+
+#### 优先级 2 — **去掉 mean-norm + 重跑** (匹配官方)
+
+理由:
+- 官方代码 `combined = rewards * weight + orig` 无 mean-norm
+- 我们 mean-norm 在 `<think>` 在 top-5 时引入污染
+- 修复成本: 改 1 处代码 (commit `e1d150e` 的 Step 2 fix 区域), 重新部署 SIA server, 重跑 100Q
+- 预期: 去掉 mean-norm 后, `<think>` 在 top-5 时其他 candidate's delta 不再受 `<think>` RM score 污染, 干预方向更精确
+
+#### 优先级 3 — **改用 1.7B VM 重跑 AlpacaEval 100Q**
+
+理由:
+- MMLU 30Q 已证明 1.7B VM 比 4B 在 0GM 上好 +6.7pp acc
+- AlpacaEval 上预期同向收益 (跨家族场景小 VM 更温和)
+- 这是 [`sia-fix-and-vm-ablation-0gm-35b-20260602.md`](sia-fix-and-vm-ablation-0gm-35b-20260602.md) §7 的 #1 建议
+- 修复成本: kill 4B RM, 起 1.7B RM, 重跑 SIA 100Q (~15 min)
+
+#### 优先级 4 — **完整 805Q 减少 sample noise**
+
+当前 N=98 (2 题 SIA 输出过短被 skip), Δ=-1.31 reward, p-value 估算: stdev=12, SE_diff ≈ 1.6 → -1.31 仅约 0.8σ, 统计上不显著。跑完整 805 Q → SE 降 1/√(805/98) ≈ 2.86×, 能确认 -13% 是真实信号还是 sample noise。
+
+#### 优先级 5 — **完全匹配官方 sampling**: 去掉 `top_p/top_k/rep_pen` 二次截断
+
+跟官方完全一致。但 0GM 大词表有 OOV 风险 (历史 rep_pen=1.3 + top_k=-1 时乱码)。需要测试是否能在 raw Human/Assistant + ban_think 下安全。
+
+### 11.5 推荐顺序
+
+1. 先跑**优先级 1** (topk=10) — 改动最小, 跟官方对齐意义最大, 单次实验
+2. 再跑**优先级 3** (1.7B VM with topk=10), 看 VM size + topk 双管齐下效果
+3. 之后看是否值得做**优先级 4** (805Q full) 减少噪声
+4. **优先级 2** (mean-norm) 和 **优先级 5** (完全匹配 sampling) 是工程层 cleanup, 影响相对小, 可暂缓

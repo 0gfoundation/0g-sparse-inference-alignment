@@ -26,7 +26,7 @@ def chat_completion(base_url, model, instruction, *,
                     max_tokens=256, temperature=1.0,
                     top_p=None, top_k=None, repetition_penalty=None,
                     disable_thinking=False, no_think_prompt=False,
-                    ban_think_token=False,
+                    ban_think_token=False, brief_instruction=False,
                     timeout=300):
     """
     POST 到 /v1/chat/completions (常规, 走 chat_template) 或者
@@ -44,6 +44,14 @@ def chat_completion(base_url, model, instruction, *,
                  ("repetition_penalty", repetition_penalty)]:
         if v is not None:
             sampling_kwargs[k] = v
+
+    # brief_instruction 模式: 在 user content 前加一句简短指令, 让模型 think 和 answer 都简短
+    if brief_instruction:
+        instruction = (
+            "Please keep both your reasoning (inside <think>) and your final answer "
+            "concise and to the point. Avoid unnecessary elaboration.\n\n"
+            + instruction
+        )
 
     if no_think_prompt:
         # raw /v1/completions, 跳过 chat_template, 用 Human/Assistant raw 文本
@@ -119,6 +127,9 @@ def main():
     p.add_argument("--ban_think_token", action="store_true",
                    help="(仅 --no_think_prompt 时生效) 通过 vllm bad_words 在 sampler 层 "
                         "禁止 <think>/</think> token 被采样, 强制模型不进 thinking")
+    p.add_argument("--brief_instruction", action="store_true",
+                   help="在 user 指令前 prepend 简短性要求: 让 thinking 和 final answer 都简短, "
+                        "缩短生成长度同时仍保留 thinking 结构")
     args = p.parse_args()
 
     data = json.load(open(args.dataset))
@@ -153,6 +164,7 @@ def main():
                 disable_thinking=args.disable_thinking,
                 no_think_prompt=args.no_think_prompt,
                 ban_think_token=args.ban_think_token,
+                brief_instruction=args.brief_instruction,
             )
         except Exception as e:
             text, ntok = f"ERROR: {e}", -1
