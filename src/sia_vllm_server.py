@@ -150,19 +150,18 @@ def _messages_to_prompt(messages: list[ChatMessage],
 
 
 def _build_sampling_params(req: ChatCompletionRequest) -> SamplingParams:
-    # Defaults preserve legacy Qwen14B+Qwen3-4B-RM baseline (top_k unset = vllm
-    # default -1, repetition_penalty=1.3). Clients targeting models with broad
-    # multilingual vocab (e.g. 0GM 248K vocab) should set top_k and
-    # repetition_penalty explicitly via the request to match the model's
-    # generation_config.json — otherwise weak/rare tokens dominate after
-    # repetition_penalty pushes common tokens down.
+    # repetition_penalty 默认 1.0 (paper-aligned, 2026-06-04 修复)。
+    # 之前默认 1.3 跟 vllm v1 sampler 顺序 (SIA processor → penalties) 联动,
+    # 直接污染 SIA 的 top-K 排序: 200Q Qwen3-14B Skywork mean reward 从 +3.09
+    # 跳到 +11.48 (跟 Paper SIA +11.16 统计等价 p=0.43)。
+    # 客户端若 model-specific 需要 repetition_penalty != 1.0, 显式传入即可。
     kwargs = dict(
         temperature=req.temperature if req.temperature is not None else 0.7,
         max_tokens=req.max_tokens if req.max_tokens is not None else 512,
         top_p=req.top_p if req.top_p is not None else 1.0,
         stop=req.stop or [],
         repetition_penalty=(
-            req.repetition_penalty if req.repetition_penalty is not None else 1.3
+            req.repetition_penalty if req.repetition_penalty is not None else 1.0
         ),
     )
     if req.top_k is not None:
@@ -347,7 +346,7 @@ async def _handle_completion(req: CompletionRequest):
         top_p=req.top_p if req.top_p is not None else 1.0,
         stop=req.stop or [],
         repetition_penalty=(
-            req.repetition_penalty if req.repetition_penalty is not None else 1.3
+            req.repetition_penalty if req.repetition_penalty is not None else 1.0
         ),
     )
     if req.top_k is not None:
