@@ -1,0 +1,681 @@
+Loading tokenizer: /workspace/SIA/models/Qwen3-VL-30B-A3B-Instruct ...
+Tokenizer loaded.
+============================================================
+Model ID : Qwen3-VL-30B-A3B-Instruct
+LLM      : /workspace/SIA/models/Qwen3-VL-30B-A3B-Instruct
+RM URL   : http://localhost:8002
+RM mode  : pytorch
+topk=10  weight=0.0  entropy_threshold=10.0  use_token_ids=False
+Server   : http://0.0.0.0:8000
+============================================================
+Loading vLLM AsyncLLMEngine...
+INFO 06-04 09:18:18 [model.py:549] Resolved architecture: Qwen3VLMoeForConditionalGeneration
+INFO 06-04 09:18:18 [model.py:1678] Using max model len 4096
+INFO 06-04 09:18:18 [scheduler.py:238] Chunked prefill is enabled with max_num_batched_tokens=2048.
+INFO 06-04 09:18:18 [vllm.py:790] Asynchronous scheduling is enabled.
+(EngineCore pid=1963519) INFO 06-04 09:18:22 [core.py:105] Initializing a V1 LLM engine (v0.19.0) with config: model='/workspace/SIA/models/Qwen3-VL-30B-A3B-Instruct', speculative_config=None, tokenizer='/workspace/SIA/models/Qwen3-VL-30B-A3B-Instruct', skip_tokenizer_init=False, tokenizer_mode=auto, revision=None, tokenizer_revision=None, trust_remote_code=False, dtype=torch.bfloat16, max_seq_len=4096, download_dir=None, load_format=auto, tensor_parallel_size=1, pipeline_parallel_size=1, data_parallel_size=1, decode_context_parallel_size=1, dcp_comm_backend=ag_rs, disable_custom_all_reduce=False, quantization=None, enforce_eager=False, enable_return_routed_experts=False, kv_cache_dtype=auto, device_config=cuda, structured_outputs_config=StructuredOutputsConfig(backend='auto', disable_any_whitespace=False, disable_additional_properties=False, reasoning_parser='', reasoning_parser_plugin='', enable_in_reasoning=False), observability_config=ObservabilityConfig(show_hidden_metrics_for_version=None, otlp_traces_endpoint=None, collect_detailed_traces=None, kv_cache_metrics=False, kv_cache_metrics_sample=0.01, cudagraph_metrics=False, enable_layerwise_nvtx_tracing=False, enable_mfu_metrics=False, enable_mm_processor_stats=False, enable_logging_iteration_details=False), seed=0, served_model_name=/workspace/SIA/models/Qwen3-VL-30B-A3B-Instruct, enable_prefix_caching=True, enable_chunked_prefill=True, pooler_config=None, compilation_config={'mode': <CompilationMode.VLLM_COMPILE: 3>, 'debug_dump_path': None, 'cache_dir': '', 'compile_cache_save_format': 'binary', 'backend': 'inductor', 'custom_ops': ['none'], 'splitting_ops': ['vllm::unified_attention', 'vllm::unified_attention_with_output', 'vllm::unified_mla_attention', 'vllm::unified_mla_attention_with_output', 'vllm::mamba_mixer2', 'vllm::mamba_mixer', 'vllm::short_conv', 'vllm::linear_attention', 'vllm::plamo2_mamba_mixer', 'vllm::gdn_attention_core', 'vllm::olmo_hybrid_gdn_full_forward', 'vllm::kda_attention', 'vllm::sparse_attn_indexer', 'vllm::rocm_aiter_sparse_attn_indexer', 'vllm::unified_kv_cache_update', 'vllm::unified_mla_kv_cache_update'], 'compile_mm_encoder': False, 'cudagraph_mm_encoder': False, 'encoder_cudagraph_token_budgets': [], 'encoder_cudagraph_max_images_per_batch': 0, 'compile_sizes': [], 'compile_ranges_endpoints': [2048], 'inductor_compile_config': {'enable_auto_functionalized_v2': False, 'size_asserts': False, 'alignment_asserts': False, 'scalar_asserts': False, 'combo_kernels': True, 'benchmark_combo_kernel': True}, 'inductor_passes': {}, 'cudagraph_mode': <CUDAGraphMode.FULL_AND_PIECEWISE: (2, 1)>, 'cudagraph_num_of_warmups': 1, 'cudagraph_capture_sizes': [1, 2, 4, 8, 16, 24, 32, 40, 48, 56, 64, 72, 80, 88, 96, 104, 112, 120, 128, 136, 144, 152, 160, 168, 176, 184, 192, 200, 208, 216, 224, 232, 240, 248, 256], 'cudagraph_copy_inputs': False, 'cudagraph_specialize_lora': True, 'use_inductor_graph_partition': False, 'pass_config': {'fuse_norm_quant': False, 'fuse_act_quant': False, 'fuse_attn_quant': False, 'enable_sp': False, 'fuse_gemm_comms': False, 'fuse_allreduce_rms': False}, 'max_cudagraph_capture_size': 256, 'dynamic_shapes_config': {'type': <DynamicShapesType.BACKED: 'backed'>, 'evaluate_guards': False, 'assume_32_bit_indexing': False}, 'local_cache_dir': None, 'fast_moe_cold_start': True, 'static_all_moe_layers': []}
+(EngineCore pid=1963519) INFO 06-04 09:18:22 [parallel_state.py:1400] world_size=1 rank=0 local_rank=0 distributed_init_method=tcp://172.17.0.2:56267 backend=nccl
+(EngineCore pid=1963519) INFO 06-04 09:18:22 [parallel_state.py:1716] rank 0 in world size 1 is assigned as DP rank 0, PP rank 0, PCP rank 0, TP rank 0, EP rank 0, EPLB rank N/A
+(EngineCore pid=1963519) [SIA] Loading LLM tokenizer: /workspace/SIA/models/Qwen3-VL-30B-A3B-Instruct
+(EngineCore pid=1963519) [SIA] RM URL: http://localhost:8002
+(EngineCore pid=1963519) INFO 06-04 09:18:25 [gpu_model_runner.py:4735] Starting to load model /workspace/SIA/models/Qwen3-VL-30B-A3B-Instruct...
+(EngineCore pid=1963519) INFO 06-04 09:18:25 [cuda.py:390] Using backend AttentionBackendEnum.FLASH_ATTN for vit attention
+(EngineCore pid=1963519) INFO 06-04 09:18:25 [mm_encoder_attention.py:230] Using AttentionBackendEnum.FLASH_ATTN for MMEncoderAttention.
+(EngineCore pid=1963519) INFO 06-04 09:18:26 [cuda.py:334] Using FLASH_ATTN attention backend out of potential backends: ['FLASH_ATTN', 'FLASHINFER', 'TRITON_ATTN', 'FLEX_ATTENTION'].
+(EngineCore pid=1963519) INFO 06-04 09:18:26 [flash_attn.py:596] Using FlashAttention version 3
+(EngineCore pid=1963519) INFO 06-04 09:18:26 [unquantized.py:186] Using TRITON backend for Unquantized MoE
+(EngineCore pid=1963519) <frozen importlib._bootstrap_external>:1297: FutureWarning: The cuda.cudart module is deprecated and will be removed in a future release, please switch to use the cuda.bindings.runtime module instead.
+(EngineCore pid=1963519) <frozen importlib._bootstrap_external>:1297: FutureWarning: The cuda.nvrtc module is deprecated and will be removed in a future release, please switch to use the cuda.bindings.nvrtc module instead.
+(EngineCore pid=1963519) Loading safetensors checkpoint shards:   0% Completed | 0/13 [00:00<?, ?it/s]
+(EngineCore pid=1963519) Loading safetensors checkpoint shards:   8% Completed | 1/13 [00:52<10:35, 52.94s/it]
+(EngineCore pid=1963519) Loading safetensors checkpoint shards:  15% Completed | 2/13 [02:04<11:42, 63.87s/it]
+(EngineCore pid=1963519) Loading safetensors checkpoint shards:  23% Completed | 3/13 [03:17<11:18, 67.89s/it]
+(EngineCore pid=1963519) Loading safetensors checkpoint shards:  31% Completed | 4/13 [04:30<10:31, 70.17s/it]
+(EngineCore pid=1963519) Loading safetensors checkpoint shards:  38% Completed | 5/13 [05:42<09:27, 70.90s/it]
+(EngineCore pid=1963519) Loading safetensors checkpoint shards:  46% Completed | 6/13 [06:55<08:21, 71.61s/it]
+(EngineCore pid=1963519) Loading safetensors checkpoint shards:  54% Completed | 7/13 [08:08<07:12, 72.04s/it]
+(EngineCore pid=1963519) Loading safetensors checkpoint shards:  62% Completed | 8/13 [09:23<06:03, 72.76s/it]
+(EngineCore pid=1963519) Loading safetensors checkpoint shards:  69% Completed | 9/13 [10:36<04:51, 72.86s/it]
+(EngineCore pid=1963519) Loading safetensors checkpoint shards:  77% Completed | 10/13 [11:50<03:40, 73.34s/it]
+(EngineCore pid=1963519) Loading safetensors checkpoint shards:  85% Completed | 11/13 [13:02<02:25, 72.90s/it]
+(EngineCore pid=1963519) Loading safetensors checkpoint shards:  92% Completed | 12/13 [14:13<01:12, 72.15s/it]
+(EngineCore pid=1963519) Loading safetensors checkpoint shards: 100% Completed | 13/13 [14:33<00:00, 56.63s/it]
+(EngineCore pid=1963519) Loading safetensors checkpoint shards: 100% Completed | 13/13 [14:33<00:00, 67.23s/it]
+(EngineCore pid=1963519) 
+(EngineCore pid=1963519) INFO 06-04 09:33:00 [default_loader.py:384] Loading weights took 874.04 seconds
+(EngineCore pid=1963519) INFO 06-04 09:33:00 [gpu_model_runner.py:4820] Model loading took 58.16 GiB memory and 874.837839 seconds
+(EngineCore pid=1963519) INFO 06-04 09:33:01 [gpu_model_runner.py:5753] Encoder cache will be initialized with a budget of 16384 tokens, and profiled with 1 image items of the maximum feature size.
+(EngineCore pid=1963519) INFO 06-04 09:33:07 [backends.py:1051] Using cache directory: /root/.cache/vllm/torch_compile_cache/456b4d709f/rank_0_0/backbone for vLLM's torch.compile
+(EngineCore pid=1963519) INFO 06-04 09:33:07 [backends.py:1111] Dynamo bytecode transform time: 4.22 s
+(EngineCore pid=1963519) INFO 06-04 09:33:10 [backends.py:285] Directly load the compiled graph(s) for compile range (1, 2048) from the cache, took 3.192 s
+(EngineCore pid=1963519) INFO 06-04 09:33:10 [decorators.py:303] Directly load AOT compilation from path /root/.cache/vllm/torch_compile_cache/torch_aot_compile/3924ae8acdd5a28fa886c26be71dce86a63f2ecda6c5e174a94fdb557a8d776a/rank_0_0/model
+(EngineCore pid=1963519) INFO 06-04 09:33:10 [monitor.py:48] torch.compile took 7.92 s in total
+(EngineCore pid=1963519) INFO 06-04 09:33:11 [fused_moe.py:1077] Using configuration from /workspace/SIA/venv4/lib/python3.12/site-packages/vllm/model_executor/layers/fused_moe/configs/E=128,N=768,device_name=NVIDIA_H200.json for MoE layer.
+(EngineCore pid=1963519) INFO 06-04 09:33:11 [monitor.py:76] Initial profiling/warmup run took 0.18 s
+(EngineCore pid=1963519) INFO 06-04 09:33:11 [kv_cache_utils.py:829] Overriding num_gpu_blocks=0 with num_gpu_blocks_override=256
+(EngineCore pid=1963519) INFO 06-04 09:33:11 [gpu_model_runner.py:5876] Profiling CUDA graph memory: PIECEWISE=35 (largest=256), FULL=19 (largest=128)
+(EngineCore pid=1963519) INFO 06-04 09:33:12 [gpu_model_runner.py:5955] Estimated CUDA graph memory: 0.61 GiB total
+(EngineCore pid=1963519) INFO 06-04 09:33:13 [gpu_worker.py:436] Available KV cache memory: 30.06 GiB
+(EngineCore pid=1963519) INFO 06-04 09:33:13 [gpu_worker.py:470] In v0.19, CUDA graph memory profiling will be enabled by default (VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS=1), which more accurately accounts for CUDA graph memory during KV cache allocation. To try it now, set VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS=1 and increase --gpu-memory-utilization from 0.6500 to 0.6544 to maintain the same effective KV cache size.
+(EngineCore pid=1963519) INFO 06-04 09:33:13 [kv_cache_utils.py:1319] GPU KV cache size: 328,288 tokens
+(EngineCore pid=1963519) INFO 06-04 09:33:13 [kv_cache_utils.py:1324] Maximum concurrency for 4,096 tokens per request: 80.15x
+(EngineCore pid=1963519) 2026-06-04 09:33:13,145 - INFO - autotuner.py:262 - flashinfer.jit: [Autotuner]: Autotuning process starts ...
+(EngineCore pid=1963519) 2026-06-04 09:33:13,201 - INFO - autotuner.py:268 - flashinfer.jit: [Autotuner]: Autotuning process ends
+(EngineCore pid=1963519) Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):   0%|          | 0/35 [00:00<?, ?it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):   3%|▎         | 1/35 [00:00<00:04,  7.69it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):   6%|▌         | 2/35 [00:00<00:04,  7.81it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):   9%|▊         | 3/35 [00:00<00:04,  7.50it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  11%|█▏        | 4/35 [00:00<00:04,  7.46it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  14%|█▍        | 5/35 [00:00<00:06,  4.64it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  17%|█▋        | 6/35 [00:01<00:05,  5.24it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  20%|██        | 7/35 [00:01<00:04,  5.74it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  23%|██▎       | 8/35 [00:01<00:04,  6.12it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  26%|██▌       | 9/35 [00:01<00:05,  4.54it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  29%|██▊       | 10/35 [00:01<00:04,  5.13it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  31%|███▏      | 11/35 [00:01<00:04,  5.63it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  34%|███▍      | 12/35 [00:02<00:03,  5.96it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  37%|███▋      | 13/35 [00:02<00:04,  4.48it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  40%|████      | 14/35 [00:02<00:04,  4.98it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  43%|████▎     | 15/35 [00:02<00:03,  5.42it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  46%|████▌     | 16/35 [00:02<00:03,  5.80it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  49%|████▊     | 17/35 [00:03<00:04,  4.42it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  51%|█████▏    | 18/35 [00:03<00:03,  5.00it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  54%|█████▍    | 19/35 [00:03<00:02,  5.43it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  57%|█████▋    | 20/35 [00:03<00:02,  5.59it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  60%|██████    | 21/35 [00:04<00:03,  4.23it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  63%|██████▎   | 22/35 [00:04<00:02,  4.78it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  66%|██████▌   | 23/35 [00:04<00:02,  5.19it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  69%|██████▊   | 24/35 [00:04<00:01,  5.60it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  71%|███████▏  | 25/35 [00:04<00:02,  4.32it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  74%|███████▍  | 26/35 [00:05<00:01,  4.81it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  77%|███████▋  | 27/35 [00:05<00:01,  5.28it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  80%|████████  | 28/35 [00:05<00:01,  5.62it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  83%|████████▎ | 29/35 [00:05<00:01,  4.49it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  86%|████████▌ | 30/35 [00:05<00:01,  4.98it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  89%|████████▊ | 31/35 [00:05<00:00,  5.35it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  91%|█████████▏| 32/35 [00:06<00:00,  5.67it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  94%|█████████▍| 33/35 [00:06<00:00,  4.41it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  97%|█████████▋| 34/35 [00:06<00:00,  4.94it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE): 100%|██████████| 35/35 [00:06<00:00,  5.37it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE): 100%|██████████| 35/35 [00:06<00:00,  5.21it/s]
+(EngineCore pid=1963519) Capturing CUDA graphs (decode, FULL):   0%|          | 0/19 [00:00<?, ?it/s]Capturing CUDA graphs (decode, FULL):   5%|▌         | 1/19 [00:00<00:02,  8.46it/s]Capturing CUDA graphs (decode, FULL):  11%|█         | 2/19 [00:00<00:01,  8.67it/s]Capturing CUDA graphs (decode, FULL):  16%|█▌        | 3/19 [00:00<00:01,  8.74it/s]Capturing CUDA graphs (decode, FULL):  21%|██        | 4/19 [00:00<00:02,  5.03it/s]Capturing CUDA graphs (decode, FULL):  26%|██▋       | 5/19 [00:00<00:02,  5.93it/s]Capturing CUDA graphs (decode, FULL):  32%|███▏      | 6/19 [00:00<00:01,  6.66it/s]Capturing CUDA graphs (decode, FULL):  37%|███▋      | 7/19 [00:01<00:01,  7.20it/s]Capturing CUDA graphs (decode, FULL):  42%|████▏     | 8/19 [00:01<00:01,  7.64it/s]Capturing CUDA graphs (decode, FULL):  47%|████▋     | 9/19 [00:01<00:01,  7.94it/s]Capturing CUDA graphs (decode, FULL):  53%|█████▎    | 10/19 [00:01<00:01,  8.15it/s]Capturing CUDA graphs (decode, FULL):  58%|█████▊    | 11/19 [00:01<00:00,  8.30it/s]Capturing CUDA graphs (decode, FULL):  63%|██████▎   | 12/19 [00:01<00:01,  5.45it/s]Capturing CUDA graphs (decode, FULL):  68%|██████▊   | 13/19 [00:01<00:00,  6.11it/s]Capturing CUDA graphs (decode, FULL):  74%|███████▎  | 14/19 [00:02<00:00,  6.69it/s]Capturing CUDA graphs (decode, FULL):  79%|███████▉  | 15/19 [00:02<00:00,  7.20it/s]Capturing CUDA graphs (decode, FULL):  84%|████████▍ | 16/19 [00:02<00:00,  7.57it/s]Capturing CUDA graphs (decode, FULL):  89%|████████▉ | 17/19 [00:02<00:00,  7.84it/s]Capturing CUDA graphs (decode, FULL):  95%|█████████▍| 18/19 [00:02<00:00,  8.09it/s]Capturing CUDA graphs (decode, FULL): 100%|██████████| 19/19 [00:02<00:00,  8.28it/s]Capturing CUDA graphs (decode, FULL): 100%|██████████| 19/19 [00:02<00:00,  7.26it/s]
+(EngineCore pid=1963519) INFO 06-04 09:33:23 [gpu_model_runner.py:6046] Graph capturing finished in 10 secs, took 0.72 GiB
+(EngineCore pid=1963519) INFO 06-04 09:33:23 [gpu_worker.py:597] CUDA graph pool memory: 0.72 GiB (actual), 0.61 GiB (estimated), difference: 0.11 GiB (14.7%).
+(EngineCore pid=1963519) INFO 06-04 09:33:23 [core.py:283] init engine (profile, create kv cache, warmup model) took 22.19 seconds
+LLM loaded.
+
+Starting HTTP server on http://0.0.0.0:8000 ...
+INFO:     Started server process [1963399]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:35504 - "GET /v1/models HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+WARNING 06-04 09:33:38 [input_processor.py:235] Passing raw prompts to InputProcessor is deprecated and will be removed in v0.18. You should instead pass the outputs of Renderer.render_cmpl() or Renderer.render_chat().
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/498  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:42584 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/1371  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:42586 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/1053  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:56706 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/743  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:56712 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/707  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:39084 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/552  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:50902 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/130  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:50918 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/341  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:50922 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/922  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:50924 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/979  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:35656 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/570  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:48662 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/686  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:48670 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/856  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:49470 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/873  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:46254 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/553  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:46266 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/801  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:34240 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/1160  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:34246 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/1045  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:56572 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/422  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:35678 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/1602  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:52930 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/956  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:55082 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/721  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:54798 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/256  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:54804 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/775  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:42122 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/132  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:42128 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/894  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:42130 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/342  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:33836 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/881  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:33848 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/624  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:35816 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/504  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:35822 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/960  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:60132 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/893  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:60134 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/984  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:43052 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/607  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:60350 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/85  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:60364 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/226  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:60370 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/861  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:40974 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/564  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:40980 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/502  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:45538 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/643  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:45544 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/441  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:42468 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/855  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:42472 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/1077  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:43968 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/243  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:56128 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/959  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:56130 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/981  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:48198 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/839  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:48200 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/1159  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:53330 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/377  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:43176 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/679  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:43184 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/49  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:47840 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/244  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:47852 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/1145  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:47860 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/699  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:52314 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/575  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:52324 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/906  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:60320 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/718  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:45182 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/800  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:45184 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/901  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:53172 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/898  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:53186 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/1101  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:60112 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/609  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:55644 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/864  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:55646 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/447  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:55996 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/794  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:51440 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/477  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:51452 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/553  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:60056 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/909  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:60064 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/1112  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:39428 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/192  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:36114 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/118  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:36124 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/212  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:36126 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/857  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:36136 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/742  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:33484 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/714  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:33494 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/780  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:48830 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/889  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:48832 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/940  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:42342 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/626  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:58042 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/674  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:58054 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/587  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:33796 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/678  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:33812 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/1141  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:60154 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/599  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:35500 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/743  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:35510 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/859  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:53968 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/1181  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:52098 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/846  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:44742 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/276  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:44754 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/931  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:44758 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/913  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:45602 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/258  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:48620 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/1061  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:48634 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/190  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:55020 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/950  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:55036 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/638  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:56818 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/173  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:56820 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/318  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:56822 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/505  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:56520 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/542  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:56530 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/668  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:56542 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/158  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:39556 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/189  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:39560 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/902  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:39572 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/606  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:37220 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/270  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:37226 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/503  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:59410 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/992  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:59422 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/931  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:39942 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/658  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:33564 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/1693  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:33568 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/1005  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:46668 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/285  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:46680 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/206  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:52314 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/573  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:52318 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/968  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:52332 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/974  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:54236 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/731  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:54332 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/304  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:54340 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/736  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:40528 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/217  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:40540 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/193  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:40548 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/269  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:37418 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/595  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:37426 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/632  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:37440 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/197  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:55866 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/956  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:55876 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/411  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:49950 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/261  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:49960 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:49964 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/2004  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:45656 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/191  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:48596 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/985  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:48154 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/264  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:48160 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/1397  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:55302 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/198  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:55670 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/1753  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:55672 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/1416  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:60142 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/1655  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:46720 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/1286  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:50936 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/1017  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:38898 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/841  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:55840 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/1538  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:55848 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/1390  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:44242 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/99  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:33656 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/1050  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:33672 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/249  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:57682 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/1245  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:57690 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:41318 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:38378 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/671  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:57570 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/1601  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:39082 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/1056  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:36888 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:53546 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/977  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:54660 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/336  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:41762 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/1207  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:41774 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/545  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:34028 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/197  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:35986 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/116  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:35992 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/496  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:36008 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/157  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:36018 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/1509  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:58544 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/537  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:54576 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/118  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:54590 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/174  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:54598 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/801  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:54614 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/279  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:39400 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/512  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:39414 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:35490 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/992  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:47234 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/2043  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:47390 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:42192 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/398  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:57946 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/230  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:57958 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/920  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:57972 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/1449  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:36808 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/1054  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:55570 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/405  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:34214 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/505  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:34220 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:59036 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/721  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:58982 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/1837  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:47160 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/1070  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:34336 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/172  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:49562 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/494  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:49576 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/812  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:52762 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/1029  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:52768 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:49040 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/598  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:53510 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/144  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:53514 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/353  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:53530 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/395  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:53544 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/558  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:57410 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/1017  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:57426 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/70  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:41740 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/500  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:41746 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/478  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:41750 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/599  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:43348 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore pid=1963519) [SIA] req=0 DONE  intervened=0/3  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:43362 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [1963399]

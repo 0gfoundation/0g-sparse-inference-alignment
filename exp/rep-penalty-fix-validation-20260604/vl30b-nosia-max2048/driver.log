@@ -1,0 +1,210 @@
+[driver] Qwen3-VL-30B-A3B-Instruct n=200 max=2048 -> /tmp/vl30b_runs/nosia_VL30B_200q_max2048.json
+[  1/200]   4.5s toks=497 finish=stop
+[  2/200]  11.3s toks=1370 finish=stop
+[  3/200]   8.8s toks=1052 finish=stop
+[  4/200]   6.2s toks=742 finish=stop
+[  5/200]   5.7s toks=706 finish=stop
+[  6/200]   4.5s toks=551 finish=stop
+[  7/200]   1.1s toks=129 finish=stop
+[  8/200]   2.7s toks=340 finish=stop
+[  9/200]   7.2s toks=921 finish=stop
+[ 10/200]   7.9s toks=978 finish=stop
+[ 11/200]   4.8s toks=569 finish=stop
+[ 12/200]   5.4s toks=685 finish=stop
+[ 13/200]   6.8s toks=855 finish=stop
+[ 14/200]   7.2s toks=872 finish=stop
+[ 15/200]   4.4s toks=552 finish=stop
+[ 16/200]   6.3s toks=800 finish=stop
+[ 17/200]   9.3s toks=1159 finish=stop
+[ 18/200]   8.4s toks=1044 finish=stop
+[ 19/200]   3.4s toks=421 finish=stop
+[ 20/200]  13.1s toks=1601 finish=stop
+[ 21/200]   8.1s toks=955 finish=stop
+[ 22/200]   6.0s toks=720 finish=stop
+[ 23/200]   2.3s toks=255 finish=stop
+[ 24/200]   6.2s toks=774 finish=stop
+[ 25/200]   1.1s toks=131 finish=stop
+  ...saved 25/200 (2.6 min)
+[ 26/200]   7.0s toks=893 finish=stop
+[ 27/200]   2.6s toks=341 finish=stop
+[ 28/200]   6.8s toks=880 finish=stop
+[ 29/200]   4.9s toks=623 finish=stop
+[ 30/200]   3.9s toks=503 finish=stop
+[ 31/200]   7.3s toks=959 finish=stop
+[ 32/200]   7.0s toks=892 finish=stop
+[ 33/200]   7.5s toks=983 finish=stop
+[ 34/200]   4.7s toks=606 finish=stop
+[ 35/200]   0.8s toks=84 finish=stop
+[ 36/200]   1.9s toks=225 finish=stop
+[ 37/200]   7.1s toks=860 finish=stop
+[ 38/200]   4.6s toks=563 finish=stop
+[ 39/200]   4.2s toks=501 finish=stop
+[ 40/200]   5.1s toks=642 finish=stop
+[ 41/200]   3.5s toks=440 finish=stop
+[ 42/200]   6.8s toks=854 finish=stop
+[ 43/200]   8.5s toks=1076 finish=stop
+[ 44/200]   2.0s toks=242 finish=stop
+[ 45/200]   7.5s toks=958 finish=stop
+[ 46/200]   7.8s toks=980 finish=stop
+[ 47/200]   6.5s toks=838 finish=stop
+[ 48/200]   8.7s toks=1158 finish=stop
+[ 49/200]   2.9s toks=376 finish=stop
+[ 50/200]   5.2s toks=678 finish=stop
+  ...saved 50/200 (4.8 min)
+[ 51/200]   0.5s toks=48 finish=stop
+[ 52/200]   2.0s toks=243 finish=stop
+[ 53/200]   8.6s toks=1144 finish=stop
+[ 54/200]   5.5s toks=698 finish=stop
+[ 55/200]   4.5s toks=574 finish=stop
+[ 56/200]   7.0s toks=905 finish=stop
+[ 57/200]   5.6s toks=717 finish=stop
+[ 58/200]   6.2s toks=799 finish=stop
+[ 59/200]   7.1s toks=900 finish=stop
+[ 60/200]   7.1s toks=897 finish=stop
+[ 61/200]   8.5s toks=1100 finish=stop
+[ 62/200]   4.9s toks=608 finish=stop
+[ 63/200]   7.3s toks=863 finish=stop
+[ 64/200]   3.7s toks=446 finish=stop
+[ 65/200]   6.4s toks=793 finish=stop
+[ 66/200]   4.0s toks=476 finish=stop
+[ 67/200]   4.7s toks=552 finish=stop
+[ 68/200]   7.4s toks=908 finish=stop
+[ 69/200]   8.6s toks=1111 finish=stop
+[ 70/200]   1.5s toks=191 finish=stop
+[ 71/200]   1.0s toks=117 finish=stop
+[ 72/200]   1.7s toks=211 finish=stop
+[ 73/200]   6.6s toks=856 finish=stop
+[ 74/200]   5.8s toks=741 finish=stop
+[ 75/200]   5.6s toks=713 finish=stop
+  ...saved 75/200 (7.0 min)
+[ 76/200]   5.9s toks=779 finish=stop
+[ 77/200]   6.8s toks=888 finish=stop
+[ 78/200]   7.3s toks=939 finish=stop
+[ 79/200]   5.1s toks=625 finish=stop
+[ 80/200]   5.6s toks=673 finish=stop
+[ 81/200]   4.8s toks=586 finish=stop
+[ 82/200]   5.6s toks=677 finish=stop
+[ 83/200]   9.2s toks=1140 finish=stop
+[ 84/200]   4.6s toks=598 finish=stop
+[ 85/200]   6.0s toks=742 finish=stop
+[ 86/200]   6.6s toks=858 finish=stop
+[ 87/200]   9.1s toks=1180 finish=stop
+[ 88/200]   6.3s toks=845 finish=stop
+[ 89/200]   2.1s toks=275 finish=stop
+[ 90/200]   7.1s toks=930 finish=stop
+[ 91/200]   7.2s toks=912 finish=stop
+[ 92/200]   2.0s toks=257 finish=stop
+[ 93/200]   8.4s toks=1060 finish=stop
+[ 94/200]   1.5s toks=189 finish=stop
+[ 95/200]   7.4s toks=949 finish=stop
+[ 96/200]   4.9s toks=637 finish=stop
+[ 97/200]   1.4s toks=172 finish=stop
+[ 98/200]   2.6s toks=317 finish=stop
+[ 99/200]   3.9s toks=504 finish=stop
+[100/200]   4.3s toks=541 finish=stop
+  ...saved 100/200 (9.3 min)
+[101/200]   5.2s toks=667 finish=stop
+[102/200]   1.4s toks=157 finish=stop
+[103/200]   1.5s toks=188 finish=stop
+[104/200]   7.0s toks=901 finish=stop
+[105/200]   4.9s toks=605 finish=stop
+[106/200]   2.2s toks=269 finish=stop
+[107/200]   4.1s toks=502 finish=stop
+[108/200]   7.8s toks=991 finish=stop
+[109/200]   7.5s toks=930 finish=stop
+[110/200]   5.2s toks=657 finish=stop
+[111/200]  13.9s toks=1692 finish=stop
+[112/200]   8.3s toks=1004 finish=stop
+[113/200]   2.4s toks=284 finish=stop
+[114/200]   1.7s toks=205 finish=stop
+[115/200]   4.7s toks=572 finish=stop
+[116/200]   7.9s toks=967 finish=stop
+[117/200]   7.9s toks=973 finish=stop
+[118/200]   5.6s toks=730 finish=stop
+[119/200]   2.6s toks=303 finish=stop
+[120/200]   6.1s toks=735 finish=stop
+[121/200]   1.9s toks=216 finish=stop
+[122/200]   1.6s toks=192 finish=stop
+[123/200]   2.3s toks=268 finish=stop
+[124/200]   4.8s toks=594 finish=stop
+[125/200]   5.1s toks=631 finish=stop
+  ...saved 125/200 (11.3 min)
+[126/200]   1.6s toks=196 finish=stop
+[127/200]   7.8s toks=955 finish=stop
+[128/200]   3.4s toks=410 finish=stop
+[129/200]   2.1s toks=260 finish=stop
+[130/200]  16.2s toks=2048 finish=length
+[131/200]  15.8s toks=2003 finish=stop
+[132/200]   1.6s toks=190 finish=stop
+[133/200]   7.9s toks=984 finish=stop
+[134/200]   2.2s toks=263 finish=stop
+[135/200]  11.1s toks=1396 finish=stop
+[136/200]   1.7s toks=197 finish=stop
+[137/200]  14.5s toks=1752 finish=stop
+[138/200]  11.0s toks=1415 finish=stop
+[139/200]  12.9s toks=1654 finish=stop
+[140/200]  10.4s toks=1285 finish=stop
+[141/200]   8.3s toks=1016 finish=stop
+[142/200]   7.3s toks=840 finish=stop
+[143/200]  12.7s toks=1537 finish=stop
+[144/200]  11.4s toks=1389 finish=stop
+[145/200]   0.9s toks=98 finish=stop
+[146/200]   8.3s toks=1049 finish=stop
+[147/200]   1.9s toks=248 finish=stop
+[148/200]   9.9s toks=1244 finish=stop
+[149/200]  15.8s toks=2048 finish=length
+[150/200]  16.4s toks=2048 finish=length
+  ...saved 150/200 (14.9 min)
+[151/200]   5.3s toks=670 finish=stop
+[152/200]  12.4s toks=1600 finish=stop
+[153/200]   8.2s toks=1055 finish=stop
+[154/200]  16.1s toks=2048 finish=length
+[155/200]   7.8s toks=976 finish=stop
+[156/200]   2.5s toks=335 finish=stop
+[157/200]   9.5s toks=1206 finish=stop
+[158/200]   4.3s toks=544 finish=stop
+[159/200]   1.7s toks=196 finish=stop
+[160/200]   1.0s toks=115 finish=stop
+[161/200]   4.2s toks=495 finish=stop
+[162/200]   1.3s toks=156 finish=stop
+[163/200]  12.5s toks=1508 finish=stop
+[164/200]   4.3s toks=536 finish=stop
+[165/200]   1.0s toks=117 finish=stop
+[166/200]   1.6s toks=173 finish=stop
+[167/200]   6.6s toks=800 finish=stop
+[168/200]   2.4s toks=278 finish=stop
+[169/200]   4.2s toks=511 finish=stop
+[170/200]  16.9s toks=2048 finish=length
+[171/200]   8.2s toks=991 finish=stop
+[172/200]  16.7s toks=2042 finish=stop
+[173/200]  16.8s toks=2048 finish=length
+[174/200]   3.1s toks=397 finish=stop
+[175/200]   1.9s toks=229 finish=stop
+  ...saved 175/200 (17.7 min)
+[176/200]   7.5s toks=919 finish=stop
+[177/200]  11.7s toks=1448 finish=stop
+[178/200]   8.2s toks=1053 finish=stop
+[179/200]   3.3s toks=404 finish=stop
+[180/200]   4.0s toks=504 finish=stop
+[181/200]  15.8s toks=2048 finish=length
+[182/200]   5.8s toks=720 finish=stop
+[183/200]  14.4s toks=1836 finish=stop
+[184/200]   8.3s toks=1069 finish=stop
+[185/200]   1.4s toks=171 finish=stop
+[186/200]   3.9s toks=493 finish=stop
+[187/200]   6.5s toks=811 finish=stop
+[188/200]   7.8s toks=1028 finish=stop
+[189/200]  15.9s toks=2048 finish=length
+[190/200]   4.7s toks=597 finish=stop
+[191/200]   1.2s toks=143 finish=stop
+[192/200]   2.8s toks=352 finish=stop
+[193/200]   3.0s toks=394 finish=stop
+[194/200]   4.4s toks=557 finish=stop
+[195/200]   8.0s toks=1016 finish=stop
+[196/200]   0.6s toks=69 finish=stop
+[197/200]   4.0s toks=499 finish=stop
+[198/200]   4.0s toks=477 finish=stop
+[199/200]   4.7s toks=598 finish=stop
+[200/200]   0.1s toks=2 finish=stop
+  ...saved 200/200 (20.2 min)
+[driver] DONE total=20.2min -> /tmp/vl30b_runs/nosia_VL30B_200q_max2048.json

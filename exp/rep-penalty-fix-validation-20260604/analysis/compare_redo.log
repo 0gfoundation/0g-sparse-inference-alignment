@@ -1,0 +1,35 @@
+loading tokenizers …
+loading Skywork …
+`torch_dtype` is deprecated! Use `dtype` instead!
+Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:  25%|██▌       | 1/4 [00:01<00:04,  1.53s/it]Loading checkpoint shards:  50%|█████     | 2/4 [00:03<00:03,  1.58s/it]Loading checkpoint shards:  75%|███████▌  | 3/4 [00:04<00:01,  1.56s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:04<00:00,  1.18s/it]
+ready
+
+Scoring SIA-2048-v2 full + trunc256, n=200 ...
+done in 15s
+
+Sanity check (first 10 Q): 0/10 outputs byte-identical to noSIA-2048
+  (Expected: 0/10 — SIA should produce different outputs from noSIA)
+
+fully paired across all arms: 200/200
+
+=== VL-30B Skywork mean reward (n=200) ===
+  SIA-2048-v2 full      (REDO, intervention 25.8%): mean=+30.186  median=+30.750
+  noSIA-2048 full       (baseline, rep=1.0)     : mean=+27.438  median=+27.625
+  SIA-2048-v2 trunc256                          : mean=+13.317  median=+13.281
+  noSIA-2048 trunc256                           : mean=+12.014  median=+11.469
+  SIA-256 native                                : mean=+14.012  median=+13.312
+  noSIA-256 native                              : mean=+11.693  median=+10.781
+
+=== Apples-to-apples ===
+
+[Full-length, max=2048 regime — THE KEY TEST]
+  SIA-2048 full vs noSIA-2048 full                  : Δmean=+2.748  rel= +10.0%  win=123/200 ( 62%)  t= +5.48 p≈0.0000
+
+[Trunc-256, max=2048 outputs cut to first 256]
+  SIA-2048 trunc256 vs noSIA-2048 trunc256          : Δmean=+1.303  rel= +10.8%  win=126/200 ( 63%)  t= +2.99 p≈0.0028
+
+[256-cap reference]
+  SIA-256 vs noSIA-256                              : Δmean=+2.320  rel= +19.8%  win=132/200 ( 66%)  t= +5.79 p≈0.0000
+
+[Cross-length on SIA: same arm, different max_tokens]
+  SIA-2048-trunc256 vs SIA-256-native               : Δmean=-0.696  rel=  -5.0%  win= 87/200 ( 44%)  t= -1.84 p≈0.0657
