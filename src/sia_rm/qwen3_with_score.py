@@ -32,7 +32,12 @@ import torch
 from torch import nn
 from vllm import ModelRegistry
 from vllm.model_executor.models.qwen3 import Qwen3ForCausalLM
-from vllm.model_executor.sampling_metadata import SamplingMetadata
+try:
+    # vLLM 0.10.x (old path)
+    from vllm.model_executor.sampling_metadata import SamplingMetadata
+except ImportError:
+    # vLLM 0.17+ moved it under v1
+    from vllm.v1.sample.metadata import SamplingMetadata
 
 
 def _reward_path() -> str:
@@ -98,6 +103,71 @@ def truncate_rewards() -> None:
     path = _reward_path()
     if os.path.exists(path):
         os.remove(path)
+
+
+# ---------- B-1: in-process reward buffer (skip /dev/shm IPC) ----------
+#
+# When RMClient runs in the same process as Qwen3WithScoreForCausalLM
+# (i.e. InprocClient mode, multiprocessing=False), the GPU→CPU sync +
+# /dev/shm file roundtrip is pure overhead — both sides can directly
+# share a Python reference to the GPU tensor.
+#
+# Mechanism: a module-level dict keyed by SIA_REWARD_FILE_ID. Mirrors
+# the /dev/shm fid scheme so the two paths are interchangeable.
+# IMPORTANT: same-process single-RMClient assumption holds here exactly
+# as it does for /dev/shm — SIA_REWARD_FILE_ID is a process-level env
+# var, so multiple RMClient instances in the same process would race.
+# (Not new; just inherited from the legacy mechanism.)
+#
+# Note on cudagraph capture: during LLM(...) initialization vLLM runs
+# ~67 dummy forward passes to capture cudagraphs at various batch sizes;
+# each one writes to the buffer. RMClient must call clear_inproc_rewards()
+# right after LLM(...) returns to discard them. Otherwise ~130KB of GPU
+# tensors stay pinned until the first real score_candidates() call.
+
+_REWARD_BUFFERS: dict[str, list[torch.Tensor]] = {}
+_INPROC_REWARD_MODE: bool = False
+
+
+def set_inproc_reward_mode(enabled: bool) -> None:
+    """Toggle reward channel. RMClient.__init__ must call this BEFORE
+    LLM(...) is constructed — cudagraph capture inside LLM(...) will
+    invoke compute_logits, which reads this flag."""
+    global _INPROC_REWARD_MODE
+    _INPROC_REWARD_MODE = enabled
+
+
+def _append_inproc_reward(fid: str, rewards_gpu: torch.Tensor) -> None:
+    """compute_logits side. Appends a GPU tensor reference (detach() —
+    no copy, shares storage with the (h @ w.T) matmul output)."""
+    _REWARD_BUFFERS.setdefault(fid, []).append(rewards_gpu)
+
+
+def clear_inproc_rewards(fid: str) -> None:
+    """RMClient side. Drops references so GPU memory is freed.
+    Called at score_candidates entry (to be safe against stale state
+    from a prior failure) and also right after LLM(...) to discard
+    cudagraph-capture-stage dummy tensors."""
+    buf = _REWARD_BUFFERS.get(fid)
+    if buf:
+        buf.clear()
+
+
+def take_inproc_rewards(fid: str) -> Optional[torch.Tensor]:
+    """RMClient side. Returns concatenated GPU tensor and clears the
+    buffer. None if nothing was written (e.g. mode flag was wrong)."""
+    buf = _REWARD_BUFFERS.get(fid)
+    if not buf:
+        return None
+    if len(buf) == 1:
+        out = buf[0]
+    else:
+        # vLLM may split a generate(N) into multiple forward passes.
+        # Concat in append order (matches the prompt order at submission
+        # — same assumption as the /dev/shm record concat).
+        out = torch.cat(buf, dim=0)
+    buf.clear()
+    return out
 
 
 # ---------- Optional split-stage profiling (SIA_RM_PROFILE=1) ----------
@@ -203,10 +273,13 @@ class Qwen3WithScoreForCausalLM(Qwen3ForCausalLM):
     def compute_logits(
         self,
         hidden_states: torch.Tensor,
-        sampling_metadata: SamplingMetadata,
+        sampling_metadata: Optional[SamplingMetadata] = None,
     ) -> Optional[torch.Tensor]:
         # hidden_states shape: (n_samples, hidden), already gathered to
         # sample positions by vLLM (one row per request's last token).
+        # sampling_metadata: vllm 0.10.x 必传; vllm 0.17+ 改为只传 hidden_states,
+        # 这里设成 Optional 以兼容两版。super().compute_logits 在新 vllm 也只接受
+        # hidden_states, 旧 vllm 才接受 sampling_metadata。
         if _PROFILE_ENABLED:
             score_start = torch.cuda.Event(enable_timing=True)
             score_end = torch.cuda.Event(enable_timing=True)
@@ -229,7 +302,21 @@ class Qwen3WithScoreForCausalLM(Qwen3ForCausalLM):
                 _write_timing(fwd_ms, score_ms,
                               self._sia_prof_n_input,
                               int(hidden_states.shape[0]))
-            _write_rewards(rewards.detach().to("cpu", torch.float32))
+            # B-1: dual reward channel.
+            if _INPROC_REWARD_MODE:
+                # In-process path: detach() shares storage with the matmul
+                # output (no copy). Safe because (h @ w.T) allocates a new
+                # tensor each call (out-of-place). Float32 not required —
+                # apply() will cast on-demand if needed.
+                #
+                # If a future cudagraph version reuses this allocation, the
+                # buffer reference could see overwritten data; switch to
+                # `.detach().clone()` if reward values come back wrong.
+                fid = os.environ.get("SIA_REWARD_FILE_ID", "default")
+                _append_inproc_reward(fid, rewards.detach())
+            else:
+                # Legacy /dev/shm path (multiprocessing=True or fallback).
+                _write_rewards(rewards.detach().to("cpu", torch.float32))
         except Exception:
             # Don't crash decode if reward/timing write fails — RMClient
             # will see stale or None and can decide what to do
@@ -237,6 +324,10 @@ class Qwen3WithScoreForCausalLM(Qwen3ForCausalLM):
 
         # Still run lm_head logits — vLLM scheduler needs them to sample
         # (a dummy) token to keep the request alive.
+        # vllm 0.10.x: super().compute_logits(hidden_states, sampling_metadata)
+        # vllm 0.17+:  super().compute_logits(hidden_states)
+        if sampling_metadata is None:
+            return super().compute_logits(hidden_states)
         return super().compute_logits(hidden_states, sampling_metadata)
 
 

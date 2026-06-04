@@ -1,0 +1,1757 @@
+[
+  {
+    "id": 0,
+    "instr": "What are the names of some famous actors that started their careers on Broadway?",
+    "sia_reward": -2.875,
+    "nosia_reward": 10.5,
+    "delta": -13.375,
+    "sia_tokens": 2025,
+    "nosia_tokens": 704
+  },
+  {
+    "id": 1,
+    "instr": "How did US states get their names?",
+    "sia_reward": -9.5,
+    "nosia_reward": 19.625,
+    "delta": -29.125,
+    "sia_tokens": 2032,
+    "nosia_tokens": 1424
+  },
+  {
+    "id": 2,
+    "instr": "Hi, my sister and her girlfriends want me to play kickball with them. Can you explain how the game is played, so they don't take advantage of me?",
+    "sia_reward": -3.734375,
+    "nosia_reward": 29.25,
+    "delta": -32.984375,
+    "sia_tokens": 2006,
+    "nosia_tokens": 945
+  },
+  {
+    "id": 3,
+    "instr": "What is some cool music from the 1920s?",
+    "sia_reward": 12.4375,
+    "nosia_reward": 27.875,
+    "delta": -15.4375,
+    "sia_tokens": 591,
+    "nosia_tokens": 859
+  },
+  {
+    "id": 4,
+    "instr": "How do I wrap a present neatly?",
+    "sia_reward": 2.4375,
+    "nosia_reward": 21.375,
+    "delta": -18.9375,
+    "sia_tokens": 644,
+    "nosia_tokens": 638
+  },
+  {
+    "id": 5,
+    "instr": "How do I dice without slicing my finger",
+    "sia_reward": 17.25,
+    "nosia_reward": 35.0,
+    "delta": -17.75,
+    "sia_tokens": 489,
+    "nosia_tokens": 520
+  },
+  {
+    "id": 6,
+    "instr": "Hi, I'm trying to solve a crossword puzzle, but I've never done one of these before. Can you help me out?",
+    "sia_reward": 31.5,
+    "nosia_reward": 34.5,
+    "delta": -3.0,
+    "sia_tokens": 182,
+    "nosia_tokens": 106
+  },
+  {
+    "id": 7,
+    "instr": "Who is Larry Page?",
+    "sia_reward": 0.1416015625,
+    "nosia_reward": 21.875,
+    "delta": -21.7333984375,
+    "sia_tokens": 1290,
+    "nosia_tokens": 252
+  },
+  {
+    "id": 8,
+    "instr": "What are different drawers I should have for clothes?",
+    "sia_reward": 8.5625,
+    "nosia_reward": 29.125,
+    "delta": -20.5625,
+    "sia_tokens": 979,
+    "nosia_tokens": 563
+  },
+  {
+    "id": 9,
+    "instr": "I like to host guests at my home from time to time, and I am gathering  recipes of different dishes and drinks to keep things interesting. I am interested in trying some Georgian  dishes. Can you give me a recipe for Kubdari?",
+    "sia_reward": -8.0,
+    "nosia_reward": 22.125,
+    "delta": -30.125,
+    "sia_tokens": 1990,
+    "nosia_tokens": 938
+  },
+  {
+    "id": 10,
+    "instr": "do you think retinoid is effective on removing the acne? because I have a lot of it",
+    "sia_reward": 16.75,
+    "nosia_reward": 29.875,
+    "delta": -13.125,
+    "sia_tokens": 639,
+    "nosia_tokens": 557
+  },
+  {
+    "id": 11,
+    "instr": "I'm trying to teach myself to have nicer handwriting. Can you help?",
+    "sia_reward": -3.1875,
+    "nosia_reward": 33.5,
+    "delta": -36.6875,
+    "sia_tokens": 2025,
+    "nosia_tokens": 605
+  },
+  {
+    "id": 12,
+    "instr": "I like to host guests at my home from time to time, and I am gathering  recipes of different dishes and drinks to keep things interesting. I am interested in trying some Somali  dishes. Can you give me a recipe for Canjeero?",
+    "sia_reward": -8.3125,
+    "nosia_reward": 15.875,
+    "delta": -24.1875,
+    "sia_tokens": 1990,
+    "nosia_tokens": 914
+  },
+  {
+    "id": 13,
+    "instr": "What are the best exercises for beginners?",
+    "sia_reward": 13.0625,
+    "nosia_reward": 31.5,
+    "delta": -18.4375,
+    "sia_tokens": 847,
+    "nosia_tokens": 682
+  },
+  {
+    "id": 14,
+    "instr": "Do you know why turkeys became the official food of thanksgiving?",
+    "sia_reward": 7.84375,
+    "nosia_reward": 22.75,
+    "delta": -14.90625,
+    "sia_tokens": 695,
+    "nosia_tokens": 427
+  },
+  {
+    "id": 15,
+    "instr": "I want to get better at networking at work",
+    "sia_reward": 24.5,
+    "nosia_reward": 32.75,
+    "delta": -8.25,
+    "sia_tokens": 847,
+    "nosia_tokens": 664
+  },
+  {
+    "id": 16,
+    "instr": "Are there any weird Christmas traditions?",
+    "sia_reward": 1.109375,
+    "nosia_reward": 32.25,
+    "delta": -31.140625,
+    "sia_tokens": 1324,
+    "nosia_tokens": 911
+  },
+  {
+    "id": 17,
+    "instr": "Hi, I'm interested in learning to play badminton. Can you explain the game to me?",
+    "sia_reward": -7.5,
+    "nosia_reward": 26.625,
+    "delta": -34.125,
+    "sia_tokens": 2019,
+    "nosia_tokens": 858
+  },
+  {
+    "id": 18,
+    "instr": "Do you know why cats always rub up against your legs?",
+    "sia_reward": 30.125,
+    "nosia_reward": 38.5,
+    "delta": -8.375,
+    "sia_tokens": 322,
+    "nosia_tokens": 278
+  },
+  {
+    "id": 19,
+    "instr": "I am going to try to roast a pig at home for Thanksgiving this year. What equipment and techniques do I need to successfully get a pig roasted?",
+    "sia_reward": -4.375,
+    "nosia_reward": 23.625,
+    "delta": -28.0,
+    "sia_tokens": 2010,
+    "nosia_tokens": 1734
+  },
+  {
+    "id": 20,
+    "instr": "Help me find a good rated electric saw.",
+    "sia_reward": 1.234375,
+    "nosia_reward": 27.625,
+    "delta": -26.390625,
+    "sia_tokens": 1234,
+    "nosia_tokens": 918
+  },
+  {
+    "id": 21,
+    "instr": "What are some artists I might like if I like Billy Joel?",
+    "sia_reward": 7.46875,
+    "nosia_reward": 34.0,
+    "delta": -26.53125,
+    "sia_tokens": 674,
+    "nosia_tokens": 676
+  },
+  {
+    "id": 22,
+    "instr": "What type of soil is suitable for cactus?",
+    "sia_reward": 32.0,
+    "nosia_reward": 46.75,
+    "delta": -14.75,
+    "sia_tokens": 228,
+    "nosia_tokens": 215
+  },
+  {
+    "id": 23,
+    "instr": "How do you become an author?",
+    "sia_reward": 20.5,
+    "nosia_reward": 47.75,
+    "delta": -27.25,
+    "sia_tokens": 667,
+    "nosia_tokens": 703
+  },
+  {
+    "id": 24,
+    "instr": "What breed dog is smallest?",
+    "sia_reward": 10.8125,
+    "nosia_reward": 22.875,
+    "delta": -12.0625,
+    "sia_tokens": 315,
+    "nosia_tokens": 154
+  },
+  {
+    "id": 25,
+    "instr": "What are some species of bears that are now extinct?",
+    "sia_reward": 4.125,
+    "nosia_reward": 17.625,
+    "delta": -13.5,
+    "sia_tokens": 2029,
+    "nosia_tokens": 812
+  },
+  {
+    "id": 26,
+    "instr": "What causes the northern lights?",
+    "sia_reward": 18.625,
+    "nosia_reward": 35.5,
+    "delta": -16.875,
+    "sia_tokens": 413,
+    "nosia_tokens": 379
+  },
+  {
+    "id": 27,
+    "instr": "What are some good foods to eat when you are sick? I am looking for something to make my girlfriend to eat.",
+    "sia_reward": 7.65625,
+    "nosia_reward": 46.75,
+    "delta": -39.09375,
+    "sia_tokens": 317,
+    "nosia_tokens": 833
+  },
+  {
+    "id": 28,
+    "instr": "Why is kobe beef so damn expensive?",
+    "sia_reward": 0.546875,
+    "nosia_reward": 57.25,
+    "delta": -56.703125,
+    "sia_tokens": 2031,
+    "nosia_tokens": 790
+  },
+  {
+    "id": 29,
+    "instr": "How do I clean my armpits?",
+    "sia_reward": -6.09375,
+    "nosia_reward": 24.5,
+    "delta": -30.59375,
+    "sia_tokens": 2031,
+    "nosia_tokens": 541
+  },
+  {
+    "id": 30,
+    "instr": "How do I detail a car?",
+    "sia_reward": 2.8125,
+    "nosia_reward": 46.75,
+    "delta": -43.9375,
+    "sia_tokens": 2033,
+    "nosia_tokens": 908
+  },
+  {
+    "id": 31,
+    "instr": "I am going to make pumpkin pie for the first time.  Can you help me?",
+    "sia_reward": -7.3125,
+    "nosia_reward": 19.625,
+    "delta": -26.9375,
+    "sia_tokens": 2022,
+    "nosia_tokens": 741
+  },
+  {
+    "id": 32,
+    "instr": "What kind of foods do they eat in Thailand",
+    "sia_reward": -3.5,
+    "nosia_reward": 42.0,
+    "delta": -45.5,
+    "sia_tokens": 1404,
+    "nosia_tokens": 841
+  },
+  {
+    "id": 33,
+    "instr": "What are some good browser alternatives to Chrome?",
+    "sia_reward": 28.625,
+    "nosia_reward": 52.25,
+    "delta": -23.625,
+    "sia_tokens": 631,
+    "nosia_tokens": 917
+  },
+  {
+    "id": 34,
+    "instr": "Who created the Superman cartoon character?",
+    "sia_reward": 0.30078125,
+    "nosia_reward": 12.4375,
+    "delta": -12.13671875,
+    "sia_tokens": 173,
+    "nosia_tokens": 69
+  },
+  {
+    "id": 35,
+    "instr": "What is Atlantis?",
+    "sia_reward": 14.1875,
+    "nosia_reward": 33.5,
+    "delta": -19.3125,
+    "sia_tokens": 353,
+    "nosia_tokens": 274
+  },
+  {
+    "id": 36,
+    "instr": "How do I make escargot?",
+    "sia_reward": -7.625,
+    "nosia_reward": 27.125,
+    "delta": -34.75,
+    "sia_tokens": 1989,
+    "nosia_tokens": 741
+  },
+  {
+    "id": 37,
+    "instr": "What exactly causes volcanoes to form?",
+    "sia_reward": 7.8125,
+    "nosia_reward": 32.25,
+    "delta": -24.4375,
+    "sia_tokens": 490,
+    "nosia_tokens": 355
+  },
+  {
+    "id": 38,
+    "instr": "Hi, I have some falafel, but no tahini to put on them. Can you give me a recipe for making tahini?",
+    "sia_reward": 9.1875,
+    "nosia_reward": 8.375,
+    "delta": 0.8125,
+    "sia_tokens": 702,
+    "nosia_tokens": 445
+  },
+  {
+    "id": 39,
+    "instr": "Should I get my children a nanny? I'm so exhausted.",
+    "sia_reward": 23.625,
+    "nosia_reward": 46.0,
+    "delta": -22.375,
+    "sia_tokens": 626,
+    "nosia_tokens": 647
+  },
+  {
+    "id": 40,
+    "instr": "When was Canada colonized?",
+    "sia_reward": 14.5625,
+    "nosia_reward": 23.5,
+    "delta": -8.9375,
+    "sia_tokens": 312,
+    "nosia_tokens": 388
+  },
+  {
+    "id": 41,
+    "instr": "How can I  use my phone less?",
+    "sia_reward": 31.25,
+    "nosia_reward": 45.75,
+    "delta": -14.5,
+    "sia_tokens": 923,
+    "nosia_tokens": 644
+  },
+  {
+    "id": 42,
+    "instr": "How did mankind discover that the earth was spherical, and why did they initially believe it to be flat?",
+    "sia_reward": 6.65625,
+    "nosia_reward": 30.0,
+    "delta": -23.34375,
+    "sia_tokens": 2019,
+    "nosia_tokens": 855
+  },
+  {
+    "id": 43,
+    "instr": "What is Gremolata?",
+    "sia_reward": 17.375,
+    "nosia_reward": 23.5,
+    "delta": -6.125,
+    "sia_tokens": 201,
+    "nosia_tokens": 321
+  },
+  {
+    "id": 44,
+    "instr": "Why did humans evolve to believe in God?",
+    "sia_reward": 4.46875,
+    "nosia_reward": 52.5,
+    "delta": -48.03125,
+    "sia_tokens": 2031,
+    "nosia_tokens": 971
+  },
+  {
+    "id": 45,
+    "instr": "what should i build a cabin out of?",
+    "sia_reward": 9.4375,
+    "nosia_reward": 43.5,
+    "delta": -34.0625,
+    "sia_tokens": 1060,
+    "nosia_tokens": 903
+  },
+  {
+    "id": 46,
+    "instr": "Why do a lot of Scientists not believe in God or Satan?",
+    "sia_reward": 11.1875,
+    "nosia_reward": 46.75,
+    "delta": -35.5625,
+    "sia_tokens": 537,
+    "nosia_tokens": 682
+  },
+  {
+    "id": 47,
+    "instr": "I like to host guests at my home from time to time, and I am gathering  recipes of different dishes and drinks to keep things interesting. I am interested in trying some Mauritian dishes. Can you give me a recipe for Mine Frite?",
+    "sia_reward": -4.09375,
+    "nosia_reward": 10.5625,
+    "delta": -14.65625,
+    "sia_tokens": 1990,
+    "nosia_tokens": 918
+  },
+  {
+    "id": 48,
+    "instr": "Why can I see the moon during the day?",
+    "sia_reward": 1.96875,
+    "nosia_reward": 24.375,
+    "delta": -22.40625,
+    "sia_tokens": 2030,
+    "nosia_tokens": 384
+  },
+  {
+    "id": 49,
+    "instr": "How do I take care of a wooden table?",
+    "sia_reward": 19.375,
+    "nosia_reward": 48.0,
+    "delta": -28.625,
+    "sia_tokens": 523,
+    "nosia_tokens": 627
+  },
+  {
+    "id": 50,
+    "instr": "What year was the Yamato Battleship built?",
+    "sia_reward": 11.125,
+    "nosia_reward": 10.5625,
+    "delta": 0.5625,
+    "sia_tokens": 68,
+    "nosia_tokens": 64
+  },
+  {
+    "id": 51,
+    "instr": "Did they ever announce the release date for the new elder scrolls game?",
+    "sia_reward": 11.3125,
+    "nosia_reward": 20.5,
+    "delta": -9.1875,
+    "sia_tokens": 239,
+    "nosia_tokens": 179
+  },
+  {
+    "id": 52,
+    "instr": "I like to host guests at my home from time to time, and I am gathering  recipes of different dishes and drinks to keep things interesting. I am interested in trying some Danish dishes. Can you give me a recipe for Flæskesteg?",
+    "sia_reward": 5.875,
+    "nosia_reward": 22.875,
+    "delta": -17.0,
+    "sia_tokens": 957,
+    "nosia_tokens": 995
+  },
+  {
+    "id": 53,
+    "instr": "Please tell me about the romantic relationship between Julius Caesar and Cleopatra.",
+    "sia_reward": -3.65625,
+    "nosia_reward": 44.25,
+    "delta": -47.90625,
+    "sia_tokens": 2014,
+    "nosia_tokens": 805
+  },
+  {
+    "id": 54,
+    "instr": "Hi, I'm in the mood for a Bloody Mary. Can you give me a recipe for making one?",
+    "sia_reward": -2.125,
+    "nosia_reward": 27.125,
+    "delta": -29.25,
+    "sia_tokens": 581,
+    "nosia_tokens": 546
+  },
+  {
+    "id": 55,
+    "instr": "What are some famous world music artists?",
+    "sia_reward": 3.6875,
+    "nosia_reward": 21.625,
+    "delta": -17.9375,
+    "sia_tokens": 2032,
+    "nosia_tokens": 747
+  },
+  {
+    "id": 56,
+    "instr": "what are some good ways to spread ashes?",
+    "sia_reward": 21.375,
+    "nosia_reward": 40.75,
+    "delta": -19.375,
+    "sia_tokens": 450,
+    "nosia_tokens": 852
+  },
+  {
+    "id": 57,
+    "instr": "I like to host guests at my home from time to time, and I am gathering  recipes of different dishes and drinks to keep things interesting. I am interested in trying some Ukrainian dishes. Can you give me a recipe for Okroshka?",
+    "sia_reward": -9.375,
+    "nosia_reward": 22.875,
+    "delta": -32.25,
+    "sia_tokens": 1990,
+    "nosia_tokens": 979
+  },
+  {
+    "id": 58,
+    "instr": "I like to host guests at my home from time to time, and I am gathering  recipes of different dishes and drinks to keep things interesting. I am interested in trying some Danish dishes. Can you give me a recipe for Koldskål?",
+    "sia_reward": 2.265625,
+    "nosia_reward": 13.5,
+    "delta": -11.234375,
+    "sia_tokens": 1990,
+    "nosia_tokens": 727
+  },
+  {
+    "id": 59,
+    "instr": "I've read the book \"The Twelve Caesars\" by Suetonius, a few times. I'm curious about the context, of when he wrote.",
+    "sia_reward": 2.28125,
+    "nosia_reward": 18.0,
+    "delta": -15.71875,
+    "sia_tokens": 2006,
+    "nosia_tokens": 988
+  },
+  {
+    "id": 60,
+    "instr": "Please tell me the history of Walt Disney.",
+    "sia_reward": -10.625,
+    "nosia_reward": 31.0,
+    "delta": -41.625,
+    "sia_tokens": 2031,
+    "nosia_tokens": 1342
+  },
+  {
+    "id": 61,
+    "instr": "Can you help me figure out how to sew a button on a shirt?",
+    "sia_reward": -4.21875,
+    "nosia_reward": 19.0,
+    "delta": -23.21875,
+    "sia_tokens": 2025,
+    "nosia_tokens": 645
+  },
+  {
+    "id": 62,
+    "instr": "How did serial killers get away with murder for so long in the 70s and 80s?",
+    "sia_reward": 6.40625,
+    "nosia_reward": 54.75,
+    "delta": -48.34375,
+    "sia_tokens": 2017,
+    "nosia_tokens": 810
+  },
+  {
+    "id": 63,
+    "instr": "How do I make apple juice?",
+    "sia_reward": 23.5,
+    "nosia_reward": 31.125,
+    "delta": -7.625,
+    "sia_tokens": 389,
+    "nosia_tokens": 620
+  },
+  {
+    "id": 64,
+    "instr": "I like to host guests at my home from time to time, and I am gathering  recipes of different dishes and drinks to keep things interesting. I am interested in trying some Israeli dishes. Can you give me a recipe Israeli Cheese Bourekas?",
+    "sia_reward": -7.46875,
+    "nosia_reward": 27.75,
+    "delta": -35.21875,
+    "sia_tokens": 1990,
+    "nosia_tokens": 935
+  },
+  {
+    "id": 65,
+    "instr": "How can I make bubble solution?",
+    "sia_reward": 4.59375,
+    "nosia_reward": 25.125,
+    "delta": -20.53125,
+    "sia_tokens": 2033,
+    "nosia_tokens": 452
+  },
+  {
+    "id": 66,
+    "instr": "How to make frosting with crisco",
+    "sia_reward": -6.21875,
+    "nosia_reward": 25.5,
+    "delta": -31.71875,
+    "sia_tokens": 929,
+    "nosia_tokens": 681
+  },
+  {
+    "id": 67,
+    "instr": "I like to host guests at my home from time to time, and I am gathering  recipes of different dishes and drinks to keep things interesting. I am interested in trying some Tunisian dishes. Can you give me a recipe Tunisian Kammounia?",
+    "sia_reward": -1.65625,
+    "nosia_reward": 14.0625,
+    "delta": -15.71875,
+    "sia_tokens": 1964,
+    "nosia_tokens": 914
+  },
+  {
+    "id": 68,
+    "instr": "I want to learn more about airplanes. How were they created?",
+    "sia_reward": 5.46875,
+    "nosia_reward": 32.5,
+    "delta": -27.03125,
+    "sia_tokens": 2027,
+    "nosia_tokens": 1062
+  },
+  {
+    "id": 69,
+    "instr": "Can you tell me a very easy to way clean a showerhead?",
+    "sia_reward": 14.0,
+    "nosia_reward": 25.0,
+    "delta": -11.0,
+    "sia_tokens": 326,
+    "nosia_tokens": 257
+  },
+  {
+    "id": 70,
+    "instr": "Please give me a list of planets in our solar system.  I am going to choose which one I want to know more.",
+    "sia_reward": 5.1875,
+    "nosia_reward": 10.0625,
+    "delta": -4.875,
+    "sia_tokens": 197,
+    "nosia_tokens": 103
+  },
+  {
+    "id": 71,
+    "instr": "Who was the first lead vocal for the rock band Starship?",
+    "sia_reward": -6.6875,
+    "nosia_reward": 7.9375,
+    "delta": -14.625,
+    "sia_tokens": 2027,
+    "nosia_tokens": 294
+  },
+  {
+    "id": 72,
+    "instr": "I need to get my nephew a birthday gift. I'm thinking of giving him a game for his Nintendo Switch. Can you give me a few options that came out recently?",
+    "sia_reward": 8.5,
+    "nosia_reward": 28.875,
+    "delta": -20.375,
+    "sia_tokens": 660,
+    "nosia_tokens": 765
+  },
+  {
+    "id": 73,
+    "instr": "Best way to defrost a refrigerator freezer?",
+    "sia_reward": 1.3671875,
+    "nosia_reward": 33.5,
+    "delta": -32.1328125,
+    "sia_tokens": 2031,
+    "nosia_tokens": 559
+  },
+  {
+    "id": 74,
+    "instr": "What are some toys I can buy my kids for imaginative play?",
+    "sia_reward": 28.75,
+    "nosia_reward": 51.25,
+    "delta": -22.5,
+    "sia_tokens": 471,
+    "nosia_tokens": 600
+  },
+  {
+    "id": 75,
+    "instr": "How do I know if my house has a water leak?",
+    "sia_reward": 5.53125,
+    "nosia_reward": 55.5,
+    "delta": -49.96875,
+    "sia_tokens": 1785,
+    "nosia_tokens": 687
+  },
+  {
+    "id": 76,
+    "instr": "I like to host guests at my home from time to time, and I am gathering  recipes of different dishes and drinks to keep things interesting. I am interested in trying some Uruguayan dishes. Can you give me a recipe for Vitel toné?",
+    "sia_reward": -6.9375,
+    "nosia_reward": 11.5625,
+    "delta": -18.5,
+    "sia_tokens": 1988,
+    "nosia_tokens": 772
+  },
+  {
+    "id": 77,
+    "instr": "I like to host guests at my home from time to time, and I am gathering  recipes of different dishes and drinks to keep things interesting. I am interested in trying some Indonesian dishes. Can you give me a recipe for Opor Ayam?",
+    "sia_reward": -4.3125,
+    "nosia_reward": 25.375,
+    "delta": -29.6875,
+    "sia_tokens": 1990,
+    "nosia_tokens": 875
+  },
+  {
+    "id": 78,
+    "instr": "What do the different octane values of gasoline mean?",
+    "sia_reward": 3.796875,
+    "nosia_reward": 41.75,
+    "delta": -37.953125,
+    "sia_tokens": 584,
+    "nosia_tokens": 619
+  },
+  {
+    "id": 79,
+    "instr": "How can I fix a leaking roof?",
+    "sia_reward": 7.09375,
+    "nosia_reward": 41.5,
+    "delta": -34.40625,
+    "sia_tokens": 2032,
+    "nosia_tokens": 790
+  },
+  {
+    "id": 80,
+    "instr": "I have a hard time falling asleep.  Is there any type of music that can help me fall asleep faster?",
+    "sia_reward": 28.375,
+    "nosia_reward": 60.0,
+    "delta": -31.625,
+    "sia_tokens": 478,
+    "nosia_tokens": 566
+  },
+  {
+    "id": 81,
+    "instr": "What are places to visit in Montgomery, Alabama?",
+    "sia_reward": -7.09375,
+    "nosia_reward": 22.0,
+    "delta": -29.09375,
+    "sia_tokens": 2030,
+    "nosia_tokens": 782
+  },
+  {
+    "id": 82,
+    "instr": "Hi, I've decided to keep a rat as a pet. How do I house, feed, and otherwise care for it?",
+    "sia_reward": -10.625,
+    "nosia_reward": 47.25,
+    "delta": -57.875,
+    "sia_tokens": 2014,
+    "nosia_tokens": 1138
+  },
+  {
+    "id": 83,
+    "instr": "How do you get water in the desert?",
+    "sia_reward": -2.859375,
+    "nosia_reward": 34.25,
+    "delta": -37.109375,
+    "sia_tokens": 2031,
+    "nosia_tokens": 658
+  },
+  {
+    "id": 84,
+    "instr": "How do I get better at aiming with my slingshot?",
+    "sia_reward": 11.125,
+    "nosia_reward": 43.25,
+    "delta": -32.125,
+    "sia_tokens": 845,
+    "nosia_tokens": 714
+  },
+  {
+    "id": 85,
+    "instr": "I like to host guests at my home from time to time, and I am gathering  recipes of different dishes and drinks to keep things interesting. I am interested in trying some Argentinian dishes. Can you give me a recipe for Milanesa de peceto?",
+    "sia_reward": -6.34375,
+    "nosia_reward": 0.68359375,
+    "delta": -7.02734375,
+    "sia_tokens": 1986,
+    "nosia_tokens": 864
+  },
+  {
+    "id": 86,
+    "instr": "I have my grandfather's antique fountain pen and a bottle of ink, but have never done this before. Can you tell me how to refill the fountain pen?",
+    "sia_reward": -3.640625,
+    "nosia_reward": 31.875,
+    "delta": -35.515625,
+    "sia_tokens": 2008,
+    "nosia_tokens": 1040
+  },
+  {
+    "id": 87,
+    "instr": "Hi, I'd like to play ice hockey. Can you explain how the game works?",
+    "sia_reward": -6.375,
+    "nosia_reward": 34.5,
+    "delta": -40.875,
+    "sia_tokens": 2022,
+    "nosia_tokens": 720
+  },
+  {
+    "id": 88,
+    "instr": "What is kevlar made out of?",
+    "sia_reward": 9.375,
+    "nosia_reward": 21.625,
+    "delta": -12.25,
+    "sia_tokens": 250,
+    "nosia_tokens": 196
+  },
+  {
+    "id": 89,
+    "instr": "Hi, I'd like to learn how to play racquetball. Can you explain the game to me?",
+    "sia_reward": -10.5,
+    "nosia_reward": 22.125,
+    "delta": -32.625,
+    "sia_tokens": 2018,
+    "nosia_tokens": 999
+  },
+  {
+    "id": 90,
+    "instr": "What are some  good books to buy for a sci fi fan?",
+    "sia_reward": 2.703125,
+    "nosia_reward": 46.0,
+    "delta": -43.296875,
+    "sia_tokens": 2026,
+    "nosia_tokens": 837
+  },
+  {
+    "id": 91,
+    "instr": "When were smart phones first made?",
+    "sia_reward": 1.40625,
+    "nosia_reward": 13.125,
+    "delta": -11.71875,
+    "sia_tokens": 628,
+    "nosia_tokens": 294
+  },
+  {
+    "id": 92,
+    "instr": "Hi, I'd like to learn to bake challah. Can you give me a recipe for that?",
+    "sia_reward": -13.0,
+    "nosia_reward": 24.25,
+    "delta": -37.25,
+    "sia_tokens": 2019,
+    "nosia_tokens": 975
+  },
+  {
+    "id": 93,
+    "instr": "Did Facebook corporation change its name?",
+    "sia_reward": 14.125,
+    "nosia_reward": 25.25,
+    "delta": -11.125,
+    "sia_tokens": 250,
+    "nosia_tokens": 199
+  },
+  {
+    "id": 94,
+    "instr": "I like to host guests at my home from time to time, and I am gathering  recipes of different dishes and drinks to keep things interesting. I am interested in trying some Hong Kong  dishes. Can you give me a recipe for Tong Sui?",
+    "sia_reward": -10.6875,
+    "nosia_reward": 17.0,
+    "delta": -27.6875,
+    "sia_tokens": 1989,
+    "nosia_tokens": 774
+  },
+  {
+    "id": 95,
+    "instr": "I want to start saving some money by growing my own food. Can I do this during the winter with an indoor garden?",
+    "sia_reward": 22.5,
+    "nosia_reward": 35.25,
+    "delta": -12.75,
+    "sia_tokens": 751,
+    "nosia_tokens": 710
+  },
+  {
+    "id": 96,
+    "instr": "How can I spice things up in the bedroom?",
+    "sia_reward": 27.875,
+    "nosia_reward": 28.25,
+    "delta": -0.375,
+    "sia_tokens": 416,
+    "nosia_tokens": 524
+  },
+  {
+    "id": 97,
+    "instr": "Is human blood ever any color other than red?",
+    "sia_reward": 13.25,
+    "nosia_reward": 28.875,
+    "delta": -15.625,
+    "sia_tokens": 489,
+    "nosia_tokens": 580
+  },
+  {
+    "id": 98,
+    "instr": "Please tell me about pearls.  Where are they found?",
+    "sia_reward": -7.65625,
+    "nosia_reward": 27.0,
+    "delta": -34.65625,
+    "sia_tokens": 2028,
+    "nosia_tokens": 673
+  },
+  {
+    "id": 99,
+    "instr": "What are some herbs I can dry out?",
+    "sia_reward": 11.3125,
+    "nosia_reward": 28.75,
+    "delta": -17.4375,
+    "sia_tokens": 620,
+    "nosia_tokens": 850
+  },
+  {
+    "id": 100,
+    "instr": "I like to host guests at my home from time to time, and I am gathering  recipes of different dishes and drinks to keep things interesting. I am interested in trying some Indonesian dishes. Can you give me a recipe for Tahu Gejrot Cirebon?",
+    "sia_reward": -5.5,
+    "nosia_reward": 30.75,
+    "delta": -36.25,
+    "sia_tokens": 1986,
+    "nosia_tokens": 749
+  },
+  {
+    "id": 101,
+    "instr": "What is a scary Halloween costume idea?",
+    "sia_reward": 13.875,
+    "nosia_reward": 27.375,
+    "delta": -13.5,
+    "sia_tokens": 378,
+    "nosia_tokens": 350
+  },
+  {
+    "id": 102,
+    "instr": "Whats the largest star in our galaxy?",
+    "sia_reward": 27.25,
+    "nosia_reward": 31.0,
+    "delta": -3.75,
+    "sia_tokens": 288,
+    "nosia_tokens": 390
+  },
+  {
+    "id": 103,
+    "instr": "I'm trying to draw out a hopscotch game on my driveway. Can you walk me through how to do that?",
+    "sia_reward": -10.3125,
+    "nosia_reward": -2.984375,
+    "delta": -7.328125,
+    "sia_tokens": 1792,
+    "nosia_tokens": 2048
+  },
+  {
+    "id": 104,
+    "instr": "Can you tell me how to make chocolate chip cookies?",
+    "sia_reward": -6.4375,
+    "nosia_reward": 28.625,
+    "delta": -35.0625,
+    "sia_tokens": 2029,
+    "nosia_tokens": 626
+  },
+  {
+    "id": 105,
+    "instr": "Where is Indonesia?",
+    "sia_reward": 0.79296875,
+    "nosia_reward": 12.375,
+    "delta": -11.58203125,
+    "sia_tokens": 589,
+    "nosia_tokens": 273
+  },
+  {
+    "id": 106,
+    "instr": "Hi, I need to find the area of a 20 sided die for my math homework. Can you help me do that?",
+    "sia_reward": 0.310546875,
+    "nosia_reward": 18.5,
+    "delta": -18.189453125,
+    "sia_tokens": 834,
+    "nosia_tokens": 662
+  },
+  {
+    "id": 107,
+    "instr": "I'm trying to learn how to install window blinds.",
+    "sia_reward": -8.125,
+    "nosia_reward": 30.0,
+    "delta": -38.125,
+    "sia_tokens": 2029,
+    "nosia_tokens": 897
+  },
+  {
+    "id": 108,
+    "instr": "I want to learn more about becoming a CPA. How long does it take to become a CPA?",
+    "sia_reward": 18.125,
+    "nosia_reward": 31.5,
+    "delta": -13.375,
+    "sia_tokens": 797,
+    "nosia_tokens": 726
+  },
+  {
+    "id": 109,
+    "instr": "I want to talk about \"Smooth\",  a song by Rob Thomas.",
+    "sia_reward": 5.25,
+    "nosia_reward": 16.0,
+    "delta": -10.75,
+    "sia_tokens": 641,
+    "nosia_tokens": 542
+  },
+  {
+    "id": 110,
+    "instr": "I'd like you to write me a story in the style of Don Delillo, about a bunch of immortal cats living in a New York high-rise co-op.  Go ahead and start a draft!",
+    "sia_reward": -0.1708984375,
+    "nosia_reward": 27.0,
+    "delta": -27.1708984375,
+    "sia_tokens": 1999,
+    "nosia_tokens": 1630
+  },
+  {
+    "id": 111,
+    "instr": "I like to host guests at my home from time to time, and I am gathering  recipes of different dishes and drinks to keep things interesting. I am interested in trying some Bolivian dishes. Can you give me a recipe for Chola Sandwich?",
+    "sia_reward": -6.78125,
+    "nosia_reward": 12.5,
+    "delta": -19.28125,
+    "sia_tokens": 1989,
+    "nosia_tokens": 886
+  },
+  {
+    "id": 112,
+    "instr": "Is it true that the native Australians were really prisoners of England?",
+    "sia_reward": 8.1875,
+    "nosia_reward": 23.5,
+    "delta": -15.3125,
+    "sia_tokens": 962,
+    "nosia_tokens": 340
+  },
+  {
+    "id": 113,
+    "instr": "What color is the sky",
+    "sia_reward": 15.125,
+    "nosia_reward": 25.25,
+    "delta": -10.125,
+    "sia_tokens": 167,
+    "nosia_tokens": 203
+  },
+  {
+    "id": 114,
+    "instr": "Is there a meaning for Christmas wreaths?",
+    "sia_reward": 18.75,
+    "nosia_reward": 31.125,
+    "delta": -12.375,
+    "sia_tokens": 470,
+    "nosia_tokens": 430
+  },
+  {
+    "id": 115,
+    "instr": "I like to host guests at my home from time to time, and I am gathering  recipes of different dishes and drinks to keep things interesting. I am interested in trying some Lativian  dishes. Can you give me a recipe for Frikadeļu zupa?",
+    "sia_reward": -8.5,
+    "nosia_reward": 22.75,
+    "delta": -31.25,
+    "sia_tokens": 1984,
+    "nosia_tokens": 916
+  },
+  {
+    "id": 116,
+    "instr": "Hi, I'd like to make my own peanut brittle. Can you give me a recipe and cooking instructions for that?",
+    "sia_reward": -9.625,
+    "nosia_reward": 33.0,
+    "delta": -42.625,
+    "sia_tokens": 2016,
+    "nosia_tokens": 870
+  },
+  {
+    "id": 117,
+    "instr": "I'm trying to stop my neighbour's cat from coming in to my garden and fighting with my cat. Any suggestions on how to do that?",
+    "sia_reward": 16.875,
+    "nosia_reward": 44.75,
+    "delta": -27.875,
+    "sia_tokens": 633,
+    "nosia_tokens": 698
+  },
+  {
+    "id": 118,
+    "instr": "does the dinosaurs really exist?",
+    "sia_reward": 19.25,
+    "nosia_reward": 28.25,
+    "delta": -9.0,
+    "sia_tokens": 338,
+    "nosia_tokens": 351
+  },
+  {
+    "id": 119,
+    "instr": "what are some big cat hybrids?",
+    "sia_reward": 7.84375,
+    "nosia_reward": 32.75,
+    "delta": -24.90625,
+    "sia_tokens": 2033,
+    "nosia_tokens": 973
+  },
+  {
+    "id": 120,
+    "instr": "what is the name of chris tucker first movie",
+    "sia_reward": -2.15625,
+    "nosia_reward": 8.0625,
+    "delta": -10.21875,
+    "sia_tokens": 778,
+    "nosia_tokens": 123
+  },
+  {
+    "id": 121,
+    "instr": "How long does it take our eyes to fully adapt to darkness?",
+    "sia_reward": 28.75,
+    "nosia_reward": 37.25,
+    "delta": -8.5,
+    "sia_tokens": 245,
+    "nosia_tokens": 245
+  },
+  {
+    "id": 122,
+    "instr": "Has there been any news regarding a potential release date for Starcraft 3?",
+    "sia_reward": 25.25,
+    "nosia_reward": 23.0,
+    "delta": 2.25,
+    "sia_tokens": 304,
+    "nosia_tokens": 230
+  },
+  {
+    "id": 123,
+    "instr": "How is oil turned into gasoline?",
+    "sia_reward": -3.421875,
+    "nosia_reward": 40.0,
+    "delta": -43.421875,
+    "sia_tokens": 2033,
+    "nosia_tokens": 778
+  },
+  {
+    "id": 124,
+    "instr": "Can you give any tips on how to cook a juicy, medium-rare steak?",
+    "sia_reward": 12.875,
+    "nosia_reward": 36.75,
+    "delta": -23.875,
+    "sia_tokens": 741,
+    "nosia_tokens": 598
+  },
+  {
+    "id": 125,
+    "instr": "When was hip hop invented?",
+    "sia_reward": 16.875,
+    "nosia_reward": 28.625,
+    "delta": -11.75,
+    "sia_tokens": 309,
+    "nosia_tokens": 161
+  },
+  {
+    "id": 126,
+    "instr": "Hi, I recently inherited a S&W 1006 and I don't even know how to load it. Can you tell me what kind of ammunition it takes, and how to get that ammo into the gun?",
+    "sia_reward": -3.265625,
+    "nosia_reward": 17.625,
+    "delta": -20.890625,
+    "sia_tokens": 1989,
+    "nosia_tokens": 949
+  },
+  {
+    "id": 127,
+    "instr": "My friend's dog just died and they're really sad. How do I comfort them?",
+    "sia_reward": 22.0,
+    "nosia_reward": 52.5,
+    "delta": -30.5,
+    "sia_tokens": 523,
+    "nosia_tokens": 455
+  },
+  {
+    "id": 128,
+    "instr": "Is the US border open to Canada?",
+    "sia_reward": 18.25,
+    "nosia_reward": 21.375,
+    "delta": -3.125,
+    "sia_tokens": 257,
+    "nosia_tokens": 483
+  },
+  {
+    "id": 129,
+    "instr": "Can you list the top 20 films or movies between 1930 and 1940 that are in English and in the US public domain?",
+    "sia_reward": -0.2333984375,
+    "nosia_reward": 17.625,
+    "delta": -17.8583984375,
+    "sia_tokens": 2006,
+    "nosia_tokens": 1452
+  },
+  {
+    "id": 130,
+    "instr": "Take MLK speech \"I had a dream\" but turn it into a top 100 rap song",
+    "sia_reward": 11.625,
+    "nosia_reward": 36.0,
+    "delta": -24.375,
+    "sia_tokens": 1372,
+    "nosia_tokens": 1946
+  },
+  {
+    "id": 131,
+    "instr": "List the layers of the TCP/IP model and for each layer identify one protocol.",
+    "sia_reward": 14.3125,
+    "nosia_reward": 13.6875,
+    "delta": 0.625,
+    "sia_tokens": 261,
+    "nosia_tokens": 213
+  },
+  {
+    "id": 132,
+    "instr": "Why can't bank use cash as capital as a buffer for potential losses?",
+    "sia_reward": 10.5625,
+    "nosia_reward": 34.75,
+    "delta": -24.1875,
+    "sia_tokens": 2025,
+    "nosia_tokens": 916
+  },
+  {
+    "id": 133,
+    "instr": "convert December 21 · 1:00 – 1:50pm pacific to asia/taipei time",
+    "sia_reward": 9.875,
+    "nosia_reward": 25.875,
+    "delta": -16.0,
+    "sia_tokens": 399,
+    "nosia_tokens": 308
+  },
+  {
+    "id": 134,
+    "instr": "Can you tell my a story about nuclear physics like dr Seuss?",
+    "sia_reward": 13.125,
+    "nosia_reward": 32.75,
+    "delta": -19.625,
+    "sia_tokens": 639,
+    "nosia_tokens": 910
+  },
+  {
+    "id": 135,
+    "instr": "Message to client for accepting offer for summary video",
+    "sia_reward": 14.25,
+    "nosia_reward": 10.375,
+    "delta": 3.875,
+    "sia_tokens": 254,
+    "nosia_tokens": 340
+  },
+  {
+    "id": 136,
+    "instr": "Can you write a short story where Hildibrand Manderville somehow gets transformed into Gandalf the Grey and he must work with The Warrior of Light and Nashu to restore his regular, most gentlemanly form. ",
+    "sia_reward": -1.8203125,
+    "nosia_reward": 36.5,
+    "delta": -38.3203125,
+    "sia_tokens": 1996,
+    "nosia_tokens": 1601
+  },
+  {
+    "id": 137,
+    "instr": "I'm currently studying Bioengineering in Argentina, focusing on computational neuroscience. I'll be graduating in May, and planning to apply to PhD programs in the US at the end of the year in order to start August 2024. I'm thinking of what to do/study during this year until my program starts. Could you give me ideas? Feel free to ask me for questions which would help you give me better suggestions.",
+    "sia_reward": 11.25,
+    "nosia_reward": 34.5,
+    "delta": -23.25,
+    "sia_tokens": 428,
+    "nosia_tokens": 1709
+  },
+  {
+    "id": 138,
+    "instr": "Write an interview between a Female Film director and a journalist. Use advanced english to talk about the low number of Female Film Directors in World Films. Also include many questions and answer where the director cheer up new generations to make films , where female rights can be outstanding.",
+    "sia_reward": 5.625,
+    "nosia_reward": 36.75,
+    "delta": -31.125,
+    "sia_tokens": 1987,
+    "nosia_tokens": 1645
+  },
+  {
+    "id": 139,
+    "instr": "Give me a sample 5 day itienary for a switzerland holiday, starting from Basel",
+    "sia_reward": -4.9375,
+    "nosia_reward": 22.875,
+    "delta": -27.8125,
+    "sia_tokens": 2021,
+    "nosia_tokens": 1454
+  },
+  {
+    "id": 140,
+    "instr": "explain The Death of Ivan Ilych",
+    "sia_reward": 0.447265625,
+    "nosia_reward": 40.75,
+    "delta": -40.302734375,
+    "sia_tokens": 2032,
+    "nosia_tokens": 1179
+  },
+  {
+    "id": 141,
+    "instr": "Why is it that only proteins, carbohydrates and fats are deemed to have caloric value?<br>Just to clarify - consider the hypothetical situation below:<br>100g of 'carbohydrates' = 400kCal<br>100g of 'protein' = 400kCal<br>100g of 'fat' = 900kCal<br>100g of 'vitamins, minerals and/or other electrolytes' = ?",
+    "sia_reward": 13.625,
+    "nosia_reward": 35.75,
+    "delta": -22.125,
+    "sia_tokens": 1937,
+    "nosia_tokens": 996
+  },
+  {
+    "id": 142,
+    "instr": "Navina has $30 more to her weekly budget than her younger sister and can afford to get one of the many online credit cards she likes. What do they each have to spend?",
+    "sia_reward": -3.296875,
+    "nosia_reward": 8.75,
+    "delta": -12.046875,
+    "sia_tokens": 510,
+    "nosia_tokens": 1930
+  },
+  {
+    "id": 143,
+    "instr": "rank the following companies by how pro-consumer they are:\nMicrosoft, Google, Nintendo, Sony, EA.",
+    "sia_reward": 1.5390625,
+    "nosia_reward": 49.5,
+    "delta": -47.9609375,
+    "sia_tokens": 2018,
+    "nosia_tokens": 1275
+  },
+  {
+    "id": 144,
+    "instr": "Anytown Bank obtaining and using consumer reports in connection with any credit or insurance transaction that is not initiated by the consumer in order to make firm offers of credit or insurance is known as:\n\nA. Approving\nB. Counteroffering\nC. Endorsing\nD. Prescreening\nE. None of the above",
+    "sia_reward": 34.0,
+    "nosia_reward": 29.625,
+    "delta": 4.375,
+    "sia_tokens": 270,
+    "nosia_tokens": 119
+  },
+  {
+    "id": 145,
+    "instr": "I’m planning to visit Okinawa Japan from April 7th to April 10th. Do you have any recommendation on what to do while I’m there?",
+    "sia_reward": 3.59375,
+    "nosia_reward": 29.0,
+    "delta": -25.40625,
+    "sia_tokens": 548,
+    "nosia_tokens": 863
+  },
+  {
+    "id": 146,
+    "instr": "I have this text: <br><br>We use professional processes. Use the photo delivery system, check the quality and send it to the customer immediately. We started editing digital photos from the first wave of 2000. Started with editing personal photos, and then spread our passion by editing wedding photos or restoring old photos for loved ones, friends and family. friends and customers. 2005 started a local photo shop and started commercial photo editing, product photography for manufacturers. 2007 implemented online projects on freelancer platforms.<br><br>Rewrite it in professional style to tell a touching story",
+    "sia_reward": 8.125,
+    "nosia_reward": 26.375,
+    "delta": -18.25,
+    "sia_tokens": 420,
+    "nosia_tokens": 410
+  },
+  {
+    "id": 148,
+    "instr": "Write me a 2000 word essay on a water safety engineering project.",
+    "sia_reward": 1.171875,
+    "nosia_reward": 34.25,
+    "delta": -33.078125,
+    "sia_tokens": 2023,
+    "nosia_tokens": 2048
+  },
+  {
+    "id": 149,
+    "instr": "Marie is at the music store for a store day. She bought two $50 combos. Then, for $25 she bought two t-shirts for $5 each and five hoodies for $2 each. Then, she bought sneakers for $8 each. How much did she spend total?",
+    "sia_reward": -5.59375,
+    "nosia_reward": -6.28125,
+    "delta": 0.6875,
+    "sia_tokens": 1979,
+    "nosia_tokens": 2048
+  },
+  {
+    "id": 150,
+    "instr": "Mick pays his teacher $800 for 40 lessons worth 2 hours each. If this will be all he is going to pay for his lessons, how much did he receive?",
+    "sia_reward": -2.890625,
+    "nosia_reward": 4.96875,
+    "delta": -7.859375,
+    "sia_tokens": 2000,
+    "nosia_tokens": 1625
+  },
+  {
+    "id": 151,
+    "instr": "How to improve instance segmentation AP metrics with human knowledge",
+    "sia_reward": 37.5,
+    "nosia_reward": 50.25,
+    "delta": -12.75,
+    "sia_tokens": 1274,
+    "nosia_tokens": 1180
+  },
+  {
+    "id": 152,
+    "instr": "what is needed for self-sufficient living spaces",
+    "sia_reward": 1.984375,
+    "nosia_reward": 42.25,
+    "delta": -40.265625,
+    "sia_tokens": 2031,
+    "nosia_tokens": 943
+  },
+  {
+    "id": 154,
+    "instr": "Expand on the relation between inconsistency and ideological thinking",
+    "sia_reward": 15.6875,
+    "nosia_reward": 44.75,
+    "delta": -29.0625,
+    "sia_tokens": 1080,
+    "nosia_tokens": 878
+  },
+  {
+    "id": 155,
+    "instr": "Why do people give Reddit Gold to admins?",
+    "sia_reward": 21.25,
+    "nosia_reward": 24.875,
+    "delta": -3.625,
+    "sia_tokens": 632,
+    "nosia_tokens": 465
+  },
+  {
+    "id": 156,
+    "instr": "Create an Annotated Bibliography, in APA citation style, with six entries describing a different social media technology in each of the following six categories: blogs, social networking sites, virtual social worlds, virtual game worlds, collaborative projects, content communities.",
+    "sia_reward": -1.140625,
+    "nosia_reward": 26.375,
+    "delta": -27.515625,
+    "sia_tokens": 1991,
+    "nosia_tokens": 1235
+  },
+  {
+    "id": 157,
+    "instr": "What does Nassim Nicholas Taleb say about market efficiency?",
+    "sia_reward": 17.0,
+    "nosia_reward": 45.5,
+    "delta": -28.5,
+    "sia_tokens": 676,
+    "nosia_tokens": 606
+  },
+  {
+    "id": 158,
+    "instr": "Can a boy and girl be just be best friends only ever\n",
+    "sia_reward": 30.875,
+    "nosia_reward": 36.75,
+    "delta": -5.875,
+    "sia_tokens": 258,
+    "nosia_tokens": 207
+  },
+  {
+    "id": 159,
+    "instr": "If a tree is on the top of a mountain and the mountain is far from the see then is the tree close to the sea?",
+    "sia_reward": 21.625,
+    "nosia_reward": 25.75,
+    "delta": -4.125,
+    "sia_tokens": 198,
+    "nosia_tokens": 159
+  },
+  {
+    "id": 160,
+    "instr": "hat would be the reason for the popularity of youtube compared to other video sharing websites?",
+    "sia_reward": 3.953125,
+    "nosia_reward": 34.5,
+    "delta": -30.546875,
+    "sia_tokens": 2023,
+    "nosia_tokens": 451
+  },
+  {
+    "id": 161,
+    "instr": "Tell me something I don’t know",
+    "sia_reward": 17.25,
+    "nosia_reward": 10.1875,
+    "delta": 7.0625,
+    "sia_tokens": 130,
+    "nosia_tokens": 274
+  },
+  {
+    "id": 162,
+    "instr": "You are a script-writer. Write a script for the opening scene of a Miami-based dark comedy show which depicts a typical miami beach club called Beefy's Beach Club run buy a british man known by the Alias Beefy, and the pool bar staff are JdeG and a blonde british woman with the Alias SophieSnazz",
+    "sia_reward": 7.34375,
+    "nosia_reward": 33.5,
+    "delta": -26.15625,
+    "sia_tokens": 1169,
+    "nosia_tokens": 1811
+  },
+  {
+    "id": 163,
+    "instr": "Do you know something about the book  ＂the art of thinking clearly\" wrote by Rolf Dobelli?",
+    "sia_reward": 28.0,
+    "nosia_reward": 48.25,
+    "delta": -20.25,
+    "sia_tokens": 460,
+    "nosia_tokens": 621
+  },
+  {
+    "id": 164,
+    "instr": "antennas that transmit an equal amount of energy in the horizontal direction are called",
+    "sia_reward": 10.4375,
+    "nosia_reward": 17.375,
+    "delta": -6.9375,
+    "sia_tokens": 189,
+    "nosia_tokens": 143
+  },
+  {
+    "id": 165,
+    "instr": "write an introduction of a person for resume who worked as an in-house IT for 18 years, managed team of 4 and 9 site and satellite offices with total 200 users. He's familiar with network and system infrastructure, server virtualization, cloud services and the migration.",
+    "sia_reward": 26.5,
+    "nosia_reward": 35.25,
+    "delta": -8.75,
+    "sia_tokens": 228,
+    "nosia_tokens": 114
+  },
+  {
+    "id": 166,
+    "instr": "Hi, I have a question about MFCC (mel frequency cepstral coefficients). Are they the same thing as a MEL-spectogram, or is there a difference?",
+    "sia_reward": 18.75,
+    "nosia_reward": 48.5,
+    "delta": -29.75,
+    "sia_tokens": 1429,
+    "nosia_tokens": 812
+  },
+  {
+    "id": 167,
+    "instr": "who was the black cabinet member who went on to play an important role in the civil rights movement",
+    "sia_reward": 1.265625,
+    "nosia_reward": 10.375,
+    "delta": -9.109375,
+    "sia_tokens": 2021,
+    "nosia_tokens": 230
+  },
+  {
+    "id": 168,
+    "instr": "“One One was a race horse Two Two was one too. One One won one race. Two Two won one too.” How many horses are in this story?",
+    "sia_reward": 4.875,
+    "nosia_reward": 13.75,
+    "delta": -8.875,
+    "sia_tokens": 1106,
+    "nosia_tokens": 864
+  },
+  {
+    "id": 170,
+    "instr": "twenty names of famous horses and who they belonged to",
+    "sia_reward": -5.90625,
+    "nosia_reward": 6.65625,
+    "delta": -12.5625,
+    "sia_tokens": 2030,
+    "nosia_tokens": 737
+  },
+  {
+    "id": 171,
+    "instr": "Write an interesting and detailed backstory for my half-elf ranger character for Pathfinder. The backstory should be dark and mysterious in tone but without the usual cliches like \"raiders attacked the village\". Make it unique and interesting. Be creative.",
+    "sia_reward": 3.15625,
+    "nosia_reward": 35.75,
+    "delta": -32.59375,
+    "sia_tokens": 1992,
+    "nosia_tokens": 1875
+  },
+  {
+    "id": 172,
+    "instr": "In this math problem, we are asked to figure out the percentage of total profits that are made in each quarter. They are 90% in the first quarter, 92% in the second quarter, 81% in the third quarter and 88% in the fourth quarter. What is the total profit percent over a period of time, based upon these quarters?",
+    "sia_reward": 8.5,
+    "nosia_reward": 6.25,
+    "delta": 2.25,
+    "sia_tokens": 1537,
+    "nosia_tokens": 2048
+  },
+  {
+    "id": 173,
+    "instr": "Why is it a bad idea to give a mouse a cookie?",
+    "sia_reward": 4.71875,
+    "nosia_reward": 25.0,
+    "delta": -20.28125,
+    "sia_tokens": 534,
+    "nosia_tokens": 325
+  },
+  {
+    "id": 174,
+    "instr": "which second messenger molecule acts on the endoplasmic reticulum to release calcium ions",
+    "sia_reward": 14.4375,
+    "nosia_reward": 42.0,
+    "delta": -27.5625,
+    "sia_tokens": 381,
+    "nosia_tokens": 261
+  },
+  {
+    "id": 175,
+    "instr": "How can anti-deressants make people think or act suicidally? Suicidal thoughts or actions' are a side effect of every single anti-depressant I've seen. Is the medicine controlling your mind or something?",
+    "sia_reward": 25.5,
+    "nosia_reward": 43.75,
+    "delta": -18.25,
+    "sia_tokens": 679,
+    "nosia_tokens": 895
+  },
+  {
+    "id": 176,
+    "instr": "Create a lesson plan in two different levels: in CEFR A1 and A2 on the topic of friendship. Add a rubric.",
+    "sia_reward": -0.6328125,
+    "nosia_reward": 36.75,
+    "delta": -37.3828125,
+    "sia_tokens": 944,
+    "nosia_tokens": 1551
+  },
+  {
+    "id": 177,
+    "instr": "Draft a ministerial speech outlining the top five benefits that innovation brings to the Australian economy",
+    "sia_reward": 7.25,
+    "nosia_reward": 46.5,
+    "delta": -39.25,
+    "sia_tokens": 2023,
+    "nosia_tokens": 988
+  },
+  {
+    "id": 178,
+    "instr": "Is online casino legal in India?",
+    "sia_reward": 13.875,
+    "nosia_reward": 45.0,
+    "delta": -31.125,
+    "sia_tokens": 2033,
+    "nosia_tokens": 515
+  },
+  {
+    "id": 179,
+    "instr": "Write a section for an award application detailing how photography has insipired you",
+    "sia_reward": 27.625,
+    "nosia_reward": 28.625,
+    "delta": -1.0,
+    "sia_tokens": 415,
+    "nosia_tokens": 497
+  },
+  {
+    "id": 181,
+    "instr": "explain the basics of area and perimeter",
+    "sia_reward": -3.25,
+    "nosia_reward": 28.375,
+    "delta": -31.625,
+    "sia_tokens": 2033,
+    "nosia_tokens": 614
+  },
+  {
+    "id": 182,
+    "instr": "Write a story about Anakin Skywalker encountering a Jedi who speaks and acts like a 1920s British aristocrat",
+    "sia_reward": -3.546875,
+    "nosia_reward": 30.0,
+    "delta": -33.546875,
+    "sia_tokens": 2015,
+    "nosia_tokens": 1976
+  },
+  {
+    "id": 183,
+    "instr": "what are the possible performance issues in a learning program on cross cultural communication",
+    "sia_reward": 31.0,
+    "nosia_reward": 46.5,
+    "delta": -15.5,
+    "sia_tokens": 906,
+    "nosia_tokens": 861
+  },
+  {
+    "id": 184,
+    "instr": "write description for 925 sterling silver miami cuban link chain",
+    "sia_reward": 21.0,
+    "nosia_reward": 26.0,
+    "delta": -5.0,
+    "sia_tokens": 328,
+    "nosia_tokens": 383
+  },
+  {
+    "id": 185,
+    "instr": "cost of fuel for a 14 mile journey in a car with 48mpg, fuel costs 625 pence per gallon and there is heavy traffic for half the journey",
+    "sia_reward": -4.53125,
+    "nosia_reward": 23.75,
+    "delta": -28.28125,
+    "sia_tokens": 2001,
+    "nosia_tokens": 372
+  },
+  {
+    "id": 186,
+    "instr": "How does money go from my pocket, through the stock market, and to support the business I've bought stock from?",
+    "sia_reward": 3.28125,
+    "nosia_reward": 37.5,
+    "delta": -34.21875,
+    "sia_tokens": 2016,
+    "nosia_tokens": 771
+  },
+  {
+    "id": 187,
+    "instr": "Can you provide a list of health food brands owned by Hispanic founders",
+    "sia_reward": 0.40234375,
+    "nosia_reward": 17.75,
+    "delta": -17.34765625,
+    "sia_tokens": 2027,
+    "nosia_tokens": 1106
+  },
+  {
+    "id": 189,
+    "instr": "What if people only valued and took pride in the things that were true about themselves?",
+    "sia_reward": 7.53125,
+    "nosia_reward": 39.75,
+    "delta": -32.21875,
+    "sia_tokens": 635,
+    "nosia_tokens": 856
+  },
+  {
+    "id": 190,
+    "instr": "It's officially 2023, and as we enter a brand new year, what better time to set up our revenue enablement goals for the new year in our Above Goal and Concierge Tools [    ] challenge learn the day-to-day tactics needed to live your best, healthiest life, while exceeding your business performance goals, as we enter this new season.<br><br>Can you come up with a two word name for the challenge akin to \"Live Well\" and fit it in the bracket above?",
+    "sia_reward": 13.9375,
+    "nosia_reward": 20.0,
+    "delta": -6.0625,
+    "sia_tokens": 162,
+    "nosia_tokens": 196
+  },
+  {
+    "id": 191,
+    "instr": "I need to learn English could you help me and make a exercise",
+    "sia_reward": -0.99609375,
+    "nosia_reward": 12.4375,
+    "delta": -13.43359375,
+    "sia_tokens": 331,
+    "nosia_tokens": 519
+  },
+  {
+    "id": 192,
+    "instr": "Why does warmth make you feel tired?",
+    "sia_reward": 10.125,
+    "nosia_reward": 32.75,
+    "delta": -22.625,
+    "sia_tokens": 525,
+    "nosia_tokens": 548
+  },
+  {
+    "id": 193,
+    "instr": "write an article informing customer of my saas software that this currently is  beta version of the software and we are working hard to improve and release it to the market.",
+    "sia_reward": -1.2734375,
+    "nosia_reward": 47.25,
+    "delta": -48.5234375,
+    "sia_tokens": 2006,
+    "nosia_tokens": 751
+  },
+  {
+    "id": 194,
+    "instr": "Explain me the Finite Elemente Method",
+    "sia_reward": 5.96875,
+    "nosia_reward": 27.375,
+    "delta": -21.40625,
+    "sia_tokens": 2032,
+    "nosia_tokens": 1232
+  },
+  {
+    "id": 195,
+    "instr": "I've put a plate on top of an apple, and take the plate from kitchen to dinning room. Where is the apple now",
+    "sia_reward": 9.875,
+    "nosia_reward": 18.625,
+    "delta": -8.75,
+    "sia_tokens": 155,
+    "nosia_tokens": 56
+  },
+  {
+    "id": 196,
+    "instr": "Introduce the ”financial markets and institutions“ by Frederic S. Mishkin",
+    "sia_reward": 2.96875,
+    "nosia_reward": 33.75,
+    "delta": -30.78125,
+    "sia_tokens": 2024,
+    "nosia_tokens": 665
+  },
+  {
+    "id": 197,
+    "instr": "when are hops added to the brewing process?",
+    "sia_reward": 16.5,
+    "nosia_reward": 34.5,
+    "delta": -18.0,
+    "sia_tokens": 624,
+    "nosia_tokens": 421
+  },
+  {
+    "id": 198,
+    "instr": "Can a Liebherr LTM 11200-9.1 hypothetically lift Mount everest",
+    "sia_reward": 23.625,
+    "nosia_reward": 40.0,
+    "delta": -16.375,
+    "sia_tokens": 756,
+    "nosia_tokens": 642
+  },
+  {
+    "id": 199,
+    "instr": "Write \"Test\"",
+    "sia_reward": 7.71875,
+    "nosia_reward": 7.875,
+    "delta": -0.15625,
+    "sia_tokens": 2,
+    "nosia_tokens": 2
+  }
+]

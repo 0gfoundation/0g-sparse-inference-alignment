@@ -1,0 +1,27 @@
+/workspace/SIA/venv2/lib/python3.12/site-packages/requests/__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (6.0.0.post1)/charset_normalizer (3.4.7) doesn't match a supported version!
+  warnings.warn(
+loaded 200 prompts from /workspace/SIA/data/alpaca_eval/alpaca_eval.json
+base_url    : http://localhost:8000/v1
+model       : 0GM-1.0-35B-A3B-0427
+max_tokens  : 512
+temperature : 1.0
+top_p / top_k / rep_penalty: 0.95 / 20 / 1.0
+disable_thinking: True
+output      : /tmp/alpaca_0gm_nosia_200q_20260602_122922.json
+------------------------------------------------------------
+[1/200] last=4.7s avg=4.7s/q  cum_tps=110.0 tok/s
+[25/200] last=2.2s avg=4.4s/q  cum_tps=110.6 tok/s
+[50/200] last=4.4s avg=4.5s/q  cum_tps=109.8 tok/s
+[75/200] last=4.7s avg=4.4s/q  cum_tps=109.2 tok/s
+[100/200] last=4.7s avg=4.4s/q  cum_tps=109.3 tok/s
+[125/200] last=4.5s avg=4.4s/q  cum_tps=109.3 tok/s
+[150/200] last=4.7s avg=4.3s/q  cum_tps=109.2 tok/s
+[175/200] last=3.0s avg=4.3s/q  cum_tps=109.2 tok/s
+[200/200] last=0.1s avg=4.2s/q  cum_tps=109.3 tok/s
+
+=== summary ===
+  saved 200 results to /tmp/alpaca_0gm_nosia_200q_20260602_122922.json
+  errors: 0
+  total tokens: 92818
+  total wall time: 849s (14.2 min)
+  throughput: 109.3 tok/s

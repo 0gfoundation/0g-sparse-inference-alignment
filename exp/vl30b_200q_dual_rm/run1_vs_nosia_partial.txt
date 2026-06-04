@@ -1,0 +1,17 @@
+=== VL-30B SIA Run 1 (vllm RM, path A direct-token-ids) vs noSIA ===
+
+Source: /tmp/vl30b_runs/vllm_sia_outputs.json
+        /tmp/alpaca_qwen3vl30b_nosia_200q_scored_20260603_034614.json
+Paired records: 195
+
+Reward distribution:
+  SIA   mean=+7.258 median=+5.875 std=11.527
+  noSIA mean=+29.265 median=+28.875 std=12.541
+
+Paired Δ (SIA - noSIA):
+  mean   -22.007
+  median -21.406
+  rel    -75.2%
+  win    9/195 = 4.6%
+  loss   186/195 = 95.4%
+  t      -23.460  (p ≈ 0.000000)

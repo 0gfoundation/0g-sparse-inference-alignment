@@ -37,12 +37,17 @@ import time
 import uuid
 from typing import Optional
 
+import torch
+
 from .qwen3_with_score import (
     read_all_rewards,
     read_rewards,
     truncate_rewards,
     read_all_timings,
     truncate_timings,
+    set_inproc_reward_mode,
+    clear_inproc_rewards,
+    take_inproc_rewards,
 )
 
 
@@ -55,6 +60,7 @@ class RMClient:
         reward_file_id: Optional[str] = None,
         cuda_graph_sizes: Optional[list] = None,
         multiprocessing: bool = False,
+        llm_tokenizer=None,
     ):
         """
         cuda_graph_sizes: optional list of batch sizes to capture in the
@@ -95,11 +101,41 @@ class RMClient:
         # Trigger ModelRegistry.register_model (idempotent)
         from . import qwen3_with_score  # noqa: F401
 
+        # B-1: select reward channel BEFORE LLM(...) runs cudagraph capture.
+        # capture invokes compute_logits with dummy inputs at every cuda
+        # graph batch size; those calls must already see the correct flag.
+        set_inproc_reward_mode(not multiprocessing)
+
         from vllm import LLM, SamplingParams, TokensPrompt
 
         # X-5: cache TokensPrompt class ref to avoid re-importing in hot path
         # (sub-microsecond per call but 100% deterministic, zero risk)
         self._TokensPrompt = TokensPrompt
+
+        # vllm 0.19 cudagraph 冲突 workaround.
+        # 主 LLM 用 vllm 0.19 默认 FULL_AND_PIECEWISE cudagraph mode;
+        # RM 跟主 LLM 同进程同 stream, RM 也用 FULL cudagraph 会冲突:
+        #   "CUDA graph capturing detected at an inappropriate time"
+        # 三种 RM 配置 (env var):
+        #   SIA_RM_CUDAGRAPH=full  (默认 0.19 行为)  — 跟主 LLM 冲突, 失败
+        #   SIA_RM_CUDAGRAPH=piecewise  (推荐 for vllm 0.19) — 只 capture splitting ops,
+        #                                跟主 LLM FULL 不冲突, 大部分加速保留 (~80%)
+        #   SIA_RM_CUDAGRAPH=none  (eager) — 没 cudagraph, ~50-70% 慢
+        # vllm 0.10/0.16 默认就是 PIECEWISE, 没冲突, 这里仍 use full default behavior.
+        rm_cg_mode = os.environ.get("SIA_RM_CUDAGRAPH", "default").lower()
+        compilation_config = None
+        enforce_eager = False
+        if rm_cg_mode == "none" or rm_cg_mode == "eager":
+            enforce_eager = True
+            print(f"[RMClient] enforce_eager=True (SIA_RM_CUDAGRAPH={rm_cg_mode})",
+                  flush=True)
+        elif rm_cg_mode == "piecewise":
+            compilation_config = {"cudagraph_mode": 1}  # 1 = PIECEWISE
+            print("[RMClient] cudagraph_mode=PIECEWISE (workaround for "
+                  "vllm 0.19 nested vLLM FULL cudagraph conflict)", flush=True)
+        elif rm_cg_mode == "full":
+            compilation_config = {"cudagraph_mode": 2}  # 2 = FULL
+            print("[RMClient] cudagraph_mode=FULL", flush=True)
 
         llm_kwargs = dict(
             model=model_path,
@@ -108,9 +144,11 @@ class RMClient:
             enable_prefix_caching=True,
             gpu_memory_utilization=gpu_mem,
             max_model_len=max_model_len,
-            enforce_eager=False,
+            enforce_eager=enforce_eager,
             disable_log_stats=True,
         )
+        if compilation_config is not None:
+            llm_kwargs["compilation_config"] = compilation_config
         if cuda_graph_sizes is not None:
             llm_kwargs["cuda_graph_sizes"] = cuda_graph_sizes
         self.llm = LLM(**llm_kwargs)
@@ -125,6 +163,44 @@ class RMClient:
         self._sessions: dict[int, list[int]] = {}
         self._next_id = 0
 
+        # Cross-tokenizer bridge: when LLM tokenizer != RM tokenizer (e.g.
+        # 0GM-35B uses 248K-vocab Qwen3.5 tokenizer, RM uses 151K-vocab
+        # Qwen3 tokenizer; only 0.2% of overlapping ids match), score_candidates
+        # has to go through string: LLM-token-id → text (LLM tokenizer)
+        # → RM-token-id (RM tokenizer). Otherwise stay on the zero-overhead
+        # token-id-direct path (Qwen3-14B + VM-Qwen3-4B case).
+        #
+        # Compatibility detection: if the caller passes the LLM tokenizer,
+        # compare vocab size + sample 100 ids. If they fully match, leave
+        # cross-tokenizer mode off (no overhead).
+        self._cross_tokenizer = False
+        self._llm_tok = None
+        self._rm_tok = None
+        if llm_tokenizer is not None:
+            from transformers import AutoTokenizer
+            rm_tok = AutoTokenizer.from_pretrained(
+                model_path, trust_remote_code=True
+            )
+            same = llm_tokenizer.vocab_size == rm_tok.vocab_size
+            if same:
+                step = max(1, llm_tokenizer.vocab_size // 100)
+                for i in range(0, llm_tokenizer.vocab_size, step):
+                    if (llm_tokenizer.convert_ids_to_tokens(i)
+                            != rm_tok.convert_ids_to_tokens(i)):
+                        same = False
+                        break
+            if not same:
+                self._cross_tokenizer = True
+                self._llm_tok = llm_tokenizer
+                self._rm_tok = rm_tok
+                print(
+                    f"[RMClient] cross-tokenizer bridge ON: "
+                    f"LLM vocab={llm_tokenizer.vocab_size}, "
+                    f"RM vocab={rm_tok.vocab_size}. "
+                    f"score_candidates will decode→encode via text.",
+                    flush=True,
+                )
+
         # Profile-mode state: how many tokens of each session's prefix have
         # already been pushed through a vLLM forward (thus KV-cached).
         # Used by score_candidates_profiled to know how many new tokens
@@ -134,6 +210,27 @@ class RMClient:
         # Clean any stale reward + timing files from previous runs
         truncate_rewards()
         truncate_timings()
+        # B-1: cudagraph capture above wrote ~67 dummy GPU tensors into
+        # the inproc reward buffer; drop them now so they don't pin GPU
+        # memory until the first real score_candidates() call.
+        if not multiprocessing:
+            clear_inproc_rewards(self._fid)
+
+        # vllm 0.17+ workspace lock 跨实例冲突修复:
+        # vllm 在每个 GPUModelRunner 完成 cudagraph capture 后会 lock 全局
+        # workspace (gpu_model_runner.py:6040 + workspace.py:58). 因为
+        # workspace_manager 是 process-level singleton, InprocClient 模式下
+        # RM 先 init 完, lock 了 workspace; 主 LLM 后续 init 时 MoE kernel
+        # 想 grow workspace (e.g. 0GM-35B MoE 需要 128 MB) → AssertionError.
+        #
+        # RM 自己的 cudagraph 已 captured (用已分配的 size, replay 时不 grow),
+        # unlock 安全; 主 LLM 加载完会自己再 lock 一次。
+        if not multiprocessing:
+            try:
+                from vllm.v1.worker.workspace import unlock_workspace
+                unlock_workspace()
+            except ImportError:
+                pass  # vllm 0.10/0.16 没有这个机制, 没有 lock 问题
 
     # ---- session management ----
 
@@ -161,38 +258,83 @@ class RMClient:
         self,
         sid: int,
         candidate_token_ids,
-    ) -> list[float]:
+    ) -> torch.Tensor:
         """Score N candidates by running forward on N prompts (prefix+[c])
-        and reading the score head outputs. Returns N floats."""
+        and reading the score head outputs.
+
+        Returns: shape (N,) float32 tensor.
+        - Inproc mode (default, multiprocessing=False): GPU tensor, same
+          device as the RM. Caller can do mean-norm + index_add_ entirely
+          on GPU.
+        - Multiprocess mode: CPU float32 tensor (read from /dev/shm).
+
+        D-1: 直接返回 tensor (而非 list[float]) — 调用方可以直接做 mean-norm /
+        scalar mul / .to(gpu) 一次性完成, 避免 `torch.tensor(list)` 重建 + 多次
+        host→device transfer。
+        B-1: inproc mode 进一步把 .cpu() sync + /dev/shm 文件 IPC 也省掉。
+        """
         if sid not in self._sessions:
             raise ValueError(f"Unknown session id {sid}")
         prefix = self._sessions[sid]
         TP = self._TokensPrompt  # X-5: local alias avoids self.__dict__ lookup × N
-
-        # X-5: candidate_token_ids comes from SIA processor topk (list[int]),
-        # already Python ints — skip redundant `int(c)` cast.
-        prompts = [
-            TP(prompt_token_ids=prefix + [c])
-            for c in candidate_token_ids
-        ]
         n_expected = len(candidate_token_ids)
 
-        # Clear reward channel before this call, then generate, then read.
-        truncate_rewards()
+        if self._cross_tokenizer:
+            # P-1: token-id bridge for incompatible tokenizers (e.g. 0GM-35B
+            # + VM-Qwen3-4B). Decode the LLM-side prefix + each candidate to
+            # text, then re-encode with the RM tokenizer. BPE is deterministic
+            # on a full string, so this round-trip is consistent (calling it
+            # twice with the same LLM prefix yields the same RM token ids,
+            # so vLLM prefix caching still hits across calls).
+            prefix_text = self._llm_tok.decode(
+                prefix, skip_special_tokens=False
+            )
+            prompts = []
+            for c in candidate_token_ids:
+                cand_text = self._llm_tok.decode([c], skip_special_tokens=False)
+                full_text = prefix_text + cand_text
+                rm_ids = self._rm_tok.encode(full_text, add_special_tokens=False)
+                prompts.append(TP(prompt_token_ids=rm_ids))
+        else:
+            # Zero-overhead path: tokenizer-compatible (Qwen3-14B + VM-Qwen3-4B).
+            # X-5: candidate_token_ids comes from SIA processor topk (list[int]),
+            # already Python ints — skip redundant `int(c)` cast.
+            prompts = [
+                TP(prompt_token_ids=prefix + [c])
+                for c in candidate_token_ids
+            ]
+
+        # B-1: dual reward channel.
+        # Clear before generate (defensive — handles stale state if a
+        # prior call raised between generate() and take/read).
+        if self._multiprocessing:
+            truncate_rewards()
+        else:
+            clear_inproc_rewards(self._fid)
+
         _ = self.llm.generate(prompts, self._sp, use_tqdm=False)
-        rewards = read_rewards()  # concatenates all records
+
+        if self._multiprocessing:
+            rewards = read_rewards()  # CPU tensor, concatenates all records
+        else:
+            rewards = take_inproc_rewards(self._fid)  # GPU tensor (or None)
 
         if rewards is None or rewards.numel() != n_expected:
             n_got = 0 if rewards is None else int(rewards.numel())
-            records = read_all_rewards()
-            shapes = [tuple(r.shape) for r in records]
+            channel = "/dev/shm" if self._multiprocessing else "inproc buffer"
+            if self._multiprocessing:
+                records = read_all_rewards()
+                shapes = [tuple(r.shape) for r in records]
+                detail = f"records seen: {shapes}"
+            else:
+                detail = ""
             raise RuntimeError(
-                f"reward channel returned {n_got} values, expected "
-                f"{n_expected}. records seen: {shapes}. "
+                f"reward channel ({channel}) returned {n_got} values, "
+                f"expected {n_expected}. {detail} "
                 f"Likely SIA_REWARD_FILE_ID mismatch or vLLM reordered "
                 f"prompts."
             )
-        return rewards.tolist()
+        return rewards
 
     # ---- bench / introspection ----
 
@@ -200,7 +342,7 @@ class RMClient:
         self,
         sid: int,
         candidate_token_ids,
-    ) -> tuple[list[float], float]:
+    ) -> tuple[torch.Tensor, float]:
         """Like score_candidates but also returns wall-clock latency in ms."""
         t0 = time.perf_counter()
         out = self.score_candidates(sid, candidate_token_ids)

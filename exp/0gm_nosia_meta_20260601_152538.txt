@@ -1,0 +1,8 @@
+TS=20260601_152538
+MODE=noSIA (vllm serve, vllm 0.19.0 in venv4)
+SRV_LOG=/tmp/0gm_server_nosia_20260601_152538.log
+SRV_PID=729404
+EVAL_LOG=/tmp/mmlu_0gm_900q_nosia_20260601_152538.log
+EVAL_OUT=/tmp/mmlu_redux_0gm_900q_nosia_20260601_152538.json
+EVAL_START=2026-06-01T15:37:54+00:00
+EVAL_PID=734852

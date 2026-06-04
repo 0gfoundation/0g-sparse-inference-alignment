@@ -1,0 +1,83 @@
+
+[continue2] starting at Thu Jun  4 00:11:18 UTC 2026
+[continue2] stopping any SIA server on :8000 …
+116330 MiB
+[continue2] === RUN 2: PyTorch RM ===
+  pid=1769056
+[continue2] SIA server ready
+[continue2] running 200Q driver for PyTorch-RM …
+[driver] model=Qwen3-VL-30B-A3B-Instruct n=200 max_tokens=2048 → /tmp/vl30b_runs/pytorch_sia_outputs.json
+[  1/200] 143.2s toks=2025 finish=length
+[  2/200] 129.8s toks=2032 finish=length
+[  3/200]  45.3s toks=904 finish=stop
+[  4/200]  14.3s toks=518 finish=stop
+[  5/200] 145.3s toks=2032 finish=length
+[  6/200]  18.7s toks=523 finish=stop
+[  7/200]   2.6s toks=149 finish=stop
+[  8/200]  21.8s toks=528 finish=stop
+[  9/200]  24.2s toks=659 finish=stop
+[ 10/200] 139.1s toks=1990 finish=length
+  ...saved 10/200 (11.4 min)
+[ 11/200]   9.5s toks=502 finish=stop
+[ 12/200]  26.8s toks=772 finish=stop
+[ 13/200] 147.7s toks=1990 finish=length
+[ 14/200]  12.7s toks=623 finish=stop
+[ 15/200] 134.8s toks=2026 finish=length
+[ 16/200]  21.6s toks=626 finish=stop
+[ 17/200]  75.8s toks=1229 finish=stop
+[ 18/200] 154.2s toks=2019 finish=length
+[ 19/200]  12.0s toks=407 finish=stop
+[ 20/200] 152.6s toks=2010 finish=length
+  ...saved 20/200 (23.9 min)
+[ 21/200]  14.3s toks=509 finish=stop
+[ 22/200]  22.1s toks=731 finish=stop
+[ 23/200]   2.2s toks=194 finish=stop
+[ 24/200]   9.3s toks=514 finish=stop
+[ 25/200]  16.1s toks=564 finish=stop
+[ 26/200] 144.0s toks=2029 finish=length
+[ 27/200]   4.0s toks=324 finish=stop
+[ 28/200]  28.9s toks=771 finish=stop
+[ 29/200]  13.9s toks=532 finish=stop
+[ 30/200]  22.3s toks=677 finish=stop
+  ...saved 30/200 (28.5 min)
+[ 31/200] 133.2s toks=2033 finish=length
+[ 32/200] 149.8s toks=2022 finish=length
+[ 33/200] 150.1s toks=2031 finish=length
+[ 34/200]  49.2s toks=999 finish=stop
+[ 35/200]   1.5s toks=113 finish=stop
+[ 36/200]   4.7s toks=342 finish=stop
+[ 37/200] 134.7s toks=2032 finish=length
+[ 38/200]  12.8s toks=520 finish=stop
+[ 39/200]  36.6s toks=822 finish=stop
+[ 40/200]   9.0s toks=368 finish=stop
+  ...saved 40/200 (39.8 min)
+[ 41/200] 149.3s toks=2034 finish=length
+[ 42/200]  18.6s toks=799 finish=stop
+[ 43/200] 203.2s toks=2019 finish=length
+[ 44/200]   2.0s toks=125 finish=stop
+[ 45/200]  29.1s toks=791 finish=stop
+[ 46/200]  15.9s toks=570 finish=stop
+[ 47/200]  20.1s toks=612 finish=stop
+[ 48/200] 159.9s toks=1990 finish=length
+[ 49/200]  12.0s toks=413 finish=stop
+[ 50/200] 153.2s toks=2030 finish=length
+  ...saved 50/200 (52.6 min)
+[ 51/200]   1.0s toks=97 finish=stop
+[ 52/200]   2.2s toks=154 finish=stop
+[ 53/200] 191.2s toks=1989 finish=length
+[ 54/200] 146.0s toks=2025 finish=length
+[ 55/200]  15.3s toks=592 finish=stop
+[ 56/200]  39.3s toks=986 finish=stop
+[ 57/200]  45.6s toks=865 finish=stop
+[ 58/200]  25.3s toks=706 finish=stop
+[ 59/200] 124.9s toks=1990 finish=length
+[ 60/200] 143.7s toks=2006 finish=length
+  ...saved 60/200 (64.8 min)
+[ 61/200] 105.3s toks=1451 finish=stop
+[ 62/200] 147.1s toks=2025 finish=length
+[ 63/200]  85.9s toks=1347 finish=stop
+[ 64/200]  18.6s toks=648 finish=stop
+[ 65/200]  85.6s toks=1564 finish=stop
+[ 66/200]  14.9s toks=516 finish=stop
+[ 67/200] 180.9s toks=2033 finish=length
+[ 68/200] 156.6s toks=1988 finish=length

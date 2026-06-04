@@ -1,0 +1,27 @@
+loading Skywork …
+`torch_dtype` is deprecated! Use `dtype` instead!
+Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:  25%|██▌       | 1/4 [00:07<00:22,  7.65s/it]Loading checkpoint shards:  50%|█████     | 2/4 [00:15<00:15,  7.55s/it]Loading checkpoint shards:  75%|███████▌  | 3/4 [00:21<00:07,  7.20s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:21<00:00,  5.50s/it]
+ready
+Loaded: pytorch-RM=200  vllm-RM=125  paper_sia=805  paper_nosia=805
+
+Scoring 200 PyTorch-RM outputs ...
+done in 7s
+
+Building 4-way paired records ...
+paired pytorch-RM with paper: 200/200
+  of those, also have ours-vllm-RM scored: 125
+
+=== Skywork mean reward (n=200, all max_tokens=256) ===
+  Ours REP=1.0  (rep_penalty fix applied):                   mean=+11.477  median=+11.594
+  Paper SIA     (official code, rep_penalty=none):           mean=+11.164  median=+10.125
+  Paper noSIA   (official code, no SIA):                     mean=+9.591  median=+8.406
+
+=== Paired comparisons ===
+  Ours-REP10 vs Paper-SIA                 : Δmean=+0.313  rel=  +2.8%  win=100/200 ( 50%)  t= +0.79 p≈0.4277
+  Ours-REP10 vs Paper-noSIA               : Δmean=+1.886  rel= +19.7%  win=122/200 ( 61%)  t= +4.38 p≈0.0000
+  Paper-SIA vs Paper-noSIA                : Δmean=+1.573  rel= +16.4%  win=122/200 ( 61%)  t= +3.79 p≈0.0002
+
+=== HYPOTHESIS TEST: REP=1.0 vs REP=1.3 (same Q's, isolates rep_penalty, n=125) ===
+  Ours-REP10 (1.0): mean=+10.798  median=+11.562
+  Ours-REP13 (1.3): mean=+3.092  median=+3.312
+  Ours-REP10 vs Ours-REP13                : Δmean=+7.706  rel=+249.2%  win=109/125 ( 87%)  t=+12.23 p≈0.0000

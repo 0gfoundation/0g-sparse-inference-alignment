@@ -125,6 +125,9 @@ def chat_completion(
     api_key: str = "dummy",
     max_tokens: int = 1024,
     temperature: float = 1.0,
+    top_p: float | None = None,
+    top_k: int | None = None,
+    repetition_penalty: float | None = None,
 ) -> tuple[str, int]:
     headers = {
         "Content-Type": "application/json",
@@ -136,6 +139,12 @@ def chat_completion(
         "max_tokens": max_tokens,
         "temperature": temperature,
     }
+    if top_p is not None:
+        payload["top_p"] = top_p
+    if top_k is not None:
+        payload["top_k"] = top_k
+    if repetition_penalty is not None:
+        payload["repetition_penalty"] = repetition_penalty
     url = f"{base_url.rstrip('/')}/chat/completions"
 
     try:
@@ -160,6 +169,9 @@ def evaluate_subject(
     api_key: str = "dummy",
     limit: int | None = None,
     temperature: float = 1.0,
+    top_p: float | None = None,
+    top_k: int | None = None,
+    repetition_penalty: float | None = None,
 ) -> dict:
     try:
         dataset = load_dataset(
@@ -201,6 +213,8 @@ def evaluate_subject(
             response_text, tokens = chat_completion(
                 base_url, model, messages, api_key=api_key,
                 max_tokens=2048, temperature=temperature,
+                top_p=top_p, top_k=top_k,
+                repetition_penalty=repetition_penalty,
             )
             predicted = extract_answer(response_text)
             is_correct = predicted == answer_letter
@@ -253,6 +267,15 @@ def main():
                         help="API key（vLLM 不校验，传任意字符串即可）")
     parser.add_argument("--temperature", type=float, default=1.0,
                         help="采样温度（默认 1.0）")
+    parser.add_argument("--top_p", type=float, default=None,
+                        help="nucleus sampling 阈值（默认不传, server 用 default 1.0; "
+                             "0GM 等大词表模型应设 0.95）")
+    parser.add_argument("--top_k", type=int, default=None,
+                        help="top-k 截断（默认不传, server 不截断; "
+                             "0GM 等大词表模型应设 20）")
+    parser.add_argument("--repetition_penalty", type=float, default=None,
+                        help="重复惩罚（默认不传, server 用 default 1.3; "
+                             "0GM 等大词表模型应设 1.0 避免 OOV drift）")
     args = parser.parse_args()
 
     subjects = args.subjects or ALL_SUBJECTS
@@ -278,6 +301,8 @@ def main():
             args.base_url, args.model, subject,
             api_key=args.api_key, limit=args.limit,
             temperature=args.temperature,
+            top_p=args.top_p, top_k=args.top_k,
+            repetition_penalty=args.repetition_penalty,
         )
         per_subject[subject] = result
         if result["accuracy"] is not None:
