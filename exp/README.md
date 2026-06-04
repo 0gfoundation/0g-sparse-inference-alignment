@@ -47,16 +47,21 @@
 
 ---
 
-**AlpacaEval 组（1 组双臂对比，805 条 Helpfulness 指令）**
+**AlpacaEval 组**
 
-不同于 MMLU 评测，AlpacaEval 用原论文 `evaluate.py` + 独立 Skywork RM 打分，关心的是 reward（不是 tok/s 或 accuracy）。
+不同于 MMLU 评测，AlpacaEval 用 Skywork RM 打分独立评估生成质量，关心的是 reward（不是 tok/s 或 accuracy）。
 
-| # | 时间 | 模式 | 干预率 | mean reward | 备注 |
-|---|---|---|---:|---:|---|
-| A1 | 2026-05-15 | noSIA (rm_weight=0, entropy_threshold=999999) | 0% | 12.294 | 基线 |
-| **A1** | 2026-05-15 | **SIA (rm_weight=1.0, entropy_threshold=1.0)** | **16.14%** | **13.923 (+13.2%)** | 与对口任务的对照 ✅ |
+| # | 时间 | 模式 (LLM + VM) | n | 干预率 | mean reward | Δ% | 备注 |
+|---|---|---|---:|---:|---:|---:|---|
+| A1 | 2026-05-15 | **Qwen3-14B + Qwen3-4B (W2S=3.5×)** 基线 noSIA | 805 | 0% | 12.294 | — | paper-spec, 实际 generation tokens median=1181 |
+| **A1** | 2026-05-15 | **Qwen3-14B + Qwen3-4B SIA** (paper-spec) | 805 | **16.14%** | **13.923** | **+13.2%** ✅ | 详见 [`doc/alpaca-eval-report.md`](../doc/alpaca-eval-report.md), 0% 崩坏率 |
+| B1-Run1 | 2026-06-03 | **VL-30B-A3B-Instruct + Qwen3-4B (W2S=7.5×) SIA**, vllm RM (path A) | 200 | **28.3%** | **+7.26** | **-75.2%** ⚠️ | 修复 vllm `use_activation` typo 后, 详见 [`vl30b_200q_dual_rm/`](vl30b_200q_dual_rm/) |
+| B1-Run2 | 2026-06-04 | VL-30B + Qwen3-4B SIA, **官方 PyTorch RM** (path = text/sentinel) | 60 (200 跑中) | 26.7% | +8.27 | -72.6% | Run 2 vs Run 1 p=0.45 → **byte-exact 等价** |
+| B1-noSIA | 2026-06-03 | VL-30B + 无 SIA 干预 (复用 03:04 跑的) | 200 | 0% | +29.27 | — | 基线 |
 
-详见 [`doc/alpaca-eval-report.md`](../doc/alpaca-eval-report.md) 和下文「2026-05-15 — A1」一节。
+详见 [`doc/vl30b-sia-200q-experiment-report-20260603.md`](../doc/vl30b-sia-200q-experiment-report-20260603.md) 和下文「2026-06-03 — B1 / 2026-05-15 — A1」两节。
+
+**关键对比**: W2S=3.5× (Qwen3-14B + Qwen3-4B) → **+13.2% Δ**, 0% 崩坏; W2S=7.5× (VL-30B + Qwen3-4B) → **-75% Δ**, 51.5% 崩坏。**SIA 论文的成功只在 in-distribution + 同代际 + W2S≤3.5× 配置成立**。
 
 ### 一眼看懂的几个跨阶段
 
@@ -856,3 +861,85 @@ nohup /workspace/SIA/venv2/bin/python eval/mmlu_eval.py \
     > mmlu_0gm_30q_sia_thr08_fix_rm1.7b_20260602_111853.log 2>&1 &
 ```
 
+
+---
+
+## 2026-06-03 — B1: VL-30B SIA 200Q dual-RM 三路对比
+
+**测试**: 验证 `use_activation=False` typo 修复 (commit `082485b`) 在 VL-30B (W2S=7.5×) 上的端到端效果, 同时确认 vllm RM 跟官方 PyTorch ValueModel 等价。详见 [`doc/vl30b-sia-200q-experiment-report-20260603.md`](../doc/vl30b-sia-200q-experiment-report-20260603.md) 和 [`vl30b_200q_dual_rm/README.md`](vl30b_200q_dual_rm/README.md)。
+
+### 启动命令
+
+**RM/VM servers (跑前先启)**:
+
+```bash
+# vllm RM (Run 1) — port 8001
+nohup vllm serve /workspace/SIA/models/VM-Qwen3-4B-merged-for-vllm \
+  --runner pooling --convert classify \
+  --hf-overrides '{"architectures":["Qwen3WithScoreForCausalLM"]}' \
+  --enable-prefix-caching --gpu-memory-utilization 0.10 \
+  --max-model-len 2048 --port 8001 &
+
+# PyTorch 官方 ValueModel (Run 2) — port 8002
+nohup /workspace/SIA/venv4/bin/python src/sia_rm_pytorch_official.py \
+  --rm /workspace/SIA/models/Qwen3-4B \
+  --rm_lora /workspace/SIA/models/VM-Qwen3-4B-Base/VM-Qwen3-4B-Base \
+  --device cuda:0 --port 8002 &
+```
+
+**Run 1: vllm RM (path A direct-token-ids, use_activation=False fix)**:
+
+```bash
+SIA_LOG_LEVEL=quiet \
+nohup /workspace/SIA/venv4/bin/python src/sia_vllm_server.py \
+  --llm /workspace/SIA/models/Qwen3-VL-30B-A3B-Instruct \
+  --rm_url http://localhost:8001 \
+  --rm_backend vllm \
+  --rm_model /workspace/SIA/models/VM-Qwen3-4B-merged-for-vllm \
+  --llm_gpu_mem 0.55 \
+  --topk 5 --weight 1.0 --entropy_threshold 1.3 \
+  --max_model_len 2048 --port 8000 &
+```
+
+**Run 2: PyTorch 官方 ValueModel (text mode)**, 只换 `--rm_backend pytorch` + `--rm_url http://localhost:8002`, 其余完全相同。
+
+**Driver** (200 AlpacaEval 题, max_tokens=2048, temp=1.0, enable_thinking=False) — 见 [`vl30b_200q_dual_rm/drive_alpaca.py`](vl30b_200q_dual_rm/drive_alpaca.py)。
+
+### 结果摘要
+
+| Run | n | mean reward | Δ vs noSIA | paired t | 崩坏率 |
+|-----|---|---|---|---|---|
+| **Run 1 (vllm RM)** | 195 | **+7.26** | **-22.01 (-75.2%)** | -23.5 (p<10⁻⁶) | **51.5%** |
+| **Run 2 (PyTorch RM)** | 60 partial | +8.27 | -21.9 (-72.6%) | -14.0 (p<10⁻⁴) | (类似) |
+| Run 2 vs Run 1 | 60 | +0.96 | (p=0.45, **不显著**) | byte-exact 等价 |
+| noSIA | 200 | +29.27 | — | — | 0% (无 SIA 干预) |
+
+**截断分析 (Run 1 vs noSIA)**:
+
+| 截断 | SIA mean | noSIA mean | Δ | rel | win% |
+|------|---|---|---|---|---|
+| full | +7.29 | +29.27 | -22.01 | **-75.2%** | 4.6% |
+| trunc 256 | +4.83 | +12.42 | -7.59 | -61.1% | 12.5% |
+| trunc 180 | +4.46 | +9.72 | -5.27 | -54.2% | 20.5% |
+
+→ 截断越短差距越小, 但永远负向; 论文 max=256 救不了 VL-30B。
+
+**输出长度**: SIA 比 noSIA 长 ~58% (mean 1217 vs 772 tokens, 41.5% Run 1 触顶 max=2048)。SIA 强行让生成"更详尽"但内容质量崩坏。
+
+### 关键发现
+
+1. **修复成功**: vllm RM ≡ PyTorch RM (p=0.45, win=52%), `use_activation=False` 字段修复 + path A direct-token-ids 让两路 byte-exact 等价。
+2. **W2S=7.5× 不可救**: 即使 RM 信号修复, VL-30B + Qwen3-4B 仍 -75% Δ, 51.5% 崩坏 (词链 + 跑题 + 外语注入 + 事实错误)。**问题在模型 size 不匹配, 不在 RM 实现**。
+3. **崩坏从早期就开始**: median 崩坏位置 = 输出 26% 处, 即使前 180 tokens 也已有事实错误 (Latvia→Lithuanian, 错归歌曲)。
+4. **跟 paper Qwen3-14B 对比**: paper 805Q 任意截断 0% 崩坏 + +13.2% Δ, 因为 W2S=3.5× 是 in-distribution。
+
+### 日志 + 产物
+
+全部在 [`vl30b_200q_dual_rm/`](vl30b_200q_dual_rm/) 目录:
+
+- 生成: `alpaca_vl30b_sia_vllm_rm_200q_20260603.json` (Run 1), `alpaca_vl30b_sia_pytorch_rm_partial.json` (Run 2)
+- 评分: `*_scored.json` (含 full, trunc256, trunc180 reward)
+- noSIA: `alpaca_vl30b_nosia_200q_scored.json` (复用 03:04 跑的 200Q)
+- Server log: `sia_vllm_server.log`, `sia_pytorch_server.log`
+- 配对分析: `run1_vs_nosia_paired.json`, `run1_vs_nosia_trunc256_paired.json`, `run1_breakdown_analysis.json`
+- 脚本: `drive_alpaca.py`, `score_*.py`, `compare_60q.py`, `analyze_breakdown.py`
