@@ -1,0 +1,21 @@
+loading Skywork …
+`torch_dtype` is deprecated! Use `dtype` instead!
+Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:  25%|██▌       | 1/4 [00:08<00:24,  8.16s/it]Loading checkpoint shards:  50%|█████     | 2/4 [00:16<00:16,  8.40s/it]Loading checkpoint shards:  75%|███████▌  | 3/4 [00:25<00:08,  8.39s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:25<00:00,  5.15s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:25<00:00,  6.32s/it]
+ready
+
+Scoring b2 inproc 200Q ...
+done in 7s
+
+============================================================
+
+=== b2 inproc (this run, vllm 0.17.1) (n=200) ===
+  mean=+13.882  median=+13.125  std=9.227
+
+=== HTTP path (prior, vllm 0.19) (n=200) ===
+  mean=+14.012  median=+13.312  std=8.872
+
+=== PAIRED: b2 inproc vs HTTP path (n=200, expected ≈ 0 if equivalent) ===
+  Δmean = -0.131  rel = -0.9%
+  win = 95/200 (48%)
+  t = -0.34  p ≈ 0.7335
+  (large p > 0.05 means statistically equivalent → no quality regression)
