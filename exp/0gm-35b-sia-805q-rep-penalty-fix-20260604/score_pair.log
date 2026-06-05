@@ -1,0 +1,26 @@
+loading Skywork …
+`torch_dtype` is deprecated! Use `dtype` instead!
+Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:  25%|██▌       | 1/4 [00:11<00:35, 11.83s/it]Loading checkpoint shards:  50%|█████     | 2/4 [00:24<00:24, 12.19s/it]Loading checkpoint shards:  75%|███████▌  | 3/4 [00:36<00:12, 12.04s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:36<00:00,  7.37s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:36<00:00,  9.09s/it]
+ready
+
+Scoring noSIA 805Q ...
+done in 29s
+
+============================================================
+
+=== SIA 805Q (rep=1.0 fix, no-think) (n=799) ===
+  mean=+16.042  median=+16.250  std=12.210
+
+=== noSIA 805Q (rep=1.0, no-think, apples-to-apples baseline) (n=787) ===
+  mean=+10.587  median=+10.812  std=12.097
+
+=== PAIRED: SIA vs noSIA (n=783, real apples-to-apples) ===
+  Δmean = +5.499  rel = +51.6%
+  win = 537/783 (69%)
+  t = +12.06  p ≈ 0.000000
+
+SIA driver:
+  n=805  avg_tok=242  sum_elapsed=101.9 min  tok/s=31.9
+
+noSIA driver:
+  n=805  avg_tok=228  sum_elapsed=31.2 min  tok/s=98.0

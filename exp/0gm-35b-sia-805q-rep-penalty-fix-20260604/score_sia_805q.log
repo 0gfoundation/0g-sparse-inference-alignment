@@ -1,0 +1,22 @@
+loading Skywork …
+`torch_dtype` is deprecated! Use `dtype` instead!
+Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:  25%|██▌       | 1/4 [00:11<00:34, 11.65s/it]Loading checkpoint shards:  50%|█████     | 2/4 [00:24<00:24, 12.12s/it]Loading checkpoint shards:  75%|███████▌  | 3/4 [00:36<00:12, 12.03s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:36<00:00,  7.36s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:36<00:00,  9.06s/it]
+ready
+
+Scoring SIA-no-think 805Q ...
+done in 29s
+
+============================================================
+
+=== SIA-no-think (this run, rep=1.0) (n=799) ===
+  mean=+16.042  median=+16.250  std=12.210
+
+=== noSIA-thinkbrief 805Q (prior, rep=1.0 driver, rep=1.3 server default?) (n=798) ===
+  mean=+13.818  median=+13.438  std=9.906
+
+=== noSIA-banthink 100Q (prior, apples-to-apples to this SIA) (n=100) ===
+  mean=+10.232  median=+10.781  std=12.316
+
+=== Paired comparisons ===
+  SIA-no-think vs noSIA-thinkbrief (805Q both)      : n=793  Δmean=+2.216  rel= +16.0%  win=461/793 ( 58%)  t= +4.71 p≈0.0000
+  SIA-no-think vs noSIA-banthink (100Q intersect, same setup): n=100  Δmean=+7.032  rel= +68.7%  win= 75/100 ( 75%)  t= +5.76 p≈0.0000
