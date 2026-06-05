@@ -12,6 +12,17 @@
 - [`rep-penalty-fix-validation-experiments-20260604.md`](rep-penalty-fix-validation-experiments-20260604.md)
 - [`project-vs-official-inference-code-diff-20260604.md`](project-vs-official-inference-code-diff-20260604.md) (背景: 14B 复现 paper 的对照实验)
 
+**前置环境** — 本 doc 所有实验在 vllm **0.19.0** 上跑 (venv4), 用 `--rm_backend pytorch` HTTP RM:
+
+```bash
+# 一次性创建 venv (~5 min)
+scripts/setup_venv_0gm35b_http.sh /workspace/SIA/venv4
+```
+
+该脚本装 [`requirements/0gm35b-or-vl30b-http.txt`](../requirements/0gm35b-or-vl30b-http.txt) (vllm 0.19.0 + transformers 4.57.6 + peft) + `pip install -e .`。venv4 名字虽然来自 0gm35b, 但对 Qwen3-14B + HTTP RM 同样适用 (vllm 0.19 全模型兼容)。
+
+> Qwen3-14B **也可以**用 vllm 0.10.1.1 (`requirements/qwen14b-b2-inproc.txt`) 跑 b2 inproc 加速, 但本 doc 实验没走那条路, 详见 [CLAUDE.md "Dependencies"](../CLAUDE.md#running-the-project) 矩阵。
+
 ---
 
 ## 一. 效果评测

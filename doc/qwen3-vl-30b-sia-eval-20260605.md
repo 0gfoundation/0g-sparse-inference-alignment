@@ -13,6 +13,17 @@
 - [`vl30b-b2-inproc-speedup-20260605.md`](vl30b-b2-inproc-speedup-20260605.md) (b2 inproc 速度优化, 含 AlpacaEval 200Q + MMLU 150Q)
 - 2026-06-05 新增 MMLU 150Q b2 inproc (本仓库 commit `232e16a`)
 
+**前置环境** — VL-30B 实验有两路 venv, 跟 SIA backend 路径绑定:
+
+| 实验路径 | vllm | venv 路径 | 一次性 setup 命令 | requirements |
+|---|---|---|---|---|
+| HTTP RM path (大多数实验) | **0.19.0** | `/workspace/SIA/venv4` | `scripts/setup_venv_0gm35b_http.sh /workspace/SIA/venv4` | [`requirements/0gm35b-or-vl30b-http.txt`](../requirements/0gm35b-or-vl30b-http.txt) |
+| **b2 inproc fast path** ⚡ | **0.17.1** | `/workspace/SIA/venv5` | `scripts/setup_venv_vl30b_fast.sh /workspace/SIA/venv5` | [`requirements/vl30b-b2-inproc.txt`](../requirements/vl30b-b2-inproc.txt) |
+
+每个脚本: 创建 venv → pip install requirements → `pip install -e .` (注册 sia_rm vllm 插件). 详见 [CLAUDE.md "Dependencies"](../CLAUDE.md#running-the-project) 矩阵。
+
+> **不要混用** vllm 0.19 跟 0.17.1, 它们 pin 不同的 torch 版本; 必须独立 venv。Skywork 评分用 venv4 (含 accelerate, venv5 没装)。
+
 ---
 
 ## 一. 效果评测
