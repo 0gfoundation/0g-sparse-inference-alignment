@@ -103,18 +103,20 @@
 
 > 性能核心指标: **agg throughput (tok/s)** 和 **avg tokens/Q**。下面按实验组织, 同一实验在效果和性能里都出现的, 引用相同的 Appendix 节。
 
-### 2.1 AlpacaEval 200Q (max=2048) — HTTP path, single-stream
+### 2.1 AlpacaEval 200Q (max=2048) — 两方对比 (noSIA / SIA HTTP)
 
 实验环境同 [§1.2](#12-alpacaeval-200q-max2048--长生成-regime), 详见 [Appendix C.3](#c3-vl-30b-alpacaeval-200q-max2048-http-path).
 
-| 指标 | SIA HTTP | noSIA HTTP | 比值 |
+> ⚠️ **b2 inproc 在 max=2048 没跑过**, 当时 b2 inproc 实验只取 max=256 验证速度 (见 [§2.2](#22-alpacaeval-200q-max256--三方对比-nosia--sia-http--sia-b2-inproc))。理论上 b2 inproc 在 max=2048 加速比应更大 (生成长 → SIA 干预次数多 → RM 通信节省更显著), 是后续可补的实验。
+
+| 指标 | noSIA HTTP | SIA HTTP | SIA b2 inproc |
 |---|---|---|---|
-| 总 reqs | 200 | 200 | — |
-| 总生成 tokens | 129,313 | 151,806 | -15% (SIA 输出略短) |
-| 总 wall (driver) | 3,599 s (60.0 min) | 1,214 s (20.2 min) | +2.97× |
-| **平均 tokens/s** | **35.9** | **125.0** | noSIA **3.5×** 快 |
-| 平均 tokens/Q | 647 | 759 | -15% |
-| 平均 wall/Q | 18.0 s | 6.1 s | +2.95× |
+| 总 reqs | 200 | 200 | (未测) |
+| 总生成 tokens | 151,806 | 129,313 | (未测) |
+| 总 wall (driver) | 1,214 s (20.2 min) | 3,599 s (60.0 min) | (未测) |
+| **Agg throughput (tok/s)** | **125.0** | 35.9 | (未测) |
+| 平均 tokens/Q | 759 | 647 (SIA 输出短 -15%) | (未测) |
+| 平均 wall/Q | 6.1 s | 18.0 s | (未测) |
 
 **每 token 推理耗时 (= wall / tokens)**:
 
@@ -138,21 +140,33 @@
 
 **核心观察**: INTERVENE 比 SKIP 慢 ~20× (75ms vs 3.7ms), 因 RM HTTP 调用 (~71ms)。加权平均 step = 25.8% × 75 + 74.2% × 3.7 ≈ 22ms (理论), 实测 27.8ms (差 5ms 是 LLM forward + vllm 内部 sampling)。
 
-### 2.2 AlpacaEval 200Q (max=256) — b2 inproc vs HTTP path
+### 2.2 AlpacaEval 200Q (max=256) — 三方对比 (noSIA / SIA HTTP / SIA b2 inproc)
 
-详见 [Appendix C.1](#c1-vl-30b-alpacaeval-200q-max256-http-path) (HTTP) 和 [Appendix C.2](#c2-vl-30b-alpacaeval-200q-max256-b2-inproc) (b2 inproc).
+详见 [Appendix C.1](#c1-vl-30b-alpacaeval-200q-max256-http-path) (HTTP, 含 SIA + noSIA) 和 [Appendix C.2](#c2-vl-30b-alpacaeval-200q-max256-b2-inproc) (b2 inproc).
 
 #### 2.2.1 端到端 throughput
 
-| 指标 | b2 inproc (venv5 0.17.1) | HTTP path (venv4 0.19) | 改善 |
+| 指标 | noSIA HTTP (venv4 0.19) | SIA HTTP (venv4 0.19) | **SIA b2 inproc (venv5 0.17.1)** |
 |---|---|---|---|
-| 总 reqs | 200 | 200 | — |
-| 总 wall (driver) | **11.8 min** (708 s) | 17.2 min (1032 s) | **1.46× 加速** ⚡ |
-| 平均 wall/Q | 3.5 s | 5.2 s | 1.49× |
-| 平均 tokens/Q | 244 | 243 | 一致 |
-| **Agg throughput (tok/s)** | **68.9** | **47.1** | **+46% (1.46×)** ⚡ |
+| 总 reqs | 200 | 200 | 200 |
+| 总 wall (driver) | **6.8 min** (406 s) | 17.2 min (1033 s) | **11.8 min** (709 s) |
+| 平均 wall/Q | 2.0 s | 5.2 s | 3.5 s |
+| 平均 tokens/Q | 242.1 | 240.1 | 241.0 |
+| **Agg throughput (tok/s)** | **119.3** | 46.5 | **67.9** |
 
-#### 2.2.2 RM 调用单次时延 (核心收益)
+**速度解读** (跟 [§2.3 MMLU 三方](#23-mmlu-150q--三方对比-nosia--sia-http--sia-b2-inproc) 同样的视角):
+
+```
+noSIA HTTP       119.3 tok/s   1.00×  (baseline, 无 SIA tax)
+SIA HTTP          46.5 tok/s   0.39×  (-61% tok/s)  — RM 调用 http_post p50 ≈ 71 ms
+SIA b2 inproc     67.9 tok/s   0.57×  (-43% tok/s)  — RM 调用 b2_score_call p50 ≈ 11 ms (6.4× 快)
+```
+
+- **SIA b2 inproc vs SIA HTTP: +46% agg tok/s (1.46× 加速)** ⚡ — RM 通信层换 inproc 是核心收益
+- **SIA tax 仍存在** (b2 vs noSIA: 0.57×) — RM forward 本身 + intervention apply 是不能消的成本, 但比 HTTP 路径少一半 RM tax (-43% vs -61%)
+- avg tokens/Q 三方几乎一致 (240-242), wall 完全反映在 tok/s 上, 不是输出长度差异
+
+#### 2.2.2 RM 调用单次时延 (核心收益, b2 vs HTTP)
 
 来自 `[SIA-pf-summary @8900]` 累计 (200Q 完整结束):
 
