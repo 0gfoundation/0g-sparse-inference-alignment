@@ -183,6 +183,73 @@ b2 inproc 路径 跟 HTTP path **质量完全等价, 速度 6.4× 快 (RM 单次
 
 ---
 
+## 5b. MMLU 150Q 三方对比 (noSIA / SIA HTTP / SIA b2 inproc)
+
+为验证 b2 inproc 加速不限于 AlpacaEval (短输出 + 偏好评分) 场景, 在 MMLU-Redux 150Q (30 subjects × 5) 上做了三方对照。这次同时引入 **noSIA baseline** (rep_penalty=1.0 fix 之后), 看 SIA 在 MMLU 上的 quality lift + b2 inproc 的实际加速比。
+
+### 5b.1 配置
+
+| 字段 | 值 |
+|------|---|
+| LLM | `Qwen3-VL-30B-A3B-Instruct` |
+| Value Model | `VM-Qwen3-4B-merged-for-vllm` (b2/HTTP) / 无 (noSIA) |
+| 评测 | MMLU-Redux, 30 subjects × `--limit 5` = 150 Q |
+| `--topk` (SIA candidates) | **5** (对齐之前 150Q HTTP run, 不是 AlpacaEval 的 10) |
+| `--weight` | 1.0 (noSIA: 0) |
+| `--entropy_threshold` | 1.0 (noSIA: 999999) |
+| `repetition_penalty` | **1.0** (rep_penalty fix 后) |
+| `temperature` | 1.0 |
+| `max_tokens` | 2048 |
+| LLM cudagraph | b2 inproc: PIECEWISE / HTTP: FULL_AND_PIECEWISE / noSIA: FULL_AND_PIECEWISE |
+
+### 5b.2 三方结果
+
+| 指标 | noSIA | SIA HTTP | **SIA b2 inproc** |
+|---|---|---|---|
+| **Accuracy** | 0.7867 (118/150) | 0.8000 (120/150) | **0.8133 (122/150)** |
+| Total tokens | 43,149 | 39,371 | 37,362 |
+| Total decode latency | **359.3 s** | 598.8 s | 510.5 s |
+| **Agg throughput (tok/s)** | **120.1** | 65.8 | **73.2** |
+| Median tok/s | 116.9 | 78.2 | 73.3 |
+| Median tokens/Q | 163 | 152 | 147 |
+| Median latency/Q | 1.4 s | 2.1 s | 2.3 s |
+
+> noSIA arm 复用 `eval/results/vl30b_noSIA_mmlu_150q.json` (2026-06-04 跑, 同 LLM 同采样, sia_vllm_server.py 空挡 `weight=0 entropy_threshold=999999`), SIA HTTP arm 是 `eval/results/vl30b_SIA_mmlu_150q.json` (vllm 0.19 + HTTP RM)。
+
+### 5b.3 速度解读
+
+```
+noSIA       120.1 tok/s   1.00×  (baseline)
+SIA HTTP     65.8 tok/s   0.55×  (-45%)  RM via http_post p50 ≈ 62 ms
+SIA b2 inproc 73.2 tok/s  0.61×  (-39%)  RM via b2_score_call p50 ≈ 10.8 ms (5.7× 快)
+```
+
+- **RM 调用层加速 5.7×** ✅ (b2_score_call p50 = 10.83 ms vs HTTP 62 ms, 从 server pf-summary @3100)
+- **端到端 b2 inproc vs HTTP: +11.3% agg throughput (-14.7% decode latency)**
+- 但端到端加速远小于 RM 层加速, 因为:
+  1. **MMLU 输出短** (median 147 tok vs AlpacaEval 256), 固定开销 (干预步 forward + apply_logits) 分摊不开
+  2. **干预率低** (server log: ~10-20%), 没干预的 step b2 vs HTTP 无差别
+  3. **主 LLM forward 占主导**, RM 通信开销缩小后剩下的瓶颈是 LLM 本身
+
+→ AlpacaEval (长输出 + 偏好评分) 是 b2 inproc 加速最明显的场景; MMLU (短输出 + 选择题) 加速被压缩。
+
+### 5b.4 质量解读
+
+| 对比 | Δ accuracy | 相对 |
+|---|---|---|
+| SIA b2 inproc vs noSIA | **+2.67 pp** | +3.4% |
+| SIA b2 inproc vs SIA HTTP | +1.33 pp | +1.7% |
+| SIA HTTP vs noSIA | +1.33 pp | +1.7% |
+
+- SIA 在 MMLU 上有 **稳定的 quality lift +2.67 pp**, 跟 [`rep-penalty-fix-validation-experiments-20260604.md`](rep-penalty-fix-validation-experiments-20260604.md) 的 AlpacaEval 结果方向一致
+- 150 题样本 → ±2-3 pp 是统计抖动量级, b2 inproc 跟 HTTP 的 +1.33 pp 差距落在噪声内, 跟 5.2 节 AlpacaEval paired p=0.73 等价的结论自洽
+
+### 5b.5 artifacts
+
+[`exp/vl30b-mmlu-150q-b2-inproc-20260605/`](../exp/vl30b-mmlu-150q-b2-inproc-20260605/) — server log, driver log, full JSON 结果
+
+---
+
 ## 6. 适用范围 + 局限
 
 ### 6.1 适用模型

@@ -1,0 +1,641 @@
+Loading tokenizer: /workspace/SIA/models/Qwen3-VL-30B-A3B-Instruct ...
+Tokenizer loaded.
+============================================================
+Model ID : Qwen3-VL-30B-A3B-Instruct
+LLM      : /workspace/SIA/models/Qwen3-VL-30B-A3B-Instruct
+RM URL   : http://localhost:8001
+RM mode  : b2
+topk=5  weight=1.0  entropy_threshold=1.0  use_token_ids=False
+Server   : http://0.0.0.0:8000
+============================================================
+Loading vLLM AsyncLLMEngine...
+[SIA] main LLM cudagraph_mode=PIECEWISE (SIA_LLM_CUDAGRAPH=piecewise)
+INFO 06-05 01:30:13 [model.py:531] Resolved architecture: Qwen3VLMoeForConditionalGeneration
+INFO 06-05 01:30:13 [model.py:1554] Using max model len 4096
+INFO 06-05 01:30:13 [scheduler.py:231] Chunked prefill is enabled with max_num_batched_tokens=2048.
+INFO 06-05 01:30:13 [vllm.py:747] Asynchronous scheduling is enabled.
+(EngineCore_DP0 pid=2310305) INFO 06-05 01:30:17 [core.py:101] Initializing a V1 LLM engine (v0.17.1) with config: model='/workspace/SIA/models/Qwen3-VL-30B-A3B-Instruct', speculative_config=None, tokenizer='/workspace/SIA/models/Qwen3-VL-30B-A3B-Instruct', skip_tokenizer_init=False, tokenizer_mode=auto, revision=None, tokenizer_revision=None, trust_remote_code=False, dtype=torch.bfloat16, max_seq_len=4096, download_dir=None, load_format=auto, tensor_parallel_size=1, pipeline_parallel_size=1, data_parallel_size=1, disable_custom_all_reduce=False, quantization=None, enforce_eager=False, enable_return_routed_experts=False, kv_cache_dtype=auto, device_config=cuda, structured_outputs_config=StructuredOutputsConfig(backend='auto', disable_fallback=False, disable_any_whitespace=False, disable_additional_properties=False, reasoning_parser='', reasoning_parser_plugin='', enable_in_reasoning=False), observability_config=ObservabilityConfig(show_hidden_metrics_for_version=None, otlp_traces_endpoint=None, collect_detailed_traces=None, kv_cache_metrics=False, kv_cache_metrics_sample=0.01, cudagraph_metrics=False, enable_layerwise_nvtx_tracing=False, enable_mfu_metrics=False, enable_mm_processor_stats=False, enable_logging_iteration_details=False), seed=0, served_model_name=/workspace/SIA/models/Qwen3-VL-30B-A3B-Instruct, enable_prefix_caching=True, enable_chunked_prefill=True, pooler_config=None, compilation_config={'level': None, 'mode': <CompilationMode.VLLM_COMPILE: 3>, 'debug_dump_path': None, 'cache_dir': '', 'compile_cache_save_format': 'binary', 'backend': 'inductor', 'custom_ops': ['none'], 'splitting_ops': ['vllm::unified_attention', 'vllm::unified_attention_with_output', 'vllm::unified_mla_attention', 'vllm::unified_mla_attention_with_output', 'vllm::mamba_mixer2', 'vllm::mamba_mixer', 'vllm::short_conv', 'vllm::linear_attention', 'vllm::plamo2_mamba_mixer', 'vllm::gdn_attention_core', 'vllm::kda_attention', 'vllm::sparse_attn_indexer', 'vllm::rocm_aiter_sparse_attn_indexer', 'vllm::unified_kv_cache_update', 'vllm::unified_mla_kv_cache_update'], 'compile_mm_encoder': False, 'compile_sizes': [], 'compile_ranges_split_points': [2048], 'inductor_compile_config': {'enable_auto_functionalized_v2': False, 'combo_kernels': True, 'benchmark_combo_kernel': True}, 'inductor_passes': {}, 'cudagraph_mode': <CUDAGraphMode.PIECEWISE: 1>, 'cudagraph_num_of_warmups': 1, 'cudagraph_capture_sizes': [1, 2, 4, 8, 16, 24, 32, 40, 48, 56, 64, 72, 80, 88, 96, 104, 112, 120, 128, 136, 144, 152, 160, 168, 176, 184, 192, 200, 208, 216, 224, 232, 240, 248, 256], 'cudagraph_copy_inputs': False, 'cudagraph_specialize_lora': True, 'use_inductor_graph_partition': False, 'pass_config': {'fuse_norm_quant': False, 'fuse_act_quant': False, 'fuse_attn_quant': False, 'enable_sp': False, 'fuse_gemm_comms': False, 'fuse_allreduce_rms': False}, 'max_cudagraph_capture_size': 256, 'dynamic_shapes_config': {'type': <DynamicShapesType.BACKED: 'backed'>, 'evaluate_guards': False, 'assume_32_bit_indexing': False}, 'local_cache_dir': None, 'fast_moe_cold_start': True, 'static_all_moe_layers': []}
+(EngineCore_DP0 pid=2310305) INFO 06-05 01:30:18 [parallel_state.py:1393] world_size=1 rank=0 local_rank=0 distributed_init_method=tcp://172.17.0.2:53301 backend=nccl
+(EngineCore_DP0 pid=2310305) INFO 06-05 01:30:19 [parallel_state.py:1715] rank 0 in world size 1 is assigned as DP rank 0, PP rank 0, PCP rank 0, TP rank 0, EP rank 0, EPLB rank N/A
+(EngineCore_DP0 pid=2310305) [SIA] Loading LLM tokenizer: /workspace/SIA/models/Qwen3-VL-30B-A3B-Instruct
+(EngineCore_DP0 pid=2310305) [SIA] RM URL: http://localhost:8001
+(EngineCore_DP0 pid=2310305) [SIA-b2] Starting RMClient(model=/workspace/SIA/models/VM-Qwen3-4B-merged-for-vllm, gpu_mem=0.15) ...
+(EngineCore_DP0 pid=2310305) [RMClient] cudagraph_mode=PIECEWISE (workaround for vllm 0.19 nested vLLM FULL cudagraph conflict)
+(EngineCore_DP0 pid=2310305) INFO 06-05 01:30:19 [utils.py:238] non-default args: {'dtype': 'bfloat16', 'max_model_len': 2048, 'enable_prefix_caching': True, 'gpu_memory_utilization': 0.15, 'disable_log_stats': True, 'hf_overrides': {'architectures': ['Qwen3WithScoreForCausalLM']}, 'compilation_config': {'level': None, 'mode': None, 'debug_dump_path': None, 'cache_dir': '', 'compile_cache_save_format': 'binary', 'backend': 'inductor', 'custom_ops': [], 'splitting_ops': None, 'compile_mm_encoder': False, 'compile_sizes': None, 'compile_ranges_split_points': None, 'inductor_compile_config': {'enable_auto_functionalized_v2': False, 'combo_kernels': True, 'benchmark_combo_kernel': True}, 'inductor_passes': {}, 'cudagraph_mode': <CUDAGraphMode.PIECEWISE: 1>, 'cudagraph_num_of_warmups': 0, 'cudagraph_capture_sizes': None, 'cudagraph_copy_inputs': False, 'cudagraph_specialize_lora': True, 'use_inductor_graph_partition': None, 'pass_config': {}, 'max_cudagraph_capture_size': None, 'dynamic_shapes_config': {'type': <DynamicShapesType.BACKED: 'backed'>, 'evaluate_guards': False, 'assume_32_bit_indexing': False}, 'local_cache_dir': None, 'fast_moe_cold_start': None, 'static_all_moe_layers': []}, 'model': '/workspace/SIA/models/VM-Qwen3-4B-merged-for-vllm'}
+(EngineCore_DP0 pid=2310305) WARNING 06-05 01:30:19 [arg_utils.py:1321] The global random seed is set to 0. Since VLLM_ENABLE_V1_MULTIPROCESSING is set to False, this may affect the random state of the Python process that launched vLLM.
+(EngineCore_DP0 pid=2310305) INFO 06-05 01:30:26 [model.py:531] Resolved architecture: Qwen3WithScoreForCausalLM
+(EngineCore_DP0 pid=2310305) INFO 06-05 01:30:26 [model.py:1554] Using max model len 2048
+(EngineCore_DP0 pid=2310305) INFO 06-05 01:30:26 [scheduler.py:231] Chunked prefill is enabled with max_num_batched_tokens=16384.
+(EngineCore_DP0 pid=2310305) The tokenizer you are loading from '/workspace/SIA/models/VM-Qwen3-4B-merged-for-vllm' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.
+(EngineCore_DP0 pid=2310305) INFO 06-05 01:30:26 [core.py:101] Initializing a V1 LLM engine (v0.17.1) with config: model='/workspace/SIA/models/VM-Qwen3-4B-merged-for-vllm', speculative_config=None, tokenizer='/workspace/SIA/models/VM-Qwen3-4B-merged-for-vllm', skip_tokenizer_init=False, tokenizer_mode=auto, revision=None, tokenizer_revision=None, trust_remote_code=False, dtype=torch.bfloat16, max_seq_len=2048, download_dir=None, load_format=auto, tensor_parallel_size=1, pipeline_parallel_size=1, data_parallel_size=1, disable_custom_all_reduce=False, quantization=None, enforce_eager=False, enable_return_routed_experts=False, kv_cache_dtype=auto, device_config=cuda, structured_outputs_config=StructuredOutputsConfig(backend='auto', disable_fallback=False, disable_any_whitespace=False, disable_additional_properties=False, reasoning_parser='', reasoning_parser_plugin='', enable_in_reasoning=False), observability_config=ObservabilityConfig(show_hidden_metrics_for_version=None, otlp_traces_endpoint=None, collect_detailed_traces=None, kv_cache_metrics=False, kv_cache_metrics_sample=0.01, cudagraph_metrics=False, enable_layerwise_nvtx_tracing=False, enable_mfu_metrics=False, enable_mm_processor_stats=False, enable_logging_iteration_details=False), seed=0, served_model_name=/workspace/SIA/models/VM-Qwen3-4B-merged-for-vllm, enable_prefix_caching=True, enable_chunked_prefill=True, pooler_config=None, compilation_config={'level': None, 'mode': <CompilationMode.VLLM_COMPILE: 3>, 'debug_dump_path': None, 'cache_dir': '', 'compile_cache_save_format': 'binary', 'backend': 'inductor', 'custom_ops': ['none'], 'splitting_ops': ['vllm::unified_attention', 'vllm::unified_attention_with_output', 'vllm::unified_mla_attention', 'vllm::unified_mla_attention_with_output', 'vllm::mamba_mixer2', 'vllm::mamba_mixer', 'vllm::short_conv', 'vllm::linear_attention', 'vllm::plamo2_mamba_mixer', 'vllm::gdn_attention_core', 'vllm::kda_attention', 'vllm::sparse_attn_indexer', 'vllm::rocm_aiter_sparse_attn_indexer', 'vllm::unified_kv_cache_update', 'vllm::unified_mla_kv_cache_update'], 'compile_mm_encoder': False, 'compile_sizes': [], 'compile_ranges_split_points': [16384], 'inductor_compile_config': {'enable_auto_functionalized_v2': False, 'combo_kernels': True, 'benchmark_combo_kernel': True}, 'inductor_passes': {}, 'cudagraph_mode': <CUDAGraphMode.PIECEWISE: 1>, 'cudagraph_num_of_warmups': 1, 'cudagraph_capture_sizes': [1, 2, 4, 8, 16, 24, 32, 40, 48, 56, 64, 72, 80, 88, 96, 104, 112, 120, 128, 136, 144, 152, 160, 168, 176, 184, 192, 200, 208, 216, 224, 232, 240, 248, 256, 272, 288, 304, 320, 336, 352, 368, 384, 400, 416, 432, 448, 464, 480, 496, 512], 'cudagraph_copy_inputs': False, 'cudagraph_specialize_lora': True, 'use_inductor_graph_partition': False, 'pass_config': {'fuse_norm_quant': False, 'fuse_act_quant': False, 'fuse_attn_quant': False, 'enable_sp': False, 'fuse_gemm_comms': False, 'fuse_allreduce_rms': False}, 'max_cudagraph_capture_size': 512, 'dynamic_shapes_config': {'type': <DynamicShapesType.BACKED: 'backed'>, 'evaluate_guards': False, 'assume_32_bit_indexing': False}, 'local_cache_dir': None, 'fast_moe_cold_start': True, 'static_all_moe_layers': []}
+(EngineCore_DP0 pid=2310305) WARNING 06-05 01:30:26 [workspace.py:231] WorkspaceManager already initialized on device cuda:0, reinitializing on device cuda:0
+(EngineCore_DP0 pid=2310305) INFO 06-05 01:30:26 [base.py:106] Offloader set to NoopOffloader
+(EngineCore_DP0 pid=2310305) INFO 06-05 01:30:26 [gpu_model_runner.py:4281] Starting to load model /workspace/SIA/models/VM-Qwen3-4B-merged-for-vllm...
+(EngineCore_DP0 pid=2310305) INFO 06-05 01:30:27 [cuda.py:405] Using FLASH_ATTN attention backend out of potential backends: ['FLASH_ATTN', 'FLASHINFER', 'TRITON_ATTN', 'FLEX_ATTENTION'].
+(EngineCore_DP0 pid=2310305) INFO 06-05 01:30:27 [flash_attn.py:587] Using FlashAttention version 3
+(EngineCore_DP0 pid=2310305) <frozen importlib._bootstrap_external>:1297: FutureWarning: The cuda.cudart module is deprecated and will be removed in a future release, please switch to use the cuda.bindings.runtime module instead.
+(EngineCore_DP0 pid=2310305) <frozen importlib._bootstrap_external>:1297: FutureWarning: The cuda.nvrtc module is deprecated and will be removed in a future release, please switch to use the cuda.bindings.nvrtc module instead.
+(EngineCore_DP0 pid=2310305) Loading safetensors checkpoint shards:   0% Completed | 0/2 [00:00<?, ?it/s]
+(EngineCore_DP0 pid=2310305) Loading safetensors checkpoint shards:  50% Completed | 1/2 [00:08<00:08,  8.39s/it]
+(EngineCore_DP0 pid=2310305) Loading safetensors checkpoint shards: 100% Completed | 2/2 [00:13<00:00,  6.62s/it]
+(EngineCore_DP0 pid=2310305) Loading safetensors checkpoint shards: 100% Completed | 2/2 [00:13<00:00,  6.89s/it]
+(EngineCore_DP0 pid=2310305) 
+(EngineCore_DP0 pid=2310305) INFO 06-05 01:30:41 [default_loader.py:293] Loading weights took 13.90 seconds
+(EngineCore_DP0 pid=2310305) INFO 06-05 01:30:42 [gpu_model_runner.py:4364] Model loading took 7.56 GiB memory and 14.687401 seconds
+(EngineCore_DP0 pid=2310305) INFO 06-05 01:30:45 [decorators.py:465] Directly load AOT compilation from path /root/.cache/vllm/torch_compile_cache/torch_aot_compile/3a523d99c302934966868c636f836ac6dba118ae218bca26be6c7395f231e75b/rank_0_0/model
+(EngineCore_DP0 pid=2310305) INFO 06-05 01:30:46 [backends.py:916] Using cache directory: /root/.cache/vllm/torch_compile_cache/747868ff01/rank_0_0/backbone for vLLM's torch.compile
+(EngineCore_DP0 pid=2310305) INFO 06-05 01:30:46 [backends.py:976] Dynamo bytecode transform time: 3.93 s
+(EngineCore_DP0 pid=2310305) INFO 06-05 01:30:48 [backends.py:266] Directly load the compiled graph(s) for compile range (1, 16384) from the cache, took 1.695 s
+(EngineCore_DP0 pid=2310305) INFO 06-05 01:30:48 [monitor.py:35] torch.compile takes 6.08 s in total
+(EngineCore_DP0 pid=2310305) INFO 06-05 01:30:48 [gpu_worker.py:424] Available KV cache memory: 11.06 GiB
+(EngineCore_DP0 pid=2310305) INFO 06-05 01:30:48 [kv_cache_utils.py:1314] GPU KV cache size: 80,512 tokens
+(EngineCore_DP0 pid=2310305) INFO 06-05 01:30:48 [kv_cache_utils.py:1319] Maximum concurrency for 2,048 tokens per request: 39.31x
+(EngineCore_DP0 pid=2310305) 2026-06-05 01:30:48,978 - INFO - autotuner.py:256 - flashinfer.jit: [Autotuner]: Autotuning process starts ...
+(EngineCore_DP0 pid=2310305) 2026-06-05 01:30:49,009 - INFO - autotuner.py:262 - flashinfer.jit: [Autotuner]: Autotuning process ends
+(EngineCore_DP0 pid=2310305) Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):   0%|          | 0/51 [00:00<?, ?it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):   4%|▍         | 2/51 [00:00<00:03, 15.01it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):   8%|▊         | 4/51 [00:00<00:03, 15.56it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  12%|█▏        | 6/51 [00:00<00:02, 15.74it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  16%|█▌        | 8/51 [00:00<00:04,  9.50it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  20%|█▉        | 10/51 [00:00<00:03, 11.13it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  24%|██▎       | 12/51 [00:00<00:03, 12.26it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  27%|██▋       | 14/51 [00:01<00:03,  9.47it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  31%|███▏      | 16/51 [00:01<00:03, 11.01it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  35%|███▌      | 18/51 [00:01<00:02, 11.86it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  39%|███▉      | 20/51 [00:01<00:03,  9.77it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  43%|████▎     | 22/51 [00:01<00:02, 10.98it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  47%|████▋     | 24/51 [00:02<00:02, 11.85it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  51%|█████     | 26/51 [00:02<00:02,  9.41it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  55%|█████▍    | 28/51 [00:02<00:02, 10.65it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  59%|█████▉    | 30/51 [00:02<00:01, 11.58it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  63%|██████▎   | 32/51 [00:02<00:01, 12.41it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  67%|██████▋   | 34/51 [00:03<00:01,  9.50it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  71%|███████   | 36/51 [00:03<00:01, 10.57it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  75%|███████▍  | 38/51 [00:03<00:01, 11.49it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  78%|███████▊  | 40/51 [00:03<00:01,  9.60it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  82%|████████▏ | 42/51 [00:03<00:00, 10.70it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  86%|████████▋ | 44/51 [00:03<00:00, 11.77it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  90%|█████████ | 46/51 [00:04<00:00,  9.71it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  94%|█████████▍| 48/51 [00:04<00:00, 10.85it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  98%|█████████▊| 50/51 [00:04<00:00, 12.25it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE): 100%|██████████| 51/51 [00:04<00:00, 10.71it/s]
+(EngineCore_DP0 pid=2310305) INFO 06-05 01:30:54 [gpu_model_runner.py:5386] Graph capturing finished in 5 secs, took -1.60 GiB
+(EngineCore_DP0 pid=2310305) INFO 06-05 01:30:54 [core.py:282] init engine (profile, create kv cache, warmup model) took 12.18 seconds
+(EngineCore_DP0 pid=2310305) The tokenizer you are loading from '/workspace/SIA/models/VM-Qwen3-4B-merged-for-vllm' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.
+(EngineCore_DP0 pid=2310305) INFO 06-05 01:30:55 [llm.py:388] Supported tasks: ('generate',)
+(EngineCore_DP0 pid=2310305) The tokenizer you are loading from '/workspace/SIA/models/VM-Qwen3-4B-merged-for-vllm' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.
+(EngineCore_DP0 pid=2310305) [SIA-b2] RMClient ready
+(EngineCore_DP0 pid=2310305) INFO 06-05 01:30:55 [base.py:106] Offloader set to NoopOffloader
+(EngineCore_DP0 pid=2310305) INFO 06-05 01:30:55 [gpu_model_runner.py:4281] Starting to load model /workspace/SIA/models/Qwen3-VL-30B-A3B-Instruct...
+(EngineCore_DP0 pid=2310305) INFO 06-05 01:30:55 [cuda.py:453] Using backend AttentionBackendEnum.FLASH_ATTN for vit attention
+(EngineCore_DP0 pid=2310305) INFO 06-05 01:30:55 [mm_encoder_attention.py:215] Using AttentionBackendEnum.FLASH_ATTN for MMEncoderAttention.
+(EngineCore_DP0 pid=2310305) INFO 06-05 01:30:55 [unquantized.py:186] Using TRITON backend for Unquantized MoE
+(EngineCore_DP0 pid=2310305) Loading safetensors checkpoint shards:   0% Completed | 0/13 [00:00<?, ?it/s]
+(EngineCore_DP0 pid=2310305) Loading safetensors checkpoint shards:   8% Completed | 1/13 [00:38<07:40, 38.40s/it]
+(EngineCore_DP0 pid=2310305) Loading safetensors checkpoint shards:  15% Completed | 2/13 [01:11<06:29, 35.38s/it]
+(EngineCore_DP0 pid=2310305) Loading safetensors checkpoint shards:  23% Completed | 3/13 [02:15<08:05, 48.58s/it]
+(EngineCore_DP0 pid=2310305) Loading safetensors checkpoint shards:  31% Completed | 4/13 [03:29<08:44, 58.33s/it]
+(EngineCore_DP0 pid=2310305) Loading safetensors checkpoint shards:  38% Completed | 5/13 [04:38<08:17, 62.14s/it]
+(EngineCore_DP0 pid=2310305) Loading safetensors checkpoint shards:  46% Completed | 6/13 [05:52<07:43, 66.16s/it]
+(EngineCore_DP0 pid=2310305) Loading safetensors checkpoint shards:  54% Completed | 7/13 [07:04<06:48, 68.12s/it]
+(EngineCore_DP0 pid=2310305) Loading safetensors checkpoint shards:  62% Completed | 8/13 [08:18<05:50, 70.08s/it]
+(EngineCore_DP0 pid=2310305) Loading safetensors checkpoint shards:  69% Completed | 9/13 [09:30<04:42, 70.73s/it]
+(EngineCore_DP0 pid=2310305) Loading safetensors checkpoint shards:  77% Completed | 10/13 [10:43<03:34, 71.51s/it]
+(EngineCore_DP0 pid=2310305) Loading safetensors checkpoint shards:  85% Completed | 11/13 [11:39<02:13, 66.68s/it]
+(EngineCore_DP0 pid=2310305) Loading safetensors checkpoint shards:  92% Completed | 12/13 [12:53<01:08, 68.81s/it]
+(EngineCore_DP0 pid=2310305) Loading safetensors checkpoint shards: 100% Completed | 13/13 [13:15<00:00, 54.59s/it]
+(EngineCore_DP0 pid=2310305) Loading safetensors checkpoint shards: 100% Completed | 13/13 [13:15<00:00, 61.17s/it]
+(EngineCore_DP0 pid=2310305) 
+(EngineCore_DP0 pid=2310305) INFO 06-05 01:44:11 [default_loader.py:293] Loading weights took 795.34 seconds
+(EngineCore_DP0 pid=2310305) INFO 06-05 01:44:11 [gpu_model_runner.py:4364] Model loading took 58.16 GiB memory and 795.590429 seconds
+(EngineCore_DP0 pid=2310305) INFO 06-05 01:44:11 [gpu_model_runner.py:5280] Encoder cache will be initialized with a budget of 16384 tokens, and profiled with 1 image items of the maximum feature size.
+(EngineCore_DP0 pid=2310305) INFO 06-05 01:44:16 [decorators.py:465] Directly load AOT compilation from path /root/.cache/vllm/torch_compile_cache/torch_aot_compile/88ae229c4a334f0979bafeef2936b96059f80ffd3372dc864df5438302b1ffd6/rank_0_0/model
+(EngineCore_DP0 pid=2310305) INFO 06-05 01:44:16 [backends.py:916] Using cache directory: /root/.cache/vllm/torch_compile_cache/143c95568b/rank_0_0/backbone for vLLM's torch.compile
+(EngineCore_DP0 pid=2310305) INFO 06-05 01:44:16 [backends.py:976] Dynamo bytecode transform time: 3.89 s
+(EngineCore_DP0 pid=2310305) INFO 06-05 01:44:18 [fused_moe.py:1080] Using configuration from /workspace/SIA/venv5/lib/python3.12/site-packages/vllm/model_executor/layers/fused_moe/configs/E=128,N=768,device_name=NVIDIA_H200.json for MoE layer.
+(EngineCore_DP0 pid=2310305) INFO 06-05 01:44:20 [backends.py:266] Directly load the compiled graph(s) for compile range (1, 2048) from the cache, took 2.320 s
+(EngineCore_DP0 pid=2310305) INFO 06-05 01:44:20 [monitor.py:35] torch.compile takes 7.43 s in total
+(EngineCore_DP0 pid=2310305) INFO 06-05 01:44:20 [gpu_worker.py:424] Available KV cache memory: 15.9 GiB
+(EngineCore_DP0 pid=2310305) INFO 06-05 01:44:20 [kv_cache_utils.py:1314] GPU KV cache size: 173,616 tokens
+(EngineCore_DP0 pid=2310305) INFO 06-05 01:44:20 [kv_cache_utils.py:1319] Maximum concurrency for 4,096 tokens per request: 42.39x
+(EngineCore_DP0 pid=2310305) 2026-06-05 01:44:20,673 - INFO - autotuner.py:256 - flashinfer.jit: [Autotuner]: Autotuning process starts ...
+(EngineCore_DP0 pid=2310305) 2026-06-05 01:44:20,740 - INFO - autotuner.py:262 - flashinfer.jit: [Autotuner]: Autotuning process ends
+(EngineCore_DP0 pid=2310305) Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):   0%|          | 0/35 [00:00<?, ?it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):   3%|▎         | 1/35 [00:00<00:05,  5.94it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):   6%|▌         | 2/35 [00:00<00:05,  6.05it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):   9%|▊         | 3/35 [00:00<00:05,  6.11it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  11%|█▏        | 4/35 [00:00<00:07,  4.26it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  14%|█▍        | 5/35 [00:01<00:06,  4.78it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  17%|█▋        | 6/35 [00:01<00:05,  5.21it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  20%|██        | 7/35 [00:01<00:05,  5.53it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  23%|██▎       | 8/35 [00:01<00:06,  4.16it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  26%|██▌       | 9/35 [00:01<00:05,  4.63it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  29%|██▊       | 10/35 [00:02<00:04,  5.07it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  31%|███▏      | 11/35 [00:02<00:04,  5.43it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  34%|███▍      | 12/35 [00:02<00:05,  4.18it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  37%|███▋      | 13/35 [00:02<00:04,  4.67it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  40%|████      | 14/35 [00:02<00:04,  5.06it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  43%|████▎     | 15/35 [00:03<00:03,  5.27it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  46%|████▌     | 16/35 [00:03<00:04,  4.19it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  49%|████▊     | 17/35 [00:03<00:03,  4.55it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  51%|█████▏    | 18/35 [00:03<00:03,  4.97it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  54%|█████▍    | 19/35 [00:03<00:03,  5.32it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  57%|█████▋    | 20/35 [00:04<00:03,  4.19it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  60%|██████    | 21/35 [00:04<00:02,  4.68it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  63%|██████▎   | 22/35 [00:04<00:02,  5.09it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  66%|██████▌   | 23/35 [00:04<00:02,  5.33it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  69%|██████▊   | 24/35 [00:05<00:02,  4.15it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  71%|███████▏  | 25/35 [00:05<00:02,  4.63it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  74%|███████▍  | 26/35 [00:05<00:01,  5.01it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  77%|███████▋  | 27/35 [00:05<00:01,  5.28it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  80%|████████  | 28/35 [00:05<00:01,  4.20it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  83%|████████▎ | 29/35 [00:06<00:01,  4.68it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  86%|████████▌ | 30/35 [00:06<00:00,  5.07it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  89%|████████▊ | 31/35 [00:06<00:00,  5.29it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  91%|█████████▏| 32/35 [00:06<00:00,  4.10it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  94%|█████████▍| 33/35 [00:06<00:00,  4.60it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  97%|█████████▋| 34/35 [00:07<00:00,  5.00it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE): 100%|██████████| 35/35 [00:07<00:00,  5.32it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE): 100%|██████████| 35/35 [00:07<00:00,  4.85it/s]
+(EngineCore_DP0 pid=2310305) INFO 06-05 01:44:28 [gpu_model_runner.py:5386] Graph capturing finished in 8 secs, took 0.46 GiB
+(EngineCore_DP0 pid=2310305) INFO 06-05 01:44:28 [core.py:282] init engine (profile, create kv cache, warmup model) took 17.39 seconds
+LLM loaded.
+
+Starting HTTP server on http://0.0.0.0:8000 ...
+INFO:     Started server process [2310226]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+[SIA] RM status query failed: All connection attempts failed
+WARNING 06-05 01:44:35 [input_processor.py:254] Passing raw prompts to InputProcessor is deprecated and will be removed in v0.18. You should instead pass the outputs of Renderer.render_cmpl() or Renderer.render_chat().
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=0/8  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:56960 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:53848 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=0/75  ratio=0.0%  top1_flip=0/0 (0.0%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:42326 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=6/207  ratio=2.9%  top1_flip=2/6 (33.3%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:42342 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=16/173  ratio=9.2%  top1_flip=8/16 (50.0%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:42356 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=3/115  ratio=2.6%  top1_flip=1/3 (33.3%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:42358 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=4/61  ratio=6.6%  top1_flip=1/4 (25.0%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:60108 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=7/70  ratio=10.0%  top1_flip=6/7 (85.7%)
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=4/98  ratio=4.1%  top1_flip=1/4 (25.0%)
+INFO:     127.0.0.1:60114 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:60120 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=8/137  ratio=5.8%  top1_flip=4/8 (50.0%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:60124 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=5/94  ratio=5.3%  top1_flip=3/5 (60.0%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:60126 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=8/122  ratio=6.6%  top1_flip=5/8 (62.5%)
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore_DP0 pid=2310305) [SIA-pf-summary @100] b2_session_init: p50=0.00 p95=0.82 max=1.65 | b2_prefix_adv: p50=0.00 p95=0.02 max=0.03 | b2_score_call: p50=10.36 p95=17.73 max=29.10 | total: p50=10.37 p95=18.15 max=29.96 | apply_total: p50=0.50 p95=11.06 max=86.04 | apply_topk_ent: p50=0.43 p95=0.62 max=85.89 | apply_cpu_sync: p50=0.05 p95=0.11 max=7.41 | skip_step: p50=0.50 p95=0.76 max=86.04 | intv_prepare: p50=0.07 p95=0.16 max=0.30 | intv_apply_logits: p50=0.44 p95=0.69 max=1.17
+INFO:     127.0.0.1:60134 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=66/282  ratio=23.4%  top1_flip=38/66 (57.6%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:51230 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=8/87  ratio=9.2%  top1_flip=4/8 (50.0%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:51232 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=30/182  ratio=16.5%  top1_flip=16/30 (53.3%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:51240 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=2/91  ratio=2.2%  top1_flip=1/2 (50.0%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:51256 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=0/35  ratio=0.0%  top1_flip=0/0 (0.0%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:34054 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=6/122  ratio=4.9%  top1_flip=3/6 (50.0%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:34060 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=2/71  ratio=2.8%  top1_flip=1/2 (50.0%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:34068 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=4/77  ratio=5.2%  top1_flip=2/4 (50.0%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:34070 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=0/83  ratio=0.0%  top1_flip=0/0 (0.0%)
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore_DP0 pid=2310305) [SIA-pf-summary @200] b2_session_init: p50=0.00 p95=0.72 max=1.65 | b2_prefix_adv: p50=0.00 p95=0.02 max=0.03 | b2_score_call: p50=10.29 p95=16.53 max=29.10 | total: p50=10.30 p95=17.42 max=29.96 | apply_total: p50=0.50 p95=11.31 max=24.28 | apply_topk_ent: p50=0.43 p95=0.73 max=1.50 | apply_cpu_sync: p50=0.05 p95=0.11 max=6.44 | skip_step: p50=0.50 p95=0.88 max=6.99 | intv_prepare: p50=0.07 p95=0.16 max=0.30 | intv_apply_logits: p50=0.44 p95=0.67 max=1.34
+INFO:     127.0.0.1:34074 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=64/561  ratio=11.4%  top1_flip=41/64 (64.1%)
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore_DP0 pid=2310305) [SIA-pf-summary @300] b2_session_init: p50=0.00 p95=0.64 max=1.65 | b2_prefix_adv: p50=0.00 p95=0.02 max=0.07 | b2_score_call: p50=10.36 p95=16.53 max=29.10 | total: p50=10.37 p95=17.28 max=29.96 | apply_total: p50=0.50 p95=11.76 max=26.70 | apply_topk_ent: p50=0.44 p95=0.70 max=1.50 | apply_cpu_sync: p50=0.05 p95=0.11 max=5.64 | skip_step: p50=0.50 p95=0.85 max=6.99 | intv_prepare: p50=0.07 p95=0.16 max=0.30 | intv_apply_logits: p50=0.45 p95=0.66 max=1.34
+INFO:     127.0.0.1:53182 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=82/471  ratio=17.4%  top1_flip=53/82 (64.6%)
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore_DP0 pid=2310305) [SIA-pf-summary @400] b2_session_init: p50=0.00 p95=0.06 max=1.65 | b2_prefix_adv: p50=0.00 p95=0.01 max=0.07 | b2_score_call: p50=10.62 p95=16.41 max=29.10 | total: p50=10.70 p95=16.43 max=29.96 | apply_total: p50=0.49 p95=12.57 max=27.23 | apply_topk_ent: p50=0.42 p95=0.51 max=1.15 | apply_cpu_sync: p50=0.05 p95=0.11 max=5.09 | skip_step: p50=0.49 p95=0.70 max=5.66 | intv_prepare: p50=0.07 p95=0.15 max=0.30 | intv_apply_logits: p50=0.45 p95=0.65 max=1.34
+(EngineCore_DP0 pid=2310305) [SIA-pf-summary @500] b2_session_init: p50=0.00 p95=0.00 max=1.65 | b2_prefix_adv: p50=0.00 p95=0.01 max=0.10 | b2_score_call: p50=11.00 p95=16.46 max=29.10 | total: p50=11.06 p95=16.47 max=29.96 | apply_total: p50=0.50 p95=14.34 max=31.41 | apply_topk_ent: p50=0.42 p95=0.51 max=1.15 | apply_cpu_sync: p50=0.05 p95=0.11 max=5.09 | skip_step: p50=0.49 p95=0.58 max=1.78 | intv_prepare: p50=0.07 p95=0.15 max=0.38 | intv_apply_logits: p50=0.46 p95=0.64 max=1.34
+(EngineCore_DP0 pid=2310305) [SIA] 01:46:55.619925 step=1962 req=0 RM error: You passed 2081 input tokens and requested 0 output tokens. However, the model's context length is only 2048 tokens, resulting in a maximum input length of 2048 tokens. Please reduce the length of the input prompt. (parameter=input_tokens, value=2081)
+(EngineCore_DP0 pid=2310305) [SIA] 01:46:55.631358 step=1963 req=0 RM error: You passed 2082 input tokens and requested 0 output tokens. However, the model's context length is only 2048 tokens, resulting in a maximum input length of 2048 tokens. Please reduce the length of the input prompt. (parameter=input_tokens, value=2082)
+(EngineCore_DP0 pid=2310305) [SIA] 01:46:55.642813 step=1964 req=0 RM error: You passed 2083 input tokens and requested 0 output tokens. However, the model's context length is only 2048 tokens, resulting in a maximum input length of 2048 tokens. Please reduce the length of the input prompt. (parameter=input_tokens, value=2083)
+(EngineCore_DP0 pid=2310305) [SIA] 01:46:55.967013 step=1993 req=0 RM error: You passed 2112 input tokens and requested 0 output tokens. However, the model's context length is only 2048 tokens, resulting in a maximum input length of 2048 tokens. Please reduce the length of the input prompt. (parameter=input_tokens, value=2112)
+(EngineCore_DP0 pid=2310305) [SIA] 01:46:55.978581 step=1994 req=0 RM error: You passed 2113 input tokens and requested 0 output tokens. However, the model's context length is only 2048 tokens, resulting in a maximum input length of 2048 tokens. Please reduce the length of the input prompt. (parameter=input_tokens, value=2113)
+(EngineCore_DP0 pid=2310305) [SIA] 01:46:56.001536 step=1996 req=0 RM error: You passed 2115 input tokens and requested 0 output tokens. However, the model's context length is only 2048 tokens, resulting in a maximum input length of 2048 tokens. Please reduce the length of the input prompt. (parameter=input_tokens, value=2115)
+(EngineCore_DP0 pid=2310305) [SIA] 01:46:56.013042 step=1997 req=0 RM error: You passed 2116 input tokens and requested 0 output tokens. However, the model's context length is only 2048 tokens, resulting in a maximum input length of 2048 tokens. Please reduce the length of the input prompt. (parameter=input_tokens, value=2116)
+(EngineCore_DP0 pid=2310305) [SIA] 01:46:56.024281 step=1998 req=0 RM error: You passed 2117 input tokens and requested 0 output tokens. However, the model's context length is only 2048 tokens, resulting in a maximum input length of 2048 tokens. Please reduce the length of the input prompt. (parameter=input_tokens, value=2117)
+(EngineCore_DP0 pid=2310305) [SIA] 01:46:56.035871 step=1999 req=0 RM error: You passed 2118 input tokens and requested 0 output tokens. However, the model's context length is only 2048 tokens, resulting in a maximum input length of 2048 tokens. Please reduce the length of the input prompt. (parameter=input_tokens, value=2118)
+(EngineCore_DP0 pid=2310305) [SIA] 01:46:56.047820 step=2000 req=0 RM error: You passed 2119 input tokens and requested 0 output tokens. However, the model's context length is only 2048 tokens, resulting in a maximum input length of 2048 tokens. Please reduce the length of the input prompt. (parameter=input_tokens, value=2119)
+(EngineCore_DP0 pid=2310305) [SIA] 01:46:56.216788 step=2015 req=0 RM error: You passed 2134 input tokens and requested 0 output tokens. However, the model's context length is only 2048 tokens, resulting in a maximum input length of 2048 tokens. Please reduce the length of the input prompt. (parameter=input_tokens, value=2134)
+(EngineCore_DP0 pid=2310305) [SIA] 01:46:56.239822 step=2017 req=0 RM error: You passed 2136 input tokens and requested 0 output tokens. However, the model's context length is only 2048 tokens, resulting in a maximum input length of 2048 tokens. Please reduce the length of the input prompt. (parameter=input_tokens, value=2136)
+(EngineCore_DP0 pid=2310305) [SIA] 01:46:56.295826 step=2022 req=0 RM error: You passed 2141 input tokens and requested 0 output tokens. However, the model's context length is only 2048 tokens, resulting in a maximum input length of 2048 tokens. Please reduce the length of the input prompt. (parameter=input_tokens, value=2141)
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=231/2048  ratio=11.3%  top1_flip=150/231 (64.9%)
+INFO:     127.0.0.1:59332 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:50520 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=11/114  ratio=9.6%  top1_flip=7/11 (63.6%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:50532 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=4/81  ratio=4.9%  top1_flip=3/4 (75.0%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:50538 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=1/239  ratio=0.4%  top1_flip=0/1 (0.0%)
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore_DP0 pid=2310305) [SIA-pf-summary @600] b2_session_init: p50=0.00 p95=0.00 max=1.65 | b2_prefix_adv: p50=0.00 p95=0.01 max=0.10 | b2_score_call: p50=11.32 p95=16.53 max=29.10 | total: p50=11.42 p95=16.93 max=29.96 | apply_total: p50=0.50 p95=6.12 max=19.41 | apply_topk_ent: p50=0.43 p95=0.52 max=1.04 | apply_cpu_sync: p50=0.06 p95=0.11 max=5.57 | skip_step: p50=0.50 p95=0.62 max=6.12 | intv_prepare: p50=0.07 p95=0.15 max=0.38 | intv_apply_logits: p50=0.46 p95=0.66 max=1.34
+(EngineCore_DP0 pid=2310305) [SIA-pf-summary @700] b2_session_init: p50=0.00 p95=0.00 max=1.65 | b2_prefix_adv: p50=0.00 p95=0.01 max=0.10 | b2_score_call: p50=11.59 p95=17.32 max=29.10 | total: p50=11.65 p95=17.42 max=29.96 | apply_total: p50=0.50 p95=12.93 max=29.59 | apply_topk_ent: p50=0.43 p95=0.65 max=1.24 | apply_cpu_sync: p50=0.06 p95=0.11 max=5.57 | skip_step: p50=0.49 p95=0.83 max=1.38 | intv_prepare: p50=0.07 p95=0.15 max=0.38 | intv_apply_logits: p50=0.46 p95=0.66 max=1.43
+INFO:     127.0.0.1:50544 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=158/1272  ratio=12.4%  top1_flip=98/158 (62.0%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:32816 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=18/194  ratio=9.3%  top1_flip=13/18 (72.2%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:42804 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=23/210  ratio=11.0%  top1_flip=16/23 (69.6%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:42818 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=19/247  ratio=7.7%  top1_flip=10/19 (52.6%)
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore_DP0 pid=2310305) [SIA-pf-summary @800] b2_session_init: p50=0.00 p95=0.00 max=1.65 | b2_prefix_adv: p50=0.00 p95=0.01 max=0.10 | b2_score_call: p50=11.52 p95=17.32 max=29.10 | total: p50=11.57 p95=17.42 max=29.96 | apply_total: p50=0.50 p95=13.68 max=29.59 | apply_topk_ent: p50=0.43 p95=0.71 max=1.24 | apply_cpu_sync: p50=0.05 p95=0.11 max=4.45 | skip_step: p50=0.49 p95=0.81 max=5.07 | intv_prepare: p50=0.07 p95=0.15 max=0.38 | intv_apply_logits: p50=0.46 p95=0.66 max=1.43
+INFO:     127.0.0.1:42824 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=70/619  ratio=11.3%  top1_flip=43/70 (61.4%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:53014 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=8/595  ratio=1.3%  top1_flip=3/8 (37.5%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:41894 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=17/729  ratio=2.3%  top1_flip=9/17 (52.9%)
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore_DP0 pid=2310305) [SIA-pf-summary @900] b2_session_init: p50=0.00 p95=0.00 max=1.65 | b2_prefix_adv: p50=0.00 p95=0.01 max=0.10 | b2_score_call: p50=11.43 p95=16.93 max=29.10 | total: p50=11.47 p95=17.28 max=29.96 | apply_total: p50=0.49 p95=0.96 max=23.30 | apply_topk_ent: p50=0.43 p95=0.56 max=7.56 | apply_cpu_sync: p50=0.05 p95=0.11 max=6.47 | skip_step: p50=0.49 p95=0.69 max=7.64 | intv_prepare: p50=0.07 p95=0.15 max=0.38 | intv_apply_logits: p50=0.46 p95=0.66 max=1.43
+INFO:     127.0.0.1:46192 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=34/665  ratio=5.1%  top1_flip=17/34 (50.0%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:34226 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=18/363  ratio=5.0%  top1_flip=7/18 (38.9%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:34232 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=4/460  ratio=0.9%  top1_flip=3/4 (75.0%)
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore_DP0 pid=2310305) [SIA-pf-summary @1000] b2_session_init: p50=0.00 p95=0.00 max=1.65 | b2_prefix_adv: p50=0.00 p95=0.02 max=0.10 | b2_score_call: p50=11.30 p95=16.53 max=29.10 | total: p50=11.38 p95=16.93 max=29.96 | apply_total: p50=0.49 p95=11.51 max=25.04 | apply_topk_ent: p50=0.41 p95=0.52 max=1.15 | apply_cpu_sync: p50=0.05 p95=0.11 max=7.06 | skip_step: p50=0.49 p95=0.60 max=7.58 | intv_prepare: p50=0.07 p95=0.15 max=0.38 | intv_apply_logits: p50=0.46 p95=0.66 max=1.43
+(EngineCore_DP0 pid=2310305) [SIA-pf-summary @1100] b2_session_init: p50=0.00 p95=0.00 max=1.65 | b2_prefix_adv: p50=0.00 p95=0.01 max=0.10 | b2_score_call: p50=11.55 p95=16.53 max=29.10 | total: p50=11.58 p95=16.93 max=29.96 | apply_total: p50=0.50 p95=13.56 max=26.11 | apply_topk_ent: p50=0.41 p95=0.50 max=1.07 | apply_cpu_sync: p50=0.05 p95=0.11 max=0.21 | skip_step: p50=0.49 p95=0.58 max=7.58 | intv_prepare: p50=0.07 p95=0.15 max=0.38 | intv_apply_logits: p50=0.46 p95=0.66 max=1.43
+(EngineCore_DP0 pid=2310305) [SIA-pf-summary @1200] b2_session_init: p50=0.00 p95=0.00 max=1.65 | b2_prefix_adv: p50=0.00 p95=0.01 max=0.10 | b2_score_call: p50=11.77 p95=16.53 max=29.10 | total: p50=11.81 p95=16.93 max=29.96 | apply_total: p50=0.50 p95=15.25 max=26.50 | apply_topk_ent: p50=0.43 p95=0.52 max=1.18 | apply_cpu_sync: p50=0.05 p95=0.11 max=0.21 | skip_step: p50=0.49 p95=0.59 max=1.32 | intv_prepare: p50=0.07 p95=0.15 max=0.38 | intv_apply_logits: p50=0.47 p95=0.66 max=1.43
+(EngineCore_DP0 pid=2310305) [SIA] 01:48:47.985040 step=1940 req=0 RM error: You passed 2052 input tokens and requested 0 output tokens. However, the model's context length is only 2048 tokens, resulting in a maximum input length of 2048 tokens. Please reduce the length of the input prompt. (parameter=input_tokens, value=2052)
+(EngineCore_DP0 pid=2310305) [SIA] 01:48:48.113985 step=1952 req=0 RM error: You passed 2064 input tokens and requested 0 output tokens. However, the model's context length is only 2048 tokens, resulting in a maximum input length of 2048 tokens. Please reduce the length of the input prompt. (parameter=input_tokens, value=2064)
+(EngineCore_DP0 pid=2310305) [SIA] 01:48:48.125197 step=1953 req=0 RM error: You passed 2065 input tokens and requested 0 output tokens. However, the model's context length is only 2048 tokens, resulting in a maximum input length of 2048 tokens. Please reduce the length of the input prompt. (parameter=input_tokens, value=2065)
+(EngineCore_DP0 pid=2310305) [SIA] 01:48:48.179302 step=1958 req=0 RM error: You passed 2070 input tokens and requested 0 output tokens. However, the model's context length is only 2048 tokens, resulting in a maximum input length of 2048 tokens. Please reduce the length of the input prompt. (parameter=input_tokens, value=2070)
+(EngineCore_DP0 pid=2310305) [SIA] 01:48:48.201263 step=1960 req=0 RM error: You passed 2072 input tokens and requested 0 output tokens. However, the model's context length is only 2048 tokens, resulting in a maximum input length of 2048 tokens. Please reduce the length of the input prompt. (parameter=input_tokens, value=2072)
+(EngineCore_DP0 pid=2310305) [SIA] 01:48:48.212570 step=1961 req=0 RM error: You passed 2073 input tokens and requested 0 output tokens. However, the model's context length is only 2048 tokens, resulting in a maximum input length of 2048 tokens. Please reduce the length of the input prompt. (parameter=input_tokens, value=2073)
+(EngineCore_DP0 pid=2310305) [SIA] 01:48:48.223501 step=1962 req=0 RM error: You passed 2074 input tokens and requested 0 output tokens. However, the model's context length is only 2048 tokens, resulting in a maximum input length of 2048 tokens. Please reduce the length of the input prompt. (parameter=input_tokens, value=2074)
+(EngineCore_DP0 pid=2310305) [SIA] 01:48:48.320513 step=1971 req=0 RM error: You passed 2083 input tokens and requested 0 output tokens. However, the model's context length is only 2048 tokens, resulting in a maximum input length of 2048 tokens. Please reduce the length of the input prompt. (parameter=input_tokens, value=2083)
+(EngineCore_DP0 pid=2310305) [SIA] 01:48:48.342726 step=1973 req=0 RM error: You passed 2085 input tokens and requested 0 output tokens. However, the model's context length is only 2048 tokens, resulting in a maximum input length of 2048 tokens. Please reduce the length of the input prompt. (parameter=input_tokens, value=2085)
+(EngineCore_DP0 pid=2310305) [SIA] 01:48:48.375252 step=1976 req=0 RM error: You passed 2088 input tokens and requested 0 output tokens. However, the model's context length is only 2048 tokens, resulting in a maximum input length of 2048 tokens. Please reduce the length of the input prompt. (parameter=input_tokens, value=2088)
+(EngineCore_DP0 pid=2310305) [SIA] 01:48:48.386258 step=1977 req=0 RM error: You passed 2089 input tokens and requested 0 output tokens. However, the model's context length is only 2048 tokens, resulting in a maximum input length of 2048 tokens. Please reduce the length of the input prompt. (parameter=input_tokens, value=2089)
+(EngineCore_DP0 pid=2310305) [SIA] 01:48:48.408080 step=1979 req=0 RM error: You passed 2091 input tokens and requested 0 output tokens. However, the model's context length is only 2048 tokens, resulting in a maximum input length of 2048 tokens. Please reduce the length of the input prompt. (parameter=input_tokens, value=2091)
+(EngineCore_DP0 pid=2310305) [SIA] 01:48:48.419327 step=1980 req=0 RM error: You passed 2092 input tokens and requested 0 output tokens. However, the model's context length is only 2048 tokens, resulting in a maximum input length of 2048 tokens. Please reduce the length of the input prompt. (parameter=input_tokens, value=2092)
+(EngineCore_DP0 pid=2310305) [SIA] 01:48:48.441199 step=1982 req=0 RM error: You passed 2094 input tokens and requested 0 output tokens. However, the model's context length is only 2048 tokens, resulting in a maximum input length of 2048 tokens. Please reduce the length of the input prompt. (parameter=input_tokens, value=2094)
+(EngineCore_DP0 pid=2310305) [SIA] 01:48:48.452641 step=1983 req=0 RM error: You passed 2095 input tokens and requested 0 output tokens. However, the model's context length is only 2048 tokens, resulting in a maximum input length of 2048 tokens. Please reduce the length of the input prompt. (parameter=input_tokens, value=2095)
+(EngineCore_DP0 pid=2310305) [SIA] 01:48:48.549560 step=1992 req=0 RM error: You passed 2104 input tokens and requested 0 output tokens. However, the model's context length is only 2048 tokens, resulting in a maximum input length of 2048 tokens. Please reduce the length of the input prompt. (parameter=input_tokens, value=2104)
+(EngineCore_DP0 pid=2310305) [SIA] 01:48:48.571241 step=1994 req=0 RM error: You passed 2106 input tokens and requested 0 output tokens. However, the model's context length is only 2048 tokens, resulting in a maximum input length of 2048 tokens. Please reduce the length of the input prompt. (parameter=input_tokens, value=2106)
+(EngineCore_DP0 pid=2310305) [SIA] 01:48:48.593242 step=1996 req=0 RM error: You passed 2108 input tokens and requested 0 output tokens. However, the model's context length is only 2048 tokens, resulting in a maximum input length of 2048 tokens. Please reduce the length of the input prompt. (parameter=input_tokens, value=2108)
+(EngineCore_DP0 pid=2310305) [SIA] 01:48:48.604744 step=1997 req=0 RM error: You passed 2109 input tokens and requested 0 output tokens. However, the model's context length is only 2048 tokens, resulting in a maximum input length of 2048 tokens. Please reduce the length of the input prompt. (parameter=input_tokens, value=2109)
+(EngineCore_DP0 pid=2310305) [SIA] 01:48:48.626390 step=1999 req=0 RM error: You passed 2111 input tokens and requested 0 output tokens. However, the model's context length is only 2048 tokens, resulting in a maximum input length of 2048 tokens. Please reduce the length of the input prompt. (parameter=input_tokens, value=2111)
+(EngineCore_DP0 pid=2310305) [SIA] 01:48:48.637365 step=2000 req=0 RM error: You passed 2112 input tokens and requested 0 output tokens. However, the model's context length is only 2048 tokens, resulting in a maximum input length of 2048 tokens. Please reduce the length of the input prompt. (parameter=input_tokens, value=2112)
+(EngineCore_DP0 pid=2310305) [SIA] 01:48:48.670176 step=2003 req=0 RM error: You passed 2115 input tokens and requested 0 output tokens. However, the model's context length is only 2048 tokens, resulting in a maximum input length of 2048 tokens. Please reduce the length of the input prompt. (parameter=input_tokens, value=2115)
+(EngineCore_DP0 pid=2310305) [SIA] 01:48:48.702765 step=2006 req=0 RM error: You passed 2118 input tokens and requested 0 output tokens. However, the model's context length is only 2048 tokens, resulting in a maximum input length of 2048 tokens. Please reduce the length of the input prompt. (parameter=input_tokens, value=2118)
+(EngineCore_DP0 pid=2310305) [SIA] 01:48:48.724892 step=2008 req=0 RM error: You passed 2120 input tokens and requested 0 output tokens. However, the model's context length is only 2048 tokens, resulting in a maximum input length of 2048 tokens. Please reduce the length of the input prompt. (parameter=input_tokens, value=2120)
+(EngineCore_DP0 pid=2310305) [SIA] 01:48:48.757313 step=2011 req=0 RM error: You passed 2123 input tokens and requested 0 output tokens. However, the model's context length is only 2048 tokens, resulting in a maximum input length of 2048 tokens. Please reduce the length of the input prompt. (parameter=input_tokens, value=2123)
+(EngineCore_DP0 pid=2310305) [SIA] 01:48:48.789710 step=2014 req=0 RM error: You passed 2126 input tokens and requested 0 output tokens. However, the model's context length is only 2048 tokens, resulting in a maximum input length of 2048 tokens. Please reduce the length of the input prompt. (parameter=input_tokens, value=2126)
+(EngineCore_DP0 pid=2310305) [SIA] 01:48:48.833535 step=2018 req=0 RM error: You passed 2130 input tokens and requested 0 output tokens. However, the model's context length is only 2048 tokens, resulting in a maximum input length of 2048 tokens. Please reduce the length of the input prompt. (parameter=input_tokens, value=2130)
+(EngineCore_DP0 pid=2310305) [SIA] 01:48:48.887887 step=2023 req=0 RM error: You passed 2135 input tokens and requested 0 output tokens. However, the model's context length is only 2048 tokens, resulting in a maximum input length of 2048 tokens. Please reduce the length of the input prompt. (parameter=input_tokens, value=2135)
+(EngineCore_DP0 pid=2310305) [SIA] 01:48:48.899413 step=2024 req=0 RM error: You passed 2136 input tokens and requested 0 output tokens. However, the model's context length is only 2048 tokens, resulting in a maximum input length of 2048 tokens. Please reduce the length of the input prompt. (parameter=input_tokens, value=2136)
+(EngineCore_DP0 pid=2310305) [SIA] 01:48:48.921272 step=2026 req=0 RM error: You passed 2138 input tokens and requested 0 output tokens. However, the model's context length is only 2048 tokens, resulting in a maximum input length of 2048 tokens. Please reduce the length of the input prompt. (parameter=input_tokens, value=2138)
+(EngineCore_DP0 pid=2310305) [SIA] 01:48:49.082945 step=2041 req=0 RM error: You passed 2153 input tokens and requested 0 output tokens. However, the model's context length is only 2048 tokens, resulting in a maximum input length of 2048 tokens. Please reduce the length of the input prompt. (parameter=input_tokens, value=2153)
+(EngineCore_DP0 pid=2310305) [SIA] 01:48:49.094508 step=2042 req=0 RM error: You passed 2154 input tokens and requested 0 output tokens. However, the model's context length is only 2048 tokens, resulting in a maximum input length of 2048 tokens. Please reduce the length of the input prompt. (parameter=input_tokens, value=2154)
+(EngineCore_DP0 pid=2310305) [SIA] 01:48:49.105521 step=2043 req=0 RM error: You passed 2155 input tokens and requested 0 output tokens. However, the model's context length is only 2048 tokens, resulting in a maximum input length of 2048 tokens. Please reduce the length of the input prompt. (parameter=input_tokens, value=2155)
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=339/2048  ratio=16.6%  top1_flip=198/339 (58.4%)
+INFO:     127.0.0.1:47322 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:43454 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=19/167  ratio=11.4%  top1_flip=12/19 (63.2%)
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore_DP0 pid=2310305) [SIA-pf-summary @1300] b2_session_init: p50=0.00 p95=0.00 max=3.89 | b2_prefix_adv: p50=0.00 p95=0.01 max=0.10 | b2_score_call: p50=12.07 p95=16.93 max=41.52 | total: p50=12.14 p95=17.27 max=45.41 | apply_total: p50=0.51 p95=16.30 max=46.49 | apply_topk_ent: p50=0.43 p95=0.54 max=1.19 | apply_cpu_sync: p50=0.06 p95=0.11 max=0.21 | skip_step: p50=0.49 p95=0.62 max=1.32 | intv_prepare: p50=0.07 p95=0.15 max=0.38 | intv_apply_logits: p50=0.46 p95=0.66 max=1.43
+INFO:     127.0.0.1:43470 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=34/258  ratio=13.2%  top1_flip=20/34 (58.8%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:50706 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=18/213  ratio=8.5%  top1_flip=9/18 (50.0%)
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore_DP0 pid=2310305) [SIA-pf-summary @1400] b2_session_init: p50=0.00 p95=0.00 max=3.89 | b2_prefix_adv: p50=0.00 p95=0.01 max=0.10 | b2_score_call: p50=11.98 p95=17.36 max=41.52 | total: p50=12.03 p95=17.40 max=45.41 | apply_total: p50=0.50 p95=12.85 max=46.49 | apply_topk_ent: p50=0.43 p95=0.75 max=1.11 | apply_cpu_sync: p50=0.06 p95=0.11 max=3.30 | skip_step: p50=0.50 p95=0.79 max=3.83 | intv_prepare: p50=0.07 p95=0.15 max=0.38 | intv_apply_logits: p50=0.46 p95=0.67 max=1.43
+INFO:     127.0.0.1:50716 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=59/607  ratio=9.7%  top1_flip=32/59 (54.2%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:52880 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=60/1227  ratio=4.9%  top1_flip=38/60 (63.3%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:50120 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=3/231  ratio=1.3%  top1_flip=3/3 (100.0%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:50130 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=0/170  ratio=0.0%  top1_flip=0/0 (0.0%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:50136 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=1/280  ratio=0.4%  top1_flip=1/1 (100.0%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:43048 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=6/335  ratio=1.8%  top1_flip=3/6 (50.0%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:43064 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=0/65  ratio=0.0%  top1_flip=0/0 (0.0%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:43306 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=13/210  ratio=6.2%  top1_flip=9/13 (69.2%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:43310 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=1/77  ratio=1.3%  top1_flip=1/1 (100.0%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:43326 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=3/49  ratio=6.1%  top1_flip=1/3 (33.3%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:43328 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=0/185  ratio=0.0%  top1_flip=0/0 (0.0%)
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore_DP0 pid=2310305) [SIA-pf-summary @1500] b2_session_init: p50=0.00 p95=0.00 max=3.89 | b2_prefix_adv: p50=0.00 p95=0.02 max=0.10 | b2_score_call: p50=11.89 p95=17.36 max=41.52 | total: p50=11.96 p95=17.40 max=45.41 | apply_total: p50=0.50 p95=0.93 max=21.42 | apply_topk_ent: p50=0.43 p95=0.74 max=1.30 | apply_cpu_sync: p50=0.05 p95=0.11 max=4.03 | skip_step: p50=0.50 p95=0.85 max=6.45 | intv_prepare: p50=0.07 p95=0.15 max=0.38 | intv_apply_logits: p50=0.46 p95=0.67 max=1.43
+INFO:     127.0.0.1:48832 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=18/277  ratio=6.5%  top1_flip=9/18 (50.0%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:48848 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=0/42  ratio=0.0%  top1_flip=0/0 (0.0%)
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=29/374  ratio=7.8%  top1_flip=15/29 (51.7%)
+INFO:     127.0.0.1:48852 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:48862 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=21/206  ratio=10.2%  top1_flip=13/21 (61.9%)
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore_DP0 pid=2310305) [SIA-pf-summary @1600] b2_session_init: p50=0.00 p95=0.00 max=3.89 | b2_prefix_adv: p50=0.00 p95=0.02 max=0.10 | b2_score_call: p50=11.77 p95=17.32 max=41.52 | total: p50=11.82 p95=17.35 max=45.41 | apply_total: p50=0.50 p95=11.54 max=25.01 | apply_topk_ent: p50=0.43 p95=0.68 max=1.13 | apply_cpu_sync: p50=0.05 p95=0.11 max=7.33 | skip_step: p50=0.50 p95=0.83 max=7.94 | intv_prepare: p50=0.07 p95=0.15 max=0.38 | intv_apply_logits: p50=0.47 p95=0.67 max=1.43
+INFO:     127.0.0.1:56310 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=104/597  ratio=17.4%  top1_flip=65/104 (62.5%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:35688 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=7/171  ratio=4.1%  top1_flip=4/7 (57.1%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:35690 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=5/72  ratio=6.9%  top1_flip=3/5 (60.0%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:35694 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=3/105  ratio=2.9%  top1_flip=3/3 (100.0%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:35708 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=9/83  ratio=10.8%  top1_flip=4/9 (44.4%)
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore_DP0 pid=2310305) [SIA-pf-summary @1700] b2_session_init: p50=0.00 p95=0.00 max=3.89 | b2_prefix_adv: p50=0.00 p95=0.02 max=0.10 | b2_score_call: p50=11.70 p95=17.36 max=41.52 | total: p50=11.76 p95=17.40 max=45.41 | apply_total: p50=0.50 p95=12.45 max=25.65 | apply_topk_ent: p50=0.43 p95=0.70 max=1.13 | apply_cpu_sync: p50=0.05 p95=0.11 max=7.33 | skip_step: p50=0.49 p95=0.82 max=7.94 | intv_prepare: p50=0.07 p95=0.15 max=0.38 | intv_apply_logits: p50=0.47 p95=0.67 max=1.43
+INFO:     127.0.0.1:39634 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=10/94  ratio=10.6%  top1_flip=6/10 (60.0%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:39644 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=19/264  ratio=7.2%  top1_flip=13/19 (68.4%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:39652 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=1/91  ratio=1.1%  top1_flip=1/1 (100.0%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:39666 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=19/483  ratio=3.9%  top1_flip=11/19 (57.9%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:34670 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=29/663  ratio=4.4%  top1_flip=17/29 (58.6%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:53988 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=17/296  ratio=5.7%  top1_flip=15/17 (88.2%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:47960 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=9/122  ratio=7.4%  top1_flip=3/9 (33.3%)
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore_DP0 pid=2310305) [SIA-pf-summary @1800] b2_session_init: p50=0.00 p95=0.00 max=3.89 | b2_prefix_adv: p50=0.00 p95=0.02 max=0.10 | b2_score_call: p50=11.67 p95=17.49 max=41.52 | total: p50=11.73 p95=17.58 max=45.41 | apply_total: p50=0.50 p95=7.99 max=24.09 | apply_topk_ent: p50=0.43 p95=0.63 max=1.10 | apply_cpu_sync: p50=0.05 p95=0.11 max=7.47 | skip_step: p50=0.50 p95=0.79 max=7.99 | intv_prepare: p50=0.07 p95=0.16 max=0.38 | intv_apply_logits: p50=0.47 p95=0.67 max=1.43
+INFO:     127.0.0.1:47970 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=11/122  ratio=9.0%  top1_flip=5/11 (45.5%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:47982 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=1/77  ratio=1.3%  top1_flip=1/1 (100.0%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:47998 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=28/180  ratio=15.6%  top1_flip=15/28 (53.6%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:48002 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=2/44  ratio=4.5%  top1_flip=2/2 (100.0%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:54058 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=1/118  ratio=0.8%  top1_flip=1/1 (100.0%)
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore_DP0 pid=2310305) [SIA-pf-summary @1900] b2_session_init: p50=0.00 p95=0.00 max=3.89 | b2_prefix_adv: p50=0.00 p95=0.02 max=0.10 | b2_score_call: p50=11.58 p95=17.50 max=41.52 | total: p50=11.63 p95=17.66 max=45.41 | apply_total: p50=0.49 p95=11.77 max=26.07 | apply_topk_ent: p50=0.41 p95=0.71 max=1.10 | apply_cpu_sync: p50=0.05 p95=0.11 max=3.94 | skip_step: p50=0.49 p95=0.81 max=4.55 | intv_prepare: p50=0.07 p95=0.16 max=0.38 | intv_apply_logits: p50=0.47 p95=0.68 max=1.43
+INFO:     127.0.0.1:54068 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=65/455  ratio=14.3%  top1_flip=52/65 (80.0%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:54070 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=11/244  ratio=4.5%  top1_flip=9/11 (81.8%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:34758 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=4/90  ratio=4.4%  top1_flip=4/4 (100.0%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:34766 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=36/348  ratio=10.3%  top1_flip=24/36 (66.7%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:33816 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=4/96  ratio=4.2%  top1_flip=4/4 (100.0%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:33824 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=4/68  ratio=5.9%  top1_flip=2/4 (50.0%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:33828 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=16/84  ratio=19.0%  top1_flip=10/16 (62.5%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:33836 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=9/114  ratio=7.9%  top1_flip=5/9 (55.6%)
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore_DP0 pid=2310305) [SIA-pf-summary @2000] b2_session_init: p50=0.00 p95=0.00 max=3.89 | b2_prefix_adv: p50=0.00 p95=0.02 max=0.10 | b2_score_call: p50=11.50 p95=17.42 max=41.52 | total: p50=11.54 p95=17.51 max=45.41 | apply_total: p50=0.50 p95=11.79 max=26.07 | apply_topk_ent: p50=0.42 p95=0.70 max=1.07 | apply_cpu_sync: p50=0.05 p95=0.11 max=6.40 | skip_step: p50=0.49 p95=0.81 max=6.90 | intv_prepare: p50=0.07 p95=0.16 max=0.38 | intv_apply_logits: p50=0.47 p95=0.67 max=1.43
+INFO:     127.0.0.1:33840 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=11/181  ratio=6.1%  top1_flip=9/11 (81.8%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:49526 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=31/267  ratio=11.6%  top1_flip=26/31 (83.9%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:49528 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=11/138  ratio=8.0%  top1_flip=7/11 (63.6%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:49532 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=20/184  ratio=10.9%  top1_flip=11/20 (55.0%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:49540 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=6/197  ratio=3.0%  top1_flip=4/6 (66.7%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:38490 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=3/71  ratio=4.2%  top1_flip=2/3 (66.7%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:38498 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=4/518  ratio=0.8%  top1_flip=3/4 (75.0%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:48448 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=11/493  ratio=2.2%  top1_flip=6/11 (54.5%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:48452 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=1/183  ratio=0.5%  top1_flip=0/1 (0.0%)
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore_DP0 pid=2310305) [SIA-pf-summary @2100] b2_session_init: p50=0.00 p95=0.00 max=3.89 | b2_prefix_adv: p50=0.00 p95=0.02 max=0.10 | b2_score_call: p50=11.46 p95=17.57 max=41.52 | total: p50=11.53 p95=18.27 max=45.41 | apply_total: p50=0.49 p95=0.83 max=25.03 | apply_topk_ent: p50=0.41 p95=0.55 max=1.20 | apply_cpu_sync: p50=0.05 p95=0.11 max=6.79 | skip_step: p50=0.49 p95=0.66 max=7.34 | intv_prepare: p50=0.07 p95=0.16 max=0.35 | intv_apply_logits: p50=0.47 p95=0.69 max=1.30
+(EngineCore_DP0 pid=2310305) [SIA-pf-summary @2200] b2_session_init: p50=0.00 p95=0.00 max=3.89 | b2_prefix_adv: p50=0.00 p95=0.02 max=0.10 | b2_score_call: p50=11.65 p95=17.57 max=41.52 | total: p50=11.72 p95=18.27 max=45.41 | apply_total: p50=0.50 p95=13.21 max=25.62 | apply_topk_ent: p50=0.42 p95=0.63 max=1.23 | apply_cpu_sync: p50=0.05 p95=0.11 max=5.09 | skip_step: p50=0.49 p95=0.72 max=5.65 | intv_prepare: p50=0.07 p95=0.16 max=0.35 | intv_apply_logits: p50=0.47 p95=0.68 max=1.30
+INFO:     127.0.0.1:48468 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=146/1919  ratio=7.6%  top1_flip=97/146 (66.4%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:40384 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=24/645  ratio=3.7%  top1_flip=13/24 (54.2%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:38520 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=14/248  ratio=5.6%  top1_flip=13/14 (92.9%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:38524 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=1/246  ratio=0.4%  top1_flip=0/1 (0.0%)
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore_DP0 pid=2310305) [SIA-pf-summary @2300] b2_session_init: p50=0.00 p95=0.00 max=3.89 | b2_prefix_adv: p50=0.00 p95=0.02 max=0.10 | b2_score_call: p50=11.65 p95=17.50 max=41.52 | total: p50=11.74 p95=17.82 max=45.41 | apply_total: p50=0.49 p95=1.15 max=19.58 | apply_topk_ent: p50=0.41 p95=0.49 max=7.66 | apply_cpu_sync: p50=0.05 p95=0.11 max=8.39 | skip_step: p50=0.48 p95=0.56 max=8.93 | intv_prepare: p50=0.07 p95=0.16 max=0.35 | intv_apply_logits: p50=0.47 p95=0.68 max=1.50
+INFO:     127.0.0.1:52188 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=28/233  ratio=12.0%  top1_flip=20/28 (71.4%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:52190 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=10/384  ratio=2.6%  top1_flip=9/10 (90.0%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:52194 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=8/123  ratio=6.5%  top1_flip=4/8 (50.0%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:58086 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=16/182  ratio=8.8%  top1_flip=11/16 (68.8%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:58096 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=2/74  ratio=2.7%  top1_flip=1/2 (50.0%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:58112 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=2/252  ratio=0.8%  top1_flip=0/2 (0.0%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:58126 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=10/269  ratio=3.7%  top1_flip=4/10 (40.0%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:43490 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=17/289  ratio=5.9%  top1_flip=14/17 (82.4%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:43492 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=33/201  ratio=16.4%  top1_flip=23/33 (69.7%)
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore_DP0 pid=2310305) [SIA-pf-summary @2400] b2_session_init: p50=0.00 p95=0.00 max=3.89 | b2_prefix_adv: p50=0.00 p95=0.02 max=0.10 | b2_score_call: p50=11.49 p95=17.36 max=41.52 | total: p50=11.57 p95=17.46 max=45.41 | apply_total: p50=0.49 p95=11.30 max=18.90 | apply_topk_ent: p50=0.41 p95=0.54 max=7.17 | apply_cpu_sync: p50=0.05 p95=0.11 max=7.10 | skip_step: p50=0.49 p95=0.64 max=7.27 | intv_prepare: p50=0.07 p95=0.16 max=0.35 | intv_apply_logits: p50=0.47 p95=0.68 max=1.50
+INFO:     127.0.0.1:59090 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=22/137  ratio=16.1%  top1_flip=15/22 (68.2%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:59098 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=43/243  ratio=17.7%  top1_flip=24/43 (55.8%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:59114 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=14/142  ratio=9.9%  top1_flip=7/14 (50.0%)
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore_DP0 pid=2310305) [SIA-pf-summary @2500] b2_session_init: p50=0.00 p95=0.00 max=3.89 | b2_prefix_adv: p50=0.00 p95=0.02 max=0.10 | b2_score_call: p50=11.37 p95=17.26 max=41.52 | total: p50=11.46 p95=17.38 max=45.41 | apply_total: p50=0.50 p95=12.19 max=20.52 | apply_topk_ent: p50=0.41 p95=0.51 max=1.43 | apply_cpu_sync: p50=0.05 p95=0.11 max=0.22 | skip_step: p50=0.47 p95=0.58 max=7.27 | intv_prepare: p50=0.07 p95=0.15 max=0.35 | intv_apply_logits: p50=0.47 p95=0.67 max=1.50
+INFO:     127.0.0.1:53222 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=26/267  ratio=9.7%  top1_flip=19/26 (73.1%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:53230 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=3/51  ratio=5.9%  top1_flip=1/3 (33.3%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:53246 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=1/49  ratio=2.0%  top1_flip=1/1 (100.0%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:53252 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=4/91  ratio=4.4%  top1_flip=1/4 (25.0%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:53264 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=17/159  ratio=10.7%  top1_flip=10/17 (58.8%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:37216 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=8/99  ratio=8.1%  top1_flip=3/8 (37.5%)
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore_DP0 pid=2310305) [SIA-pf-summary @2600] b2_session_init: p50=0.00 p95=0.00 max=3.89 | b2_prefix_adv: p50=0.00 p95=0.02 max=0.10 | b2_score_call: p50=11.26 p95=16.85 max=41.52 | total: p50=11.32 p95=17.04 max=45.41 | apply_total: p50=0.49 p95=11.74 max=18.35 | apply_topk_ent: p50=0.41 p95=0.49 max=1.17 | apply_cpu_sync: p50=0.05 p95=0.09 max=6.97 | skip_step: p50=0.47 p95=0.55 max=7.57 | intv_prepare: p50=0.07 p95=0.15 max=0.35 | intv_apply_logits: p50=0.47 p95=0.67 max=1.50
+INFO:     127.0.0.1:37228 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=162/780  ratio=20.8%  top1_flip=101/162 (62.3%)
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore_DP0 pid=2310305) [SIA-pf-summary @2700] b2_session_init: p50=0.00 p95=0.00 max=3.89 | b2_prefix_adv: p50=0.00 p95=0.02 max=0.10 | b2_score_call: p50=11.35 p95=16.85 max=41.52 | total: p50=11.42 p95=17.01 max=45.41 | apply_total: p50=0.50 p95=12.65 max=27.04 | apply_topk_ent: p50=0.41 p95=0.49 max=1.17 | apply_cpu_sync: p50=0.05 p95=0.10 max=6.97 | skip_step: p50=0.47 p95=0.55 max=7.57 | intv_prepare: p50=0.07 p95=0.15 max=0.35 | intv_apply_logits: p50=0.47 p95=0.67 max=1.57
+INFO:     127.0.0.1:36480 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=2/43  ratio=4.7%  top1_flip=1/2 (50.0%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:36492 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=8/135  ratio=5.9%  top1_flip=3/8 (37.5%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:36494 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=10/76  ratio=13.2%  top1_flip=8/10 (80.0%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:58976 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=7/93  ratio=7.5%  top1_flip=6/7 (85.7%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:58980 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=25/242  ratio=10.3%  top1_flip=20/25 (80.0%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:58986 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=1/97  ratio=1.0%  top1_flip=1/1 (100.0%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:58994 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=7/189  ratio=3.7%  top1_flip=2/7 (28.6%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:42080 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=1/118  ratio=0.8%  top1_flip=0/1 (0.0%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:42088 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=4/142  ratio=2.8%  top1_flip=3/4 (75.0%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:42102 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=12/149  ratio=8.1%  top1_flip=6/12 (50.0%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:42116 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=1/97  ratio=1.0%  top1_flip=1/1 (100.0%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:42132 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=8/64  ratio=12.5%  top1_flip=5/8 (62.5%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:50418 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=1/57  ratio=1.8%  top1_flip=1/1 (100.0%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:50434 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=2/60  ratio=3.3%  top1_flip=1/2 (50.0%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:50436 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=10/69  ratio=14.5%  top1_flip=5/10 (50.0%)
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore_DP0 pid=2310305) [SIA-pf-summary @2800] b2_session_init: p50=0.00 p95=0.00 max=3.89 | b2_prefix_adv: p50=0.00 p95=0.02 max=0.10 | b2_score_call: p50=11.27 p95=16.76 max=41.52 | total: p50=11.34 p95=16.86 max=45.41 | apply_total: p50=0.49 p95=10.84 max=18.88 | apply_topk_ent: p50=0.41 p95=0.52 max=1.28 | apply_cpu_sync: p50=0.05 p95=0.11 max=7.01 | skip_step: p50=0.48 p95=0.60 max=7.58 | intv_prepare: p50=0.07 p95=0.15 max=0.35 | intv_apply_logits: p50=0.47 p95=0.66 max=1.57
+INFO:     127.0.0.1:50446 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=9/79  ratio=11.4%  top1_flip=4/9 (44.4%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:50450 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=0/79  ratio=0.0%  top1_flip=0/0 (0.0%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:50462 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=13/137  ratio=9.5%  top1_flip=9/13 (69.2%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:50466 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=13/142  ratio=9.2%  top1_flip=12/13 (92.3%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:39336 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=42/367  ratio=11.4%  top1_flip=24/42 (57.1%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:39344 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=14/323  ratio=4.3%  top1_flip=12/14 (85.7%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:60158 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=4/82  ratio=4.9%  top1_flip=3/4 (75.0%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:60170 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=2/109  ratio=1.8%  top1_flip=1/2 (50.0%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:60180 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=3/267  ratio=1.1%  top1_flip=2/3 (66.7%)
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore_DP0 pid=2310305) [SIA-pf-summary @2900] b2_session_init: p50=0.00 p95=0.50 max=3.89 | b2_prefix_adv: p50=0.00 p95=0.02 max=0.10 | b2_score_call: p50=11.17 p95=16.62 max=41.52 | total: p50=11.25 p95=16.74 max=45.41 | apply_total: p50=0.50 p95=11.10 max=26.70 | apply_topk_ent: p50=0.41 p95=0.56 max=1.13 | apply_cpu_sync: p50=0.05 p95=0.11 max=7.75 | skip_step: p50=0.49 p95=0.66 max=8.35 | intv_prepare: p50=0.07 p95=0.15 max=0.35 | intv_apply_logits: p50=0.47 p95=0.66 max=1.57
+INFO:     127.0.0.1:51454 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=24/144  ratio=16.7%  top1_flip=17/24 (70.8%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:51462 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=17/112  ratio=15.2%  top1_flip=9/17 (52.9%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:51478 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=23/265  ratio=8.7%  top1_flip=12/23 (52.2%)
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore_DP0 pid=2310305) [SIA-pf-summary @3000] b2_session_init: p50=0.00 p95=0.02 max=3.89 | b2_prefix_adv: p50=0.00 p95=0.02 max=0.10 | b2_score_call: p50=11.17 p95=17.01 max=41.52 | total: p50=11.26 p95=17.07 max=45.41 | apply_total: p50=0.50 p95=11.95 max=26.70 | apply_topk_ent: p50=0.43 p95=0.67 max=1.13 | apply_cpu_sync: p50=0.05 p95=0.11 max=7.75 | skip_step: p50=0.50 p95=0.76 max=8.35 | intv_prepare: p50=0.07 p95=0.15 max=0.35 | intv_apply_logits: p50=0.47 p95=0.66 max=1.57
+INFO:     127.0.0.1:51486 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=65/343  ratio=19.0%  top1_flip=40/65 (61.5%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:44878 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=48/182  ratio=26.4%  top1_flip=26/48 (54.2%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:42250 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=8/61  ratio=13.1%  top1_flip=5/8 (62.5%)
+[SIA] RM status query failed: All connection attempts failed
+(EngineCore_DP0 pid=2310305) [SIA-pf-summary @3100] b2_session_init: p50=0.00 p95=0.58 max=2.28 | b2_prefix_adv: p50=0.00 p95=0.02 max=0.08 | b2_score_call: p50=10.83 p95=15.11 max=25.70 | total: p50=10.88 p95=15.47 max=25.71 | apply_total: p50=0.50 p95=12.15 max=26.70 | apply_topk_ent: p50=0.42 p95=0.66 max=1.54 | apply_cpu_sync: p50=0.05 p95=0.11 max=7.75 | skip_step: p50=0.50 p95=0.75 max=8.35 | intv_prepare: p50=0.07 p95=0.14 max=0.32 | intv_apply_logits: p50=0.46 p95=0.64 max=1.57
+INFO:     127.0.0.1:42254 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=22/121  ratio=18.2%  top1_flip=15/22 (68.2%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:42262 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=5/69  ratio=7.2%  top1_flip=4/5 (80.0%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:42272 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=13/227  ratio=5.7%  top1_flip=8/13 (61.5%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:42276 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=10/93  ratio=10.8%  top1_flip=6/10 (60.0%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:51546 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=5/63  ratio=7.9%  top1_flip=2/5 (40.0%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:51556 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=10/91  ratio=11.0%  top1_flip=3/10 (30.0%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:51560 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=1/61  ratio=1.6%  top1_flip=1/1 (100.0%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:51564 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=7/75  ratio=9.3%  top1_flip=4/7 (57.1%)
+[SIA] RM status query failed: All connection attempts failed
+INFO:     127.0.0.1:51570 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore_DP0 pid=2310305) [SIA] req=0 DONE  intervened=5/66  ratio=7.6%  top1_flip=3/5 (60.0%)
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [2310226]
