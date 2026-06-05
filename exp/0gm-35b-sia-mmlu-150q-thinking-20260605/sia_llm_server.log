@@ -1,0 +1,673 @@
+The tokenizer you are loading from '/workspace/SIA/models/0GM-1.0-35B-A3B-0427' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.
+Loading tokenizer: /workspace/SIA/models/0GM-1.0-35B-A3B-0427 ...
+Tokenizer loaded.
+============================================================
+Model ID : 0GM-1.0-35B-A3B-0427
+LLM      : /workspace/SIA/models/0GM-1.0-35B-A3B-0427
+RM URL   : http://localhost:8001
+RM mode  : vllm  model=/workspace/SIA/models/VM-Qwen3-4B-merged-for-vllm
+topk=5  weight=1.0  entropy_threshold=1.0  use_token_ids=False
+Server   : http://0.0.0.0:8000
+============================================================
+Loading vLLM AsyncLLMEngine...
+INFO 06-05 03:40:28 [model.py:549] Resolved architecture: Qwen3_5MoeForConditionalGeneration
+INFO 06-05 03:40:28 [model.py:1678] Using max model len 4096
+INFO 06-05 03:40:29 [scheduler.py:238] Chunked prefill is enabled with max_num_batched_tokens=2048.
+INFO 06-05 03:40:29 [config.py:281] Setting attention block size to 1056 tokens to ensure that attention page size is >= mamba page size.
+INFO 06-05 03:40:29 [config.py:312] Padding mamba page size by 0.76% to ensure that mamba page size and attention page size are exactly equal.
+INFO 06-05 03:40:29 [vllm.py:790] Asynchronous scheduling is enabled.
+The tokenizer you are loading from '/workspace/SIA/models/0GM-1.0-35B-A3B-0427' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.
+The tokenizer you are loading from '/workspace/SIA/models/0GM-1.0-35B-A3B-0427' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.
+The tokenizer you are loading from '/workspace/SIA/models/0GM-1.0-35B-A3B-0427' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.
+WARNING 06-05 03:40:36 [system_utils.py:152] We must use the `spawn` multiprocessing start method. Overriding VLLM_WORKER_MULTIPROC_METHOD to 'spawn'. See https://docs.vllm.ai/en/latest/usage/troubleshooting.html#python-multiprocessing for more information. Reasons: CUDA is initialized
+(EngineCore pid=2355984) INFO 06-05 03:40:44 [core.py:105] Initializing a V1 LLM engine (v0.19.0) with config: model='/workspace/SIA/models/0GM-1.0-35B-A3B-0427', speculative_config=None, tokenizer='/workspace/SIA/models/0GM-1.0-35B-A3B-0427', skip_tokenizer_init=False, tokenizer_mode=auto, revision=None, tokenizer_revision=None, trust_remote_code=False, dtype=torch.bfloat16, max_seq_len=4096, download_dir=None, load_format=auto, tensor_parallel_size=1, pipeline_parallel_size=1, data_parallel_size=1, decode_context_parallel_size=1, dcp_comm_backend=ag_rs, disable_custom_all_reduce=False, quantization=None, enforce_eager=False, enable_return_routed_experts=False, kv_cache_dtype=auto, device_config=cuda, structured_outputs_config=StructuredOutputsConfig(backend='auto', disable_any_whitespace=False, disable_additional_properties=False, reasoning_parser='', reasoning_parser_plugin='', enable_in_reasoning=False), observability_config=ObservabilityConfig(show_hidden_metrics_for_version=None, otlp_traces_endpoint=None, collect_detailed_traces=None, kv_cache_metrics=False, kv_cache_metrics_sample=0.01, cudagraph_metrics=False, enable_layerwise_nvtx_tracing=False, enable_mfu_metrics=False, enable_mm_processor_stats=False, enable_logging_iteration_details=False), seed=0, served_model_name=/workspace/SIA/models/0GM-1.0-35B-A3B-0427, enable_prefix_caching=False, enable_chunked_prefill=True, pooler_config=None, compilation_config={'mode': <CompilationMode.VLLM_COMPILE: 3>, 'debug_dump_path': None, 'cache_dir': '', 'compile_cache_save_format': 'binary', 'backend': 'inductor', 'custom_ops': ['none'], 'splitting_ops': ['vllm::unified_attention', 'vllm::unified_attention_with_output', 'vllm::unified_mla_attention', 'vllm::unified_mla_attention_with_output', 'vllm::mamba_mixer2', 'vllm::mamba_mixer', 'vllm::short_conv', 'vllm::linear_attention', 'vllm::plamo2_mamba_mixer', 'vllm::gdn_attention_core', 'vllm::olmo_hybrid_gdn_full_forward', 'vllm::kda_attention', 'vllm::sparse_attn_indexer', 'vllm::rocm_aiter_sparse_attn_indexer', 'vllm::unified_kv_cache_update', 'vllm::unified_mla_kv_cache_update'], 'compile_mm_encoder': False, 'cudagraph_mm_encoder': False, 'encoder_cudagraph_token_budgets': [], 'encoder_cudagraph_max_images_per_batch': 0, 'compile_sizes': [], 'compile_ranges_endpoints': [2048], 'inductor_compile_config': {'enable_auto_functionalized_v2': False, 'size_asserts': False, 'alignment_asserts': False, 'scalar_asserts': False, 'combo_kernels': True, 'benchmark_combo_kernel': True}, 'inductor_passes': {}, 'cudagraph_mode': <CUDAGraphMode.FULL_AND_PIECEWISE: (2, 1)>, 'cudagraph_num_of_warmups': 1, 'cudagraph_capture_sizes': [1, 2, 4, 8, 16, 24, 32, 40, 48, 56, 64, 72, 80, 88, 96, 104, 112, 120, 128, 136, 144, 152, 160, 168, 176, 184, 192, 200, 208, 216, 224, 232, 240, 248, 256], 'cudagraph_copy_inputs': False, 'cudagraph_specialize_lora': True, 'use_inductor_graph_partition': False, 'pass_config': {'fuse_norm_quant': False, 'fuse_act_quant': False, 'fuse_attn_quant': False, 'enable_sp': False, 'fuse_gemm_comms': False, 'fuse_allreduce_rms': False}, 'max_cudagraph_capture_size': 256, 'dynamic_shapes_config': {'type': <DynamicShapesType.BACKED: 'backed'>, 'evaluate_guards': False, 'assume_32_bit_indexing': False}, 'local_cache_dir': None, 'fast_moe_cold_start': True, 'static_all_moe_layers': []}
+(EngineCore pid=2355984) The tokenizer you are loading from '/workspace/SIA/models/0GM-1.0-35B-A3B-0427' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.
+(EngineCore pid=2355984) INFO 06-05 03:40:45 [parallel_state.py:1400] world_size=1 rank=0 local_rank=0 distributed_init_method=tcp://172.17.0.2:58597 backend=nccl
+(EngineCore pid=2355984) INFO 06-05 03:40:45 [parallel_state.py:1716] rank 0 in world size 1 is assigned as DP rank 0, PP rank 0, PCP rank 0, TP rank 0, EP rank 0, EPLB rank N/A
+(EngineCore pid=2355984) [SIA] Loading LLM tokenizer: /workspace/SIA/models/0GM-1.0-35B-A3B-0427
+(EngineCore pid=2355984) The tokenizer you are loading from '/workspace/SIA/models/0GM-1.0-35B-A3B-0427' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.
+(EngineCore pid=2355984) [SIA] RM URL: http://localhost:8001
+(EngineCore pid=2355984) [SIA] Loading RM tokenizer: /workspace/SIA/models/VM-Qwen3-4B-merged-for-vllm
+(EngineCore pid=2355984) The tokenizer you are loading from '/workspace/SIA/models/VM-Qwen3-4B-merged-for-vllm' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.
+(EngineCore pid=2355984) [SIA] Tokenizer compat: same_vocab=False (LLM vocab=248044, RM vocab=151643) → text round-trip (cross-tokenizer)
+(EngineCore pid=2355984) The tokenizer you are loading from '/workspace/SIA/models/0GM-1.0-35B-A3B-0427' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.
+(EngineCore pid=2355984) The tokenizer you are loading from '/workspace/SIA/models/0GM-1.0-35B-A3B-0427' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.
+(EngineCore pid=2355984) INFO 06-05 03:40:53 [gpu_model_runner.py:4735] Starting to load model /workspace/SIA/models/0GM-1.0-35B-A3B-0427...
+(EngineCore pid=2355984) INFO 06-05 03:40:53 [cuda.py:390] Using backend AttentionBackendEnum.FLASH_ATTN for vit attention
+(EngineCore pid=2355984) INFO 06-05 03:40:53 [mm_encoder_attention.py:230] Using AttentionBackendEnum.FLASH_ATTN for MMEncoderAttention.
+(EngineCore pid=2355984) INFO 06-05 03:40:53 [gdn_linear_attn.py:139] Using FlashInfer GDN prefill kernel
+(EngineCore pid=2355984) INFO 06-05 03:40:53 [gdn_linear_attn.py:140] FlashInfer GDN prefill kernel is JIT-compiled; first run may take a while to compile. Set `--gdn-prefill-backend triton` to avoid JIT compile time.
+(EngineCore pid=2355984) INFO 06-05 03:40:54 [unquantized.py:186] Using TRITON backend for Unquantized MoE
+(EngineCore pid=2355984) INFO 06-05 03:40:54 [cuda.py:334] Using FLASH_ATTN attention backend out of potential backends: ['FLASH_ATTN', 'FLASHINFER', 'TRITON_ATTN', 'FLEX_ATTENTION'].
+(EngineCore pid=2355984) INFO 06-05 03:40:54 [flash_attn.py:596] Using FlashAttention version 3
+(EngineCore pid=2355984) <frozen importlib._bootstrap_external>:1297: FutureWarning: The cuda.cudart module is deprecated and will be removed in a future release, please switch to use the cuda.bindings.runtime module instead.
+(EngineCore pid=2355984) <frozen importlib._bootstrap_external>:1297: FutureWarning: The cuda.nvrtc module is deprecated and will be removed in a future release, please switch to use the cuda.bindings.nvrtc module instead.
+(EngineCore pid=2355984) Loading safetensors checkpoint shards:   0% Completed | 0/26 [00:00<?, ?it/s]
+(EngineCore pid=2355984) Loading safetensors checkpoint shards:   4% Completed | 1/26 [00:29<12:28, 29.93s/it]
+(EngineCore pid=2355984) Loading safetensors checkpoint shards:   8% Completed | 2/26 [00:33<05:41, 14.22s/it]
+(EngineCore pid=2355984) Loading safetensors checkpoint shards:  12% Completed | 3/26 [00:59<07:33, 19.70s/it]
+(EngineCore pid=2355984) Loading safetensors checkpoint shards:  15% Completed | 4/26 [01:25<08:05, 22.08s/it]
+(EngineCore pid=2355984) Loading safetensors checkpoint shards:  19% Completed | 5/26 [01:51<08:13, 23.48s/it]
+(EngineCore pid=2355984) Loading safetensors checkpoint shards:  23% Completed | 6/26 [02:19<08:25, 25.27s/it]
+(EngineCore pid=2355984) Loading safetensors checkpoint shards:  27% Completed | 7/26 [02:30<06:30, 20.57s/it]
+(EngineCore pid=2355984) Loading safetensors checkpoint shards:  31% Completed | 8/26 [03:07<07:40, 25.59s/it]
+(EngineCore pid=2355984) Loading safetensors checkpoint shards:  35% Completed | 9/26 [03:09<05:13, 18.44s/it]
+(EngineCore pid=2355984) Loading safetensors checkpoint shards:  38% Completed | 10/26 [03:46<06:27, 24.22s/it]
+(EngineCore pid=2355984) Loading safetensors checkpoint shards:  42% Completed | 11/26 [03:49<04:25, 17.69s/it]
+(EngineCore pid=2355984) Loading safetensors checkpoint shards:  46% Completed | 12/26 [04:16<04:47, 20.51s/it]
+(EngineCore pid=2355984) Loading safetensors checkpoint shards:  50% Completed | 13/26 [04:28<03:51, 17.82s/it]
+(EngineCore pid=2355984) Loading safetensors checkpoint shards:  54% Completed | 14/26 [04:53<03:58, 19.88s/it]
+(EngineCore pid=2355984) Loading safetensors checkpoint shards:  58% Completed | 15/26 [05:05<03:14, 17.66s/it]
+(EngineCore pid=2355984) Loading safetensors checkpoint shards:  62% Completed | 16/26 [05:33<03:28, 20.81s/it]
+(EngineCore pid=2355984) Loading safetensors checkpoint shards:  65% Completed | 17/26 [05:43<02:37, 17.48s/it]
+(EngineCore pid=2355984) Loading safetensors checkpoint shards:  69% Completed | 18/26 [06:17<03:00, 22.55s/it]
+(EngineCore pid=2355984) Loading safetensors checkpoint shards:  73% Completed | 19/26 [06:20<01:56, 16.60s/it]
+(EngineCore pid=2355984) Loading safetensors checkpoint shards:  77% Completed | 20/26 [06:46<01:56, 19.44s/it]
+(EngineCore pid=2355984) Loading safetensors checkpoint shards:  81% Completed | 21/26 [06:57<01:24, 16.97s/it]
+(EngineCore pid=2355984) Loading safetensors checkpoint shards:  85% Completed | 22/26 [07:22<01:17, 19.32s/it]
+(EngineCore pid=2355984) Loading safetensors checkpoint shards:  88% Completed | 23/26 [07:48<01:03, 21.30s/it]
+(EngineCore pid=2355984) Loading safetensors checkpoint shards:  92% Completed | 24/26 [08:13<00:45, 22.53s/it]
+(EngineCore pid=2355984) Loading safetensors checkpoint shards:  96% Completed | 25/26 [08:37<00:22, 22.91s/it]
+(EngineCore pid=2355984) Loading safetensors checkpoint shards: 100% Completed | 26/26 [08:41<00:00, 17.21s/it]
+(EngineCore pid=2355984) Loading safetensors checkpoint shards: 100% Completed | 26/26 [08:41<00:00, 20.06s/it]
+(EngineCore pid=2355984) 
+(EngineCore pid=2355984) INFO 06-05 03:49:36 [default_loader.py:384] Loading weights took 521.65 seconds
+(EngineCore pid=2355984) INFO 06-05 03:49:36 [gpu_model_runner.py:4820] Model loading took 65.53 GiB memory and 522.462042 seconds
+(EngineCore pid=2355984) INFO 06-05 03:49:36 [gpu_model_runner.py:5753] Encoder cache will be initialized with a budget of 16384 tokens, and profiled with 1 image items of the maximum feature size.
+(EngineCore pid=2355984) INFO 06-05 03:49:42 [backends.py:1051] Using cache directory: /root/.cache/vllm/torch_compile_cache/4e3d590cc6/rank_0_0/backbone for vLLM's torch.compile
+(EngineCore pid=2355984) INFO 06-05 03:49:42 [backends.py:1111] Dynamo bytecode transform time: 2.50 s
+(EngineCore pid=2355984) INFO 06-05 03:49:44 [backends.py:285] Directly load the compiled graph(s) for compile range (1, 2048) from the cache, took 2.060 s
+(EngineCore pid=2355984) INFO 06-05 03:49:44 [decorators.py:303] Directly load AOT compilation from path /root/.cache/vllm/torch_compile_cache/torch_aot_compile/b55ebfcc82f770aa0bc2f1727d4f3ab4015e454fb7133a28c6150c08986a8833/rank_0_0/model
+(EngineCore pid=2355984) INFO 06-05 03:49:44 [monitor.py:48] torch.compile took 4.90 s in total
+(EngineCore pid=2355984) WARNING 06-05 03:49:45 [fused_moe.py:1090] Using default MoE config. Performance might be sub-optimal! Config file not found at /workspace/SIA/venv4/lib/python3.12/site-packages/vllm/model_executor/layers/fused_moe/configs/E=256,N=512,device_name=NVIDIA_H200.json
+(EngineCore pid=2355984) INFO 06-05 03:49:45 [monitor.py:76] Initial profiling/warmup run took 0.95 s
+(EngineCore pid=2355984) INFO 06-05 03:49:46 [kv_cache_utils.py:829] Overriding num_gpu_blocks=0 with num_gpu_blocks_override=256
+(EngineCore pid=2355984) INFO 06-05 03:49:46 [gpu_model_runner.py:5876] Profiling CUDA graph memory: PIECEWISE=35 (largest=256), FULL=19 (largest=128)
+(EngineCore pid=2355984) INFO 06-05 03:49:47 [gpu_model_runner.py:5955] Estimated CUDA graph memory: 0.82 GiB total
+(EngineCore pid=2355984) INFO 06-05 03:49:48 [gpu_worker.py:436] Available KV cache memory: 32.61 GiB
+(EngineCore pid=2355984) INFO 06-05 03:49:48 [gpu_worker.py:470] In v0.19, CUDA graph memory profiling will be enabled by default (VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS=1), which more accurately accounts for CUDA graph memory during KV cache allocation. To try it now, set VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS=1 and increase --gpu-memory-utilization from 0.7200 to 0.7259 to maintain the same effective KV cache size.
+(EngineCore pid=2355984) INFO 06-05 03:49:48 [kv_cache_utils.py:1319] GPU KV cache size: 426,624 tokens
+(EngineCore pid=2355984) INFO 06-05 03:49:48 [kv_cache_utils.py:1324] Maximum concurrency for 4,096 tokens per request: 231.14x
+(EngineCore pid=2355984) 2026-06-05 03:49:48,033 - INFO - autotuner.py:262 - flashinfer.jit: [Autotuner]: Autotuning process starts ...
+(EngineCore pid=2355984) 2026-06-05 03:49:48,101 - INFO - autotuner.py:268 - flashinfer.jit: [Autotuner]: Autotuning process ends
+(EngineCore pid=2355984) Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):   0%|          | 0/35 [00:00<?, ?it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):   3%|▎         | 1/35 [00:00<00:05,  6.51it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):   6%|▌         | 2/35 [00:00<00:04,  6.60it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):   9%|▊         | 3/35 [00:00<00:05,  6.30it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  11%|█▏        | 4/35 [00:00<00:05,  6.19it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  14%|█▍        | 5/35 [00:00<00:04,  6.06it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  17%|█▋        | 6/35 [00:01<00:06,  4.28it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  20%|██        | 7/35 [00:01<00:06,  4.65it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  23%|██▎       | 8/35 [00:01<00:05,  4.95it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  26%|██▌       | 9/35 [00:01<00:06,  4.04it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  29%|██▊       | 10/35 [00:02<00:05,  4.49it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  31%|███▏      | 11/35 [00:02<00:06,  3.79it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  34%|███▍      | 12/35 [00:02<00:05,  4.22it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  37%|███▋      | 13/35 [00:02<00:04,  4.57it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  40%|████      | 14/35 [00:03<00:05,  3.80it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  43%|████▎     | 15/35 [00:03<00:04,  4.17it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  46%|████▌     | 16/35 [00:03<00:04,  4.54it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  49%|████▊     | 17/35 [00:03<00:04,  3.93it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  51%|█████▏    | 18/35 [00:03<00:03,  4.40it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  54%|█████▍    | 19/35 [00:04<00:03,  4.70it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  57%|█████▋    | 20/35 [00:04<00:03,  3.89it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  60%|██████    | 21/35 [00:04<00:03,  4.17it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  63%|██████▎   | 22/35 [00:05<00:03,  3.64it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  66%|██████▌   | 23/35 [00:05<00:02,  4.03it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  69%|██████▊   | 24/35 [00:05<00:02,  4.39it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  71%|███████▏  | 25/35 [00:05<00:02,  3.72it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  74%|███████▍  | 26/35 [00:05<00:02,  4.14it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  77%|███████▋  | 27/35 [00:06<00:01,  4.44it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  80%|████████  | 28/35 [00:06<00:01,  3.84it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  83%|████████▎ | 29/35 [00:06<00:01,  4.15it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  86%|████████▌ | 30/35 [00:07<00:01,  3.58it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  89%|████████▊ | 31/35 [00:07<00:00,  4.01it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  91%|█████████▏| 32/35 [00:07<00:00,  4.42it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  94%|█████████▍| 33/35 [00:07<00:00,  3.87it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  97%|█████████▋| 34/35 [00:07<00:00,  4.31it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE): 100%|██████████| 35/35 [00:08<00:00,  3.73it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE): 100%|██████████| 35/35 [00:08<00:00,  4.23it/s]
+(EngineCore pid=2355984) Capturing CUDA graphs (decode, FULL):   0%|          | 0/19 [00:00<?, ?it/s]Capturing CUDA graphs (decode, FULL):   5%|▌         | 1/19 [00:00<00:06,  2.70it/s]Capturing CUDA graphs (decode, FULL):  11%|█         | 2/19 [00:00<00:04,  3.91it/s]Capturing CUDA graphs (decode, FULL):  16%|█▌        | 3/19 [00:00<00:03,  4.67it/s]Capturing CUDA graphs (decode, FULL):  21%|██        | 4/19 [00:00<00:02,  5.12it/s]Capturing CUDA graphs (decode, FULL):  26%|██▋       | 5/19 [00:01<00:02,  5.31it/s]Capturing CUDA graphs (decode, FULL):  32%|███▏      | 6/19 [00:01<00:02,  5.55it/s]Capturing CUDA graphs (decode, FULL):  37%|███▋      | 7/19 [00:01<00:02,  5.71it/s]Capturing CUDA graphs (decode, FULL):  42%|████▏     | 8/19 [00:01<00:02,  4.25it/s]Capturing CUDA graphs (decode, FULL):  47%|████▋     | 9/19 [00:01<00:02,  4.68it/s]Capturing CUDA graphs (decode, FULL):  53%|█████▎    | 10/19 [00:02<00:01,  5.06it/s]Capturing CUDA graphs (decode, FULL):  58%|█████▊    | 11/19 [00:02<00:01,  5.35it/s]Capturing CUDA graphs (decode, FULL):  63%|██████▎   | 12/19 [00:02<00:01,  5.57it/s]Capturing CUDA graphs (decode, FULL):  68%|██████▊   | 13/19 [00:02<00:01,  5.75it/s]Capturing CUDA graphs (decode, FULL):  74%|███████▎  | 14/19 [00:02<00:00,  5.86it/s]Capturing CUDA graphs (decode, FULL):  79%|███████▉  | 15/19 [00:02<00:00,  5.99it/s]Capturing CUDA graphs (decode, FULL):  84%|████████▍ | 16/19 [00:03<00:00,  4.52it/s]Capturing CUDA graphs (decode, FULL):  89%|████████▉ | 17/19 [00:03<00:00,  4.91it/s]Capturing CUDA graphs (decode, FULL):  95%|█████████▍| 18/19 [00:03<00:00,  5.22it/s]Capturing CUDA graphs (decode, FULL): 100%|██████████| 19/19 [00:03<00:00,  5.31it/s]Capturing CUDA graphs (decode, FULL): 100%|██████████| 19/19 [00:03<00:00,  5.09it/s]
+(EngineCore pid=2355984) INFO 06-05 03:50:00 [gpu_model_runner.py:6046] Graph capturing finished in 13 secs, took 0.95 GiB
+(EngineCore pid=2355984) INFO 06-05 03:50:00 [gpu_worker.py:597] CUDA graph pool memory: 0.95 GiB (actual), 0.82 GiB (estimated), difference: 0.13 GiB (13.6%).
+(EngineCore pid=2355984) INFO 06-05 03:50:00 [core.py:283] init engine (profile, create kv cache, warmup model) took 24.06 seconds
+(EngineCore pid=2355984) INFO 06-05 03:50:01 [vllm.py:790] Asynchronous scheduling is enabled.
+LLM loaded.
+
+Starting HTTP server on http://0.0.0.0:8000 ...
+INFO:     Started server process [2355898]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+[SIA] RM status: None  rm=None  rm_lora=none
+WARNING 06-05 03:50:03 [input_processor.py:235] Passing raw prompts to InputProcessor is deprecated and will be removed in v0.18. You should instead pass the outputs of Renderer.render_cmpl() or Renderer.render_chat().
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=1/30  ratio=3.3%  top1_flip=1/1 (100.0%)
+INFO:     127.0.0.1:53178 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:38188 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=7/182  ratio=3.8%  top1_flip=4/7 (57.1%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @100] format_chat: p50=0.09 p95=0.23 max=1.60 | tokenize_client: p50=0.00 p95=0.00 max=0.01 | http_post: p50=81.06 p95=100.74 max=112.73 | parse_response: p50=0.18 p95=0.31 max=0.41 | total: p50=81.39 p95=101.04 max=113.08 | apply_total: p50=3.97 p95=89.57 max=125.28 | apply_topk_ent: p50=0.53 p95=1.12 max=125.15 | apply_cpu_sync: p50=3.38 p95=3.64 max=3.91 | skip_step: p50=3.92 p95=4.09 max=125.28 | intv_prepare: p50=0.12 p95=0.23 max=0.37 | intv_apply_logits: p50=1.14 p95=1.30 max=1.55
+INFO:     127.0.0.1:35918 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=168/1183  ratio=14.2%  top1_flip=108/168 (64.3%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @200] format_chat: p50=0.08 p95=0.19 max=1.60 | tokenize_client: p50=0.00 p95=0.00 max=0.01 | http_post: p50=82.37 p95=110.31 max=120.86 | parse_response: p50=0.18 p95=0.30 max=0.41 | total: p50=82.72 p95=110.62 max=121.02 | apply_total: p50=3.95 p95=94.77 max=125.99 | apply_topk_ent: p50=0.56 p95=1.12 max=125.15 | apply_cpu_sync: p50=3.31 p95=3.64 max=3.91 | skip_step: p50=3.88 p95=4.08 max=125.28 | intv_prepare: p50=0.12 p95=0.23 max=0.37 | intv_apply_logits: p50=1.14 p95=1.26 max=1.55
+INFO:     127.0.0.1:54328 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=64/445  ratio=14.4%  top1_flip=41/64 (64.1%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:57500 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=28/403  ratio=6.9%  top1_flip=20/28 (71.4%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @300] format_chat: p50=0.08 p95=0.19 max=1.60 | tokenize_client: p50=0.00 p95=0.00 max=0.01 | http_post: p50=78.49 p95=108.72 max=120.86 | parse_response: p50=0.18 p95=0.30 max=0.41 | total: p50=78.83 p95=109.01 max=121.02 | apply_total: p50=4.00 p95=85.39 max=125.99 | apply_topk_ent: p50=0.49 p95=1.10 max=1.59 | apply_cpu_sync: p50=3.48 p95=3.64 max=3.71 | skip_step: p50=3.99 p95=4.08 max=4.20 | intv_prepare: p50=0.11 p95=0.23 max=0.37 | intv_apply_logits: p50=1.12 p95=1.30 max=1.55
+INFO:     127.0.0.1:42358 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=59/410  ratio=14.4%  top1_flip=35/59 (59.3%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @400] format_chat: p50=0.08 p95=0.19 max=1.60 | tokenize_client: p50=0.00 p95=0.00 max=0.01 | http_post: p50=77.36 p95=106.93 max=120.86 | parse_response: p50=0.18 p95=0.30 max=0.41 | total: p50=77.62 p95=107.33 max=121.02 | apply_total: p50=3.98 p95=82.59 max=99.90 | apply_topk_ent: p50=0.53 p95=1.12 max=1.85 | apply_cpu_sync: p50=3.36 p95=3.63 max=3.67 | skip_step: p50=3.94 p95=4.08 max=4.20 | intv_prepare: p50=0.12 p95=0.22 max=0.37 | intv_apply_logits: p50=1.13 p95=1.28 max=1.55
+(EngineCore pid=2355984) [SIA-pf-summary @500] format_chat: p50=0.09 p95=0.20 max=1.60 | tokenize_client: p50=0.00 p95=0.00 max=0.01 | http_post: p50=80.05 p95=106.62 max=120.86 | parse_response: p50=0.18 p95=0.31 max=0.41 | total: p50=80.30 p95=107.13 max=121.02 | apply_total: p50=3.96 p95=93.72 max=119.04 | apply_topk_ent: p50=0.57 p95=1.14 max=1.85 | apply_cpu_sync: p50=3.27 p95=3.63 max=3.67 | skip_step: p50=3.79 p95=4.07 max=4.14 | intv_prepare: p50=0.12 p95=0.22 max=0.37 | intv_apply_logits: p50=1.14 p95=1.29 max=1.61
+INFO:     127.0.0.1:53118 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=202/1015  ratio=19.9%  top1_flip=122/202 (60.4%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:39080 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=36/368  ratio=9.8%  top1_flip=22/36 (61.1%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @600] format_chat: p50=0.09 p95=0.21 max=1.60 | tokenize_client: p50=0.00 p95=0.00 max=0.01 | http_post: p50=80.12 p95=108.42 max=120.86 | parse_response: p50=0.18 p95=0.31 max=0.41 | total: p50=80.52 p95=108.90 max=121.02 | apply_total: p50=4.00 p95=101.61 max=121.94 | apply_topk_ent: p50=0.53 p95=1.12 max=1.85 | apply_cpu_sync: p50=3.37 p95=3.63 max=3.67 | skip_step: p50=3.89 p95=4.08 max=4.14 | intv_prepare: p50=0.12 p95=0.22 max=0.37 | intv_apply_logits: p50=1.13 p95=1.27 max=1.61
+INFO:     127.0.0.1:58410 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=93/606  ratio=15.3%  top1_flip=57/93 (61.3%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:45756 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=30/370  ratio=8.1%  top1_flip=15/30 (50.0%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @700] format_chat: p50=0.09 p95=0.21 max=1.60 | tokenize_client: p50=0.00 p95=0.00 max=0.01 | http_post: p50=80.22 p95=107.80 max=120.86 | parse_response: p50=0.18 p95=0.30 max=0.41 | total: p50=80.53 p95=108.13 max=121.02 | apply_total: p50=4.01 p95=88.19 max=106.34 | apply_topk_ent: p50=0.48 p95=1.10 max=1.39 | apply_cpu_sync: p50=3.54 p95=3.64 max=3.69 | skip_step: p50=4.00 p95=4.09 max=4.17 | intv_prepare: p50=0.12 p95=0.22 max=0.37 | intv_apply_logits: p50=1.13 p95=1.26 max=1.61
+INFO:     127.0.0.1:48024 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=83/585  ratio=14.2%  top1_flip=53/83 (63.9%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @800] format_chat: p50=0.09 p95=0.21 max=1.60 | tokenize_client: p50=0.00 p95=0.00 max=0.01 | http_post: p50=80.06 p95=106.93 max=120.86 | parse_response: p50=0.18 p95=0.30 max=0.41 | total: p50=80.38 p95=107.33 max=121.02 | apply_total: p50=4.01 p95=88.20 max=115.16 | apply_topk_ent: p50=0.48 p95=1.11 max=1.60 | apply_cpu_sync: p50=3.49 p95=3.64 max=3.69 | skip_step: p50=4.00 p95=4.09 max=4.17 | intv_prepare: p50=0.12 p95=0.22 max=0.37 | intv_apply_logits: p50=1.13 p95=1.27 max=1.61
+INFO:     127.0.0.1:34780 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=120/1194  ratio=10.1%  top1_flip=80/120 (66.7%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @900] format_chat: p50=0.09 p95=0.21 max=1.60 | tokenize_client: p50=0.00 p95=0.00 max=0.02 | http_post: p50=81.13 p95=107.98 max=120.86 | parse_response: p50=0.18 p95=0.30 max=0.41 | total: p50=81.32 p95=108.42 max=121.02 | apply_total: p50=3.98 p95=90.31 max=122.89 | apply_topk_ent: p50=0.51 p95=1.11 max=1.60 | apply_cpu_sync: p50=3.42 p95=3.64 max=3.67 | skip_step: p50=3.91 p95=4.08 max=4.13 | intv_prepare: p50=0.12 p95=0.23 max=0.45 | intv_apply_logits: p50=1.13 p95=1.27 max=1.61
+INFO:     127.0.0.1:52152 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=72/928  ratio=7.8%  top1_flip=48/72 (66.7%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @1000] format_chat: p50=0.09 p95=0.21 max=1.60 | tokenize_client: p50=0.00 p95=0.00 max=0.02 | http_post: p50=81.07 p95=107.39 max=120.86 | parse_response: p50=0.18 p95=0.30 max=0.41 | total: p50=81.35 p95=107.72 max=121.02 | apply_total: p50=3.96 p95=84.99 max=114.62 | apply_topk_ent: p50=0.53 p95=1.12 max=2.03 | apply_cpu_sync: p50=3.38 p95=3.63 max=16.90 | skip_step: p50=3.92 p95=4.08 max=17.81 | intv_prepare: p50=0.12 p95=0.23 max=0.45 | intv_apply_logits: p50=1.13 p95=1.27 max=1.62
+INFO:     127.0.0.1:56008 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=76/810  ratio=9.4%  top1_flip=46/76 (60.5%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:48482 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=46/673  ratio=6.8%  top1_flip=40/46 (87.0%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:55936 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=11/165  ratio=6.7%  top1_flip=10/11 (90.9%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @1100] format_chat: p50=0.08 p95=0.21 max=1.60 | tokenize_client: p50=0.00 p95=0.00 max=0.02 | http_post: p50=81.01 p95=106.62 max=120.86 | parse_response: p50=0.18 p95=0.30 max=0.41 | total: p50=81.27 p95=107.13 max=121.02 | apply_total: p50=3.99 p95=81.16 max=120.15 | apply_topk_ent: p50=0.49 p95=1.11 max=1.69 | apply_cpu_sync: p50=3.49 p95=3.64 max=16.90 | skip_step: p50=3.98 p95=4.09 max=17.81 | intv_prepare: p50=0.12 p95=0.23 max=0.45 | intv_apply_logits: p50=1.13 p95=1.27 max=1.72
+INFO:     127.0.0.1:56122 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=15/210  ratio=7.1%  top1_flip=9/15 (60.0%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:56136 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=81/571  ratio=14.2%  top1_flip=55/81 (67.9%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @1200] format_chat: p50=0.08 p95=0.21 max=1.60 | tokenize_client: p50=0.00 p95=0.00 max=0.02 | http_post: p50=79.52 p95=106.31 max=120.86 | parse_response: p50=0.18 p95=0.30 max=0.41 | total: p50=79.88 p95=106.61 max=121.02 | apply_total: p50=3.98 p95=76.61 max=106.42 | apply_topk_ent: p50=0.51 p95=1.12 max=1.69 | apply_cpu_sync: p50=3.43 p95=3.63 max=8.78 | skip_step: p50=3.95 p95=4.08 max=9.20 | intv_prepare: p50=0.12 p95=0.23 max=0.45 | intv_apply_logits: p50=1.13 p95=1.27 max=1.72
+INFO:     127.0.0.1:48798 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=44/303  ratio=14.5%  top1_flip=33/44 (75.0%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:57388 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=33/507  ratio=6.5%  top1_flip=15/33 (45.5%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @1300] format_chat: p50=0.08 p95=0.21 max=1.60 | tokenize_client: p50=0.00 p95=0.00 max=0.02 | http_post: p50=78.66 p95=105.41 max=120.86 | parse_response: p50=0.18 p95=0.30 max=0.41 | total: p50=78.83 p95=105.76 max=121.02 | apply_total: p50=4.00 p95=75.09 max=103.42 | apply_topk_ent: p50=0.48 p95=1.09 max=1.49 | apply_cpu_sync: p50=3.50 p95=3.63 max=3.67 | skip_step: p50=3.96 p95=4.08 max=9.20 | intv_prepare: p50=0.12 p95=0.23 max=0.45 | intv_apply_logits: p50=1.12 p95=1.27 max=1.72
+INFO:     127.0.0.1:57404 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=111/971  ratio=11.4%  top1_flip=73/111 (65.8%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @1400] format_chat: p50=0.08 p95=0.21 max=1.60 | tokenize_client: p50=0.00 p95=0.00 max=0.02 | http_post: p50=78.89 p95=106.44 max=120.86 | parse_response: p50=0.18 p95=0.30 max=0.41 | total: p50=79.20 p95=106.79 max=121.02 | apply_total: p50=4.00 p95=89.59 max=118.04 | apply_topk_ent: p50=0.50 p95=1.11 max=21.69 | apply_cpu_sync: p50=3.44 p95=3.64 max=9.46 | skip_step: p50=3.98 p95=4.08 max=9.86 | intv_prepare: p50=0.12 p95=0.23 max=0.45 | intv_apply_logits: p50=1.13 p95=1.27 max=1.72
+(EngineCore pid=2355984) [SIA-pf-summary @1500] format_chat: p50=0.08 p95=0.20 max=1.60 | tokenize_client: p50=0.00 p95=0.00 max=0.02 | http_post: p50=79.21 p95=106.39 max=120.86 | parse_response: p50=0.18 p95=0.30 max=0.41 | total: p50=79.55 p95=106.75 max=121.02 | apply_total: p50=3.97 p95=89.87 max=114.95 | apply_topk_ent: p50=0.54 p95=1.12 max=1.41 | apply_cpu_sync: p50=3.35 p95=3.63 max=3.68 | skip_step: p50=3.93 p95=4.08 max=9.86 | intv_prepare: p50=0.12 p95=0.23 max=0.45 | intv_apply_logits: p50=1.13 p95=1.27 max=1.72
+(EngineCore pid=2355984) [SIA-pf-summary @1600] format_chat: p50=0.08 p95=0.20 max=1.60 | tokenize_client: p50=0.00 p95=0.00 max=0.02 | http_post: p50=80.50 p95=109.94 max=134.45 | parse_response: p50=0.18 p95=0.30 max=0.41 | total: p50=80.82 p95=110.19 max=134.77 | apply_total: p50=3.95 p95=102.17 max=139.42 | apply_topk_ent: p50=0.56 p95=1.13 max=1.65 | apply_cpu_sync: p50=3.29 p95=3.63 max=3.68 | skip_step: p50=3.85 p95=4.07 max=4.15 | intv_prepare: p50=0.12 p95=0.23 max=0.50 | intv_apply_logits: p50=1.14 p95=1.27 max=1.72
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=262/2048  ratio=12.8%  top1_flip=164/262 (62.6%)
+INFO:     127.0.0.1:37248 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @1700] format_chat: p50=0.08 p95=0.20 max=1.60 | tokenize_client: p50=0.00 p95=0.00 max=0.02 | http_post: p50=81.06 p95=112.67 max=135.36 | parse_response: p50=0.18 p95=0.30 max=0.41 | total: p50=81.35 p95=113.01 max=135.69 | apply_total: p50=3.97 p95=111.68 max=140.97 | apply_topk_ent: p50=0.53 p95=1.12 max=1.65 | apply_cpu_sync: p50=3.37 p95=3.63 max=3.67 | skip_step: p50=3.94 p95=4.08 max=4.15 | intv_prepare: p50=0.12 p95=0.24 max=0.50 | intv_apply_logits: p50=1.14 p95=1.27 max=1.72
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=125/2048  ratio=6.1%  top1_flip=79/125 (63.2%)
+INFO:     127.0.0.1:36544 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:41750 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=28/416  ratio=6.7%  top1_flip=13/28 (46.4%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @1800] format_chat: p50=0.08 p95=0.20 max=1.60 | tokenize_client: p50=0.00 p95=0.00 max=0.04 | http_post: p50=81.62 p95=115.39 max=135.36 | parse_response: p50=0.18 p95=0.30 max=0.41 | total: p50=81.92 p95=115.85 max=135.69 | apply_total: p50=4.00 p95=80.15 max=136.93 | apply_topk_ent: p50=0.48 p95=1.11 max=1.53 | apply_cpu_sync: p50=3.54 p95=3.63 max=3.66 | skip_step: p50=4.00 p95=4.08 max=4.14 | intv_prepare: p50=0.13 p95=0.24 max=0.50 | intv_apply_logits: p50=1.14 p95=1.27 max=1.72
+INFO:     127.0.0.1:41764 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=43/504  ratio=8.5%  top1_flip=29/43 (67.4%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:33362 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=6/551  ratio=1.1%  top1_flip=4/6 (66.7%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @1900] format_chat: p50=0.08 p95=0.20 max=1.60 | tokenize_client: p50=0.00 p95=0.00 max=0.04 | http_post: p50=81.54 p95=114.69 max=135.36 | parse_response: p50=0.18 p95=0.30 max=0.41 | total: p50=81.83 p95=115.00 max=135.69 | apply_total: p50=4.01 p95=4.13 max=111.80 | apply_topk_ent: p50=0.47 p95=1.08 max=1.90 | apply_cpu_sync: p50=3.56 p95=3.63 max=3.69 | skip_step: p50=4.00 p95=4.08 max=4.13 | intv_prepare: p50=0.12 p95=0.24 max=0.50 | intv_apply_logits: p50=1.13 p95=1.27 max=1.72
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=131/2048  ratio=6.4%  top1_flip=84/131 (64.1%)
+INFO:     127.0.0.1:38884 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @2000] format_chat: p50=0.08 p95=0.20 max=1.60 | tokenize_client: p50=0.00 p95=0.00 max=0.04 | http_post: p50=82.18 p95=116.36 max=139.52 | parse_response: p50=0.18 p95=0.30 max=0.41 | total: p50=82.52 p95=116.66 max=139.75 | apply_total: p50=4.00 p95=91.34 max=145.22 | apply_topk_ent: p50=0.48 p95=1.08 max=18.36 | apply_cpu_sync: p50=3.55 p95=3.63 max=10.94 | skip_step: p50=3.99 p95=4.08 max=18.51 | intv_prepare: p50=0.12 p95=0.24 max=0.50 | intv_apply_logits: p50=1.13 p95=1.27 max=1.72
+INFO:     127.0.0.1:38470 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=43/446  ratio=9.6%  top1_flip=25/43 (58.1%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:38486 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=49/352  ratio=13.9%  top1_flip=30/49 (61.2%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @2100] format_chat: p50=0.08 p95=0.19 max=0.89 | tokenize_client: p50=0.00 p95=0.00 max=0.04 | http_post: p50=82.42 p95=122.09 max=139.52 | parse_response: p50=0.18 p95=0.30 max=0.40 | total: p50=82.72 p95=122.39 max=139.75 | apply_total: p50=4.00 p95=81.63 max=145.22 | apply_topk_ent: p50=0.48 p95=1.09 max=18.36 | apply_cpu_sync: p50=3.53 p95=3.63 max=10.94 | skip_step: p50=3.99 p95=4.08 max=18.51 | intv_prepare: p50=0.12 p95=0.24 max=0.50 | intv_apply_logits: p50=1.13 p95=1.27 max=1.72
+(EngineCore pid=2355984) [SIA-pf-summary @2200] format_chat: p50=0.08 p95=0.19 max=0.89 | tokenize_client: p50=0.00 p95=0.00 max=0.04 | http_post: p50=83.60 p95=121.78 max=139.52 | parse_response: p50=0.18 p95=0.30 max=0.40 | total: p50=83.83 p95=122.07 max=139.75 | apply_total: p50=3.97 p95=95.99 max=124.25 | apply_topk_ent: p50=0.56 p95=1.13 max=1.80 | apply_cpu_sync: p50=3.30 p95=3.63 max=3.67 | skip_step: p50=3.89 p95=4.07 max=4.12 | intv_prepare: p50=0.13 p95=0.25 max=0.50 | intv_apply_logits: p50=1.14 p95=1.28 max=1.72
+INFO:     127.0.0.1:47316 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=144/948  ratio=15.2%  top1_flip=97/144 (67.4%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:58688 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=72/1198  ratio=6.0%  top1_flip=50/72 (69.4%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @2300] format_chat: p50=0.08 p95=0.19 max=0.89 | tokenize_client: p50=0.00 p95=0.00 max=0.04 | http_post: p50=83.51 p95=121.34 max=139.52 | parse_response: p50=0.18 p95=0.30 max=0.40 | total: p50=83.65 p95=121.70 max=139.75 | apply_total: p50=4.01 p95=4.11 max=143.70 | apply_topk_ent: p50=0.46 p95=1.08 max=1.51 | apply_cpu_sync: p50=3.57 p95=3.64 max=3.67 | skip_step: p50=4.00 p95=4.08 max=4.24 | intv_prepare: p50=0.13 p95=0.24 max=0.50 | intv_apply_logits: p50=1.13 p95=1.28 max=1.72
+INFO:     127.0.0.1:52584 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=21/1356  ratio=1.5%  top1_flip=15/21 (71.4%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:47076 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=52/1428  ratio=3.6%  top1_flip=38/52 (73.1%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @2400] format_chat: p50=0.08 p95=0.19 max=0.89 | tokenize_client: p50=0.00 p95=0.00 max=0.04 | http_post: p50=83.10 p95=120.68 max=139.52 | parse_response: p50=0.18 p95=0.30 max=0.40 | total: p50=83.38 p95=120.99 max=139.75 | apply_total: p50=4.04 p95=4.13 max=126.99 | apply_topk_ent: p50=0.45 p95=0.69 max=1.34 | apply_cpu_sync: p50=3.60 p95=3.65 max=3.69 | skip_step: p50=4.03 p95=4.09 max=4.18 | intv_prepare: p50=0.12 p95=0.24 max=0.50 | intv_apply_logits: p50=1.12 p95=1.28 max=1.72
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=98/2048  ratio=4.8%  top1_flip=65/98 (66.3%)
+INFO:     127.0.0.1:56710 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:48966 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=20/554  ratio=3.6%  top1_flip=13/20 (65.0%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @2500] format_chat: p50=0.07 p95=0.19 max=0.89 | tokenize_client: p50=0.00 p95=0.00 max=0.04 | http_post: p50=84.19 p95=121.62 max=147.02 | parse_response: p50=0.18 p95=0.30 max=0.40 | total: p50=84.47 p95=121.87 max=147.13 | apply_total: p50=4.04 p95=4.11 max=151.83 | apply_topk_ent: p50=0.45 p95=0.87 max=1.26 | apply_cpu_sync: p50=3.59 p95=3.64 max=3.68 | skip_step: p50=4.03 p95=4.09 max=4.14 | intv_prepare: p50=0.12 p95=0.24 max=0.50 | intv_apply_logits: p50=1.12 p95=1.28 max=1.72
+INFO:     127.0.0.1:48968 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=33/1280  ratio=2.6%  top1_flip=20/33 (60.6%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @2600] format_chat: p50=0.07 p95=0.19 max=0.89 | tokenize_client: p50=0.00 p95=0.00 max=0.04 | http_post: p50=84.70 p95=121.19 max=147.02 | parse_response: p50=0.18 p95=0.30 max=0.56 | total: p50=85.06 p95=121.43 max=147.13 | apply_total: p50=4.00 p95=85.41 max=119.59 | apply_topk_ent: p50=0.48 p95=1.09 max=1.50 | apply_cpu_sync: p50=3.55 p95=3.64 max=3.67 | skip_step: p50=4.01 p95=4.09 max=4.19 | intv_prepare: p50=0.12 p95=0.24 max=0.50 | intv_apply_logits: p50=1.12 p95=1.28 max=1.72
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=166/2048  ratio=8.1%  top1_flip=104/166 (62.7%)
+INFO:     127.0.0.1:35294 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @2700] format_chat: p50=0.07 p95=0.19 max=0.89 | tokenize_client: p50=0.00 p95=0.00 max=0.04 | http_post: p50=85.85 p95=121.96 max=147.02 | parse_response: p50=0.18 p95=0.30 max=0.56 | total: p50=86.15 p95=122.19 max=147.13 | apply_total: p50=3.95 p95=110.32 max=150.79 | apply_topk_ent: p50=0.53 p95=1.12 max=1.93 | apply_cpu_sync: p50=3.36 p95=3.63 max=3.66 | skip_step: p50=3.94 p95=4.08 max=4.14 | intv_prepare: p50=0.12 p95=0.24 max=0.50 | intv_apply_logits: p50=1.13 p95=1.28 max=1.72
+INFO:     127.0.0.1:46678 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=81/531  ratio=15.3%  top1_flip=49/81 (60.5%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @2800] format_chat: p50=0.08 p95=0.19 max=0.89 | tokenize_client: p50=0.00 p95=0.00 max=0.04 | http_post: p50=86.50 p95=122.02 max=147.02 | parse_response: p50=0.18 p95=0.30 max=0.56 | total: p50=86.68 p95=122.32 max=147.13 | apply_total: p50=3.93 p95=113.18 max=150.79 | apply_topk_ent: p50=0.57 p95=1.12 max=1.93 | apply_cpu_sync: p50=3.26 p95=3.62 max=8.80 | skip_step: p50=3.88 p95=4.08 max=9.22 | intv_prepare: p50=0.13 p95=0.24 max=0.50 | intv_apply_logits: p50=1.13 p95=1.28 max=1.72
+INFO:     127.0.0.1:35194 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=66/751  ratio=8.8%  top1_flip=43/66 (65.2%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:42498 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=70/1272  ratio=5.5%  top1_flip=38/70 (54.3%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @2900] format_chat: p50=0.08 p95=0.19 max=0.89 | tokenize_client: p50=0.00 p95=0.00 max=0.04 | http_post: p50=85.84 p95=121.78 max=147.02 | parse_response: p50=0.18 p95=0.30 max=0.56 | total: p50=86.13 p95=122.08 max=147.13 | apply_total: p50=4.01 p95=76.16 max=119.38 | apply_topk_ent: p50=0.46 p95=1.07 max=1.48 | apply_cpu_sync: p50=3.57 p95=3.63 max=13.55 | skip_step: p50=4.01 p95=4.08 max=4.12 | intv_prepare: p50=0.12 p95=0.24 max=0.50 | intv_apply_logits: p50=1.12 p95=1.28 max=1.72
+INFO:     127.0.0.1:49868 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=91/1970  ratio=4.6%  top1_flip=61/91 (67.0%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @3000] format_chat: p50=0.08 p95=0.19 max=0.89 | tokenize_client: p50=0.00 p95=0.00 max=0.04 | http_post: p50=86.10 p95=121.80 max=147.02 | parse_response: p50=0.18 p95=0.30 max=0.56 | total: p50=86.35 p95=122.14 max=147.13 | apply_total: p50=4.00 p95=4.10 max=137.63 | apply_topk_ent: p50=0.46 p95=1.08 max=1.46 | apply_cpu_sync: p50=3.57 p95=3.63 max=3.66 | skip_step: p50=4.00 p95=4.08 max=4.14 | intv_prepare: p50=0.13 p95=0.24 max=0.63 | intv_apply_logits: p50=1.12 p95=1.28 max=1.73
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=74/2048  ratio=3.6%  top1_flip=48/74 (64.9%)
+INFO:     127.0.0.1:35404 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:38488 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=37/1191  ratio=3.1%  top1_flip=22/37 (59.5%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @3100] format_chat: p50=0.07 p95=0.19 max=0.37 | tokenize_client: p50=0.00 p95=0.00 max=0.01 | http_post: p50=89.65 p95=120.95 max=147.02 | parse_response: p50=0.18 p95=0.30 max=0.56 | total: p50=89.91 p95=121.31 max=147.13 | apply_total: p50=4.01 p95=4.10 max=122.52 | apply_topk_ent: p50=0.46 p95=1.07 max=7.44 | apply_cpu_sync: p50=3.58 p95=3.64 max=3.69 | skip_step: p50=4.01 p95=4.09 max=7.51 | intv_prepare: p50=0.13 p95=0.24 max=0.63 | intv_apply_logits: p50=1.11 p95=1.28 max=1.73
+INFO:     127.0.0.1:46066 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=25/875  ratio=2.9%  top1_flip=18/25 (72.0%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:37594 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=7/610  ratio=1.1%  top1_flip=3/7 (42.9%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:37596 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=42/1342  ratio=3.1%  top1_flip=35/42 (83.3%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:48854 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=22/308  ratio=7.1%  top1_flip=12/22 (54.5%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @3200] format_chat: p50=0.07 p95=0.19 max=0.44 | tokenize_client: p50=0.00 p95=0.00 max=0.01 | http_post: p50=88.26 p95=119.91 max=147.02 | parse_response: p50=0.18 p95=0.30 max=0.56 | total: p50=88.46 p95=120.16 max=147.13 | apply_total: p50=4.01 p95=4.13 max=115.99 | apply_topk_ent: p50=0.46 p95=1.08 max=1.43 | apply_cpu_sync: p50=3.57 p95=3.64 max=8.85 | skip_step: p50=4.01 p95=4.08 max=9.37 | intv_prepare: p50=0.13 p95=0.24 max=0.67 | intv_apply_logits: p50=1.10 p95=1.28 max=1.73
+(EngineCore pid=2355984) [SIA-pf-summary @3300] format_chat: p50=0.07 p95=0.19 max=0.44 | tokenize_client: p50=0.00 p95=0.00 max=0.01 | http_post: p50=89.00 p95=119.80 max=147.02 | parse_response: p50=0.18 p95=0.30 max=0.56 | total: p50=89.15 p95=120.10 max=147.13 | apply_total: p50=3.99 p95=90.20 max=127.86 | apply_topk_ent: p50=0.48 p95=1.08 max=1.43 | apply_cpu_sync: p50=3.53 p95=3.63 max=8.88 | skip_step: p50=3.97 p95=4.07 max=9.35 | intv_prepare: p50=0.13 p95=0.24 max=0.67 | intv_apply_logits: p50=1.11 p95=1.28 max=1.73
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=173/2048  ratio=8.4%  top1_flip=113/173 (65.3%)
+INFO:     127.0.0.1:54428 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @3400] format_chat: p50=0.07 p95=0.19 max=0.44 | tokenize_client: p50=0.00 p95=0.00 max=0.01 | http_post: p50=89.64 p95=121.64 max=147.02 | parse_response: p50=0.18 p95=0.30 max=0.56 | total: p50=89.91 p95=121.86 max=147.13 | apply_total: p50=4.00 p95=107.98 max=144.04 | apply_topk_ent: p50=0.47 p95=1.08 max=1.69 | apply_cpu_sync: p50=3.54 p95=3.63 max=3.67 | skip_step: p50=3.98 p95=4.08 max=4.13 | intv_prepare: p50=0.12 p95=0.24 max=0.67 | intv_apply_logits: p50=1.10 p95=1.27 max=1.73
+INFO:     127.0.0.1:33098 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=54/557  ratio=9.7%  top1_flip=31/54 (57.4%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:40246 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=13/232  ratio=5.6%  top1_flip=6/13 (46.2%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:40262 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=16/680  ratio=2.4%  top1_flip=14/16 (87.5%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:39500 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=46/1014  ratio=4.5%  top1_flip=28/46 (60.9%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @3500] format_chat: p50=0.07 p95=0.19 max=0.44 | tokenize_client: p50=0.00 p95=0.00 max=0.01 | http_post: p50=87.99 p95=121.10 max=147.02 | parse_response: p50=0.18 p95=0.30 max=0.56 | total: p50=88.24 p95=121.43 max=147.13 | apply_total: p50=4.01 p95=4.10 max=110.83 | apply_topk_ent: p50=0.46 p95=1.06 max=1.73 | apply_cpu_sync: p50=3.57 p95=3.63 max=3.72 | skip_step: p50=4.00 p95=4.08 max=4.20 | intv_prepare: p50=0.12 p95=0.24 max=0.67 | intv_apply_logits: p50=1.09 p95=1.27 max=2.09
+INFO:     127.0.0.1:52258 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=37/355  ratio=10.4%  top1_flip=20/37 (54.1%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:38650 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=70/973  ratio=7.2%  top1_flip=49/70 (70.0%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @3600] format_chat: p50=0.07 p95=0.19 max=0.44 | tokenize_client: p50=0.00 p95=0.00 max=0.01 | http_post: p50=87.25 p95=120.76 max=147.02 | parse_response: p50=0.18 p95=0.30 max=0.56 | total: p50=87.54 p95=121.09 max=147.13 | apply_total: p50=4.00 p95=68.25 max=122.32 | apply_topk_ent: p50=0.46 p95=1.09 max=1.44 | apply_cpu_sync: p50=3.57 p95=3.63 max=3.66 | skip_step: p50=3.99 p95=4.08 max=4.14 | intv_prepare: p50=0.12 p95=0.24 max=0.67 | intv_apply_logits: p50=1.09 p95=1.27 max=2.09
+(EngineCore pid=2355984) [SIA-pf-summary @3700] format_chat: p50=0.07 p95=0.18 max=0.44 | tokenize_client: p50=0.00 p95=0.00 max=0.01 | http_post: p50=86.76 p95=119.93 max=147.02 | parse_response: p50=0.18 p95=0.30 max=0.56 | total: p50=87.07 p95=120.28 max=147.13 | apply_total: p50=3.99 p95=84.35 max=122.32 | apply_topk_ent: p50=0.48 p95=1.10 max=1.44 | apply_cpu_sync: p50=3.51 p95=3.63 max=3.66 | skip_step: p50=3.93 p95=4.08 max=4.14 | intv_prepare: p50=0.12 p95=0.24 max=0.67 | intv_apply_logits: p50=1.10 p95=1.27 max=2.09
+INFO:     127.0.0.1:54064 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=137/1191  ratio=11.5%  top1_flip=89/137 (65.0%)
+INFO:     127.0.0.1:51324 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=48/947  ratio=5.1%  top1_flip=35/48 (72.9%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @3800] format_chat: p50=0.07 p95=0.18 max=0.44 | tokenize_client: p50=0.00 p95=0.00 max=0.01 | http_post: p50=86.73 p95=119.59 max=147.02 | parse_response: p50=0.18 p95=0.30 max=0.56 | total: p50=87.03 p95=119.91 max=147.13 | apply_total: p50=4.00 p95=76.16 max=119.68 | apply_topk_ent: p50=0.47 p95=1.07 max=1.55 | apply_cpu_sync: p50=3.56 p95=3.63 max=10.09 | skip_step: p50=3.98 p95=4.08 max=10.52 | intv_prepare: p50=0.12 p95=0.24 max=0.67 | intv_apply_logits: p50=1.10 p95=1.27 max=2.09
+INFO:     127.0.0.1:51080 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=30/264  ratio=11.4%  top1_flip=20/30 (66.7%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @3900] format_chat: p50=0.07 p95=0.18 max=0.44 | tokenize_client: p50=0.00 p95=0.00 max=0.01 | http_post: p50=85.95 p95=119.14 max=147.02 | parse_response: p50=0.18 p95=0.30 max=0.56 | total: p50=86.18 p95=119.45 max=147.13 | apply_total: p50=4.00 p95=82.74 max=116.31 | apply_topk_ent: p50=0.48 p95=1.09 max=1.65 | apply_cpu_sync: p50=3.52 p95=3.63 max=10.09 | skip_step: p50=3.98 p95=4.08 max=10.52 | intv_prepare: p50=0.12 p95=0.24 max=0.67 | intv_apply_logits: p50=1.10 p95=1.27 max=2.09
+(EngineCore pid=2355984) [SIA-pf-summary @4000] format_chat: p50=0.07 p95=0.18 max=0.44 | tokenize_client: p50=0.00 p95=0.00 max=0.01 | http_post: p50=87.00 p95=119.91 max=147.02 | parse_response: p50=0.18 p95=0.30 max=0.56 | total: p50=87.25 p95=120.24 max=147.13 | apply_total: p50=3.99 p95=104.74 max=138.04 | apply_topk_ent: p50=0.47 p95=1.10 max=11.12 | apply_cpu_sync: p50=3.54 p95=3.63 max=20.39 | skip_step: p50=3.98 p95=4.07 max=18.04 | intv_prepare: p50=0.12 p95=0.24 max=0.67 | intv_apply_logits: p50=1.10 p95=1.27 max=2.09
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=193/2048  ratio=9.4%  top1_flip=121/193 (62.7%)
+INFO:     127.0.0.1:51088 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:58216 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=22/425  ratio=5.2%  top1_flip=10/22 (45.5%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:36038 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=36/330  ratio=10.9%  top1_flip=27/36 (75.0%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @4100] format_chat: p50=0.07 p95=0.18 max=0.44 | tokenize_client: p50=0.00 p95=0.00 max=0.00 | http_post: p50=82.88 p95=118.42 max=138.38 | parse_response: p50=0.18 p95=0.30 max=0.49 | total: p50=83.13 p95=118.77 max=138.73 | apply_total: p50=4.00 p95=73.70 max=142.63 | apply_topk_ent: p50=0.47 p95=1.07 max=11.12 | apply_cpu_sync: p50=3.56 p95=3.62 max=20.39 | skip_step: p50=3.99 p95=4.08 max=18.04 | intv_prepare: p50=0.12 p95=0.24 max=0.67 | intv_apply_logits: p50=1.09 p95=1.25 max=2.09
+INFO:     127.0.0.1:36050 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=47/320  ratio=14.7%  top1_flip=30/47 (63.8%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @4200] format_chat: p50=0.07 p95=0.18 max=0.44 | tokenize_client: p50=0.00 p95=0.00 max=0.00 | http_post: p50=81.73 p95=117.70 max=138.38 | parse_response: p50=0.18 p95=0.30 max=0.49 | total: p50=81.98 p95=118.03 max=138.73 | apply_total: p50=4.00 p95=80.39 max=142.63 | apply_topk_ent: p50=0.48 p95=1.08 max=11.12 | apply_cpu_sync: p50=3.52 p95=3.62 max=20.39 | skip_step: p50=3.98 p95=4.08 max=18.04 | intv_prepare: p50=0.12 p95=0.23 max=0.67 | intv_apply_logits: p50=1.09 p95=1.25 max=2.09
+INFO:     127.0.0.1:42586 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=142/970  ratio=14.6%  top1_flip=96/142 (67.6%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:37500 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=20/361  ratio=5.5%  top1_flip=14/20 (70.0%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @4300] format_chat: p50=0.07 p95=0.18 max=0.44 | tokenize_client: p50=0.00 p95=0.00 max=0.00 | http_post: p50=81.73 p95=117.19 max=138.38 | parse_response: p50=0.18 p95=0.30 max=0.49 | total: p50=81.94 p95=117.51 max=138.73 | apply_total: p50=4.00 p95=61.71 max=116.00 | apply_topk_ent: p50=0.47 p95=1.07 max=1.26 | apply_cpu_sync: p50=3.56 p95=3.63 max=3.67 | skip_step: p50=4.00 p95=4.08 max=4.12 | intv_prepare: p50=0.12 p95=0.23 max=0.67 | intv_apply_logits: p50=1.08 p95=1.26 max=2.09
+INFO:     127.0.0.1:36924 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=47/947  ratio=5.0%  top1_flip=28/47 (59.6%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:41396 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=49/1063  ratio=4.6%  top1_flip=32/49 (65.3%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:44264 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=27/356  ratio=7.6%  top1_flip=18/27 (66.7%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @4400] format_chat: p50=0.07 p95=0.18 max=0.44 | tokenize_client: p50=0.00 p95=0.00 max=0.00 | http_post: p50=81.73 p95=116.85 max=138.38 | parse_response: p50=0.18 p95=0.30 max=0.49 | total: p50=81.98 p95=117.10 max=138.73 | apply_total: p50=4.00 p95=66.89 max=116.56 | apply_topk_ent: p50=0.47 p95=1.07 max=1.82 | apply_cpu_sync: p50=3.56 p95=3.63 max=3.66 | skip_step: p50=4.00 p95=4.08 max=4.13 | intv_prepare: p50=0.12 p95=0.23 max=0.67 | intv_apply_logits: p50=1.08 p95=1.26 max=2.09
+(EngineCore pid=2355984) [SIA-pf-summary @4500] format_chat: p50=0.07 p95=0.18 max=0.44 | tokenize_client: p50=0.00 p95=0.00 max=0.00 | http_post: p50=81.96 p95=116.52 max=138.38 | parse_response: p50=0.18 p95=0.30 max=0.49 | total: p50=82.17 p95=116.87 max=138.73 | apply_total: p50=3.99 p95=89.12 max=112.68 | apply_topk_ent: p50=0.49 p95=1.10 max=1.82 | apply_cpu_sync: p50=3.48 p95=3.63 max=3.66 | skip_step: p50=3.98 p95=4.08 max=4.13 | intv_prepare: p50=0.12 p95=0.23 max=0.67 | intv_apply_logits: p50=1.08 p95=1.26 max=2.09
+INFO:     127.0.0.1:44280 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=146/1214  ratio=12.0%  top1_flip=86/146 (58.9%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @4600] format_chat: p50=0.07 p95=0.18 max=0.44 | tokenize_client: p50=0.00 p95=0.00 max=0.00 | http_post: p50=81.66 p95=116.19 max=138.38 | parse_response: p50=0.18 p95=0.30 max=0.49 | total: p50=81.90 p95=116.45 max=138.73 | apply_total: p50=3.98 p95=88.65 max=120.83 | apply_topk_ent: p50=0.52 p95=1.12 max=1.82 | apply_cpu_sync: p50=3.41 p95=3.63 max=3.67 | skip_step: p50=3.91 p95=4.08 max=4.12 | intv_prepare: p50=0.12 p95=0.23 max=0.67 | intv_apply_logits: p50=1.09 p95=1.26 max=2.09
+INFO:     127.0.0.1:52262 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=142/951  ratio=14.9%  top1_flip=87/142 (61.3%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @4700] format_chat: p50=0.07 p95=0.18 max=0.44 | tokenize_client: p50=0.00 p95=0.00 max=0.00 | http_post: p50=82.07 p95=115.32 max=138.38 | parse_response: p50=0.18 p95=0.30 max=0.49 | total: p50=82.37 p95=115.67 max=138.73 | apply_total: p50=3.97 p95=93.51 max=120.83 | apply_topk_ent: p50=0.52 p95=1.13 max=1.74 | apply_cpu_sync: p50=3.38 p95=3.62 max=3.67 | skip_step: p50=3.93 p95=4.08 max=4.12 | intv_prepare: p50=0.12 p95=0.24 max=0.67 | intv_apply_logits: p50=1.10 p95=1.27 max=2.09
+INFO:     127.0.0.1:36910 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=39/424  ratio=9.2%  top1_flip=27/39 (69.2%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @4800] format_chat: p50=0.07 p95=0.18 max=0.44 | tokenize_client: p50=0.00 p95=0.00 max=0.00 | http_post: p50=81.73 p95=115.06 max=138.38 | parse_response: p50=0.18 p95=0.30 max=0.49 | total: p50=81.98 p95=115.29 max=138.73 | apply_total: p50=3.99 p95=86.59 max=120.71 | apply_topk_ent: p50=0.48 p95=1.11 max=1.51 | apply_cpu_sync: p50=3.50 p95=3.63 max=3.66 | skip_step: p50=3.95 p95=4.07 max=4.12 | intv_prepare: p50=0.12 p95=0.24 max=0.67 | intv_apply_logits: p50=1.10 p95=1.27 max=2.67
+INFO:     127.0.0.1:52270 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @4900] format_chat: p50=0.08 p95=0.19 max=0.46 | tokenize_client: p50=0.00 p95=0.00 max=0.00 | http_post: p50=81.89 p95=114.17 max=138.38 | parse_response: p50=0.18 p95=0.30 max=0.49 | total: p50=82.12 p95=114.40 max=138.73 | apply_total: p50=3.95 p95=97.80 max=120.71 | apply_topk_ent: p50=0.53 p95=1.11 max=1.52 | apply_cpu_sync: p50=3.36 p95=3.62 max=16.01 | skip_step: p50=3.91 p95=4.07 max=16.87 | intv_prepare: p50=0.12 p95=0.23 max=0.67 | intv_apply_logits: p50=1.10 p95=1.27 max=2.67
+INFO:     127.0.0.1:45252 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=212/1466  ratio=14.5%  top1_flip=151/212 (71.2%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:50724 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=12/598  ratio=2.0%  top1_flip=11/12 (91.7%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @5000] format_chat: p50=0.08 p95=0.22 max=0.46 | tokenize_client: p50=0.00 p95=0.00 max=0.00 | http_post: p50=81.69 p95=113.41 max=138.38 | parse_response: p50=0.18 p95=0.30 max=0.49 | total: p50=81.94 p95=113.73 max=138.73 | apply_total: p50=3.98 p95=82.21 max=111.96 | apply_topk_ent: p50=0.51 p95=1.11 max=1.46 | apply_cpu_sync: p50=3.42 p95=3.62 max=12.32 | skip_step: p50=3.95 p95=4.07 max=16.87 | intv_prepare: p50=0.12 p95=0.23 max=0.67 | intv_apply_logits: p50=1.10 p95=1.27 max=2.67
+INFO:     127.0.0.1:50738 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @5100] format_chat: p50=0.09 p95=0.24 max=0.46 | tokenize_client: p50=0.00 p95=0.00 max=0.00 | http_post: p50=81.02 p95=108.01 max=121.51 | parse_response: p50=0.18 p95=0.30 max=0.42 | total: p50=81.26 p95=108.36 max=121.92 | apply_total: p50=4.00 p95=93.13 max=127.23 | apply_topk_ent: p50=0.48 p95=1.09 max=1.59 | apply_cpu_sync: p50=3.55 p95=3.63 max=12.32 | skip_step: p50=3.99 p95=4.08 max=4.20 | intv_prepare: p50=0.11 p95=0.23 max=0.52 | intv_apply_logits: p50=1.10 p95=1.29 max=2.67
+INFO:     127.0.0.1:39376 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=171/2110  ratio=8.1%  top1_flip=122/171 (71.3%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:38574 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=52/625  ratio=8.3%  top1_flip=40/52 (76.9%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @5200] format_chat: p50=0.08 p95=0.24 max=0.46 | tokenize_client: p50=0.00 p95=0.00 max=0.00 | http_post: p50=81.00 p95=108.06 max=121.51 | parse_response: p50=0.18 p95=0.30 max=0.42 | total: p50=81.26 p95=108.37 max=121.92 | apply_total: p50=4.00 p95=83.35 max=127.23 | apply_topk_ent: p50=0.47 p95=1.07 max=1.38 | apply_cpu_sync: p50=3.57 p95=3.63 max=3.71 | skip_step: p50=4.00 p95=4.08 max=4.20 | intv_prepare: p50=0.11 p95=0.23 max=0.52 | intv_apply_logits: p50=1.10 p95=1.28 max=2.67
+(EngineCore pid=2355984) [SIA-pf-summary @5300] format_chat: p50=0.08 p95=0.23 max=0.46 | tokenize_client: p50=0.00 p95=0.00 max=0.00 | http_post: p50=81.42 p95=108.75 max=121.51 | parse_response: p50=0.18 p95=0.30 max=0.42 | total: p50=81.69 p95=109.01 max=121.92 | apply_total: p50=3.96 p95=89.88 max=123.14 | apply_topk_ent: p50=0.52 p95=1.12 max=1.83 | apply_cpu_sync: p50=3.39 p95=3.62 max=3.67 | skip_step: p50=3.89 p95=4.07 max=4.11 | intv_prepare: p50=0.11 p95=0.23 max=0.52 | intv_apply_logits: p50=1.11 p95=1.28 max=2.67
+INFO:     127.0.0.1:44372 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=157/1320  ratio=11.9%  top1_flip=86/157 (54.8%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:57180 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=44/388  ratio=11.3%  top1_flip=24/44 (54.5%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:52330 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=16/200  ratio=8.0%  top1_flip=7/16 (43.8%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @5400] format_chat: p50=0.08 p95=0.23 max=0.51 | tokenize_client: p50=0.00 p95=0.00 max=0.00 | http_post: p50=81.02 p95=109.10 max=121.51 | parse_response: p50=0.18 p95=0.30 max=0.42 | total: p50=81.28 p95=109.35 max=121.92 | apply_total: p50=3.94 p95=90.45 max=123.14 | apply_topk_ent: p50=0.57 p95=1.12 max=1.95 | apply_cpu_sync: p50=3.27 p95=3.62 max=3.66 | skip_step: p50=3.87 p95=4.07 max=4.13 | intv_prepare: p50=0.11 p95=0.23 max=0.52 | intv_apply_logits: p50=1.10 p95=1.27 max=2.67
+(EngineCore pid=2355984) [SIA-pf-summary @5500] format_chat: p50=0.09 p95=0.23 max=0.51 | tokenize_client: p50=0.00 p95=0.00 max=0.00 | http_post: p50=80.20 p95=108.22 max=121.51 | parse_response: p50=0.18 p95=0.30 max=0.50 | total: p50=80.50 p95=108.64 max=121.92 | apply_total: p50=3.92 p95=89.78 max=123.14 | apply_topk_ent: p50=0.60 p95=1.12 max=1.95 | apply_cpu_sync: p50=3.20 p95=3.61 max=3.66 | skip_step: p50=3.82 p95=4.07 max=4.13 | intv_prepare: p50=0.11 p95=0.23 max=0.52 | intv_apply_logits: p50=1.11 p95=1.27 max=2.67
+INFO:     127.0.0.1:52344 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=189/860  ratio=22.0%  top1_flip=114/189 (60.3%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @5600] format_chat: p50=0.09 p95=0.23 max=0.51 | tokenize_client: p50=0.00 p95=0.00 max=0.00 | http_post: p50=80.12 p95=108.06 max=121.51 | parse_response: p50=0.18 p95=0.30 max=0.50 | total: p50=80.42 p95=108.37 max=121.92 | apply_total: p50=3.97 p95=85.58 max=117.14 | apply_topk_ent: p50=0.56 p95=1.12 max=1.70 | apply_cpu_sync: p50=3.28 p95=3.62 max=20.54 | skip_step: p50=3.81 p95=4.07 max=21.76 | intv_prepare: p50=0.12 p95=0.23 max=0.52 | intv_apply_logits: p50=1.12 p95=1.27 max=2.67
+(EngineCore pid=2355984) [SIA-pf-summary @5700] format_chat: p50=0.09 p95=0.23 max=0.51 | tokenize_client: p50=0.00 p95=0.00 max=0.00 | http_post: p50=80.40 p95=107.70 max=121.51 | parse_response: p50=0.18 p95=0.30 max=0.50 | total: p50=80.74 p95=107.95 max=121.92 | apply_total: p50=3.91 p95=98.33 max=117.14 | apply_topk_ent: p50=0.64 p95=1.12 max=1.63 | apply_cpu_sync: p50=3.13 p95=3.61 max=20.54 | skip_step: p50=3.80 p95=4.07 max=21.76 | intv_prepare: p50=0.12 p95=0.23 max=0.52 | intv_apply_logits: p50=1.12 p95=1.27 max=2.67
+INFO:     127.0.0.1:37806 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=146/830  ratio=17.6%  top1_flip=92/146 (63.0%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:50464 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=42/575  ratio=7.3%  top1_flip=31/42 (73.8%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @5800] format_chat: p50=0.08 p95=0.22 max=0.51 | tokenize_client: p50=0.00 p95=0.00 max=0.00 | http_post: p50=79.95 p95=107.36 max=121.51 | parse_response: p50=0.18 p95=0.30 max=0.50 | total: p50=80.15 p95=107.64 max=121.92 | apply_total: p50=4.00 p95=76.30 max=113.98 | apply_topk_ent: p50=0.47 p95=1.07 max=1.47 | apply_cpu_sync: p50=3.55 p95=3.63 max=18.99 | skip_step: p50=3.97 p95=4.07 max=19.97 | intv_prepare: p50=0.12 p95=0.23 max=0.52 | intv_apply_logits: p50=1.11 p95=1.27 max=7.61
+INFO:     127.0.0.1:41562 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=56/612  ratio=9.2%  top1_flip=35/56 (62.5%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:52440 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=48/572  ratio=8.4%  top1_flip=39/48 (81.2%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @5900] format_chat: p50=0.08 p95=0.22 max=0.51 | tokenize_client: p50=0.00 p95=0.00 max=0.00 | http_post: p50=79.79 p95=106.98 max=121.51 | parse_response: p50=0.18 p95=0.30 max=0.50 | total: p50=80.08 p95=107.30 max=121.92 | apply_total: p50=3.98 p95=77.70 max=103.78 | apply_topk_ent: p50=0.48 p95=1.08 max=1.40 | apply_cpu_sync: p50=3.51 p95=3.62 max=3.81 | skip_step: p50=3.97 p95=4.07 max=10.79 | intv_prepare: p50=0.11 p95=0.23 max=0.52 | intv_apply_logits: p50=1.10 p95=1.27 max=7.61
+INFO:     127.0.0.1:48568 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=121/1009  ratio=12.0%  top1_flip=73/121 (60.3%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @6000] format_chat: p50=0.08 p95=0.22 max=0.51 | tokenize_client: p50=0.00 p95=0.00 max=0.04 | http_post: p50=79.48 p95=106.84 max=121.51 | parse_response: p50=0.18 p95=0.30 max=0.50 | total: p50=79.74 p95=107.14 max=121.92 | apply_total: p50=4.01 p95=72.90 max=115.28 | apply_topk_ent: p50=0.46 p95=1.06 max=1.77 | apply_cpu_sync: p50=3.57 p95=3.63 max=3.74 | skip_step: p50=4.00 p95=4.08 max=4.15 | intv_prepare: p50=0.11 p95=0.23 max=1.00 | intv_apply_logits: p50=1.09 p95=1.27 max=7.61
+INFO:     127.0.0.1:53756 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=12/456  ratio=2.6%  top1_flip=9/12 (75.0%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:40396 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=27/553  ratio=4.9%  top1_flip=16/27 (59.3%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:60498 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=34/1755  ratio=1.9%  top1_flip=27/34 (79.4%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @6100] format_chat: p50=0.08 p95=0.19 max=0.51 | tokenize_client: p50=0.00 p95=0.00 max=0.04 | http_post: p50=80.04 p95=108.64 max=122.30 | parse_response: p50=0.18 p95=0.29 max=0.50 | total: p50=80.33 p95=108.97 max=122.52 | apply_total: p50=4.01 p95=4.10 max=127.41 | apply_topk_ent: p50=0.46 p95=1.07 max=1.50 | apply_cpu_sync: p50=3.57 p95=3.63 max=3.73 | skip_step: p50=4.01 p95=4.08 max=4.15 | intv_prepare: p50=0.11 p95=0.24 max=1.00 | intv_apply_logits: p50=1.07 p95=1.25 max=7.61
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=125/2048  ratio=6.1%  top1_flip=79/125 (63.2%)
+INFO:     127.0.0.1:33528 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @6200] format_chat: p50=0.08 p95=0.19 max=0.51 | tokenize_client: p50=0.00 p95=0.00 max=0.04 | http_post: p50=81.17 p95=111.65 max=127.33 | parse_response: p50=0.18 p95=0.29 max=0.50 | total: p50=81.48 p95=111.92 max=127.61 | apply_total: p50=3.99 p95=4.13 max=133.06 | apply_topk_ent: p50=0.48 p95=1.08 max=1.98 | apply_cpu_sync: p50=3.55 p95=3.63 max=5.73 | skip_step: p50=3.99 p95=4.08 max=6.14 | intv_prepare: p50=0.11 p95=0.24 max=1.00 | intv_apply_logits: p50=1.07 p95=1.25 max=7.61
+INFO:     127.0.0.1:59004 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=15/582  ratio=2.6%  top1_flip=9/15 (60.0%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=31/2048  ratio=1.5%  top1_flip=18/31 (58.1%)
+INFO:     127.0.0.1:50366 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @6300] format_chat: p50=0.08 p95=0.19 max=0.51 | tokenize_client: p50=0.00 p95=0.00 max=0.04 | http_post: p50=81.39 p95=111.49 max=127.33 | parse_response: p50=0.18 p95=0.30 max=0.50 | total: p50=81.62 p95=111.74 max=127.61 | apply_total: p50=4.02 p95=4.12 max=116.45 | apply_topk_ent: p50=0.46 p95=1.01 max=1.66 | apply_cpu_sync: p50=3.58 p95=3.64 max=18.60 | skip_step: p50=4.01 p95=4.08 max=19.52 | intv_prepare: p50=0.12 p95=0.25 max=1.00 | intv_apply_logits: p50=1.07 p95=1.26 max=7.61
+INFO:     127.0.0.1:38418 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=102/1522  ratio=6.7%  top1_flip=65/102 (63.7%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:51708 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=41/766  ratio=5.4%  top1_flip=27/41 (65.9%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:53578 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=3/480  ratio=0.6%  top1_flip=2/3 (66.7%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @6400] format_chat: p50=0.08 p95=0.19 max=0.67 | tokenize_client: p50=0.00 p95=0.00 max=0.04 | http_post: p50=81.67 p95=112.03 max=127.33 | parse_response: p50=0.18 p95=0.30 max=0.50 | total: p50=81.90 p95=112.34 max=127.61 | apply_total: p50=4.00 p95=4.10 max=110.35 | apply_topk_ent: p50=0.47 p95=1.08 max=1.58 | apply_cpu_sync: p50=3.56 p95=3.63 max=3.68 | skip_step: p50=4.00 p95=4.08 max=4.13 | intv_prepare: p50=0.12 p95=0.25 max=1.00 | intv_apply_logits: p50=1.07 p95=1.26 max=7.61
+INFO:     127.0.0.1:53582 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=53/743  ratio=7.1%  top1_flip=31/53 (58.5%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:60426 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=23/929  ratio=2.5%  top1_flip=15/23 (65.2%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @6500] format_chat: p50=0.07 p95=0.19 max=0.67 | tokenize_client: p50=0.00 p95=0.00 max=0.04 | http_post: p50=81.64 p95=111.64 max=127.33 | parse_response: p50=0.18 p95=0.30 max=0.50 | total: p50=81.90 p95=111.90 max=127.61 | apply_total: p50=4.01 p95=48.67 max=112.89 | apply_topk_ent: p50=0.46 p95=1.02 max=1.37 | apply_cpu_sync: p50=3.56 p95=3.63 max=3.67 | skip_step: p50=4.00 p95=4.08 max=4.15 | intv_prepare: p50=0.12 p95=0.25 max=1.00 | intv_apply_logits: p50=1.07 p95=1.26 max=7.61
+(EngineCore pid=2355984) [SIA-pf-summary @6600] format_chat: p50=0.08 p95=0.19 max=0.67 | tokenize_client: p50=0.00 p95=0.00 max=0.05 | http_post: p50=82.17 p95=112.50 max=131.26 | parse_response: p50=0.18 p95=0.30 max=0.56 | total: p50=82.37 p95=112.82 max=131.52 | apply_total: p50=4.00 p95=86.93 max=151.92 | apply_topk_ent: p50=0.48 p95=1.09 max=1.46 | apply_cpu_sync: p50=3.55 p95=3.63 max=3.67 | skip_step: p50=3.99 p95=4.08 max=4.12 | intv_prepare: p50=0.12 p95=0.25 max=1.00 | intv_apply_logits: p50=1.07 p95=1.26 max=24.88
+INFO:     127.0.0.1:52398 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=193/1375  ratio=14.0%  top1_flip=129/193 (66.8%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @6700] format_chat: p50=0.08 p95=0.19 max=0.67 | tokenize_client: p50=0.00 p95=0.00 max=0.05 | http_post: p50=82.49 p95=113.45 max=131.26 | parse_response: p50=0.18 p95=0.30 max=0.56 | total: p50=82.74 p95=113.74 max=131.52 | apply_total: p50=3.97 p95=100.01 max=151.92 | apply_topk_ent: p50=0.52 p95=1.12 max=1.81 | apply_cpu_sync: p50=3.39 p95=3.62 max=10.86 | skip_step: p50=3.88 p95=4.07 max=11.35 | intv_prepare: p50=0.12 p95=0.25 max=1.00 | intv_apply_logits: p50=1.07 p95=1.27 max=24.88
+INFO:     127.0.0.1:50450 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=140/1360  ratio=10.3%  top1_flip=84/140 (60.0%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @6800] format_chat: p50=0.08 p95=0.19 max=0.67 | tokenize_client: p50=0.00 p95=0.00 max=0.05 | http_post: p50=83.08 p95=114.30 max=131.26 | parse_response: p50=0.18 p95=0.30 max=0.56 | total: p50=83.29 p95=114.61 max=131.52 | apply_total: p50=3.97 p95=100.68 max=136.03 | apply_topk_ent: p50=0.53 p95=1.12 max=1.81 | apply_cpu_sync: p50=3.38 p95=3.62 max=10.86 | skip_step: p50=3.90 p95=4.08 max=11.35 | intv_prepare: p50=0.12 p95=0.25 max=1.00 | intv_apply_logits: p50=1.07 p95=1.27 max=24.88
+(EngineCore pid=2355984) [SIA-pf-summary @6900] format_chat: p50=0.08 p95=0.19 max=0.67 | tokenize_client: p50=0.00 p95=0.00 max=0.05 | http_post: p50=83.10 p95=114.08 max=131.26 | parse_response: p50=0.18 p95=0.30 max=0.56 | total: p50=83.39 p95=114.38 max=131.52 | apply_total: p50=3.93 p95=100.05 max=136.03 | apply_topk_ent: p50=0.56 p95=1.12 max=1.46 | apply_cpu_sync: p50=3.28 p95=3.61 max=9.26 | skip_step: p50=3.88 p95=4.07 max=9.74 | intv_prepare: p50=0.12 p95=0.25 max=1.00 | intv_apply_logits: p50=1.08 p95=1.27 max=24.88
+(EngineCore pid=2355984) [SIA-pf-summary @7000] format_chat: p50=0.08 p95=0.19 max=0.67 | tokenize_client: p50=0.00 p95=0.00 max=0.05 | http_post: p50=84.32 p95=114.34 max=131.26 | parse_response: p50=0.18 p95=0.30 max=0.56 | total: p50=84.56 p95=114.62 max=131.52 | apply_total: p50=3.91 p95=108.18 max=136.03 | apply_topk_ent: p50=0.59 p95=1.13 max=1.60 | apply_cpu_sync: p50=3.21 p95=3.61 max=9.26 | skip_step: p50=3.85 p95=4.07 max=9.74 | intv_prepare: p50=0.12 p95=0.25 max=1.00 | intv_apply_logits: p50=1.09 p95=1.27 max=24.88
+INFO:     127.0.0.1:58784 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=275/1593  ratio=17.3%  top1_flip=178/275 (64.7%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:46138 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=33/742  ratio=4.4%  top1_flip=21/33 (63.6%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @7100] format_chat: p50=0.08 p95=0.20 max=0.67 | tokenize_client: p50=0.00 p95=0.00 max=0.05 | http_post: p50=89.94 p95=120.17 max=132.96 | parse_response: p50=0.18 p95=0.31 max=0.56 | total: p50=90.19 p95=120.45 max=133.29 | apply_total: p50=3.97 p95=108.25 max=138.27 | apply_topk_ent: p50=0.53 p95=1.12 max=1.79 | apply_cpu_sync: p50=3.36 p95=3.63 max=3.70 | skip_step: p50=3.90 p95=4.08 max=4.13 | intv_prepare: p50=0.13 p95=0.27 max=0.67 | intv_apply_logits: p50=1.10 p95=1.29 max=24.88
+INFO:     127.0.0.1:34270 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=86/996  ratio=8.6%  top1_flip=57/86 (66.3%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @7200] format_chat: p50=0.08 p95=0.21 max=0.67 | tokenize_client: p50=0.00 p95=0.00 max=0.05 | http_post: p50=89.62 p95=119.38 max=132.96 | parse_response: p50=0.18 p95=0.31 max=0.56 | total: p50=89.87 p95=119.65 max=133.29 | apply_total: p50=3.99 p95=88.80 max=120.07 | apply_topk_ent: p50=0.48 p95=1.09 max=1.30 | apply_cpu_sync: p50=3.50 p95=3.63 max=9.08 | skip_step: p50=3.99 p95=4.08 max=9.61 | intv_prepare: p50=0.13 p95=0.26 max=0.67 | intv_apply_logits: p50=1.11 p95=1.29 max=24.88
+INFO:     127.0.0.1:53454 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=52/606  ratio=8.6%  top1_flip=40/52 (76.9%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @7300] format_chat: p50=0.08 p95=0.21 max=0.67 | tokenize_client: p50=0.00 p95=0.00 max=0.05 | http_post: p50=89.03 p95=119.19 max=132.96 | parse_response: p50=0.18 p95=0.31 max=0.56 | total: p50=89.33 p95=119.35 max=133.29 | apply_total: p50=3.98 p95=92.21 max=120.07 | apply_topk_ent: p50=0.49 p95=1.10 max=1.49 | apply_cpu_sync: p50=3.46 p95=3.63 max=9.72 | skip_step: p50=3.96 p95=4.08 max=10.15 | intv_prepare: p50=0.13 p95=0.26 max=0.67 | intv_apply_logits: p50=1.11 p95=1.29 max=24.88
+INFO:     127.0.0.1:37870 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=103/709  ratio=14.5%  top1_flip=61/103 (59.2%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:40792 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @7400] format_chat: p50=0.08 p95=0.21 max=0.67 | tokenize_client: p50=0.00 p95=0.00 max=0.05 | http_post: p50=89.34 p95=118.58 max=132.96 | parse_response: p50=0.18 p95=0.31 max=0.56 | total: p50=89.57 p95=118.89 max=133.29 | apply_total: p50=4.00 p95=89.31 max=116.82 | apply_topk_ent: p50=0.47 p95=1.09 max=1.88 | apply_cpu_sync: p50=3.56 p95=3.63 max=3.67 | skip_step: p50=3.97 p95=4.08 max=4.14 | intv_prepare: p50=0.12 p95=0.26 max=0.67 | intv_apply_logits: p50=1.11 p95=1.29 max=24.88
+(EngineCore pid=2355984) [SIA-pf-summary @7500] format_chat: p50=0.08 p95=0.23 max=0.67 | tokenize_client: p50=0.00 p95=0.00 max=0.05 | http_post: p50=89.84 p95=117.65 max=132.96 | parse_response: p50=0.18 p95=0.31 max=0.56 | total: p50=90.05 p95=118.07 max=133.29 | apply_total: p50=3.98 p95=103.29 max=121.45 | apply_topk_ent: p50=0.50 p95=1.12 max=1.88 | apply_cpu_sync: p50=3.44 p95=3.62 max=3.67 | skip_step: p50=3.94 p95=4.08 max=4.12 | intv_prepare: p50=0.12 p95=0.26 max=0.67 | intv_apply_logits: p50=1.11 p95=1.29 max=24.88
+(EngineCore pid=2355984) [SIA-pf-summary @7600] format_chat: p50=0.08 p95=0.23 max=0.67 | tokenize_client: p50=0.00 p95=0.00 max=0.07 | http_post: p50=90.54 p95=119.42 max=138.24 | parse_response: p50=0.18 p95=0.31 max=0.56 | total: p50=90.86 p95=119.69 max=138.69 | apply_total: p50=3.89 p95=110.85 max=143.72 | apply_topk_ent: p50=0.62 p95=1.14 max=1.48 | apply_cpu_sync: p50=3.15 p95=3.61 max=3.68 | skip_step: p50=3.91 p95=4.07 max=4.16 | intv_prepare: p50=0.12 p95=0.26 max=0.67 | intv_apply_logits: p50=1.12 p95=1.29 max=24.88
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=343/2730  ratio=12.6%  top1_flip=241/343 (70.3%)
+INFO:     127.0.0.1:42506 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @7700] format_chat: p50=0.08 p95=0.23 max=0.67 | tokenize_client: p50=0.00 p95=0.00 max=0.07 | http_post: p50=91.64 p95=122.52 max=145.94 | parse_response: p50=0.18 p95=0.31 max=0.56 | total: p50=91.89 p95=122.84 max=146.05 | apply_total: p50=3.96 p95=122.68 max=150.98 | apply_topk_ent: p50=0.55 p95=1.13 max=1.31 | apply_cpu_sync: p50=3.31 p95=3.62 max=3.69 | skip_step: p50=3.89 p95=4.07 max=4.17 | intv_prepare: p50=0.12 p95=0.26 max=0.67 | intv_apply_logits: p50=1.12 p95=1.29 max=24.88
+INFO:     127.0.0.1:57486 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=100/922  ratio=10.8%  top1_flip=73/100 (73.0%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @7800] format_chat: p50=0.08 p95=0.23 max=0.67 | tokenize_client: p50=0.00 p95=0.00 max=0.07 | http_post: p50=91.84 p95=122.11 max=145.94 | parse_response: p50=0.18 p95=0.31 max=0.56 | total: p50=91.95 p95=122.36 max=146.05 | apply_total: p50=3.98 p95=101.33 max=124.27 | apply_topk_ent: p50=0.50 p95=1.10 max=2.06 | apply_cpu_sync: p50=3.44 p95=3.63 max=3.69 | skip_step: p50=3.95 p95=4.08 max=4.17 | intv_prepare: p50=0.12 p95=0.26 max=0.67 | intv_apply_logits: p50=1.12 p95=1.29 max=24.88
+INFO:     127.0.0.1:55948 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=43/327  ratio=13.1%  top1_flip=30/43 (69.8%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:36776 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=34/275  ratio=12.4%  top1_flip=18/34 (52.9%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:36778 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=3/49  ratio=6.1%  top1_flip=3/3 (100.0%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:36788 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=31/264  ratio=11.7%  top1_flip=17/31 (54.8%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @7900] format_chat: p50=0.08 p95=0.23 max=0.67 | tokenize_client: p50=0.00 p95=0.00 max=0.07 | http_post: p50=90.73 p95=121.63 max=145.94 | parse_response: p50=0.18 p95=0.31 max=0.56 | total: p50=90.98 p95=121.95 max=146.05 | apply_total: p50=3.98 p95=92.54 max=124.77 | apply_topk_ent: p50=0.50 p95=1.11 max=2.06 | apply_cpu_sync: p50=3.43 p95=3.63 max=17.80 | skip_step: p50=3.95 p95=4.08 max=18.78 | intv_prepare: p50=0.12 p95=0.26 max=0.67 | intv_apply_logits: p50=1.12 p95=1.29 max=24.88
+(EngineCore pid=2355984) [SIA-pf-summary @8000] format_chat: p50=0.08 p95=0.22 max=0.67 | tokenize_client: p50=0.00 p95=0.00 max=0.07 | http_post: p50=90.15 p95=121.30 max=145.94 | parse_response: p50=0.18 p95=0.31 max=0.56 | total: p50=90.46 p95=121.65 max=146.05 | apply_total: p50=3.97 p95=85.02 max=132.68 | apply_topk_ent: p50=0.51 p95=1.12 max=1.71 | apply_cpu_sync: p50=3.39 p95=3.62 max=17.80 | skip_step: p50=3.92 p95=4.07 max=18.78 | intv_prepare: p50=0.12 p95=0.26 max=0.67 | intv_apply_logits: p50=1.12 p95=1.28 max=24.88
+(EngineCore pid=2355984) [SIA-pf-summary @8100] format_chat: p50=0.09 p95=0.24 max=0.44 | tokenize_client: p50=0.00 p95=0.00 max=0.07 | http_post: p50=91.95 p95=124.79 max=145.94 | parse_response: p50=0.18 p95=0.31 max=0.40 | total: p50=92.14 p95=125.20 max=146.05 | apply_total: p50=3.90 p95=104.09 max=132.68 | apply_topk_ent: p50=0.59 p95=1.16 max=1.58 | apply_cpu_sync: p50=3.22 p95=3.61 max=8.96 | skip_step: p50=3.81 p95=4.07 max=9.39 | intv_prepare: p50=0.12 p95=0.25 max=0.46 | intv_apply_logits: p50=1.13 p95=1.28 max=1.44
+INFO:     127.0.0.1:42928 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=262/1759  ratio=14.9%  top1_flip=181/262 (69.1%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @8200] format_chat: p50=0.09 p95=0.23 max=0.44 | tokenize_client: p50=0.00 p95=0.00 max=0.07 | http_post: p50=91.75 p95=125.33 max=145.94 | parse_response: p50=0.18 p95=0.31 max=0.40 | total: p50=91.95 p95=125.62 max=146.05 | apply_total: p50=3.90 p95=103.05 max=138.33 | apply_topk_ent: p50=0.58 p95=1.13 max=1.59 | apply_cpu_sync: p50=3.23 p95=3.61 max=8.96 | skip_step: p50=3.81 p95=4.07 max=9.39 | intv_prepare: p50=0.12 p95=0.25 max=0.46 | intv_apply_logits: p50=1.12 p95=1.28 max=1.44
+INFO:     127.0.0.1:41280 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=55/577  ratio=9.5%  top1_flip=29/55 (52.7%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:58352 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=12/392  ratio=3.1%  top1_flip=11/12 (91.7%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:43974 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=54/523  ratio=10.3%  top1_flip=35/54 (64.8%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:37668 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=23/390  ratio=5.9%  top1_flip=16/23 (69.6%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @8300] format_chat: p50=0.09 p95=0.23 max=0.44 | tokenize_client: p50=0.00 p95=0.00 max=0.07 | http_post: p50=89.98 p95=124.79 max=145.94 | parse_response: p50=0.18 p95=0.31 max=0.40 | total: p50=90.24 p95=125.20 max=146.05 | apply_total: p50=3.99 p95=71.29 max=103.53 | apply_topk_ent: p50=0.48 p95=1.08 max=1.58 | apply_cpu_sync: p50=3.53 p95=3.63 max=7.53 | skip_step: p50=3.98 p95=4.08 max=7.94 | intv_prepare: p50=0.12 p95=0.25 max=0.46 | intv_apply_logits: p50=1.11 p95=1.27 max=1.44
+INFO:     127.0.0.1:37678 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=39/400  ratio=9.8%  top1_flip=25/39 (64.1%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:39784 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=30/284  ratio=10.6%  top1_flip=20/30 (66.7%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:43168 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=32/293  ratio=10.9%  top1_flip=21/32 (65.6%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @8400] format_chat: p50=0.08 p95=0.23 max=0.44 | tokenize_client: p50=0.00 p95=0.00 max=0.07 | http_post: p50=87.89 p95=123.75 max=145.94 | parse_response: p50=0.18 p95=0.31 max=0.40 | total: p50=88.12 p95=124.05 max=146.05 | apply_total: p50=3.98 p95=75.49 max=103.79 | apply_topk_ent: p50=0.48 p95=1.08 max=1.59 | apply_cpu_sync: p50=3.50 p95=3.63 max=11.59 | skip_step: p50=3.96 p95=4.08 max=12.17 | intv_prepare: p50=0.12 p95=0.24 max=0.46 | intv_apply_logits: p50=1.11 p95=1.28 max=1.44
+INFO:     127.0.0.1:44094 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=38/337  ratio=11.3%  top1_flip=20/38 (52.6%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:44106 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=61/875  ratio=7.0%  top1_flip=41/61 (67.2%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @8500] format_chat: p50=0.08 p95=0.23 max=0.44 | tokenize_client: p50=0.00 p95=0.00 max=0.07 | http_post: p50=87.05 p95=122.83 max=145.94 | parse_response: p50=0.18 p95=0.31 max=0.40 | total: p50=87.27 p95=123.19 max=146.05 | apply_total: p50=3.99 p95=81.82 max=115.99 | apply_topk_ent: p50=0.48 p95=1.11 max=1.93 | apply_cpu_sync: p50=3.53 p95=3.63 max=11.59 | skip_step: p50=3.98 p95=4.08 max=11.49 | intv_prepare: p50=0.12 p95=0.24 max=0.46 | intv_apply_logits: p50=1.11 p95=1.28 max=26.22
+INFO:     127.0.0.1:50434 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=22/152  ratio=14.5%  top1_flip=13/22 (59.1%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:50442 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=25/282  ratio=8.9%  top1_flip=19/25 (76.0%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:57186 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=48/513  ratio=9.4%  top1_flip=34/48 (70.8%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @8600] format_chat: p50=0.08 p95=0.23 max=0.44 | tokenize_client: p50=0.00 p95=0.00 max=0.07 | http_post: p50=85.59 p95=122.52 max=145.94 | parse_response: p50=0.18 p95=0.31 max=0.40 | total: p50=85.83 p95=122.84 max=146.05 | apply_total: p50=4.00 p95=75.60 max=115.99 | apply_topk_ent: p50=0.47 p95=1.08 max=1.68 | apply_cpu_sync: p50=3.56 p95=3.63 max=7.77 | skip_step: p50=4.00 p95=4.08 max=8.26 | intv_prepare: p50=0.12 p95=0.24 max=0.46 | intv_apply_logits: p50=1.11 p95=1.27 max=26.22
+INFO:     127.0.0.1:57198 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=13/271  ratio=4.8%  top1_flip=9/13 (69.2%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:36162 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=53/365  ratio=14.5%  top1_flip=32/53 (60.4%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:47772 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=29/223  ratio=13.0%  top1_flip=19/29 (65.5%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:47788 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=7/152  ratio=4.6%  top1_flip=3/7 (42.9%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @8700] format_chat: p50=0.08 p95=0.23 max=0.44 | tokenize_client: p50=0.00 p95=0.00 max=0.07 | http_post: p50=84.40 p95=121.73 max=145.94 | parse_response: p50=0.18 p95=0.31 max=0.40 | total: p50=84.64 p95=122.11 max=146.05 | apply_total: p50=3.99 p95=76.16 max=102.14 | apply_topk_ent: p50=0.48 p95=1.08 max=1.46 | apply_cpu_sync: p50=3.53 p95=3.63 max=3.67 | skip_step: p50=3.99 p95=4.08 max=8.26 | intv_prepare: p50=0.12 p95=0.23 max=0.46 | intv_apply_logits: p50=1.10 p95=1.27 max=26.22
+INFO:     127.0.0.1:44498 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=29/166  ratio=17.5%  top1_flip=17/29 (58.6%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:44512 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=68/513  ratio=13.3%  top1_flip=37/68 (54.4%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @8800] format_chat: p50=0.08 p95=0.23 max=0.83 | tokenize_client: p50=0.00 p95=0.00 max=0.07 | http_post: p50=83.32 p95=121.19 max=145.94 | parse_response: p50=0.18 p95=0.31 max=0.40 | total: p50=83.55 p95=121.57 max=146.05 | apply_total: p50=3.97 p95=79.53 max=99.61 | apply_topk_ent: p50=0.51 p95=1.11 max=1.46 | apply_cpu_sync: p50=3.41 p95=3.62 max=3.67 | skip_step: p50=3.95 p95=4.07 max=4.15 | intv_prepare: p50=0.12 p95=0.23 max=0.46 | intv_apply_logits: p50=1.10 p95=1.27 max=26.22
+INFO:     127.0.0.1:50706 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=34/297  ratio=11.4%  top1_flip=16/34 (47.1%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @8900] format_chat: p50=0.08 p95=0.22 max=0.83 | tokenize_client: p50=0.00 p95=0.00 max=0.07 | http_post: p50=83.15 p95=120.84 max=145.94 | parse_response: p50=0.18 p95=0.31 max=0.40 | total: p50=83.43 p95=121.20 max=146.05 | apply_total: p50=3.98 p95=89.54 max=125.82 | apply_topk_ent: p50=0.50 p95=1.11 max=10.24 | apply_cpu_sync: p50=3.42 p95=3.62 max=3.67 | skip_step: p50=3.94 p95=4.07 max=10.34 | intv_prepare: p50=0.12 p95=0.23 max=0.46 | intv_apply_logits: p50=1.10 p95=1.27 max=26.22
+INFO:     127.0.0.1:51262 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=94/769  ratio=12.2%  top1_flip=57/94 (60.6%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:58308 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=37/444  ratio=8.3%  top1_flip=22/37 (59.5%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @9000] format_chat: p50=0.08 p95=0.22 max=0.83 | tokenize_client: p50=0.00 p95=0.00 max=0.07 | http_post: p50=82.73 p95=120.17 max=145.94 | parse_response: p50=0.18 p95=0.31 max=0.40 | total: p50=83.03 p95=120.45 max=146.05 | apply_total: p50=3.99 p95=79.82 max=135.43 | apply_topk_ent: p50=0.48 p95=1.08 max=1.33 | apply_cpu_sync: p50=3.53 p95=3.63 max=3.68 | skip_step: p50=3.97 p95=4.08 max=4.13 | intv_prepare: p50=0.12 p95=0.23 max=0.46 | intv_apply_logits: p50=1.10 p95=1.27 max=26.22
+INFO:     127.0.0.1:54452 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=70/943  ratio=7.4%  top1_flip=48/70 (68.6%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:43940 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=44/1054  ratio=4.2%  top1_flip=28/44 (63.6%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @9100] format_chat: p50=0.07 p95=0.19 max=0.83 | tokenize_client: p50=0.00 p95=0.00 max=0.05 | http_post: p50=77.02 p95=107.89 max=133.32 | parse_response: p50=0.18 p95=0.30 max=0.40 | total: p50=77.33 p95=108.08 max=133.51 | apply_total: p50=4.01 p95=76.19 max=119.69 | apply_topk_ent: p50=0.46 p95=1.07 max=1.45 | apply_cpu_sync: p50=3.57 p95=3.64 max=9.10 | skip_step: p50=4.00 p95=4.08 max=9.64 | intv_prepare: p50=0.12 p95=0.23 max=0.46 | intv_apply_logits: p50=1.07 p95=1.26 max=26.22
+INFO:     127.0.0.1:35316 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=50/425  ratio=11.8%  top1_flip=35/50 (70.0%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:39876 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=22/338  ratio=6.5%  top1_flip=12/22 (54.5%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @9200] format_chat: p50=0.08 p95=0.20 max=0.83 | tokenize_client: p50=0.00 p95=0.00 max=0.05 | http_post: p50=77.47 p95=107.89 max=133.32 | parse_response: p50=0.18 p95=0.31 max=0.40 | total: p50=77.78 p95=108.08 max=133.51 | apply_total: p50=4.02 p95=82.67 max=116.53 | apply_topk_ent: p50=0.46 p95=1.07 max=1.64 | apply_cpu_sync: p50=3.58 p95=3.64 max=3.68 | skip_step: p50=4.02 p95=4.08 max=4.12 | intv_prepare: p50=0.12 p95=0.23 max=0.46 | intv_apply_logits: p50=1.07 p95=1.26 max=26.22
+INFO:     127.0.0.1:39890 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=75/1496  ratio=5.0%  top1_flip=52/75 (69.3%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:54104 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=83/627  ratio=13.2%  top1_flip=51/83 (61.4%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @9300] format_chat: p50=0.07 p95=0.20 max=0.83 | tokenize_client: p50=0.00 p95=0.00 max=0.05 | http_post: p50=78.10 p95=108.03 max=133.32 | parse_response: p50=0.18 p95=0.31 max=0.40 | total: p50=78.39 p95=108.31 max=133.51 | apply_total: p50=4.00 p95=93.13 max=124.89 | apply_topk_ent: p50=0.47 p95=1.08 max=1.55 | apply_cpu_sync: p50=3.55 p95=3.63 max=3.68 | skip_step: p50=3.99 p95=4.08 max=4.13 | intv_prepare: p50=0.12 p95=0.23 max=0.46 | intv_apply_logits: p50=1.07 p95=1.26 max=26.22
+(EngineCore pid=2355984) [SIA-pf-summary @9400] format_chat: p50=0.08 p95=0.20 max=0.83 | tokenize_client: p50=0.00 p95=0.00 max=0.05 | http_post: p50=78.93 p95=108.11 max=133.32 | parse_response: p50=0.18 p95=0.31 max=0.40 | total: p50=79.22 p95=108.39 max=133.51 | apply_total: p50=3.93 p95=101.77 max=124.89 | apply_topk_ent: p50=0.58 p95=1.12 max=2.37 | apply_cpu_sync: p50=3.26 p95=3.63 max=3.68 | skip_step: p50=3.97 p95=4.08 max=4.13 | intv_prepare: p50=0.12 p95=0.23 max=0.46 | intv_apply_logits: p50=1.09 p95=1.26 max=26.22
+INFO:     127.0.0.1:53250 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=108/688  ratio=15.7%  top1_flip=63/108 (58.3%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @9500] format_chat: p50=0.08 p95=0.20 max=0.83 | tokenize_client: p50=0.00 p95=0.00 max=0.05 | http_post: p50=79.63 p95=108.79 max=133.32 | parse_response: p50=0.18 p95=0.31 max=0.40 | total: p50=80.01 p95=109.02 max=133.51 | apply_total: p50=3.91 p95=95.75 max=121.33 | apply_topk_ent: p50=0.57 p95=1.12 max=17.26 | apply_cpu_sync: p50=3.27 p95=3.62 max=3.66 | skip_step: p50=3.86 p95=4.07 max=17.39 | intv_prepare: p50=0.12 p95=0.23 max=0.46 | intv_apply_logits: p50=1.09 p95=1.26 max=26.22
+(EngineCore pid=2355984) [SIA-pf-summary @9600] format_chat: p50=0.08 p95=0.20 max=0.83 | tokenize_client: p50=0.00 p95=0.00 max=0.05 | http_post: p50=81.08 p95=113.17 max=134.38 | parse_response: p50=0.18 p95=0.31 max=0.40 | total: p50=81.30 p95=113.44 max=134.79 | apply_total: p50=3.92 p95=107.75 max=139.49 | apply_topk_ent: p50=0.57 p95=1.12 max=17.26 | apply_cpu_sync: p50=3.27 p95=3.62 max=3.70 | skip_step: p50=3.87 p95=4.07 max=17.39 | intv_prepare: p50=0.12 p95=0.23 max=0.46 | intv_apply_logits: p50=1.09 p95=1.27 max=26.22
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=269/2048  ratio=13.1%  top1_flip=167/269 (62.1%)
+INFO:     127.0.0.1:41344 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @9700] format_chat: p50=0.08 p95=0.20 max=0.83 | tokenize_client: p50=0.00 p95=0.00 max=0.05 | http_post: p50=81.76 p95=119.45 max=159.19 | parse_response: p50=0.18 p95=0.31 max=0.40 | total: p50=82.08 p95=119.72 max=159.53 | apply_total: p50=3.90 p95=123.60 max=164.63 | apply_topk_ent: p50=0.59 p95=1.13 max=1.43 | apply_cpu_sync: p50=3.22 p95=3.62 max=8.60 | skip_step: p50=3.85 p95=4.07 max=17.39 | intv_prepare: p50=0.12 p95=0.24 max=0.46 | intv_apply_logits: p50=1.09 p95=1.27 max=26.22
+(EngineCore pid=2355984) [SIA-pf-summary @9800] format_chat: p50=0.08 p95=0.20 max=0.83 | tokenize_client: p50=0.00 p95=0.00 max=0.05 | http_post: p50=81.76 p95=118.89 max=159.19 | parse_response: p50=0.18 p95=0.31 max=0.40 | total: p50=82.02 p95=119.20 max=159.53 | apply_total: p50=3.91 p95=115.17 max=164.63 | apply_topk_ent: p50=0.59 p95=1.12 max=1.43 | apply_cpu_sync: p50=3.23 p95=3.61 max=3.67 | skip_step: p50=3.83 p95=4.07 max=9.02 | intv_prepare: p50=0.12 p95=0.24 max=0.46 | intv_apply_logits: p50=1.09 p95=1.27 max=26.22
+(EngineCore pid=2355984) [SIA-pf-summary @9900] format_chat: p50=0.08 p95=0.20 max=0.83 | tokenize_client: p50=0.00 p95=0.00 max=0.05 | http_post: p50=83.06 p95=120.71 max=159.19 | parse_response: p50=0.18 p95=0.31 max=0.40 | total: p50=83.30 p95=121.01 max=159.53 | apply_total: p50=3.89 p95=120.39 max=164.63 | apply_topk_ent: p50=0.62 p95=1.14 max=1.55 | apply_cpu_sync: p50=3.16 p95=3.61 max=3.68 | skip_step: p50=3.80 p95=4.07 max=9.02 | intv_prepare: p50=0.12 p95=0.24 max=0.46 | intv_apply_logits: p50=1.10 p95=1.27 max=26.22
+INFO:     127.0.0.1:58774 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=225/1255  ratio=17.9%  top1_flip=135/225 (60.0%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @10000] format_chat: p50=0.08 p95=0.20 max=0.83 | tokenize_client: p50=0.00 p95=0.00 max=0.05 | http_post: p50=83.83 p95=120.13 max=159.19 | parse_response: p50=0.18 p95=0.31 max=0.40 | total: p50=83.98 p95=120.43 max=159.53 | apply_total: p50=3.93 p95=115.51 max=132.55 | apply_topk_ent: p50=0.61 p95=1.14 max=1.58 | apply_cpu_sync: p50=3.19 p95=3.62 max=3.72 | skip_step: p50=3.86 p95=4.07 max=4.13 | intv_prepare: p50=0.12 p95=0.24 max=0.46 | intv_apply_logits: p50=1.10 p95=1.27 max=26.22
+INFO:     127.0.0.1:33930 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=100/750  ratio=13.3%  top1_flip=65/100 (65.0%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:41706 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=45/350  ratio=12.9%  top1_flip=31/45 (68.9%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @10100] format_chat: p50=0.08 p95=0.20 max=0.64 | tokenize_client: p50=0.00 p95=0.00 max=0.00 | http_post: p50=90.32 p95=123.86 max=159.19 | parse_response: p50=0.18 p95=0.31 max=0.46 | total: p50=90.69 p95=124.12 max=159.53 | apply_total: p50=3.97 p95=88.40 max=123.72 | apply_topk_ent: p50=0.51 p95=1.11 max=1.58 | apply_cpu_sync: p50=3.41 p95=3.61 max=3.72 | skip_step: p50=3.89 p95=4.07 max=4.13 | intv_prepare: p50=0.13 p95=0.25 max=0.39 | intv_apply_logits: p50=1.13 p95=1.28 max=1.70
+(EngineCore pid=2355984) [SIA-pf-summary @10200] format_chat: p50=0.08 p95=0.20 max=0.64 | tokenize_client: p50=0.00 p95=0.00 max=0.00 | http_post: p50=90.32 p95=123.54 max=159.19 | parse_response: p50=0.18 p95=0.31 max=0.62 | total: p50=90.69 p95=123.92 max=159.53 | apply_total: p50=3.97 p95=95.62 max=123.72 | apply_topk_ent: p50=0.53 p95=1.12 max=1.58 | apply_cpu_sync: p50=3.37 p95=3.62 max=3.72 | skip_step: p50=3.92 p95=4.07 max=4.13 | intv_prepare: p50=0.13 p95=0.25 max=0.39 | intv_apply_logits: p50=1.13 p95=1.28 max=1.70
+INFO:     127.0.0.1:44240 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=168/1025  ratio=16.4%  top1_flip=105/168 (62.5%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:47628 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=49/485  ratio=10.1%  top1_flip=29/49 (59.2%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:56574 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=26/232  ratio=11.2%  top1_flip=15/26 (57.7%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @10300] format_chat: p50=0.08 p95=0.20 max=0.64 | tokenize_client: p50=0.00 p95=0.00 max=0.07 | http_post: p50=88.65 p95=122.51 max=159.19 | parse_response: p50=0.18 p95=0.31 max=0.62 | total: p50=88.97 p95=122.86 max=159.53 | apply_total: p50=3.97 p95=91.42 max=125.80 | apply_topk_ent: p50=0.53 p95=1.12 max=1.43 | apply_cpu_sync: p50=3.38 p95=3.62 max=3.67 | skip_step: p50=3.92 p95=4.07 max=4.11 | intv_prepare: p50=0.13 p95=0.26 max=0.39 | intv_apply_logits: p50=1.12 p95=1.28 max=1.70
+INFO:     127.0.0.1:51972 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=67/440  ratio=15.2%  top1_flip=42/67 (62.7%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @10400] format_chat: p50=0.08 p95=0.20 max=0.64 | tokenize_client: p50=0.00 p95=0.00 max=0.07 | http_post: p50=87.16 p95=122.14 max=159.19 | parse_response: p50=0.18 p95=0.31 max=0.62 | total: p50=87.29 p95=122.47 max=159.53 | apply_total: p50=3.98 p95=82.35 max=103.45 | apply_topk_ent: p50=0.49 p95=1.08 max=1.52 | apply_cpu_sync: p50=3.46 p95=3.63 max=5.32 | skip_step: p50=3.95 p95=4.07 max=4.14 | intv_prepare: p50=0.13 p95=0.26 max=0.43 | intv_apply_logits: p50=1.12 p95=1.27 max=1.70
+INFO:     127.0.0.1:43534 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=70/592  ratio=11.8%  top1_flip=45/70 (64.3%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:55374 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=39/292  ratio=13.4%  top1_flip=21/39 (53.8%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @10500] format_chat: p50=0.08 p95=0.20 max=0.64 | tokenize_client: p50=0.00 p95=0.00 max=0.07 | http_post: p50=85.92 p95=121.49 max=159.19 | parse_response: p50=0.18 p95=0.31 max=0.62 | total: p50=86.18 p95=121.82 max=159.53 | apply_total: p50=3.98 p95=83.33 max=121.12 | apply_topk_ent: p50=0.50 p95=1.08 max=7.48 | apply_cpu_sync: p50=3.44 p95=3.63 max=14.37 | skip_step: p50=3.95 p95=4.08 max=14.99 | intv_prepare: p50=0.13 p95=0.25 max=0.43 | intv_apply_logits: p50=1.11 p95=1.27 max=1.70
+INFO:     127.0.0.1:54840 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=54/363  ratio=14.9%  top1_flip=39/54 (72.2%)
+[SIA] RM status: None  rm=None  rm_lora=none
+(EngineCore pid=2355984) [SIA-pf-summary @10600] format_chat: p50=0.08 p95=0.19 max=0.64 | tokenize_client: p50=0.00 p95=0.00 max=0.08 | http_post: p50=85.27 p95=120.80 max=159.19 | parse_response: p50=0.18 p95=0.32 max=0.62 | total: p50=85.52 p95=121.12 max=159.53 | apply_total: p50=3.98 p95=86.30 max=121.12 | apply_topk_ent: p50=0.52 p95=1.11 max=7.69 | apply_cpu_sync: p50=3.39 p95=3.63 max=14.37 | skip_step: p50=3.94 p95=4.07 max=14.99 | intv_prepare: p50=0.13 p95=0.25 max=0.43 | intv_apply_logits: p50=1.11 p95=1.27 max=1.70
+(EngineCore pid=2355984) [SIA-pf-summary @10700] format_chat: p50=0.08 p95=0.19 max=0.64 | tokenize_client: p50=0.00 p95=0.00 max=0.08 | http_post: p50=85.22 p95=120.13 max=159.19 | parse_response: p50=0.18 p95=0.32 max=0.62 | total: p50=85.49 p95=120.43 max=159.53 | apply_total: p50=3.97 p95=94.27 max=127.46 | apply_topk_ent: p50=0.55 p95=1.13 max=7.69 | apply_cpu_sync: p50=3.35 p95=3.62 max=15.88 | skip_step: p50=3.91 p95=4.07 max=13.54 | intv_prepare: p50=0.12 p95=0.25 max=0.43 | intv_apply_logits: p50=1.11 p95=1.27 max=1.70
+(EngineCore pid=2355984) [SIA-pf-summary @10800] format_chat: p50=0.08 p95=0.19 max=0.64 | tokenize_client: p50=0.00 p95=0.00 max=0.08 | http_post: p50=85.70 p95=121.45 max=159.19 | parse_response: p50=0.18 p95=0.32 max=0.62 | total: p50=85.94 p95=121.72 max=159.53 | apply_total: p50=3.93 p95=103.32 max=133.25 | apply_topk_ent: p50=0.59 p95=1.13 max=7.69 | apply_cpu_sync: p50=3.22 p95=3.62 max=18.32 | skip_step: p50=3.86 p95=4.07 max=19.35 | intv_prepare: p50=0.13 p95=0.26 max=0.43 | intv_apply_logits: p50=1.11 p95=1.28 max=1.77
+INFO:     127.0.0.1:54842 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=318/1657  ratio=19.2%  top1_flip=186/318 (58.5%)
+[SIA] RM status: None  rm=None  rm_lora=none
+INFO:     127.0.0.1:40744 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=2355984) [SIA] req=0 DONE  intervened=54/359  ratio=15.0%  top1_flip=26/54 (48.1%)
+ERROR 06-05 05:15:53 [core_client.py:667] Engine core proc EngineCore died unexpectedly, shutting down client.
+ERROR 06-05 05:15:56 [async_llm.py:707] AsyncLLM output_handler failed.
+ERROR 06-05 05:15:56 [async_llm.py:707] Traceback (most recent call last):
+ERROR 06-05 05:15:56 [async_llm.py:707]   File "/workspace/SIA/venv4/lib/python3.12/site-packages/vllm/v1/engine/async_llm.py", line 663, in output_handler
+ERROR 06-05 05:15:56 [async_llm.py:707]     outputs = await engine_core.get_output_async()
+ERROR 06-05 05:15:56 [async_llm.py:707]               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+ERROR 06-05 05:15:56 [async_llm.py:707]   File "/workspace/SIA/venv4/lib/python3.12/site-packages/vllm/v1/engine/core_client.py", line 985, in get_output_async
+ERROR 06-05 05:15:56 [async_llm.py:707]     raise self._format_exception(outputs) from None
+ERROR 06-05 05:15:56 [async_llm.py:707] vllm.v1.engine.exceptions.EngineDeadError: EngineCore encountered an issue. See stack trace (above) for the root cause.

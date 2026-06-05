@@ -128,23 +128,80 @@ def chat_completion(
     top_p: float | None = None,
     top_k: int | None = None,
     repetition_penalty: float | None = None,
+    disable_thinking: bool = False,
+    no_think_prompt: bool = False,
+    ban_think_token: bool = False,
 ) -> tuple[str, int]:
+    """
+    向 OpenAI 兼容 server 发请求, 返回 (text, completion_tokens)。
+
+    向后兼容: 当 disable_thinking / no_think_prompt / ban_think_token 全为 False
+    (默认值) 时, 代码路径跟历史完全一致 — 走 /v1/chat/completions, payload
+    跟以前 byte-identical, Qwen3-14B / VL-30B 之前的命令可重现。
+
+    thinking-suppression flags (主要给 0GM-35B 等 thinking 模型用, 跟
+    eval/alpaca_eval.py 的实现一致):
+      - disable_thinking: 在 chat_template 里塞 enable_thinking=False
+        (Qwen3 / 0GM 系列支持). 仍走 chat path
+      - no_think_prompt: 走 raw /v1/completions, prompt 完全跳过 chat_template,
+        用 SYSTEM\\n\\nHuman:\\n{prompt}\\nAssistant:\\n raw 文本, 比
+        disable_thinking 更彻底
+      - ban_think_token: (仅 no_think_prompt 时生效) 用 vllm bad_words
+        在 sampler 层禁 <think>/</think> 被采样
+    """
     headers = {
         "Content-Type": "application/json",
         "Authorization": f"Bearer {api_key}",
     }
+    sampling_kwargs = {}
+    if top_p is not None:
+        sampling_kwargs["top_p"] = top_p
+    if top_k is not None:
+        sampling_kwargs["top_k"] = top_k
+    if repetition_penalty is not None:
+        sampling_kwargs["repetition_penalty"] = repetition_penalty
+
+    if no_think_prompt:
+        # raw /v1/completions, 跳过 chat_template
+        # 把 messages 拍平: system + user → "<system>\n\nHuman:\n<user>\nAssistant:\n"
+        system_parts = [m["content"] for m in messages if m["role"] == "system"]
+        user_parts = [m["content"] for m in messages if m["role"] == "user"]
+        sys_text = "\n\n".join(system_parts).strip()
+        usr_text = "\n\n".join(user_parts).strip()
+        if sys_text:
+            prompt = f"{sys_text}\n\nHuman:\n{usr_text}\nAssistant:\n"
+        else:
+            prompt = f"Human:\n{usr_text}\nAssistant:\n"
+        if ban_think_token:
+            sampling_kwargs["bad_words"] = ["<think>", "</think>"]
+        payload = {
+            "model": model,
+            "prompt": prompt,
+            "max_tokens": max_tokens,
+            "temperature": temperature,
+            **sampling_kwargs,
+        }
+        url = f"{base_url.rstrip('/')}/completions"
+        try:
+            resp = requests.post(url, json=payload, headers=headers, timeout=120)
+            resp.raise_for_status()
+            data = resp.json()
+            text = data["choices"][0]["text"]
+            tokens = data.get("usage", {}).get("completion_tokens", -1)
+            return text, tokens
+        except Exception as e:
+            raise RuntimeError(f"Request failed: {e}") from e
+
+    # 默认路径: /v1/chat/completions (跟历史 byte-identical when no flags set)
     payload = {
         "model": model,
         "messages": messages,
         "max_tokens": max_tokens,
         "temperature": temperature,
+        **sampling_kwargs,
     }
-    if top_p is not None:
-        payload["top_p"] = top_p
-    if top_k is not None:
-        payload["top_k"] = top_k
-    if repetition_penalty is not None:
-        payload["repetition_penalty"] = repetition_penalty
+    if disable_thinking:
+        payload["chat_template_kwargs"] = {"enable_thinking": False}
     url = f"{base_url.rstrip('/')}/chat/completions"
 
     try:
@@ -172,6 +229,9 @@ def evaluate_subject(
     top_p: float | None = None,
     top_k: int | None = None,
     repetition_penalty: float | None = None,
+    disable_thinking: bool = False,
+    no_think_prompt: bool = False,
+    ban_think_token: bool = False,
 ) -> dict:
     try:
         dataset = load_dataset(
@@ -215,6 +275,9 @@ def evaluate_subject(
                 max_tokens=2048, temperature=temperature,
                 top_p=top_p, top_k=top_k,
                 repetition_penalty=repetition_penalty,
+                disable_thinking=disable_thinking,
+                no_think_prompt=no_think_prompt,
+                ban_think_token=ban_think_token,
             )
             predicted = extract_answer(response_text)
             is_correct = predicted == answer_letter
@@ -276,6 +339,17 @@ def main():
     parser.add_argument("--repetition_penalty", type=float, default=None,
                         help="重复惩罚（默认不传, server 用 default 1.3; "
                              "0GM 等大词表模型应设 1.0 避免 OOV drift）")
+    parser.add_argument("--disable_thinking", action="store_true",
+                        help="(thinking 模型用) 给 chat_template 传 enable_thinking=false, "
+                             "让模型跳过 <think>...</think>. Qwen3 / 0GM 支持. "
+                             "注意: chat_template 仍会塞空 <think></think> 块")
+    parser.add_argument("--no_think_prompt", action="store_true",
+                        help="(thinking 模型用) 走 raw /v1/completions, 完全跳过 chat_template, "
+                             "用 system\\n\\nHuman:\\n{prompt}\\nAssistant:\\n raw 文本. "
+                             "比 --disable_thinking 更彻底")
+    parser.add_argument("--ban_think_token", action="store_true",
+                        help="(thinking 模型用, 仅 --no_think_prompt 时生效) 用 vllm bad_words "
+                             "在 sampler 层禁 <think>/</think> 被采样")
     args = parser.parse_args()
 
     subjects = args.subjects or ALL_SUBJECTS
@@ -303,6 +377,9 @@ def main():
             temperature=args.temperature,
             top_p=args.top_p, top_k=args.top_k,
             repetition_penalty=args.repetition_penalty,
+            disable_thinking=args.disable_thinking,
+            no_think_prompt=args.no_think_prompt,
+            ban_think_token=args.ban_think_token,
         )
         per_subject[subject] = result
         if result["accuracy"] is not None:
