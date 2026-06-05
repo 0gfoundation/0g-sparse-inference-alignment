@@ -8,10 +8,31 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Running the Project
 
-**Dependencies (install manually — no requirements.txt):**
+**Dependencies — pick the venv that matches your main LLM:**
+
+| 主推理 LLM | 推荐 venv | vllm | SIA 路径 | 备注 |
+|------------|----------|------|---------|------|
+| Qwen3-14B | qwen14b | 0.10.1.1 | `--rm_backend b2` (inproc) | 原始 baseline |
+| Qwen3-VL-30B-A3B-Instruct | **vl30b-fast** | **0.17.1** | `--rm_backend b2` (inproc) | 速度最佳, 1.46× ([doc](doc/vl30b-b2-inproc-speedup-20260605.md)) |
+| Qwen3-VL-30B-A3B-Instruct | 0gm35b-http | 0.19.0 | `--rm_backend vllm` (HTTP) | 备选 |
+| 0GM-1.0-35B-A3B | 0gm35b-http | 0.19.0 | `--rm_backend vllm` (HTTP) | 唯一选项（b2 不行，0.19 PIECEWISE 冲突）|
+
 ```bash
-pip install fastapi uvicorn "peft<0.15.0" vllm transformers torch
+# Setup (one-shot)
+scripts/setup_venv_qwen14b.sh        /path/to/venv-qwen14b
+scripts/setup_venv_vl30b_fast.sh     /path/to/venv-vl30b-fast
+scripts/setup_venv_0gm35b_http.sh    /path/to/venv-0gm35b
 ```
+
+Each script: creates a fresh venv → `pip install -r requirements/<config>.txt` → `pip install -e .` (registers the `sia_rm` vllm plugin via `pyproject.toml`).
+
+Requirements files live in `requirements/`:
+- `base.txt` — shared HTTP / eval / scoring deps
+- `qwen14b-b2-inproc.txt` — vllm 0.10.1.1 + torch 2.7.1 + transformers 4.55.2
+- `vl30b-b2-inproc.txt` — vllm 0.17.1 + transformers 4.57.6
+- `0gm35b-or-vl30b-http.txt` — vllm 0.19.0 + transformers 4.57.6
+
+> **不要混用** — vllm 0.10 / 0.17 / 0.19 pin 不同的 torch 版本，必须各自独立 venv。根目录的 `requirements.txt` 仅为 qwen14b 默认配置。
 
 **CLI mode (no HTTP server):**
 ```bash

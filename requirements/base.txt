@@ -1,0 +1,25 @@
+# Base deps shared across all SIA venv configurations.
+# Don't install this alone — include via `-r base.txt` from the per-venv
+# requirements file (e.g. requirements/vl30b-b2-inproc.txt). The per-venv
+# file pins vllm/torch/transformers, which are mutually exclusive across
+# venvs.
+
+# ---- HTTP server (src/sia_vllm_server.py, src/sia_rm_*.py) ------------
+fastapi>=0.136
+uvicorn>=0.46
+httpx==0.28.1
+pydantic>=2.13
+
+# ---- Eval client (eval/alpaca_eval.py, eval/mmlu_eval.py) -------------
+requests>=2.32
+datasets>=4.0
+tqdm>=4.67
+
+# ---- Tensor / weight IO ----------------------------------------------
+safetensors==0.7.0
+numpy>=2.2,<3
+
+# ---- Skywork scoring (scripts/measure_alpaca_reward.py) --------------
+# transformers will be pinned by the per-venv file; accelerate is needed
+# to load Skywork with device_map="cuda:0".
+accelerate>=1.10

@@ -1,0 +1,39 @@
+# Configuration: Qwen3-VL-30B-A3B-Instruct as main LLM, b2 inproc.
+# The "sweet spot" speedup path (commit 46cefbb, 2026-06-05):
+#   - vllm 0.17.1 = oldest version supporting Qwen3VLMoe arch
+#   - 0.17.1 has unlock_workspace() API (MoE main LLM can grow workspace)
+#   - 0.17.1 PIECEWISE is still AOT (no runtime cudagraph flag conflict)
+#   - 0.19 PIECEWISE became per-piece runtime trigger → 100% RM error
+#
+# Validated: 200Q AlpacaEval RM call p50 71→11.12ms (6.4× faster),
+# end-to-end 1.46× speedup, Skywork mean reward statistically equivalent
+# to HTTP path (p=0.7335). See doc/vl30b-b2-inproc-speedup-20260605.md.
+#
+# Install:
+#   python3 -m venv /path/to/venv-vl30b-fast
+#   source /path/to/venv-vl30b-fast/bin/activate
+#   pip install -r requirements/vl30b-b2-inproc.txt
+#   pip install -e .
+#
+# Or run the helper script:
+#   scripts/setup_venv_vl30b_fast.sh /path/to/venv-vl30b-fast
+#
+# Launch (key env vars + b2 backend):
+#   SIA_LLM_CUDAGRAPH=piecewise SIA_RM_CUDAGRAPH=piecewise \
+#   SIA_RM_MULTIPROCESS=0 \
+#   python src/sia_vllm_server.py --llm <VL-30B-path> --rm_backend b2 \
+#     --rm_model <VM-merged-path> --rm_b2_gpu_mem 0.15 --llm_gpu_mem 0.55 \
+#     --topk 10 --weight 1.0 --entropy_threshold 1.0 \
+#     --max_model_len 4096 --port 8000
+
+-r base.txt
+
+# ---- vLLM + LLM stack (0.17.1 specifically — see top comment) --------
+vllm==0.17.1
+# torch auto-pulled by vllm wheel (2.10.0)
+transformers==4.57.6
+
+# Note: peft NOT needed for b2 inproc path (RM uses pre-merged checkpoint
+# VM-Qwen3-4B-merged-for-vllm). If you also want to run the legacy
+# sia_rm_pytorch_official.py HTTP server (which loads base+LoRA), install
+# peft<0.15 separately.

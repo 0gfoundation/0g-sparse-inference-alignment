@@ -1,4 +1,23 @@
-# SIA + B2 (in-process RM) runtime dependencies
+# SIA — DEFAULT runtime dependencies (Qwen3-14B + b2 inproc, vllm 0.10.1.1)
+#
+# >>> IMPORTANT: this file is ONE of three possible configurations. <<<
+#
+# SIA supports three main LLMs, each requiring a different vllm version
+# (vllm pins different torch versions — cannot coexist in one venv).
+# See CLAUDE.md "Dependencies" section for the full matrix. Pick the
+# config matching your main LLM:
+#
+#   Qwen3-14B            → requirements/qwen14b-b2-inproc.txt    (this file's content)
+#   Qwen3-VL-30B-A3B     → requirements/vl30b-b2-inproc.txt      (vllm 0.17.1, 1.46× faster)
+#   0GM-1.0-35B-A3B      → requirements/0gm35b-or-vl30b-http.txt (vllm 0.19.0, HTTP RM)
+#
+# Each has a one-shot setup script:
+#   scripts/setup_venv_qwen14b.sh        /path/to/venv-qwen14b
+#   scripts/setup_venv_vl30b_fast.sh     /path/to/venv-vl30b-fast
+#   scripts/setup_venv_0gm35b_http.sh    /path/to/venv-0gm35b
+#
+# The pins below match `requirements/qwen14b-b2-inproc.txt` for backward
+# compatibility (commit 5612850, MMLU-Redux 75.7 tok/s baseline).
 #
 # Install:
 #   pip install -r requirements.txt
@@ -6,8 +25,7 @@
 #                                    # (registers Qwen3WithScoreForCausalLM
 #                                    #  as vLLM plugin per pyproject.toml)
 #
-# Verified Python 3.12 + CUDA 12.x. Versions pinned to the working set tested
-# on commit 5612850 (M2 step 5: MMLU-Redux 75.7 tok/s, 68.67% accuracy).
+# Verified Python 3.12 + CUDA 12.x.
 #
 # Notes:
 #   - torch / vllm versions are tied (vllm 0.10.1.1 → torch 2.7.x).

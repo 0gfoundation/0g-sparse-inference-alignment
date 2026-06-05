@@ -1,0 +1,38 @@
+# Configuration: 0GM-1.0-35B-A3B as main LLM, OR Qwen3-VL-30B-A3B with
+# HTTP RM fallback. Requires vllm 0.19.0:
+#   - 0GM uses Qwen3_5MoeForConditionalGeneration arch, added in 0.19
+#   - 0.19 PIECEWISE is per-piece runtime trigger → b2 inproc 100% fails
+#     because main LLM forward raises cudagraph global flag during RM
+#     scoring. Workaround: run RM as a separate HTTP server.
+#
+# Install:
+#   python3 -m venv /path/to/venv-0gm35b
+#   source /path/to/venv-0gm35b/bin/activate
+#   pip install -r requirements/0gm35b-or-vl30b-http.txt
+#   pip install -e .
+#
+# Or run the helper script:
+#   scripts/setup_venv_0gm35b_http.sh /path/to/venv-0gm35b
+#
+# Launch (two processes — HTTP RM + main LLM):
+#   # Terminal A: RM server (vllm serve with --runner pooling)
+#   vllm serve <VM-merged-path> --runner pooling --convert classify \
+#     --enable-prefix-caching --gpu-memory-utilization 0.3 --port 8001
+#
+#   # Terminal B: main LLM with --rm_backend vllm
+#   python src/sia_vllm_server.py --llm <LLM-path> \
+#     --rm_url http://localhost:8001 --rm_backend vllm \
+#     --rm_model <VM-merged-path> \
+#     --topk 5 --weight 1.0 --entropy_threshold 1.0 \
+#     --no_think_prompt --ban_think_token --disable_thinking \
+#     --top_p 0.95 --top_k 20 --port 8000
+
+-r base.txt
+
+# ---- vLLM + LLM stack (0.19+ required for Qwen3_5MoeForConditionalGeneration) ----
+vllm==0.19.0
+# torch auto-pulled by vllm wheel (2.10.0+cu128)
+transformers==4.57.6
+
+# ---- LoRA loading (for legacy sia_rm_pytorch_official.py if used) ----
+peft>=0.14.0
