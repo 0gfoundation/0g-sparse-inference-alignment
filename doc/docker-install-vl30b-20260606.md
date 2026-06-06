@@ -26,10 +26,13 @@ docker run -it --rm \
   bash
 ```
 
-如果还没 clone repo, 在容器里再 clone:
+如果还没 clone repo, 在**容器里**再 clone — pytorch image 默认没装 git, 必须先装:
 ```bash
+apt-get update && apt-get install -y --no-install-recommends git ca-certificates
 cd /workspace && git clone <your-repo-url> sia-repo
 ```
+
+> 推荐做法: 在**主机上**先 clone 好再用 `-v /data/sia-repo:/workspace/sia-repo` 挂进来, 容器内就不用装 git 了。
 
 ## Step 2 — 跑安装脚本 (容器内)
 
