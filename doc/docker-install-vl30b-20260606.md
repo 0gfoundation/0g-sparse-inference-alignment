@@ -62,7 +62,9 @@ Qwen3VLMoe arch     : ✓ registered
 sia_rm plugin       : ✓ (['sia_rm'])
 ```
 
-## Step 3 — 激活 venv + 启 SIA server
+## Step 3 — 激活 venv + 启 SIA server (主 LLM + Value Model 同进程)
+
+> ℹ️ **重要 — b2 inproc 是单进程拓扑**: 跟 HTTP path 起两个 server (一个主 LLM, 一个 RM 在另一个端口) 不同, b2 inproc 让 **主 LLM (VL-30B) + Value Model (VM-Qwen3-4B) 在同一个 Python 进程里 nested 跑**, 共享一个 CUDA context, RM 调用是直接 Python 函数调用而非 HTTP。所以下面**这一条命令就同时启动了主 LLM + Value Model**, 不需要再开一个 RM server。
 
 ```bash
 source /opt/venv-vl30b/bin/activate
@@ -71,15 +73,28 @@ SIA_LLM_CUDAGRAPH=piecewise \
 SIA_RM_CUDAGRAPH=piecewise \
 SIA_RM_MULTIPROCESS=0 \
 python src/sia_vllm_server.py \
-  --llm /workspace/models/Qwen3-VL-30B-A3B-Instruct \
+  --llm        /workspace/models/Qwen3-VL-30B-A3B-Instruct \
   --rm_backend b2 \
-  --rm_model /workspace/models/VM-Qwen3-4B-merged-for-vllm \
-  --rm_b2_gpu_mem 0.15 --llm_gpu_mem 0.55 \
+  --rm_model   /workspace/models/VM-Qwen3-4B-merged-for-vllm \
+  --llm_gpu_mem    0.55 \
+  --rm_b2_gpu_mem  0.15 \
   --topk 10 --weight 1.0 --entropy_threshold 1.0 \
   --max_model_len 4096 --port 8000
 ```
 
-等待启动 (主 LLM weights 加载 ~12 min on H200, 然后 cudagraph capture + warmup ~3 min), 直到看到:
+参数对应:
+
+| 参数 | 作用 |
+|---|---|
+| `--llm` | **主推理 LLM** (VL-30B), 占 GPU 55% 显存 |
+| `--rm_backend b2` | 用 nested in-process backend (vllm 0.17.1 sweet-spot 路径) |
+| `--rm_model` | **Value Model** (VM-Qwen3-4B), nested 在主进程内, 占 GPU 15% 显存 |
+| `--llm_gpu_mem 0.55 + --rm_b2_gpu_mem 0.15` | 加起来 70%, 剩 30% 给 cudagraph + KV cache 头空间 |
+| `--topk 10 --weight 1.0 --entropy_threshold 1.0` | SIA 算法参数: 每个 token 候选 10 个, 干预权重 1.0, entropy > 1.0 才介入 |
+| `SIA_LLM_CUDAGRAPH=piecewise` | 强制主 LLM 用 PIECEWISE cudagraph (vllm 0.17.1 AOT 模式), 避免跟 nested RM 撞 |
+| `SIA_RM_MULTIPROCESS=0` | RM 跟主 LLM 同进程 (InprocClient), 不走 subprocess |
+
+等待启动 (主 LLM weights 加载 ~12 min on H200, 然后 cudagraph capture + warmup ~3 min, 再 Value Model 加载 ~1 min), 直到看到:
 ```
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
