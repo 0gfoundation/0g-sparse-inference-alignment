@@ -42,8 +42,8 @@ bash scripts/docker_install_vl30b.sh
 ```
 
 脚本按顺序做的事:
-1. `apt-get install -y git ca-certificates curl` (如果缺)
-2. `python3 -m venv /opt/venv-vl30b` (用 docker 的 conda python, 隔离 torch 2.11)
+1. **apt 依赖** — 检查 + 自动装缺失的: `git ca-certificates curl` + `python${ver}-venv` (probe `python3 -c "import ensurepip"`; 失败就查 python 版本装匹配包, 例 `python3.12-venv`。pytorch image 系统 python 默认不带 venv 模块, 这一步必须有)
+2. `python3 -m venv /opt/venv-vl30b` (用系统 python, 跟 docker 预装的 conda env torch 2.11 隔离)
 3. `pip install -r requirements/vl30b-b2-inproc.txt` (装 vllm 0.17.1 + torch 2.10.0 + 全部依赖)
 4. `pip install -e .` (注册 `sia_rm` 这个 vllm 插件, 让 b2 inproc backend 能工作)
 5. **自检**: import vllm/torch, 验证 CUDA 可用, 验证 Qwen3VLMoe arch 注册, 验证 `unlock_workspace` API 存在, 验证 sia_rm 插件可发现
