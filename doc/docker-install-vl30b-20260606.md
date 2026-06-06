@@ -11,7 +11,20 @@
   - `Qwen3-VL-30B-A3B-Instruct/` (主 LLM, ~60 GB)
   - `VM-Qwen3-4B-merged-for-vllm/` (RM, ~11 GB)
 
-## Step 1 — 启动 docker container
+## 两条路径选一条
+
+| 路径 | 适用场景 | 步骤 |
+|---|---|---|
+| **Path A: 命令行装** | 临时想跑一次, 不留持久 image | Step 1 → Step 2 (跑安装脚本) → Step 3 → Step 4 |
+| **Path B: Dockerfile 构建** ⚡ | 跑多次 / 分发给别人 / CI; 启动后无任何依赖安装 | Step 1B (build image) → Step 1B' (docker run) → Step 3 → Step 4 |
+
+Path A 每次进新容器都要重装 deps (3-5 min); Path B 一次性 `docker build` 后, 后续 `docker run` 进去就能直接跑 server, 没有安装等待。
+
+---
+
+## Path A — 命令行装
+
+### Step 1 — 启动 docker container
 
 ```bash
 # 假设主机模型在 /data/models/, 仓库 clone 到 /data/sia-repo/
@@ -62,7 +75,69 @@ Qwen3VLMoe arch     : ✓ registered
 sia_rm plugin       : ✓ (['sia_rm'])
 ```
 
+---
+
+## Path B — Dockerfile 构建 (推荐, 跑多次或分发用)
+
+Path A 每次起新容器都要等 3-5 分钟装 deps。Path B 一次 `docker build` 把所有 Python 依赖 baked 进 image (vllm 0.17.1 + torch 2.10.0 + transformers ...), 之后每次 `docker run` 进去**直接可以跑 server, 零等待**。
+
+仓库 + 模型仍然走 bind-mount, 不进 image (image 维持小巧 ~10 GB)。
+
+### Step 1B — 构建 image (一次性, ~5-10 min)
+
+在主机上, `cd` 到仓库根 (含 `Dockerfile`):
+```bash
+cd /dstack/persistent/SIA/sia-repo/0g-sparse-inference-alignment
+docker build -t sia-vl30b:0.17.1 .
+```
+
+构建过程做的事 (跟 Path A 的 install 脚本对应):
+1. `apt-get install python3.12-venv ca-certificates curl` (curl 装在 image 里以便 smoke test)
+2. `python3 -m venv /opt/venv-vl30b`
+3. `pip install -r requirements/vl30b-b2-inproc.txt` (vllm 0.17.1 + 全部 Python 依赖)
+4. COPY 一个 entrypoint 脚本进 image, 容器启动时自动 `pip install -e <mounted-repo>` 注册 sia_rm 插件 (1-2 秒, 必要)
+
+注意: **Dockerfile 不 COPY 源码**, 只 COPY `requirements/` 子目录用于 pip install。源码靠 bind-mount, 你改了 src/ 不用重 build image。
+
+### Step 1B' — 启动 container
+
+```bash
+docker run -it --rm \
+  --gpus all \
+  --shm-size=16g \
+  --ipc=host \
+  -p 8000:8000 \
+  -v /dstack/persistent/SIA:/workspace \
+  sia-vl30b:0.17.1 \
+  bash
+```
+
+进容器后看到:
+```
+[entrypoint] registering sia_rm vllm plugin (pip install -e /workspace/sia-repo/0g-sparse-inference-alignment)
+root@xxxx:/workspace/sia-repo/0g-sparse-inference-alignment#
+```
+
+venv 已经在 `$PATH` 里, 进容器直接 `python --version` 就能看到 venv 的 python。**跳过 Step 2 整段, 直接走 Step 3 启 server**。
+
+### (可选) 验证 image 内的依赖都齐了
+
+```bash
+python -c "
+import vllm, torch
+from importlib.metadata import entry_points
+print('vllm :', vllm.__version__)
+print('torch:', torch.__version__, 'CUDA available:', torch.cuda.is_available())
+print('sia_rm plugin:', [e.name for e in entry_points(group='vllm.general_plugins') if 'sia' in e.name])
+"
+```
+预期: `vllm: 0.17.1`, `torch: 2.10.0+cu124`, `sia_rm plugin: ['sia_rm']`.
+
+---
+
 ## Step 3 — 激活 venv + 启 SIA server (主 LLM + Value Model 同进程)
+
+> Path B 容器里 venv 已在 PATH, `source /opt/venv-vl30b/bin/activate` 可省。Path A 用户记得激活。
 
 > ℹ️ **重要 — b2 inproc 是单进程拓扑**: 跟 HTTP path 起两个 server (一个主 LLM, 一个 RM 在另一个端口) 不同, b2 inproc 让 **主 LLM (VL-30B) + Value Model (VM-Qwen3-4B) 在同一个 Python 进程里 nested 跑**, 共享一个 CUDA context, RM 调用是直接 Python 函数调用而非 HTTP。所以下面**这一条命令就同时启动了主 LLM + Value Model**, 不需要再开一个 RM server。
 
@@ -157,7 +232,9 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
 
 - [`qwen3-vl-30b-sia-eval-20260605.md`](qwen3-vl-30b-sia-eval-20260605.md) — VL-30B SIA 评测汇总 (效果 + 性能), 含本地实验结果
 - [`vl30b-b2-inproc-speedup-20260605.md`](vl30b-b2-inproc-speedup-20260605.md) — b2 inproc 加速 1.46× 的原始实验报告 (含 vllm 0.15/0.17.1/0.19 三档对比为什么 0.17.1 是 sweet spot)
-- [`../scripts/docker_install_vl30b.sh`](../scripts/docker_install_vl30b.sh) — 本 doc 引用的安装脚本
+- [`../Dockerfile`](../Dockerfile) — Path B 用的 Dockerfile (vllm 0.17.1 baked-in 镜像)
+- [`../scripts/docker_entrypoint_vl30b.sh`](../scripts/docker_entrypoint_vl30b.sh) — Path B image 的 entrypoint, 启动时注册 sia_rm 插件
+- [`../scripts/docker_install_vl30b.sh`](../scripts/docker_install_vl30b.sh) — Path A 用的命令行安装脚本
 - [`../scripts/setup_venv_vl30b_fast.sh`](../scripts/setup_venv_vl30b_fast.sh) — venv 创建底层脚本 (docker_install 会调用它)
 - [`../requirements/vl30b-b2-inproc.txt`](../requirements/vl30b-b2-inproc.txt) — pip 依赖清单
 - [`../CLAUDE.md`](../CLAUDE.md) — 整体 venv 矩阵 (Qwen3-14B / VL-30B / 0GM-35B)
