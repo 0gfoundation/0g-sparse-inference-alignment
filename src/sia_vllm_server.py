@@ -422,6 +422,15 @@ def parse_args():
                         "省服务端 re-tokenize（~3-5ms/call）。需要 RM server 用 "
                         "scripts/vllm_serve_with_token_ids.py 启动以打 Pydantic 补丁。")
     p.add_argument("--max_model_len", type=int, default=4096)
+    # vllm Automatic Prefix Caching (APC). Default ON (生产推荐):
+    # 多 request 共享前缀时 2-10x prefill 加速; SIA 跟 APC 正交不冲突。
+    # 想关传 --disable_prefix_caching.
+    p.add_argument("--enable_prefix_caching", dest="enable_prefix_caching",
+                   action="store_true", default=True,
+                   help="Enable vllm APC (default).")
+    p.add_argument("--disable_prefix_caching", dest="enable_prefix_caching",
+                   action="store_false",
+                   help="Disable vllm APC (not recommended for production).")
     p.add_argument("--enable_thinking", choices=["true", "false"], default=None,
                    help="透传 enable_thinking 给 RM prefix 构造, 跟 LLM 实际看到的 prompt 100% 一致。"
                         "Qwen3 Instruct 模型 default=true (含 <think> 注入); "
@@ -500,7 +509,9 @@ def main():
         gpu_memory_utilization=_args.llm_gpu_mem,
         logits_processors=[SIAProcessor],
         disable_log_stats=True,
+        enable_prefix_caching=_args.enable_prefix_caching,
     )
+    print(f"[SIA] main LLM prefix_caching = {_args.enable_prefix_caching}")
     # Optional main-LLM cudagraph override. Default = vllm's default (keeps
     # legacy Qwen14B / vllm 0.10 path untouched). Set to "piecewise" when
     # running a nested-vllm RM under vllm >= 0.15: FULL_AND_PIECEWISE on the

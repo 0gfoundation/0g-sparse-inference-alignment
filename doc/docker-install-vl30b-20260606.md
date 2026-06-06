@@ -379,6 +379,85 @@ docker compose exec sia-vl30b bash -c \
 | `docker compose` vs `docker-compose` 命令 | 本 doc 用的是 **Compose V2 plugin** 语法 (`docker compose`, 中间空格)。老的 `docker-compose` (中划线, V1, Python 实现) 也能跑同一个 yaml, 但部分 v2 字段 (e.g. `gpus: all`) 可能不识别。建议升级 docker (>= 20.10) + 安装 compose plugin |
 | Path C 怎么改 server 参数 (e.g. `--topk` / `--weight`) | 改 `docker-compose.yml` 的 `command:` 字段, 然后 `docker compose up -d` 自动 recreate container。**不用重 build image** |
 
+## 如何验证 Prefix Caching 是否启用
+
+vllm 的 **Automatic Prefix Caching (APC)** 在共享前缀场景 (system prompt / RAG context / 多轮对话) 能给 prefill **2-10× 加速**, 是生产部署的关键 cache 机制。本仓库已经把它**默认开启** — `sia_vllm_server.py` 的 `--enable_prefix_caching` flag 默认 True, 而且 [`docker-compose.yml`](../docker-compose.yml) `command:` 里显式传了这个 flag。
+
+> 想关掉测对照: `--disable_prefix_caching` (生产**不推荐**)。
+
+### 验证方法 1: 看 server 启动日志 (最直接)
+
+server 启动时 vllm 会 dump engine 配置, 里面有 `enable_prefix_caching=True`:
+
+```bash
+# Path C
+docker compose logs sia-vl30b 2>&1 | grep -m1 enable_prefix_caching
+
+# Path A/B
+grep -m1 enable_prefix_caching $LOG    # 你 Step 3 启动时记的那个 log 文件
+```
+
+预期输出 (vllm 内部一长串配置 dump 的一部分):
+```
+... seed=0, served_model_name=..., enable_prefix_caching=True, enable_chunked_prefill=True, ...
+```
+
+如果看到 `enable_prefix_caching=False` → APC 关了, 要 debug 启动 flag。
+
+### 验证方法 2: 看 server 自己的 prefix_caching 标记
+
+`sia_vllm_server.py` 在加载 vllm engine 之前打印自己看到的 flag (本仓库的 wrapper 加的):
+
+```bash
+docker compose logs sia-vl30b 2>&1 | grep "main LLM prefix_caching"
+```
+
+预期:
+```
+[SIA] main LLM prefix_caching = True
+```
+
+### 验证方法 3: 功能性测试 (共享前缀, 看第二次 TTFT 是否暴跌)
+
+发两次 prompt **相同前缀, 不同结尾** 的 request, 用 `time` 量 wall time。APC 生效时, 第二个 request 的 prefill 几乎免费 (KV 直接复用), wall time 应该明显短:
+
+```bash
+PROMPT='Imagine you are a senior software engineer reviewing a Python codebase. You should focus on correctness, readability, and idiomatic style. Provide concrete suggestions where appropriate. Now '
+
+URL=http://localhost:8000/v1/chat/completions
+MODEL=/workspace/models/Qwen3-VL-30B-A3B-Instruct
+
+call() {
+  curl -s -X POST "$URL" -H "Content-Type: application/json" \
+    -d "{\"model\":\"$MODEL\",\"messages\":[{\"role\":\"user\",\"content\":\"$PROMPT $1\"}],\"max_tokens\":30,\"temperature\":0}" \
+    > /dev/null
+}
+
+echo "First call (no cache hit):"
+time call "review this function: def add(a, b): return a + b"
+
+echo "Second call (same long prefix, different ending — should hit cache):"
+time call "review this function: def sub(a, b): return a - b"
+```
+
+预期: 第二次 wall time 明显小于第一次 (主要是 prefill 时间省掉)。30B 模型上 ~50 token 共享 prefix 应该能省 ~50-100 ms TTFT。
+
+> ⚠️ 此测试需要 prompt **完全相同的前缀长度 + content**。SIA 干预**不影响** APC — APC 只对 prefill 阶段的 input prompt KV 做缓存, SIA 介入是 decode 阶段改 logits, 两者作用不同阶段。
+
+### 关掉对照测速 (可选, 留作日后调优)
+
+想看 APC 对自己业务的实际收益:
+```bash
+# 改 docker-compose.yml 的 command, 把 --enable_prefix_caching 换成 --disable_prefix_caching
+# 重启:
+docker compose up -d
+# 用相同 benchmark 测一遍, 对比 throughput / TTFT
+```
+
+注意: 关 APC 后, **SIA 干预效果不变** (Skywork reward / accuracy 等指标跟开 APC 时统计等价), 只是 prefill 慢。这一点跟 b2 inproc 加速一样 — 工程优化跟 SIA 算法层正交。
+
+---
+
 ## 显存预算 — 其他进程占用 GPU 时如何调
 
 如果 GPU 上还有别的进程, 用 `nvidia-smi --query-gpu=memory.total,memory.used --format=csv,noheader` 算出 free 显存, 然后调小 `--llm_gpu_mem` 和 `--rm_b2_gpu_mem` (因为 vllm 把它们当作**总显存**的百分比, 不是 free 显存)。
