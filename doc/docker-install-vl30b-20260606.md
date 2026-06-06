@@ -69,17 +69,31 @@ sia_rm plugin       : ✓ (['sia_rm'])
 ```bash
 source /opt/venv-vl30b/bin/activate
 
-SIA_LLM_CUDAGRAPH=piecewise \
-SIA_RM_CUDAGRAPH=piecewise \
-SIA_RM_MULTIPROCESS=0 \
-python src/sia_vllm_server.py \
-  --llm        /workspace/models/Qwen3-VL-30B-A3B-Instruct \
-  --rm_backend b2 \
-  --rm_model   /workspace/models/VM-Qwen3-4B-merged-for-vllm \
-  --llm_gpu_mem    0.55 \
-  --rm_b2_gpu_mem  0.15 \
-  --topk 10 --weight 1.0 --entropy_threshold 1.0 \
-  --max_model_len 4096 --port 8000
+# 输出重定向到带时间戳的 log 文件, 用 nohup 让进程独立于当前 shell
+mkdir -p /workspace/sia-logs
+LOG="/workspace/sia-logs/sia_server_$(date +%Y%m%d_%H%M%S).log"
+echo "[launch] log → $LOG"
+
+nohup env \
+  SIA_LLM_CUDAGRAPH=piecewise \
+  SIA_RM_CUDAGRAPH=piecewise \
+  SIA_RM_MULTIPROCESS=0 \
+  python src/sia_vllm_server.py \
+    --llm        /workspace/models/Qwen3-VL-30B-A3B-Instruct \
+    --rm_backend b2 \
+    --rm_model   /workspace/models/VM-Qwen3-4B-merged-for-vllm \
+    --llm_gpu_mem    0.55 \
+    --rm_b2_gpu_mem  0.15 \
+    --topk 10 --weight 1.0 --entropy_threshold 1.0 \
+    --max_model_len 4096 --port 8000 \
+    > "$LOG" 2>&1 &
+
+echo "[launch] pid=$!  (process detached from this shell, log: $LOG)"
+```
+
+加载过程实时观察 (`Ctrl+C` 退出 tail 不影响 server, server 仍在跑):
+```bash
+tail -f "$LOG"
 ```
 
 参数对应:
@@ -94,10 +108,22 @@ python src/sia_vllm_server.py \
 | `SIA_LLM_CUDAGRAPH=piecewise` | 强制主 LLM 用 PIECEWISE cudagraph (vllm 0.17.1 AOT 模式), 避免跟 nested RM 撞 |
 | `SIA_RM_MULTIPROCESS=0` | RM 跟主 LLM 同进程 (InprocClient), 不走 subprocess |
 
-等待启动 (主 LLM weights 加载 ~12 min on H200, 然后 cudagraph capture + warmup ~3 min, 再 Value Model 加载 ~1 min), 直到看到:
+等待启动 (主 LLM weights 加载 ~12 min on H200, 然后 cudagraph capture + warmup ~3 min, 再 Value Model 加载 ~1 min), 直到 `tail -f "$LOG"` 输出里看到:
 ```
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+```
+
+随时检查 server 是否还活:
+```bash
+ps -ef | grep sia_vllm_server | grep -v grep
+# 或:
+pgrep -af sia_vllm_server
+```
+
+要停掉 server:
+```bash
+pkill -f sia_vllm_server.py
 ```
 
 ## Step 4 — Smoke test (容器外或新 shell)
