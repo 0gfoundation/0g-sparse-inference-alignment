@@ -29,19 +29,27 @@ echo "[docker-install] venv : ${VENV_PATH}"
 echo "================================================================"
 
 # ---------- Step 1: apt deps ----------------------------------------------
-# pytorch/pytorch:*-devel images typically have git but not always; install
-# defensively. ca-certificates / curl are for git fetch + later curl tests.
-need_apt_install=0
+# pytorch/pytorch:*-devel ships system Python from apt (typically 3.12 on
+# Ubuntu 24.04 base) but WITHOUT the matching python3-venv package, so
+# `python3 -m venv` fails with "ensurepip is not available". Detect that
+# and add the right venv package to the apt install list.
+need_pkgs=()
 for pkg in git ca-certificates; do
-  if ! dpkg -s "$pkg" >/dev/null 2>&1; then
-    need_apt_install=1
-    break
-  fi
+  dpkg -s "$pkg" >/dev/null 2>&1 || need_pkgs+=("$pkg")
 done
-if [[ $need_apt_install -eq 1 ]]; then
-  echo "[docker-install] installing system deps via apt-get..."
+
+# Check if python3 -m venv works (don't actually create anything; just probe
+# whether the venv module's ensurepip support is wired up).
+if ! python3 -c "import ensurepip" >/dev/null 2>&1; then
+  py_minor=$(python3 -c 'import sys; print(f"{sys.version_info[0]}.{sys.version_info[1]}")')
+  need_pkgs+=("python${py_minor}-venv")
+  echo "[docker-install] python3 (=${py_minor}) lacks ensurepip; will install python${py_minor}-venv"
+fi
+
+if [[ ${#need_pkgs[@]} -gt 0 ]]; then
+  echo "[docker-install] installing system deps via apt-get: ${need_pkgs[*]}"
   apt-get update -qq
-  apt-get install -y --no-install-recommends git ca-certificates curl
+  apt-get install -y --no-install-recommends "${need_pkgs[@]}" curl
   rm -rf /var/lib/apt/lists/*
 else
   echo "[docker-install] system deps already present, skipping apt-get"
