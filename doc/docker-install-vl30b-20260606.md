@@ -1,8 +1,23 @@
-# VL-30B SIA 在 Docker 里跑通 — 完整安装步骤
+# VL-30B SIA 在 Docker 里跑通 — 完整部署指南
 
 **最后更新**: 2026-06-06
 **适用 docker image**: `pytorch/pytorch:2.11.0-cuda12.8-cudnn9-devel`
 **适用配置**: VL-30B (Qwen3-VL-30B-A3B-Instruct) SIA b2 inproc 加速路径 (vllm 0.17.1, [`requirements/vl30b-b2-inproc.txt`](../requirements/vl30b-b2-inproc.txt))
+
+> 本 doc 覆盖 3 条部署路径 (临时跑 / Dockerfile build / **生产 compose**), 每条都包含: **构建 image** → **启动 server** → **smoke test** → **停止 / 重启 / 清理**。新读者直接跳到 [三条路径选一条](#三条路径选一条).
+
+## 快速参考 (TL;DR)
+
+**生产部署** (复制粘贴即用, 假设模型已在 `/dstack/persistent/SIA/models/`):
+```bash
+cd /dstack/persistent/SIA/sia-repo/0g-sparse-inference-alignment
+docker compose up -d --build         # 起服务 (首次 ~15-20 min 含 build + warmup)
+docker compose logs -f sia-vl30b     # 看启动 + 运行日志
+docker compose ps                    # 等 STATUS = (healthy)
+curl -X POST http://localhost:8000/v1/chat/completions -H "Content-Type: application/json" \
+  -d '{"model":"/workspace/models/Qwen3-VL-30B-A3B-Instruct","messages":[{"role":"user","content":"hi"}],"max_tokens":50}'
+docker compose down                  # 停服务 (named volume 保留, 下次启动复用 compile cache)
+```
 
 ## 前提
 
@@ -188,13 +203,13 @@ Path C 之下, **server 在 `docker compose up -d` 后已经在自动启动**, �
 
 ---
 
-## Step 3 — 激活 venv + 启 SIA server (主 LLM + Value Model 同进程)
+## Step 3 — 启 SIA server (主 LLM + Value Model 同进程) — Path A / B 手动启动
 
-> Path B 容器里 venv 已在 PATH, `source /opt/venv-vl30b/bin/activate` 可省。Path A 用户记得激活。**Path C 用户跳过本步骤** — server 已经被 compose 自动启起来了。
-
-> Path B 容器里 venv 已在 PATH, `source /opt/venv-vl30b/bin/activate` 可省。Path A 用户记得激活。
+> **谁需要看这一步**: Path A 用户 (Step 2 装完依赖后), Path B 用户 (Step 1B' 进容器后)。**Path C 用户跳过** — server 已经被 compose 自动启起来了。
 
 > ℹ️ **重要 — b2 inproc 是单进程拓扑**: 跟 HTTP path 起两个 server (一个主 LLM, 一个 RM 在另一个端口) 不同, b2 inproc 让 **主 LLM (VL-30B) + Value Model (VM-Qwen3-4B) 在同一个 Python 进程里 nested 跑**, 共享一个 CUDA context, RM 调用是直接 Python 函数调用而非 HTTP。所以下面**这一条命令就同时启动了主 LLM + Value Model**, 不需要再开一个 RM server。
+
+> Path B 容器里 venv 已在 PATH, `source /opt/venv-vl30b/bin/activate` 可省。Path A 用户记得激活。
 
 ```bash
 source /opt/venv-vl30b/bin/activate
@@ -256,7 +271,13 @@ pgrep -af sia_vllm_server
 pkill -f sia_vllm_server.py
 ```
 
-## Step 4 — Smoke test (容器外或新 shell)
+## Step 4 — Smoke test (验证 server 真活)
+
+Server 已 ready (Path A/B 看到 "Uvicorn running on http://0.0.0.0:8000", Path C 看到 `docker compose ps` 显示 `(healthy)`) 后, 跑一个 chat completion 验证端到端工作。
+
+Server 暴露的是**OpenAI 兼容** API, 三种方式都行:
+
+### 4.1 用 curl (最简单)
 
 ```bash
 curl -s -X POST http://localhost:8000/v1/chat/completions \
@@ -269,7 +290,81 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
   }' | python3 -m json.tool
 ```
 
-预期: 收到正常 JSON response。同时 server stderr 会打印 `[SIA] req=0 DONE intervened=N/M ratio=X%`, 确认 SIA 真的在干预 (intv 率应该在 15-25% 区间)。
+### 4.2 用 OpenAI Python SDK (生产代码集成可这么测)
+
+```bash
+pip install openai
+```
+```python
+from openai import OpenAI
+client = OpenAI(base_url="http://localhost:8000/v1", api_key="dummy")   # key 不校验
+resp = client.chat.completions.create(
+    model="/workspace/models/Qwen3-VL-30B-A3B-Instruct",
+    messages=[{"role": "user", "content": "What are 3 colors of fruit?"}],
+    max_tokens=100, temperature=0.7,
+)
+print(resp.choices[0].message.content)
+print("usage:", resp.usage)   # prompt_tokens / completion_tokens / total_tokens
+```
+
+### 4.3 Path C 用户也可以从容器内测 (省去暴露端口的麻烦)
+
+```bash
+docker compose exec sia-vl30b bash -c \
+  'curl -s -X POST http://localhost:8000/v1/chat/completions \
+     -H "Content-Type: application/json" \
+     -d "{\"model\":\"/workspace/models/Qwen3-VL-30B-A3B-Instruct\",\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}],\"max_tokens\":50}"'
+```
+
+### 验证 SIA 真的在干预 (不是退化成 noSIA)
+
+预期 response 是正常 JSON, 同时 server 日志会打印:
+```
+[SIA] req=0 DONE  intervened=N/M  ratio=X%  top1_flip=K/N (Y%)
+```
+
+健康指标 (跟 doc [`qwen3-vl-30b-sia-eval-20260605.md` §2.4](qwen3-vl-30b-sia-eval-20260605.md#24-sia-健康指标汇总) 一致):
+
+| 指标 | 健康范围 | 红灯 |
+|---|---|---|
+| intervention ratio | 10-40% (短输出 ~20%, 长输出 ~25-30%) | **0%** → RM 死了, SIA 退化为 no-op |
+| top1 flip rate | 50-80% | 0% / 100% → bug |
+| RM error 日志 | 0 | >0 → RM forward 失败 |
+
+看日志方法 (per path):
+- **Path A/B**: `tail -f "$LOG"` (你启动时记的那个 `/workspace/sia-logs/sia_server_*.log`)
+- **Path C**: `docker compose logs -f sia-vl30b`
+
+---
+
+## Step 5 — 停止 / 重启 / 清理 (per path)
+
+### Path A / B (手动起 docker run)
+
+| 操作 | 命令 |
+|---|---|
+| 停 server (进程级) | `pkill -f sia_vllm_server.py` |
+| 看 server 是否还在跑 | `pgrep -af sia_vllm_server` |
+| 重启 server | 重新跑 Step 3 的 nohup 命令 |
+| 退出 container (server 也会被 kill) | 在容器里 `exit` |
+| 容器 docker run 时加了 `--rm`, exit 后容器自动删除 |
+
+### Path C (docker compose) — 生产推荐
+
+| 操作 | 命令 |
+|---|---|
+| 停 server + 移除 container (保留 named volumes, 含 compile cache) | `docker compose down` |
+| 停 server + 移除 container + 清理 volumes (重置 compile cache) | `docker compose down -v` |
+| 仅重启 server, 不重 build, 不动 volume | `docker compose restart sia-vl30b` |
+| 改了源码后重启 (源码是 bind-mount, 直接 restart 即可) | `docker compose restart sia-vl30b` |
+| 改了 `requirements/vl30b-b2-inproc.txt` 后重 build | `docker compose up -d --build` |
+| 改了 `docker-compose.yml` 后应用新配置 | `docker compose up -d` (会自动 recreate container) |
+| 查看资源占用 | `docker stats sia-vl30b-server` |
+| 直接进容器 debug (server 仍在跑) | `docker compose exec sia-vl30b bash` |
+
+> **GPU 显存释放**: container 停掉后 (`docker compose down` 或 `pkill`) GPU 显存通常**几秒内自动释放**。如果 `nvidia-smi` 还显示显存被占, 说明有僵尸进程, 用 `pkill -9 -f sia_vllm_server.py` 强杀。
+
+---
 
 ## 关键陷阱 / 注意事项
 
@@ -279,9 +374,29 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
 | CUDA 12.8 vs vllm 0.17.1 的 cu124 wheel | 向前兼容, OK (cu124 binary 能跑在 12.8 驱动上) |
 | `--shm-size=16g --ipc=host` 必须加 | vllm 用大量共享内存做 KV cache, 默认 docker 的 64MB 不够 |
 | 主 LLM cudagraph mode 必须 PIECEWISE (`SIA_LLM_CUDAGRAPH=piecewise`) | 0.17.1 的 PIECEWISE 是 AOT 编译, 不会撞 nested RM 的 cudagraph flag。这是 b2 inproc 跑通的关键 env var |
-| 主进程 + nested RM 在同一 GPU 共享显存 | `--llm_gpu_mem 0.55 --rm_b2_gpu_mem 0.15` 加起来 0.70, 给 cudagraph 留 30%; 80 GB GPU 上跑 30B 主 LLM + 4B RM 是紧但够 |
+| 主进程 + nested RM 在同一 GPU 共享显存 | `--llm_gpu_mem 0.55 --rm_b2_gpu_mem 0.15` 加起来 0.70, 给 cudagraph 留 30%; 80 GB GPU 上跑 30B 主 LLM + 4B RM 是紧但够。GPU 上有其他进程时, 减到 `0.48 + 0.08`, 详见 doc 末尾 [显存预算](#显存预算其他进程占用-gpu-时如何调) |
+| Path C 首次启动看 `(unhealthy)` 状态 | start_period=20m, 给主 LLM weights 加载 + torch.compile 留余地。容器不会在这段时间被 docker kill (`unless-stopped` + `start_period` 配合)。20 min 后还 unhealthy 才是真问题 |
+| `docker compose` vs `docker-compose` 命令 | 本 doc 用的是 **Compose V2 plugin** 语法 (`docker compose`, 中间空格)。老的 `docker-compose` (中划线, V1, Python 实现) 也能跑同一个 yaml, 但部分 v2 字段 (e.g. `gpus: all`) 可能不识别。建议升级 docker (>= 20.10) + 安装 compose plugin |
+| Path C 怎么改 server 参数 (e.g. `--topk` / `--weight`) | 改 `docker-compose.yml` 的 `command:` 字段, 然后 `docker compose up -d` 自动 recreate container。**不用重 build image** |
 
-如果 step 2 自检有任何 ✗, **不要继续**, 先 debug。任何一步报错先看具体错误信息, 不要硬上 step 3。
+## 显存预算 — 其他进程占用 GPU 时如何调
+
+如果 GPU 上还有别的进程, 用 `nvidia-smi --query-gpu=memory.total,memory.used --format=csv,noheader` 算出 free 显存, 然后调小 `--llm_gpu_mem` 和 `--rm_b2_gpu_mem` (因为 vllm 把它们当作**总显存**的百分比, 不是 free 显存)。
+
+例: 143 GB GPU, 别的进程占 57 GB, 剩 86 GB 给 vllm:
+
+| 配置 | `--llm_gpu_mem` | `--rm_b2_gpu_mem` | 总 vllm 占 | 加其他进程后 | 留 headroom |
+|---|---|---|---|---|---|
+| 默认 (空闲 GPU) | 0.55 | 0.15 | 100,640 MiB | 158,002 MiB | ❌ **OOM** |
+| 调小后 | **0.48** | **0.08** | 80,512 MiB | 137,874 MiB | ✅ 5,897 MiB |
+
+加上 `--max_model_len 2048` (从 4096 降一半) 减少 KV cache 需求, 更稳。
+
+如果 Path C 也想适配, 改 `docker-compose.yml` 的 `command:` 字段对应行即可。
+
+---
+
+如果 Step 2 自检有任何 ✗, **不要继续**, 先 debug。任何一步报错先看具体错误信息, 不要硬上 Step 3。
 
 ## 相关 doc
 
