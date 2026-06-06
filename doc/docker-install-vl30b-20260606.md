@@ -11,14 +11,15 @@
   - `Qwen3-VL-30B-A3B-Instruct/` (主 LLM, ~60 GB)
   - `VM-Qwen3-4B-merged-for-vllm/` (RM, ~11 GB)
 
-## 两条路径选一条
+## 三条路径选一条
 
 | 路径 | 适用场景 | 步骤 |
 |---|---|---|
 | **Path A: 命令行装** | 临时想跑一次, 不留持久 image | Step 1 → Step 2 (跑安装脚本) → Step 3 → Step 4 |
-| **Path B: Dockerfile 构建** ⚡ | 跑多次 / 分发给别人 / CI; 启动后无任何依赖安装 | Step 1B (build image) → Step 1B' (docker run) → Step 3 → Step 4 |
+| **Path B: Dockerfile 构建** ⚡ | 跑多次 / 分发给别人 / CI; 启动后无依赖安装但仍需手动起 server | Step 1B (build image) → Step 1B' (docker run) → Step 3 → Step 4 |
+| **Path C: docker compose** ⭐ **生产推荐** | 生产部署 / 自动重启 / 健康检查 / 持久 compile cache; **server 完全自动起** | Step 1C (`docker compose up -d`) → Step 4 (smoke test) |
 
-Path A 每次进新容器都要重装 deps (3-5 min); Path B 一次性 `docker build` 后, 后续 `docker run` 进去就能直接跑 server, 没有安装等待。
+Path A 每次进新容器都要重装 deps (3-5 min); Path B 一次性 `docker build` 后, 后续 `docker run` 进去就能直接跑 server, 但要手动敲启动命令; Path C 把启动命令 + 重启策略 + 健康检查 + GPU + 挂载全部固化到 `docker-compose.yml`, `docker compose up` 一条命令搞定。
 
 ---
 
@@ -135,7 +136,61 @@ print('sia_rm plugin:', [e.name for e in entry_points(group='vllm.general_plugin
 
 ---
 
+## Path C — docker compose (⭐ 生产推荐)
+
+把 GPU 资源 / 挂载 / 重启策略 / 健康检查 / 完整 server 启动命令全部写进 [`docker-compose.yml`](../docker-compose.yml) (跟 Dockerfile 同在 repo 根)。**一条命令拉起全套**, server 自动起来跑。
+
+### Step 1C — 起服务
+
+在 host 上, cd 到 repo 根 (含 `docker-compose.yml`):
+```bash
+cd /dstack/persistent/SIA/sia-repo/0g-sparse-inference-alignment
+docker compose up -d --build      # 首次: build image (~5-10 min) + 后台起 container
+```
+
+之后日常运维:
+```bash
+docker compose logs -f sia-vl30b  # tail server log (Ctrl+C 不杀 container)
+docker compose ps                  # 看健康状态
+docker compose restart sia-vl30b   # 重启 server (不重 build)
+docker compose down                # 停 + 移除 container (named volume 保留)
+```
+
+### compose 文件做了什么 (跟 Path A/B 相比的差异)
+
+| 维度 | Path A/B (docker run) | Path C (compose) |
+|---|---|---|
+| 启动 server | 进容器后手动敲 `python src/sia_vllm_server.py ...` | **自动启** (`command:` 字段) |
+| 后台运行 | 你要写 `nohup ... &` | **docker 管 PID 1**, `up -d` 后台跑 |
+| 日志 | 自己 redirect 到文件 | **`docker compose logs`** 自动收集 stdout/stderr |
+| 进程崩了 | 死了就死了, 要手动重启 | **`restart: unless-stopped`** 自动拉起 |
+| 健康检查 | 自己 curl 测 | **healthcheck**: 自动 curl `/health`, 失败标 unhealthy |
+| 跨容器重启复用 compile cache | 无 | **named volume `vllm-compile-cache`** 持久化, 二次启动省 ~3-5 min torch.compile 时间 |
+| GPU + shm + ipc | 命令行 flag 一堆 | 写在 yaml 里, 一处管理 |
+| 环境差异 (dev/staging/prod) | 一份 shell 命令很难管 | `docker-compose.dev.yml` / `.prod.yml` 各一份, 重用 image |
+
+### 启动命令: 为什么放 compose 不放 Dockerfile
+
+| | Dockerfile `CMD` | docker-compose `command:` |
+|---|---|---|
+| 改参数 | 要重 build image | 改 yaml + `docker compose up` 重新 create container, **不重 build** |
+| 同一 image 多场景 | 只能一份 default | dev/prod 各一份 compose 文件覆盖 |
+| 调试 | `docker run sia-vl30b bash` 会被 CMD 干扰 | Dockerfile CMD 留 `bash`, compose 用 `command:` 覆盖; debug 时 `docker run` 直接进 bash, 生产用 compose | 
+| 业界标准 | "image self-launching" 风格 | **微服务 + k8s 主流**: image 是通用 artifact, 启动配置在编排层 |
+
+**最规范的做法** (本仓库就是这样):
+- `Dockerfile` 的 `CMD ["bash"]` — debug 默认行为, 跟 `docker run` 友好
+- `docker-compose.yml` 的 `command:` — 生产实际启动的命令, 完整参数固化
+
+### 跳过 Step 2 / Step 3, 直接到 Step 4
+
+Path C 之下, **server 在 `docker compose up -d` 后已经在自动启动**, 不需要 Step 2 (装 deps) 和 Step 3 (手动启 server)。等 `docker compose ps` 显示 `(healthy)` 状态 (大约 15-20 分钟首次启动, 包括首次 torch.compile; 后续重启 ~3-5 分钟) 后, 直接跳到 Step 4 smoke test。
+
+---
+
 ## Step 3 — 激活 venv + 启 SIA server (主 LLM + Value Model 同进程)
+
+> Path B 容器里 venv 已在 PATH, `source /opt/venv-vl30b/bin/activate` 可省。Path A 用户记得激活。**Path C 用户跳过本步骤** — server 已经被 compose 自动启起来了。
 
 > Path B 容器里 venv 已在 PATH, `source /opt/venv-vl30b/bin/activate` 可省。Path A 用户记得激活。
 
@@ -232,8 +287,9 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
 
 - [`qwen3-vl-30b-sia-eval-20260605.md`](qwen3-vl-30b-sia-eval-20260605.md) — VL-30B SIA 评测汇总 (效果 + 性能), 含本地实验结果
 - [`vl30b-b2-inproc-speedup-20260605.md`](vl30b-b2-inproc-speedup-20260605.md) — b2 inproc 加速 1.46× 的原始实验报告 (含 vllm 0.15/0.17.1/0.19 三档对比为什么 0.17.1 是 sweet spot)
-- [`../Dockerfile`](../Dockerfile) — Path B 用的 Dockerfile (vllm 0.17.1 baked-in 镜像)
-- [`../scripts/docker_entrypoint_vl30b.sh`](../scripts/docker_entrypoint_vl30b.sh) — Path B image 的 entrypoint, 启动时注册 sia_rm 插件
+- [`../docker-compose.yml`](../docker-compose.yml) — **Path C 生产 compose 文件** (GPU + 挂载 + restart + healthcheck + 完整启动命令)
+- [`../Dockerfile`](../Dockerfile) — Path B / C 共用的 Dockerfile (vllm 0.17.1 baked-in 镜像)
+- [`../scripts/docker_entrypoint_vl30b.sh`](../scripts/docker_entrypoint_vl30b.sh) — Path B / C 共用 entrypoint, 启动时注册 sia_rm 插件
 - [`../scripts/docker_install_vl30b.sh`](../scripts/docker_install_vl30b.sh) — Path A 用的命令行安装脚本
 - [`../scripts/setup_venv_vl30b_fast.sh`](../scripts/setup_venv_vl30b_fast.sh) — venv 创建底层脚本 (docker_install 会调用它)
 - [`../requirements/vl30b-b2-inproc.txt`](../requirements/vl30b-b2-inproc.txt) — pip 依赖清单

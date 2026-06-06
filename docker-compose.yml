@@ -1,0 +1,97 @@
+# Production docker-compose for VL-30B SIA b2 inproc.
+#
+# Pairs with the repo-root Dockerfile + scripts/docker_entrypoint_vl30b.sh
+# (the latter pip-installs the sia_rm plugin against the bind-mounted repo
+# at container startup, then exec's the `command:` below as PID 1).
+#
+# Build + start:
+#   docker compose up --build -d        # detached
+#   docker compose logs -f sia-vl30b    # tail server log
+#   docker compose down                 # stop + remove
+#
+# Override for dev/staging: copy this file to docker-compose.dev.yml and
+# tweak `command:` / `volumes:` / `ports:`, then:
+#   docker compose -f docker-compose.dev.yml up -d
+
+services:
+  sia-vl30b:
+    image: sia-vl30b:0.17.1
+    container_name: sia-vl30b-server
+
+    # Build from repo-root Dockerfile if image:tag is not already present.
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    # ------ GPU access (docker compose >= v2.30; standard 'gpus' syntax) ------
+    # 'all' grabs every visible GPU. For multi-GPU host, restrict via
+    # 'device_ids: ["0"]' or NVIDIA_VISIBLE_DEVICES env.
+    gpus: all
+
+    # ------ Memory / IPC -----------------------------------------------------
+    # vLLM uses large shared-memory buffers; docker default 64MB is NOT enough.
+    # --ipc=host lets nested RM in b2 inproc share CUDA context cleanly.
+    shm_size: 16g
+    ipc: host
+
+    # ------ Network ----------------------------------------------------------
+    ports:
+      - "8000:8000"    # OpenAI-compatible chat/completions endpoint
+
+    # ------ Bind mounts ------------------------------------------------------
+    volumes:
+      # Models + repo (matches /dstack/persistent/SIA layout):
+      #   /workspace/models/Qwen3-VL-30B-A3B-Instruct/
+      #   /workspace/models/VM-Qwen3-4B-merged-for-vllm/
+      #   /workspace/sia-repo/0g-sparse-inference-alignment/  (incl. pyproject.toml)
+      - /dstack/persistent/SIA:/workspace
+
+      # Persist torch.compile / vLLM cudagraph cache across container restarts.
+      # First launch recompiles main LLM (~3-5 min); subsequent restarts skip
+      # this step by loading from this volume.
+      - vllm-compile-cache:/root/.cache/vllm
+
+    # ------ Environment (SIA / vllm cudagraph mode for b2 inproc) -----------
+    environment:
+      SIA_LLM_CUDAGRAPH: piecewise
+      SIA_RM_CUDAGRAPH: piecewise
+      SIA_RM_MULTIPROCESS: "0"
+
+    # ------ Launch command (overrides Dockerfile CMD) -----------------------
+    # No nohup needed inside a container — docker manages PID 1 lifecycle.
+    # No output redirect — stdout/stderr go to `docker logs` automatically.
+    command: >
+      python src/sia_vllm_server.py
+        --llm        /workspace/models/Qwen3-VL-30B-A3B-Instruct
+        --rm_backend b2
+        --rm_model   /workspace/models/VM-Qwen3-4B-merged-for-vllm
+        --llm_gpu_mem    0.55
+        --rm_b2_gpu_mem  0.15
+        --topk 10 --weight 1.0 --entropy_threshold 1.0
+        --max_model_len 4096
+        --host 0.0.0.0
+        --port 8000
+
+    # ------ Auto-restart on crash (but not on explicit `docker compose down`) -
+    restart: unless-stopped
+
+    # ------ Health check -----------------------------------------------------
+    # First launch needs ~12-15 min for VL-30B weights + cudagraph capture.
+    # start_period=20m means failures before then DON'T count toward retries
+    # (so docker doesn't kill the container during slow cold start).
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20m
+
+    # ------ Stop signal + grace period --------------------------------------
+    # Default SIGTERM is fine; give vllm 30s to shutdown gracefully (release
+    # GPU memory cleanly).
+    stop_grace_period: 30s
+
+volumes:
+  vllm-compile-cache:
+    # Named volume — survives container removal. Inspect with:
+    #   docker volume inspect 0g-sparse-inference-alignment_vllm-compile-cache
