@@ -1,6 +1,6 @@
 # VL-30B SIA 在 Docker 里跑通 — 完整部署指南
 
-**最后更新**: 2026-06-06
+**最后更新**: 2026-06-07
 **适用 docker image**: `pytorch/pytorch:2.11.0-cuda12.8-cudnn9-devel`
 **适用配置**: VL-30B (Qwen3-VL-30B-A3B-Instruct) SIA b2 inproc 加速路径 (vllm 0.17.1, [`requirements/vl30b-b2-inproc.txt`](../requirements/vl30b-b2-inproc.txt))
 
@@ -8,7 +8,10 @@
 
 ## 快速参考 (TL;DR)
 
-**生产部署** (复制粘贴即用, 假设模型已在 `/dstack/persistent/SIA/models/`):
+**生产部署** (复制粘贴即用, 假设前提全部满足, 模型已在 `/dstack/persistent/SIA/models/`):
+
+> **新机器?** 先完整走完 [前提](#前提) — 需要安装 nvidia-container-toolkit、下载模型权重 (~71-82 GB)（RM checkpoint 可直接下载，无需 convert），再回来执行下面的命令。
+
 ```bash
 cd /dstack/persistent/SIA/sia-repo/0g-sparse-inference-alignment
 docker compose up -d --build         # 起服务 (首次 ~15-20 min 含 build + warmup)
@@ -21,10 +24,147 @@ docker compose down                  # 停服务 (named volume 保留, 下次启
 
 ## 前提
 
-- 主机有 NVIDIA GPU (H100 / H200 / A100 **80GB+ 显存**), nvidia-container-toolkit 装好
-- 主机上有模型权重 (~71 GB 总计):
-  - `Qwen3-VL-30B-A3B-Instruct/` (主 LLM, ~60 GB)
-  - `VM-Qwen3-4B-merged-for-vllm/` (RM, ~11 GB)
+### 1. 主机硬件 + NVIDIA 驱动
+
+- NVIDIA GPU (H100 / H200 / A100, **80GB+ 显存**)
+- NVIDIA 驱动已装：`nvidia-smi` 应当可以正常运行
+
+### 2. nvidia-container-toolkit
+
+让 Docker 容器能访问 GPU。先检查是否已装：
+
+```bash
+docker run --rm --gpus all ubuntu:22.04 nvidia-smi
+```
+
+如果报错 (`could not select device driver "nvidia"`) 说明还没装，按以下步骤装 (Ubuntu/Debian)：
+
+```bash
+curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey \
+  | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
+curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list \
+  | sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' \
+  | sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
+sudo apt-get update && sudo apt-get install -y nvidia-container-toolkit
+sudo systemctl restart docker
+# 验证
+docker run --rm --gpus all ubuntu:22.04 nvidia-smi
+```
+
+### 3. Docker + Compose 版本
+
+`docker-compose.yml` 使用了 `gpus: all` 顶层语法，**需要 Docker Compose V2.30+**：
+
+```bash
+docker compose version    # 需要 >= v2.30.0
+```
+
+如果版本不够，升级 (通过官方 docker 源)：
+
+```bash
+# Ubuntu/Debian
+sudo apt-get install --only-upgrade docker-ce docker-compose-plugin
+docker compose version    # 确认已升到 v2.30+
+```
+
+> 若无法升级，可把 `docker-compose.yml` 里的 `gpus: all` 改成等效兼容写法 (见 [关键陷阱](#关键陷阱--注意事项))。
+
+### 4. 目录结构
+
+Path B/C 把整个 `/dstack/persistent/SIA` 挂载到容器 `/workspace`，需要提前建好这个结构：
+
+```
+/dstack/persistent/SIA/
+├── models/
+│   ├── Qwen3-VL-30B-A3B-Instruct/     ← 主 LLM，~60 GB  (Step 5.1)
+│   ├── Qwen3-4B-Base/                  ← RM convert 原料，~8 GB   (Step 5.2)
+│   ├── SIA-checkpoints/                ← LoRA checkpoints，~3 GB  (Step 5.2)
+│   └── VM-Qwen3-4B-merged-for-vllm/   ← RM 最终 checkpoint，~11 GB (Step 5.4 下载或 convert)
+└── sia-repo/
+    └── 0g-sparse-inference-alignment/  ← 本仓库 (Step 5.1)
+```
+
+```bash
+mkdir -p /dstack/persistent/SIA/models
+mkdir -p /dstack/persistent/SIA/sia-repo
+```
+
+### 5. 仓库 + 模型权重 (~71 GB 最少；含 convert 原料共 ~82 GB)
+
+> 需要 `huggingface-cli`：`pip install huggingface-hub`
+
+#### 5.1 Clone 仓库（convert 脚本在仓库里，先 clone）
+
+```bash
+git clone <your-repo-url> \
+  /dstack/persistent/SIA/sia-repo/0g-sparse-inference-alignment
+```
+
+#### 5.2 主 LLM — Qwen3-VL-30B-A3B-Instruct (~60 GB)
+
+```bash
+huggingface-cli download Qwen/Qwen3-VL-30B-A3B-Instruct \
+  --local-dir /dstack/persistent/SIA/models/Qwen3-VL-30B-A3B-Instruct
+```
+
+#### 5.3 RM 原料 — Qwen3-4B-Base + VM-Qwen3-4B-Base LoRA (~11 GB)（仅 §5.4 选项 B 需要）
+
+```bash
+# Qwen3-4B-Base: RM 的基础模型 (~8 GB)
+huggingface-cli download Qwen/Qwen3-4B-Base \
+  --local-dir /dstack/persistent/SIA/models/Qwen3-4B-Base
+
+# VM-Qwen3-4B-Base: 论文作者提供的 LoRA checkpoint (~3 GB，含全部 VM 变种)
+huggingface-cli download Runyi-Hu/SIA \
+  --local-dir /dstack/persistent/SIA/models/SIA-checkpoints
+```
+
+下载完后 LoRA 路径为 `/dstack/persistent/SIA/models/SIA-checkpoints/VM-Qwen3-4B-Base/`。
+
+#### 5.4 获取 VM-Qwen3-4B-merged-for-vllm
+
+**选项 A：直接下载（推荐，已融合好的版本）**
+
+融合后的 checkpoint 已上传至 HuggingFace，可以直接下载，跳过融合步骤：
+
+```bash
+huggingface-cli download TengGao/VM-Qwen3-4B-merged-for-vllm_public \
+  --local-dir /dstack/persistent/SIA/models/VM-Qwen3-4B-merged-for-vllm
+```
+
+**选项 B：自行 convert（换了别的 RM / LoRA 时用这个）**
+
+如果需要用不同的 base model 或 LoRA，运行 convert 脚本重新融合：
+
+```bash
+# 在宿主机 Python 环境里跑（不依赖 vllm venv，只需要 transformers + peft）
+pip install transformers peft safetensors
+
+python /dstack/persistent/SIA/sia-repo/0g-sparse-inference-alignment/scripts/convert_rm_for_vllm.py \
+  --rm      /dstack/persistent/SIA/models/Qwen3-4B-Base \
+  --rm_lora /dstack/persistent/SIA/models/SIA-checkpoints/VM-Qwen3-4B-Base \
+  --output  /dstack/persistent/SIA/models/VM-Qwen3-4B-merged-for-vllm
+```
+
+预计耗时 2-5 分钟，输出 ~11 GB。
+
+验证（无论选项 A 还是 B）：
+
+```bash
+ls /dstack/persistent/SIA/models/VM-Qwen3-4B-merged-for-vllm/
+# 预期看到: config.json  model.safetensors  tokenizer*.json  ...
+```
+
+完成后确认所有模型到位：
+
+```bash
+ls /dstack/persistent/SIA/models/
+# Qwen3-VL-30B-A3B-Instruct  Qwen3-4B-Base  SIA-checkpoints  VM-Qwen3-4B-merged-for-vllm
+```
+
+**以上前提全部满足后，再进入下面的三条路径。**
+
+---
 
 ## 三条路径选一条
 
@@ -43,30 +183,36 @@ Path A 每次进新容器都要重装 deps (3-5 min); Path B 一次性 `docker b
 ### Step 1 — 启动 docker container
 
 ```bash
-# 假设主机模型在 /data/models/, 仓库 clone 到 /data/sia-repo/
+# 如果使用标准 /dstack/persistent/SIA 目录结构 (见前提 §4), 推荐整体挂载:
 docker run -it --rm \
   --gpus all \
   --shm-size=16g \
   --ipc=host \
   -p 8000:8000 \
-  -v /data/sia-repo:/workspace/sia-repo \
-  -v /data/models:/workspace/models \
+  -v /dstack/persistent/SIA:/workspace \
   pytorch/pytorch:2.11.0-cuda12.8-cudnn9-devel \
   bash
+
+# 如果 repo 和 models 在不同目录, 也可以分开挂载 (路径按实际情况替换):
+# docker run -it --rm --gpus all --shm-size=16g --ipc=host -p 8000:8000 \
+#   -v /path/to/sia-repo/0g-sparse-inference-alignment:/workspace/sia-repo \
+#   -v /path/to/models:/workspace/models \
+#   pytorch/pytorch:2.11.0-cuda12.8-cudnn9-devel bash
 ```
 
 如果还没 clone repo, 在**容器里**再 clone — pytorch image 默认没装 git, 必须先装:
 ```bash
 apt-get update && apt-get install -y --no-install-recommends git ca-certificates
-cd /workspace && git clone <your-repo-url> sia-repo
+mkdir -p /workspace/sia-repo
+cd /workspace/sia-repo && git clone <your-repo-url> 0g-sparse-inference-alignment
 ```
 
-> 推荐做法: 在**主机上**先 clone 好再用 `-v /data/sia-repo:/workspace/sia-repo` 挂进来, 容器内就不用装 git 了。
+> 推荐做法: 在**主机上**先按前提 §5 clone 好再用 `-v /dstack/persistent/SIA:/workspace` 挂进来, 容器内就不用装 git 了。
 
 ## Step 2 — 跑安装脚本 (容器内)
 
 ```bash
-cd /workspace/sia-repo
+cd /workspace/sia-repo/0g-sparse-inference-alignment
 bash scripts/docker_install_vl30b.sh
 ```
 
@@ -376,7 +522,9 @@ docker compose exec sia-vl30b bash -c \
 | 主 LLM cudagraph mode 必须 PIECEWISE (`SIA_LLM_CUDAGRAPH=piecewise`) | 0.17.1 的 PIECEWISE 是 AOT 编译, 不会撞 nested RM 的 cudagraph flag。这是 b2 inproc 跑通的关键 env var |
 | 主进程 + nested RM 在同一 GPU 共享显存 | `--llm_gpu_mem 0.55 --rm_b2_gpu_mem 0.15` 加起来 0.70, 给 cudagraph 留 30%; 80 GB GPU 上跑 30B 主 LLM + 4B RM 是紧但够。GPU 上有其他进程时, 减到 `0.48 + 0.08`, 详见 doc 末尾 [显存预算](#显存预算其他进程占用-gpu-时如何调) |
 | Path C 首次启动看 `(unhealthy)` 状态 | start_period=20m, 给主 LLM weights 加载 + torch.compile 留余地。容器不会在这段时间被 docker kill (`unless-stopped` + `start_period` 配合)。20 min 后还 unhealthy 才是真问题 |
-| `docker compose` vs `docker-compose` 命令 | 本 doc 用的是 **Compose V2 plugin** 语法 (`docker compose`, 中间空格)。老的 `docker-compose` (中划线, V1, Python 实现) 也能跑同一个 yaml, 但部分 v2 字段 (e.g. `gpus: all`) 可能不识别。建议升级 docker (>= 20.10) + 安装 compose plugin |
+| `gpus: all` 顶层语法版本要求 | `docker-compose.yml` 的 `gpus: all` 需要 **Compose V2.30+**，低于此版本报 `unsupported attribute`。用 `docker compose version` 验证；升级: `sudo apt-get install --only-upgrade docker-compose-plugin`。无法升级时改成标准兼容写法: `deploy: {resources: {reservations: {devices: [{driver: nvidia, count: all, capabilities: [gpu]}]}}}` |
+| Path A 的 `-v /data/...` 只是示例路径 | Path A 的 docker run 示例用了泛化路径 `/data/...`；如果你按前提 §4 建了 `/dstack/persistent/SIA` 目录, 用整体挂载 `-v /dstack/persistent/SIA:/workspace` 即可（跟 Path B/C 一致） |
+| 生产长跑日志撑满磁盘 | `docker logs` 默认无上限, 在 `docker-compose.yml` 的 `sia-vl30b` service 下加: `logging: {driver: "json-file", options: {max-size: "500m", max-file: "5"}}` |
 | Path C 怎么改 server 参数 (e.g. `--topk` / `--weight`) | 改 `docker-compose.yml` 的 `command:` 字段, 然后 `docker compose up -d` 自动 recreate container。**不用重 build image** |
 
 ## 如何验证 Prefix Caching 是否启用
@@ -488,3 +636,4 @@ docker compose up -d
 - [`../scripts/setup_venv_vl30b_fast.sh`](../scripts/setup_venv_vl30b_fast.sh) — venv 创建底层脚本 (docker_install 会调用它)
 - [`../requirements/vl30b-b2-inproc.txt`](../requirements/vl30b-b2-inproc.txt) — pip 依赖清单
 - [`../CLAUDE.md`](../CLAUDE.md) — 整体 venv 矩阵 (Qwen3-14B / VL-30B / 0GM-35B)
+- [`vllm-rm-backend.md`](vllm-rm-backend.md) — convert_rm_for_vllm.py 详细说明 (RM checkpoint 转换原理)
