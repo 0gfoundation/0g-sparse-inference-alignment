@@ -756,6 +756,33 @@ python scripts/measure_alpaca_reward.py \
 
 各约 3-5 min（Skywork 8B BF16, ~2.5 题/s）。
 
+### Generation 结束后 — 辅助指标查看
+
+**tokens/s**（generation 结束后 `gen.log` 末尾自动打印）：
+```bash
+tail -5 /workspace/exp/alpaca_vl30b_b2_sia_gen.log
+# 预期看到: throughput: XX.X tok/s
+```
+
+**干预率 + flip rate**（从 server 日志聚合，需在仓库根目录执行）：
+```bash
+cd /dstack/persistent/SIA/sia-repo/0g-sparse-inference-alignment
+docker compose logs sia-vl30b 2>&1 | grep "DONE" | tail -200 | \
+python -u -c "
+import sys, re
+ratios, flips = [], []
+for line in sys.stdin:
+    m = re.search(r'ratio=(\d+\.?\d*)%', line)
+    if m: ratios.append(float(m.group(1)))
+    m = re.search(r'top1_flip=\d+/\d+ \((\d+\.?\d*)%\)', line)
+    if m: flips.append(float(m.group(1)))
+print(f'干预率  mean={sum(ratios)/len(ratios):.1f}%  n={len(ratios)}' if ratios else 'no ratio data')
+print(f'flip率  mean={sum(flips)/len(flips):.1f}%  n={len(flips)}' if flips else 'no flip data')
+"
+```
+
+健康参考值（参见 [§4 smoke test 健康指标](doc/docker-install-vl30b-20260606.md#验证-sia-真的在干预)）：干预率 10–40%，flip rate 50–80%。
+
 ### Phase 3 — 对比结果
 
 ```bash

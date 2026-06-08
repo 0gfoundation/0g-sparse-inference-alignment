@@ -200,15 +200,16 @@ def main():
             "prompt": f"Human:\n{instr}\nAssistant:\n",
             "result": f"Human:\n{instr}\nAssistant:\n{text}",
         })
-        if (idx + 1) % 25 == 0 or idx == 0:
-            total_elapsed = time.time() - t0_total
-            tps = sum(r.get("tokens", 0) or 0 for r in results) / total_elapsed
-            avg_lat = total_elapsed / (idx + 1)
-            print(f"[{idx+1}/{len(data)}] last={elapsed:.1f}s "
-                  f"avg={avg_lat:.1f}s/q  cum_tps={tps:.1f} tok/s")
-            # 中途保存
-            json.dump(results, open(args.output, "w"),
-                      ensure_ascii=False, indent=2)
+        total_elapsed = time.time() - t0_total
+        tps = sum(r.get("tokens", 0) or 0 for r in results) / total_elapsed
+        avg_lat = total_elapsed / (idx + 1)
+        print(f"[{idx+1}/{len(data)}] last={elapsed:.1f}s "
+              f"avg={avg_lat:.1f}s/q  cum_tps={tps:.1f} tok/s  tokens={ntok}")
+        print(f"  Q: {instr[:80]}{'...' if len(instr) > 80 else ''}")
+        print(f"  A: {text[:120]}{'...' if len(text) > 120 else ''}")
+        # 每题保存，防止中断丢数据
+        json.dump(results, open(args.output, "w"),
+                  ensure_ascii=False, indent=2)
 
     json.dump(results, open(args.output, "w"),
               ensure_ascii=False, indent=2)
