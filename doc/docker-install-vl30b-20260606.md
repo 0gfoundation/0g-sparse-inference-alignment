@@ -52,12 +52,12 @@ Path B/C 把整个 `/dstack/persistent/SIA` 挂载到容器 `/workspace`，需�
 ```
 /dstack/persistent/SIA/
 ├── models/
-│   ├── Qwen3-VL-30B-A3B-Instruct/     ← 主 LLM，~60 GB  (Step 5.1)
-│   ├── Qwen3-4B-Base/                  ← RM convert 原料，~8 GB   (Step 5.2)
-│   ├── SIA-checkpoints/                ← LoRA checkpoints，~3 GB  (Step 5.2)
-│   └── VM-Qwen3-4B-merged-for-vllm/   ← RM 最终 checkpoint，~11 GB (Step 5.4 下载或 convert)
+│   ├── Qwen3-VL-30B-A3B-Instruct/     ← 主 LLM，~60 GB  (§5.2)
+│   ├── Qwen3-4B-Base/                  ← RM convert 原料，~8 GB   (§5.3)
+│   ├── SIA-checkpoints/                ← LoRA checkpoints，~3 GB  (§5.3)
+│   └── VM-Qwen3-4B-merged-for-vllm/   ← RM 最终 checkpoint，~11 GB (§5.4 下载或 convert)
 └── sia-repo/
-    └── 0g-sparse-inference-alignment/  ← 本仓库 (Step 5.1)
+    └── 0g-sparse-inference-alignment/  ← 本仓库 (§5.1)
 ```
 
 ```bash
@@ -151,8 +151,6 @@ ls /dstack/persistent/SIA/models/
 | **Path B: Dockerfile 构建** ⚡ | 跑多次 / 分发给别人 / CI; 启动后无依赖安装但仍需手动起 server | Step 1B (build image) → Step 1B' (docker run) → Step 3 → Step 4 |
 | **Path C: docker compose** ⭐ **生产推荐** | 生产部署 / 自动重启 / 健康检查 / 持久 compile cache; **server 完全自动起** | Step 1C (`docker compose up -d`) → Step 4 (smoke test) |
 
-Path A 每次进新容器都要重装 deps (3-5 min); Path B 一次性 `docker build` 后, 后续 `docker run` 进去就能直接跑 server, 但要手动敲启动命令; Path C 把启动命令 + 重启策略 + 健康检查 + GPU + 挂载全部固化到 `docker-compose.yml`, `docker compose up` 一条命令搞定。
-
 ---
 
 ## Path A — 命令行装
@@ -186,7 +184,7 @@ cd /workspace/sia-repo && git clone <your-repo-url> 0g-sparse-inference-alignmen
 
 > 推荐做法: 在**主机上**先按前提 §5 clone 好再用 `-v /dstack/persistent/SIA:/workspace` 挂进来, 容器内就不用装 git 了。
 
-## Step 2 — 跑安装脚本 (容器内)
+### Step 2 — 跑安装脚本 (容器内)
 
 ```bash
 cd /workspace/sia-repo/0g-sparse-inference-alignment
@@ -217,8 +215,6 @@ sia_rm plugin       : ✓ (['sia_rm'])
 ---
 
 ## Path B — Dockerfile 构建 (推荐, 跑多次或分发用)
-
-Path A 每次起新容器都要等 3-5 分钟装 deps。Path B 一次 `docker build` 把所有 Python 依赖 baked 进 image (vllm 0.17.1 + torch 2.10.0 + transformers ...), 之后每次 `docker run` 进去**直接可以跑 server, 零等待**。
 
 仓库 + 模型仍然走 bind-mount, 不进 image (image 维持小巧 ~10 GB)。
 
@@ -554,7 +550,6 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
 | 主进程 + nested RM 在同一 GPU 共享显存 | `--llm_gpu_mem 0.55 --rm_b2_gpu_mem 0.15` 加起来 0.70, 给 cudagraph 留 30%; 80 GB GPU 上跑 30B 主 LLM + 4B RM 是紧但够。GPU 上有其他进程时, 减到 `0.48 + 0.08`, 详见 doc 末尾 [显存预算](#显存预算其他进程占用-gpu-时如何调) |
 | Path C 首次启动看 `(unhealthy)` 状态 | start_period=20m, 给主 LLM weights 加载 + torch.compile 留余地。容器不会在这段时间被 docker kill (`unless-stopped` + `start_period` 配合)。20 min 后还 unhealthy 才是真问题 |
 | GPU 访问语法版本问题 | `docker-compose.yml` 已改用 `deploy: resources: reservations: devices:` 写法，兼容全版本。若仍报 `Additional property gpus is not allowed`，说明你本地文件还是旧版，重新 pull 最新代码即可 |
-| Path A 的 `-v /data/...` 只是示例路径 | Path A 的 docker run 示例用了泛化路径 `/data/...`；如果你按前提 §4 建了 `/dstack/persistent/SIA` 目录, 用整体挂载 `-v /dstack/persistent/SIA:/workspace` 即可（跟 Path B/C 一致） |
 | 生产长跑日志撑满磁盘 | `docker logs` 默认无上限, 在 `docker-compose.yml` 的 `sia-vl30b` service 下加: `logging: {driver: "json-file", options: {max-size: "500m", max-file: "5"}}` |
 | Path C 怎么改 server 参数 (e.g. `--topk` / `--weight`) | 改 `docker-compose.yml` 的 `command:` 字段, 然后 `docker compose up -d` 自动 recreate container。**不用重 build image** |
 
@@ -694,7 +689,7 @@ mkdir -p /workspace/exp
 nohup python -u eval/alpaca_eval.py \
   --base_url http://localhost:8000/v1 \
   --model "$MODEL" \
-  --limit 200 --max_tokens 2048 \
+  --limit 200 --max_tokens 1800 \
   --temperature 1.0 --top_p 0.95 --top_k 20 --repetition_penalty 1.0 \
   --output /workspace/exp/alpaca_vl30b_b2_sia_$(date +%Y%m%d_%H%M%S).json \
   > /workspace/exp/alpaca_vl30b_b2_sia_gen.log 2>&1 &
@@ -706,7 +701,7 @@ echo "SIA arm PID=$!"
 nohup python -u eval/alpaca_eval.py \
   --base_url http://localhost:8000/v1 \
   --model "$MODEL" \
-  --limit 200 --max_tokens 2048 \
+  --limit 200 --max_tokens 1800 \
   --temperature 1.0 --top_p 0.95 --top_k 20 --repetition_penalty 1.0 \
   --sia_weight 0 \
   --output /workspace/exp/alpaca_vl30b_b2_nosia_$(date +%Y%m%d_%H%M%S).json \
@@ -765,7 +760,7 @@ print(f'flip率  mean={sum(flips)/len(flips):.1f}%  n={len(flips)}' if flips els
 "
 ```
 
-健康参考值（参见 [§4 smoke test 健康指标](doc/docker-install-vl30b-20260606.md#验证-sia-真的在干预)）：干预率 10–40%，flip rate 50–80%。
+健康参考值（参见 [§4 smoke test 健康指标](#验证-sia-真的在干预)）：干预率 10–40%，flip rate 50–80%。
 
 ### Phase 3 — 对比结果
 
