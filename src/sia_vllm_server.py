@@ -215,7 +215,9 @@ async def list_models():
 
 
 async def _log_rm_status():
-    """查询 RM server /status 并打印到日志，失败时静默跳过。"""
+    """查询 RM server /status 并打印到日志，失败时静默跳过。b2 inproc 无 HTTP server，跳过。"""
+    if _args.rm_backend == "b2":
+        return
     try:
         async with httpx.AsyncClient(timeout=3.0) as client:
             resp = await client.get(f"{_args.rm_url}/status")
