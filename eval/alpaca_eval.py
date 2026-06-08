@@ -27,6 +27,7 @@ def chat_completion(base_url, model, instruction, *,
                     top_p=None, top_k=None, repetition_penalty=None,
                     disable_thinking=False, no_think_prompt=False,
                     ban_think_token=False, brief_instruction=False,
+                    sia_weight=None, sia_topk=None, sia_entropy_threshold=None,
                     timeout=700):
     """
     POST 到 /v1/chat/completions (常规, 走 chat_template) 或者
@@ -91,6 +92,14 @@ def chat_completion(base_url, model, instruction, *,
         # 在 assistant 起始处插入 '<think>\\n\\n</think>\\n\\n' (空 thinking block),
         # 不是真的无 think tag (要彻底去掉用 --no_think_prompt 走 raw completions)
         payload["chat_template_kwargs"] = {"enable_thinking": False}
+    sia_extra = {}
+    if sia_weight is not None:
+        sia_extra["sia_weight"] = sia_weight
+    if sia_topk is not None:
+        sia_extra["sia_topk"] = sia_topk
+    if sia_entropy_threshold is not None:
+        sia_extra["sia_entropy_threshold"] = sia_entropy_threshold
+    payload.update(sia_extra)
     resp = requests.post(
         f"{base_url.rstrip('/')}/chat/completions",
         json=payload, timeout=timeout,
@@ -130,6 +139,13 @@ def main():
     p.add_argument("--brief_instruction", action="store_true",
                    help="在 user 指令前 prepend 简短性要求: 让 thinking 和 final answer 都简短, "
                         "缩短生成长度同时仍保留 thinking 结构")
+    p.add_argument("--sia_weight", type=float, default=None,
+                   help="per-request SIA weight 覆盖 (0.0 = 完全关闭 SIA, 退化为纯 vLLM; "
+                        "留空 = 沿用 server 启动时的 --weight 全局默认值)")
+    p.add_argument("--sia_topk", type=int, default=None,
+                   help="per-request SIA topk 覆盖 (留空 = 沿用全局 --topk)")
+    p.add_argument("--sia_entropy_threshold", type=float, default=None,
+                   help="per-request entropy gate 覆盖 (0 = 每 token 都干预; 留空 = 沿用全局)")
     args = p.parse_args()
 
     data = json.load(open(args.dataset))
@@ -144,6 +160,8 @@ def main():
           f"{args.top_p} / {args.top_k} / {args.repetition_penalty}")
     print(f"disable_thinking: {args.disable_thinking}")
     print(f"no_think_prompt : {args.no_think_prompt}")
+    print(f"sia_weight / sia_topk / sia_entropy_threshold: "
+          f"{args.sia_weight} / {args.sia_topk} / {args.sia_entropy_threshold}")
     print(f"output      : {args.output}")
     print("-" * 60)
 
@@ -165,6 +183,9 @@ def main():
                 no_think_prompt=args.no_think_prompt,
                 ban_think_token=args.ban_think_token,
                 brief_instruction=args.brief_instruction,
+                sia_weight=args.sia_weight,
+                sia_topk=args.sia_topk,
+                sia_entropy_threshold=args.sia_entropy_threshold,
             )
         except Exception as e:
             text, ntok = f"ERROR: {e}", -1
