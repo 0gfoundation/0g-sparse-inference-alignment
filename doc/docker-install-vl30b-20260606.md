@@ -53,21 +53,13 @@ docker run --rm --gpus all ubuntu:22.04 nvidia-smi
 
 ### 3. Docker + Compose 版本
 
-`docker-compose.yml` 使用了 `gpus: all` 顶层语法，**需要 Docker Compose V2.30+**：
+Docker Compose V2+ 即可（`docker compose` 而非 `docker-compose`）。验证：
 
 ```bash
-docker compose version    # 需要 >= v2.30.0
+docker compose version    # 有输出即可，无版本下限要求
 ```
 
-如果版本不够，升级 (通过官方 docker 源)：
-
-```bash
-# Ubuntu/Debian
-sudo apt-get install --only-upgrade docker-ce docker-compose-plugin
-docker compose version    # 确认已升到 v2.30+
-```
-
-> 若无法升级，可把 `docker-compose.yml` 里的 `gpus: all` 改成等效兼容写法 (见 [关键陷阱](#关键陷阱--注意事项))。
+> `docker-compose.yml` 使用 `deploy: resources: reservations: devices:` GPU 语法，全版本兼容。
 
 ### 4. 目录结构
 
@@ -523,7 +515,7 @@ docker compose exec sia-vl30b bash -c \
 | 主 LLM cudagraph mode 必须 PIECEWISE (`SIA_LLM_CUDAGRAPH=piecewise`) | 0.17.1 的 PIECEWISE 是 AOT 编译, 不会撞 nested RM 的 cudagraph flag。这是 b2 inproc 跑通的关键 env var |
 | 主进程 + nested RM 在同一 GPU 共享显存 | `--llm_gpu_mem 0.55 --rm_b2_gpu_mem 0.15` 加起来 0.70, 给 cudagraph 留 30%; 80 GB GPU 上跑 30B 主 LLM + 4B RM 是紧但够。GPU 上有其他进程时, 减到 `0.48 + 0.08`, 详见 doc 末尾 [显存预算](#显存预算其他进程占用-gpu-时如何调) |
 | Path C 首次启动看 `(unhealthy)` 状态 | start_period=20m, 给主 LLM weights 加载 + torch.compile 留余地。容器不会在这段时间被 docker kill (`unless-stopped` + `start_period` 配合)。20 min 后还 unhealthy 才是真问题 |
-| `gpus: all` 顶层语法版本要求 | `docker-compose.yml` 的 `gpus: all` 需要 **Compose V2.30+**，低于此版本报 `unsupported attribute`。用 `docker compose version` 验证；升级: `sudo apt-get install --only-upgrade docker-compose-plugin`。无法升级时改成标准兼容写法: `deploy: {resources: {reservations: {devices: [{driver: nvidia, count: all, capabilities: [gpu]}]}}}` |
+| GPU 访问语法版本问题 | `docker-compose.yml` 已改用 `deploy: resources: reservations: devices:` 写法，兼容全版本。若仍报 `Additional property gpus is not allowed`，说明你本地文件还是旧版，重新 pull 最新代码即可 |
 | Path A 的 `-v /data/...` 只是示例路径 | Path A 的 docker run 示例用了泛化路径 `/data/...`；如果你按前提 §4 建了 `/dstack/persistent/SIA` 目录, 用整体挂载 `-v /dstack/persistent/SIA:/workspace` 即可（跟 Path B/C 一致） |
 | 生产长跑日志撑满磁盘 | `docker logs` 默认无上限, 在 `docker-compose.yml` 的 `sia-vl30b` service 下加: `logging: {driver: "json-file", options: {max-size: "500m", max-file: "5"}}` |
 | Path C 怎么改 server 参数 (e.g. `--topk` / `--weight`) | 改 `docker-compose.yml` 的 `command:` 字段, 然后 `docker compose up -d` 自动 recreate container。**不用重 build image** |

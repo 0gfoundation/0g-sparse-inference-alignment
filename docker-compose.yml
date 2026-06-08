@@ -23,10 +23,17 @@ services:
       context: .
       dockerfile: Dockerfile
 
-    # ------ GPU access (docker compose >= v2.30; standard 'gpus' syntax) ------
-    # 'all' grabs every visible GPU. For multi-GPU host, restrict via
-    # 'device_ids: ["0"]' or NVIDIA_VISIBLE_DEVICES env.
-    gpus: all
+    # ------ GPU access (compatible with all Compose versions) -----------------
+    # deploy.resources syntax works everywhere; gpus: all requires V2.30+.
+    # 'count: all' grabs every visible GPU. To restrict, set NVIDIA_VISIBLE_DEVICES
+    # in environment: or change count to a specific number.
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
 
     # ------ Memory / IPC -----------------------------------------------------
     # vLLM uses large shared-memory buffers; docker default 64MB is NOT enough.
