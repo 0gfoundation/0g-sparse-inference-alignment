@@ -474,6 +474,60 @@ docker compose exec sia-vl30b bash -c \
 - **Path A/B**: `tail -f "$LOG"` (你启动时记的那个 `/workspace/sia-logs/sia_server_*.log`)
 - **Path C**: `docker compose logs -f sia-vl30b`
 
+### 4.4 Per-request SIA 参数测试
+
+SIA 支持在单次 request 里覆盖全局参数（`sia_weight` / `sia_topk` / `sia_entropy_threshold`），无需重启 server。以下三条 curl 各验证一个参数，**观察 server 日志里 `DONE` 行的 ratio / top1_flip 变化**确认生效。
+
+#### 关闭 SIA 干预 (`sia_weight=0`)
+
+```bash
+curl -s -X POST http://localhost:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "/workspace/models/Qwen3-VL-30B-A3B-Instruct",
+    "messages": [{"role":"user","content":"What are 3 colors of fruit?"}],
+    "max_tokens": 100,
+    "temperature": 0.7,
+    "sia_weight": 0
+  }' | python3 -m json.tool
+```
+
+预期 server 日志：`ratio=0.0%` — RM 完全不调用，退化为纯 vLLM 推理。
+
+#### 只评分 1 个候选 (`sia_topk=1`)
+
+```bash
+curl -s -X POST http://localhost:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "/workspace/models/Qwen3-VL-30B-A3B-Instruct",
+    "messages": [{"role":"user","content":"What are 3 colors of fruit?"}],
+    "max_tokens": 100,
+    "temperature": 0.7,
+    "sia_topk": 1
+  }' | python3 -m json.tool
+```
+
+预期 server 日志：`ratio≈20-30%`（entropy gate 正常工作）、`top1_flip=0%`（只有 1 个候选，top-1 不可能被替换）。
+
+#### 强制每 token 都干预 (`sia_entropy_threshold=0`)
+
+```bash
+curl -s -X POST http://localhost:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "/workspace/models/Qwen3-VL-30B-A3B-Instruct",
+    "messages": [{"role":"user","content":"What are 3 colors of fruit?"}],
+    "max_tokens": 100,
+    "temperature": 0.7,
+    "sia_entropy_threshold": 0
+  }' | python3 -m json.tool
+```
+
+预期 server 日志：`ratio=100%` — 所有 token 都经过 RM 评分，包括模型置信度很高的位置（entropy gate 完全旁路）。
+
+> 三个参数可以在同一个 request 里组合使用，例如 `"sia_weight": 2.0, "sia_topk": 20, "sia_entropy_threshold": 0.5`。未传的参数沿用 server 启动时的全局默认值（`--weight` / `--topk` / `--entropy_threshold`）。
+
 ---
 
 ## Step 5 — 停止 / 重启 / 清理 (per path)
