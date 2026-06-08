@@ -103,7 +103,59 @@
 
 ---
 
-## 5. 相关 doc
+---
+
+## 5. MMLU 150Q 评测 (同日，同 server)
+
+### 5.1 配置
+
+与 AlpacaEval 共用同一 docker compose server（参数同 §1）。
+noSIA arm 同样通过 per-request `--sia_weight 0` 实现，无需切换服务。
+
+| 参数 | 值 |
+|---|---|
+| subjects | 30 科目 × 5Q = 150Q |
+| `--limit` | 5 |
+| `--temperature` | 1.0 |
+| `--repetition_penalty` | 1.0 |
+| thinking 模式 | 默认开启（不加 `--disable_thinking`） |
+
+### 5.2 结果
+
+| 指标 | SIA | noSIA | Δ |
+|---|---|---|---|
+| accuracy | **0.7867 (118/150)** | 0.7867 (118/150) | **0.00 pp** |
+| wall time | 678.8s (11.3 min) | 608.0s (10.1 min) | — |
+| avg tokens/Q | 259.9 | 287.7 | — |
+| throughput | 57.4 tok/s | 71.0 tok/s | SIA tax 1.24× |
+
+**SIA 干预健康指标**：
+
+| 指标 | 本次 | 历史参考 (HTTP path) |
+|---|---|---|
+| 干预率 | **11.5%** | 10.03% |
+| top1 flip rate | **63.4%** | ~62% |
+| RM error | 0 | 0 ✅ |
+
+### 5.3 与历史实验对比
+
+| 实验 | noSIA acc | SIA acc | Δ | 干预率 |
+|---|---|---|---|---|
+| HTTP path (20260604) | 0.7867 (118/150) | 0.8000 (120/150) | +1.33 pp | 10.03% |
+| b2 inproc (20260605) | 0.7867 (118/150) | 0.8133 (122/150) | **+2.67 pp** | ~10-20% |
+| **b2 inproc docker (本次)** | **0.7867 (118/150)** | **0.7867 (118/150)** | **0.00 pp** | **11.5%** |
+
+### 5.4 分析
+
+**Δ=0 在统计噪声范围内**。doc 中已注明 "MMLU 150Q 噪声内 (binomial 95% CI ±7.7pp)"，历史最大 Δ 也只有 +2.67 pp，远小于置信区间。0 pp 属于正常波动，不代表 SIA 失效。
+
+**干预率 11.5% 与历史 10.03% 一致**，RM 工作正常。noSIA 吞吐 (71 tok/s vs 历史 120 tok/s) 偏低同 AlpacaEval 同因——GPU 内存约束。
+
+**结论**：SIA 在 MMLU 上的效果本身就小（知识任务，RM 训练目标偏 helpfulness），150Q 题量不足以稳定体现 Δ，需要更多题目才能排除噪声。
+
+---
+
+## 6. 相关 doc
 
 - [`qwen3-vl-30b-sia-eval-20260605.md`](qwen3-vl-30b-sia-eval-20260605.md) — VL-30B SIA 综合评测汇总 (HTTP + b2 inproc)
 - [`docker-install-vl30b-20260606.md`](docker-install-vl30b-20260606.md) — 本次使用的 docker compose 部署指南
