@@ -72,10 +72,10 @@ services:
         --llm        /workspace/models/Qwen3-VL-30B-A3B-Instruct
         --rm_backend b2
         --rm_model   /workspace/models/VM-Qwen3-4B-merged-for-vllm
-        --llm_gpu_mem    0.55
-        --rm_b2_gpu_mem  0.15
+        --llm_gpu_mem    0.48
+        --rm_b2_gpu_mem  0.08
         --topk 10 --weight 1.0 --entropy_threshold 1.0
-        --max_model_len 4096
+        --max_model_len 2048
         --enable_prefix_caching
         --host 0.0.0.0
         --port 8000
