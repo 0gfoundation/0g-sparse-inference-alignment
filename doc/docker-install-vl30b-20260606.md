@@ -672,6 +672,128 @@ docker compose up -d
 
 如果 Step 2 自检有任何 ✗, **不要继续**, 先 debug。任何一步报错先看具体错误信息, 不要硬上 Step 3。
 
+---
+
+## AlpacaEval 评测 — SIA vs noSIA (Skywork 打分)
+
+在 docker 容器内直接复用 SIA server 跑 AlpacaEval 效果评测。两个 arm 共用同一个运行中的 server，通过 per-request `--sia_weight 0` 区分，无需切换服务。
+
+**脚本**: `eval/alpaca_eval.py` (generation) + `scripts/measure_alpaca_reward.py` (scoring)
+**评分模型**: Skywork-Reward-V2-Llama-3.1-8B (第三方 RM，独立于 VM-Qwen3-4B)
+**参考基线**: 旧实验 HTTP path VL-30B 200Q: noSIA mean=29.26, SIA mean=28.67, Δ=-1.57% (p=0.29)
+
+### 前提
+
+```bash
+# 确认 Skywork 评分模型（路径按实际位置调整）
+ls /dstack/persistent/SIA/models/Skywork-Reward-V2-Llama-3.1-8B/
+# 若未下载:
+# huggingface-cli download Skywork/Skywork-Reward-V2-Llama-3.1-8B \
+#   --local-dir /dstack/persistent/SIA/models/Skywork-Reward-V2-Llama-3.1-8B
+
+# 确认 AlpacaEval 数据集（805 条 instruction）
+ls /dstack/persistent/SIA/data/alpaca_eval/alpaca_eval.json
+# 若未下载:
+# python -c "
+# from datasets import load_dataset; import json, pathlib
+# pathlib.Path('/dstack/persistent/SIA/data/alpaca_eval').mkdir(parents=True, exist_ok=True)
+# ds = load_dataset('tatsu-lab/alpaca_eval','alpaca_eval')['eval']
+# json.dump(list(ds), open('/dstack/persistent/SIA/data/alpaca_eval/alpaca_eval.json','w'), indent=2)
+# "
+```
+
+### Phase 1 — Generation（server 正常运行，无需停机）
+
+进入容器：
+```bash
+docker compose exec sia-vl30b bash
+cd /workspace/sia-repo/0g-sparse-inference-alignment
+MODEL=/workspace/models/Qwen3-VL-30B-A3B-Instruct
+DATASET=/workspace/data/alpaca_eval/alpaca_eval.json   # 按实际路径改
+mkdir -p /workspace/exp
+```
+
+**SIA arm**（server 默认参数：topk=10, weight=1.0, entropy_threshold=1.0）：
+```bash
+nohup python eval/alpaca_eval.py \
+  --base_url http://localhost:8000/v1 \
+  --model "$MODEL" --dataset "$DATASET" \
+  --limit 200 --max_tokens 2048 \
+  --temperature 1.0 --top_p 0.95 --top_k 20 --repetition_penalty 1.0 \
+  --output /workspace/exp/alpaca_vl30b_b2_sia_$(date +%Y%m%d_%H%M%S).json \
+  > /workspace/exp/alpaca_vl30b_b2_sia_gen.log 2>&1 &
+echo "SIA arm PID=$!"
+```
+
+**noSIA arm**（`--sia_weight 0` 关掉 RM 干预，speed ≈ raw vllm）：
+```bash
+nohup python eval/alpaca_eval.py \
+  --base_url http://localhost:8000/v1 \
+  --model "$MODEL" --dataset "$DATASET" \
+  --limit 200 --max_tokens 2048 \
+  --temperature 1.0 --top_p 0.95 --top_k 20 --repetition_penalty 1.0 \
+  --sia_weight 0 \
+  --output /workspace/exp/alpaca_vl30b_b2_nosia_$(date +%Y%m%d_%H%M%S).json \
+  > /workspace/exp/alpaca_vl30b_b2_nosia_gen.log 2>&1 &
+echo "noSIA arm PID=$!"
+```
+
+> SIA arm 约 80-90 min (28 tok/s)；noSIA arm 约 20 min (RM 跳过，速度回到 ~120 tok/s)。可以串行跑（等 SIA 完再跑 noSIA），也可以并行跑（同一 server 支持并发请求）。
+
+### Phase 2 — Skywork 打分（需要停 server 释放显存）
+
+```bash
+# 在宿主机停 server
+docker compose stop sia-vl30b
+
+# 起临时容器跑打分（named volume 保留，compile cache 不丢）
+docker compose run --rm sia-vl30b bash
+cd /workspace/sia-repo/0g-sparse-inference-alignment
+RM=/workspace/models/Skywork-Reward-V2-Llama-3.1-8B   # 按实际路径改
+
+python scripts/measure_alpaca_reward.py \
+  --input_file  /workspace/exp/alpaca_vl30b_b2_sia_*.json \
+  --output_file /workspace/exp/alpaca_vl30b_b2_sia_scored.json \
+  --rm "$RM" --device cuda:0 --strip_think
+
+python scripts/measure_alpaca_reward.py \
+  --input_file  /workspace/exp/alpaca_vl30b_b2_nosia_*.json \
+  --output_file /workspace/exp/alpaca_vl30b_b2_nosia_scored.json \
+  --rm "$RM" --device cuda:0 --strip_think
+```
+
+各约 3-5 min（Skywork 8B BF16, ~2.5 题/s）。
+
+### Phase 3 — 对比结果
+
+```bash
+python - <<'EOF'
+import json, statistics
+
+def stats(p):
+    d = json.load(open(p))
+    rs = [r["reward"] for r in d if r.get("reward") is not None]
+    return statistics.mean(rs), statistics.median(rs), len(rs), len(d)
+
+nosia_mean, nosia_p50, n1, t1 = stats("/workspace/exp/alpaca_vl30b_b2_nosia_scored.json")
+sia_mean,   sia_p50,   n2, t2 = stats("/workspace/exp/alpaca_vl30b_b2_sia_scored.json")
+delta_abs = sia_mean - nosia_mean
+delta_rel = delta_abs / abs(nosia_mean) * 100
+
+print(f"noSIA  {n1}/{t1} scored  mean={nosia_mean:+.4f}  p50={nosia_p50:+.4f}")
+print(f"SIA    {n2}/{t2} scored  mean={sia_mean:+.4f}  p50={sia_p50:+.4f}")
+print(f"Δ      {delta_abs:+.4f}  ({delta_rel:+.2f}%)")
+EOF
+```
+
+打分完重启服务：
+```bash
+exit   # 退出打分容器
+docker compose start sia-vl30b
+```
+
+---
+
 ## 相关 doc
 
 - [`qwen3-vl-30b-sia-eval-20260605.md`](qwen3-vl-30b-sia-eval-20260605.md) — VL-30B SIA 评测汇总 (效果 + 性能), 含本地实验结果
