@@ -1,0 +1,28 @@
+nohup: ignoring input
+loaded 200 prompts from data/alpaca_eval/alpaca_eval.json
+base_url    : http://localhost:8000/v1
+model       : 
+max_tokens  : 2048
+temperature : 1.0
+top_p / top_k / rep_penalty: 0.95 / 20 / 1.0
+disable_thinking: False
+no_think_prompt : False
+sia_weight / sia_topk / sia_entropy_threshold: 0.0 / None / None
+output      : /workspace/exp/alpaca_vl30b_b2_nosia_20260608_094908.json
+------------------------------------------------------------
+[1/200] last=9.4s avg=9.4s/q  cum_tps=56.9 tok/s
+[25/200] last=3.5s avg=9.4s/q  cum_tps=81.1 tok/s
+[50/200] last=8.4s avg=8.7s/q  cum_tps=80.5 tok/s
+[75/200] last=7.2s avg=8.5s/q  cum_tps=80.8 tok/s
+[100/200] last=8.7s avg=8.6s/q  cum_tps=80.9 tok/s
+[125/200] last=6.4s avg=8.4s/q  cum_tps=80.9 tok/s
+[150/200] last=23.3s avg=9.0s/q  cum_tps=80.7 tok/s
+[175/200] last=3.1s avg=9.2s/q  cum_tps=80.8 tok/s
+[200/200] last=0.0s avg=9.2s/q  cum_tps=80.8 tok/s
+
+=== summary ===
+  saved 200 results to /workspace/exp/alpaca_vl30b_b2_nosia_20260608_094908.json
+  errors: 0
+  total tokens: 149018
+  total wall time: 1844s (30.7 min)
+  throughput: 80.8 tok/s

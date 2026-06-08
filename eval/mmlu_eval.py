@@ -131,6 +131,9 @@ def chat_completion(
     disable_thinking: bool = False,
     no_think_prompt: bool = False,
     ban_think_token: bool = False,
+    sia_weight: float | None = None,
+    sia_topk: int | None = None,
+    sia_entropy_threshold: float | None = None,
 ) -> tuple[str, int]:
     """
     向 OpenAI 兼容 server 发请求, 返回 (text, completion_tokens)。
@@ -202,6 +205,14 @@ def chat_completion(
     }
     if disable_thinking:
         payload["chat_template_kwargs"] = {"enable_thinking": False}
+    sia_extra = {}
+    if sia_weight is not None:
+        sia_extra["sia_weight"] = sia_weight
+    if sia_topk is not None:
+        sia_extra["sia_topk"] = sia_topk
+    if sia_entropy_threshold is not None:
+        sia_extra["sia_entropy_threshold"] = sia_entropy_threshold
+    payload.update(sia_extra)
     url = f"{base_url.rstrip('/')}/chat/completions"
 
     try:
@@ -232,6 +243,9 @@ def evaluate_subject(
     disable_thinking: bool = False,
     no_think_prompt: bool = False,
     ban_think_token: bool = False,
+    sia_weight: float | None = None,
+    sia_topk: int | None = None,
+    sia_entropy_threshold: float | None = None,
 ) -> dict:
     try:
         dataset = load_dataset(
@@ -278,6 +292,9 @@ def evaluate_subject(
                 disable_thinking=disable_thinking,
                 no_think_prompt=no_think_prompt,
                 ban_think_token=ban_think_token,
+                sia_weight=sia_weight,
+                sia_topk=sia_topk,
+                sia_entropy_threshold=sia_entropy_threshold,
             )
             predicted = extract_answer(response_text)
             is_correct = predicted == answer_letter
@@ -350,6 +367,12 @@ def main():
     parser.add_argument("--ban_think_token", action="store_true",
                         help="(thinking 模型用, 仅 --no_think_prompt 时生效) 用 vllm bad_words "
                              "在 sampler 层禁 <think>/</think> 被采样")
+    parser.add_argument("--sia_weight", type=float, default=None,
+                        help="per-request SIA weight 覆盖 (0.0 = 完全关闭 SIA; 留空 = 沿用全局 --weight)")
+    parser.add_argument("--sia_topk", type=int, default=None,
+                        help="per-request SIA topk 覆盖 (留空 = 沿用全局 --topk)")
+    parser.add_argument("--sia_entropy_threshold", type=float, default=None,
+                        help="per-request entropy gate 覆盖 (0 = 每 token 都干预; 留空 = 沿用全局)")
     args = parser.parse_args()
 
     subjects = args.subjects or ALL_SUBJECTS
@@ -361,6 +384,8 @@ def main():
     print(f"subjects    : {len(subjects)} 个")
     print(f"limit       : {args.limit or '无'}")
     print(f"temperature : {args.temperature}")
+    print(f"sia_weight / sia_topk / sia_entropy_threshold: "
+          f"{args.sia_weight} / {args.sia_topk} / {args.sia_entropy_threshold}")
     print(f"output      : {output_path}")
     print("-" * 60)
 
@@ -380,6 +405,9 @@ def main():
             disable_thinking=args.disable_thinking,
             no_think_prompt=args.no_think_prompt,
             ban_think_token=args.ban_think_token,
+            sia_weight=args.sia_weight,
+            sia_topk=args.sia_topk,
+            sia_entropy_threshold=args.sia_entropy_threshold,
         )
         per_subject[subject] = result
         if result["accuracy"] is not None:
