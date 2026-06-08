@@ -691,15 +691,8 @@ ls /dstack/persistent/SIA/models/Skywork-Reward-V2-Llama-3.1-8B/
 # huggingface-cli download Skywork/Skywork-Reward-V2-Llama-3.1-8B \
 #   --local-dir /dstack/persistent/SIA/models/Skywork-Reward-V2-Llama-3.1-8B
 
-# 确认 AlpacaEval 数据集（805 条 instruction）
-ls /dstack/persistent/SIA/data/alpaca_eval/alpaca_eval.json
-# 若未下载:
-# python -c "
-# from datasets import load_dataset; import json, pathlib
-# pathlib.Path('/dstack/persistent/SIA/data/alpaca_eval').mkdir(parents=True, exist_ok=True)
-# ds = load_dataset('tatsu-lab/alpaca_eval','alpaca_eval')['eval']
-# json.dump(list(ds), open('/dstack/persistent/SIA/data/alpaca_eval/alpaca_eval.json','w'), indent=2)
-# "
+# 确认 AlpacaEval 数据集（仓库内已包含，确认文件存在）
+ls /dstack/persistent/SIA/sia-repo/0g-sparse-inference-alignment/data/alpaca_eval/alpaca_eval.json
 ```
 
 ### Phase 1 — Generation（server 正常运行，无需停机）
@@ -709,7 +702,6 @@ ls /dstack/persistent/SIA/data/alpaca_eval/alpaca_eval.json
 docker compose exec sia-vl30b bash
 cd /workspace/sia-repo/0g-sparse-inference-alignment
 MODEL=/workspace/models/Qwen3-VL-30B-A3B-Instruct
-DATASET=/workspace/data/alpaca_eval/alpaca_eval.json   # 按实际路径改
 mkdir -p /workspace/exp
 ```
 
@@ -717,7 +709,7 @@ mkdir -p /workspace/exp
 ```bash
 nohup python eval/alpaca_eval.py \
   --base_url http://localhost:8000/v1 \
-  --model "$MODEL" --dataset "$DATASET" \
+  --model "$MODEL" \
   --limit 200 --max_tokens 2048 \
   --temperature 1.0 --top_p 0.95 --top_k 20 --repetition_penalty 1.0 \
   --output /workspace/exp/alpaca_vl30b_b2_sia_$(date +%Y%m%d_%H%M%S).json \
@@ -729,7 +721,7 @@ echo "SIA arm PID=$!"
 ```bash
 nohup python eval/alpaca_eval.py \
   --base_url http://localhost:8000/v1 \
-  --model "$MODEL" --dataset "$DATASET" \
+  --model "$MODEL" \
   --limit 200 --max_tokens 2048 \
   --temperature 1.0 --top_p 0.95 --top_k 20 --repetition_penalty 1.0 \
   --sia_weight 0 \

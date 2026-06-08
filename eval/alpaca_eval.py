@@ -116,7 +116,7 @@ def main():
     p.add_argument("--base_url", default="http://localhost:8000/v1")
     p.add_argument("--model", required=True)
     p.add_argument("--dataset",
-                   default="/workspace/SIA/data/alpaca_eval/alpaca_eval.json")
+                   default="data/alpaca_eval/alpaca_eval.json")
     p.add_argument("--output", required=True)
     p.add_argument("--limit", type=int, default=None,
                    help="只跑前 N 条 (default 全 805)")
