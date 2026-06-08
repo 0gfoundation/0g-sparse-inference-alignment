@@ -4,23 +4,7 @@
 **适用 docker image**: `pytorch/pytorch:2.11.0-cuda12.8-cudnn9-devel`
 **适用配置**: VL-30B (Qwen3-VL-30B-A3B-Instruct) SIA b2 inproc 加速路径 (vllm 0.17.1, [`requirements/vl30b-b2-inproc.txt`](../requirements/vl30b-b2-inproc.txt))
 
-> 本 doc 覆盖 3 条部署路径 (临时跑 / Dockerfile build / **生产 compose**), 每条都包含: **构建 image** → **启动 server** → **smoke test** → **停止 / 重启 / 清理**。新读者直接跳到 [三条路径选一条](#三条路径选一条).
-
-## 快速参考 (TL;DR)
-
-**生产部署** (复制粘贴即用, 假设前提全部满足, 模型已在 `/dstack/persistent/SIA/models/`):
-
-> **新机器?** 先完整走完 [前提](#前提) — 需要安装 nvidia-container-toolkit、下载模型权重 (~71-82 GB)（RM checkpoint 可直接下载，无需 convert），再回来执行下面的命令。
-
-```bash
-cd /dstack/persistent/SIA/sia-repo/0g-sparse-inference-alignment
-docker compose up -d --build         # 起服务 (首次 ~15-20 min 含 build + warmup)
-docker compose logs -f sia-vl30b     # 看启动 + 运行日志
-docker compose ps                    # 等 STATUS = (healthy)
-curl -X POST http://localhost:8000/v1/chat/completions -H "Content-Type: application/json" \
-  -d '{"model":"/workspace/models/Qwen3-VL-30B-A3B-Instruct","messages":[{"role":"user","content":"hi"}],"max_tokens":50}'
-docker compose down                  # 停服务 (named volume 保留, 下次启动复用 compile cache)
-```
+> 本 doc 覆盖 3 条部署路径 (临时跑 / Dockerfile build / **生产 compose**), 每条都包含: **构建 image** → **启动 server** → **smoke test** → **停止 / 重启 / 清理**。生产部署推荐直接看 [Path C](#path-c--docker-compose--生产推荐)。
 
 ## 前提
 
