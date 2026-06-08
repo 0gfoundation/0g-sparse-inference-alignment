@@ -91,6 +91,10 @@ class ChatCompletionRequest(BaseModel):
     # 透传给 apply_chat_template 的额外 kwargs (e.g. {"enable_thinking": False})
     # 用法: 跟 OpenAI 兼容 — eval client 传 chat_template_kwargs={"enable_thinking": False}
     chat_template_kwargs: Optional[dict] = None
+    # Per-request SIA overrides. None = use server default (from --weight / --topk / --entropy_threshold).
+    sia_weight: Optional[float] = None            # 0.0 = disable SIA for this request
+    sia_topk: Optional[int] = None                # override number of RM candidates
+    sia_entropy_threshold: Optional[float] = None  # override entropy gate; 0 = always intervene
 
 
 class CompletionRequest(BaseModel):
@@ -166,6 +170,15 @@ def _build_sampling_params(req: ChatCompletionRequest) -> SamplingParams:
     )
     if req.top_k is not None:
         kwargs["top_k"] = req.top_k
+    sia_extra: dict = {}
+    if req.sia_weight is not None:
+        sia_extra["sia_weight"] = req.sia_weight
+    if req.sia_topk is not None:
+        sia_extra["sia_topk"] = req.sia_topk
+    if req.sia_entropy_threshold is not None:
+        sia_extra["sia_entropy_threshold"] = req.sia_entropy_threshold
+    if sia_extra:
+        kwargs["extra_args"] = sia_extra
     return SamplingParams(**kwargs)
 
 
