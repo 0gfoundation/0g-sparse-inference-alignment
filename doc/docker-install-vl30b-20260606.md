@@ -155,11 +155,12 @@ ls /dstack/persistent/SIA/models/VM-Qwen3-4B-merged-for-vllm/
 # 预期看到: config.json  model.safetensors  tokenizer*.json  ...
 ```
 
-完成后确认所有模型到位：
+完成后确认必要模型到位：
 
 ```bash
 ls /dstack/persistent/SIA/models/
-# Qwen3-VL-30B-A3B-Instruct  Qwen3-4B-Base  SIA-checkpoints  VM-Qwen3-4B-merged-for-vllm
+# 选项 A: Qwen3-VL-30B-A3B-Instruct  VM-Qwen3-4B-merged-for-vllm
+# 选项 B: Qwen3-VL-30B-A3B-Instruct  Qwen3-4B-Base  SIA-checkpoints  VM-Qwen3-4B-merged-for-vllm
 ```
 
 **以上前提全部满足后，再进入下面的三条路径。**
@@ -227,7 +228,7 @@ bash scripts/docker_install_vl30b.sh
 
 成功后会打印类似:
 ```
-python: 3.11.x  (/opt/venv-vl30b/bin/python3)
+python: 3.12.x  (/opt/venv-vl30b/bin/python3)
 vllm  : 0.17.1
 torch : 2.10.0+cu124
 CUDA  : available=True  device_count=1
