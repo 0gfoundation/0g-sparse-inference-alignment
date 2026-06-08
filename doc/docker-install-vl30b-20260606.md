@@ -707,7 +707,7 @@ mkdir -p /workspace/exp
 
 **SIA arm**（server 默认参数：topk=10, weight=1.0, entropy_threshold=1.0）：
 ```bash
-nohup python eval/alpaca_eval.py \
+nohup python -u eval/alpaca_eval.py \
   --base_url http://localhost:8000/v1 \
   --model "$MODEL" \
   --limit 200 --max_tokens 2048 \
@@ -719,7 +719,7 @@ echo "SIA arm PID=$!"
 
 **noSIA arm**（`--sia_weight 0` 关掉 RM 干预，speed ≈ raw vllm）：
 ```bash
-nohup python eval/alpaca_eval.py \
+nohup python -u eval/alpaca_eval.py \
   --base_url http://localhost:8000/v1 \
   --model "$MODEL" \
   --limit 200 --max_tokens 2048 \
