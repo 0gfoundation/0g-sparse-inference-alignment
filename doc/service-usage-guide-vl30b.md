@@ -8,7 +8,7 @@
 
 | 要求 | 状态 | 说明 |
 |---|---|---|
-| OpenAI 规范 | ✅ | 完全遵循 OpenAI `/v1/chat/completions` 接口规范。请求字段（`model`、`messages`、`max_tokens`、`temperature`、`stream` 等）和响应结构（`choices[].message.content`、`finish_reason`、`usage` 等）均与 OpenAI API 一致，可直接使用 OpenAI Python SDK 或任何兼容客户端接入。 |
+| OpenAI 规范 | ✅ | 完全遵循 OpenAI `/v1/chat/completions` 接口规范。请求字段（`model`、`messages`、`max_tokens`、`temperature`、`stream` 等）和响应结构（`choices[].message.content`、`finish_reason`、`usage` 等）均与 OpenAI API 一致，可直接使用 OpenAI Python SDK 或任何兼容客户端接入。服务同时暴露 `/chat/completions`（无 `/v1/` 前缀）作为 broker billing 路由，两者行为完全一致。 |
 | Input Cache（Prefix Caching）| ✅ | 服务启用了 vLLM Automatic Prefix Caching (APC)（docker-compose.yml 的 `--enable_prefix_caching`）。System prompt、对话历史等共享前缀的 KV 会被自动缓存，后续请求命中缓存时 prefill 几乎免费，显著降低 TTFT。注：同事所说的 "input cache" 即此 prefix caching 机制。 |
 | Response 支持 usage | ✅ | 每个响应均包含 `usage` 字段，报告本次请求的 `prompt_tokens`、`completion_tokens`、`total_tokens`（见下方 §1 示例）。 |
 
@@ -254,7 +254,7 @@ data: {"id":"chatcmpl-g5b9c7d6","object":"chat.completion.chunk","choices":[{"de
 data: [DONE]
 ```
 
-> ⚠️ 本服务的 streaming 是**模拟**的（先生成完整回复，再分块推送），延迟特性与真正的逐 token streaming 不同。
+> 本服务实现的是**真·token-level streaming**，每生成一个 token 立即推送一个 SSE chunk，TTFT 与首 token 到达时间一致。
 
 ---
 
@@ -264,8 +264,8 @@ data: [DONE]
 |---|---|---|---|
 | `model` | string | 必填 | 填服务端模型路径 |
 | `messages` | array | 必填 | 对话历史，支持 system / user / assistant |
-| `max_tokens` | int | — | 最大生成 token 数，建议 ≤ 1800（受 max_model_len=2048 限制） |
-| `temperature` | float | 1.0 | 采样温度，0 为贪婪解码，越高越随机 |
+| `max_tokens` | int | 512 | 最大生成 token 数，建议 ≤ 1800（受 max_model_len=2048 限制；长 system prompt 会进一步压缩上限） |
+| `temperature` | float | 0.7 | 采样温度，0 为贪婪解码，越高越随机 |
 | `top_p` | float | — | nucleus sampling 概率阈值 |
 | `top_k` | int | — | 只从概率最高的 k 个 token 里采样 |
 | `repetition_penalty` | float | — | 重复惩罚，推荐 1.0（关闭）或 1.05 |
