@@ -9,7 +9,7 @@
 | 要求 | 状态 | 说明 |
 |---|---|---|
 | OpenAI 规范 | ✅ | 完全遵循 OpenAI `/v1/chat/completions` 接口规范。请求字段（`model`、`messages`、`max_tokens`、`temperature`、`stream` 等）和响应结构（`choices[].message.content`、`finish_reason`、`usage` 等）均与 OpenAI API 一致，可直接使用 OpenAI Python SDK 或任何兼容客户端接入。服务同时暴露 `/chat/completions`（无 `/v1/` 前缀）作为 broker billing 路由，两者行为完全一致。 |
-| Input Cache（Prefix Caching）| ✅ | 服务启用了 vLLM Automatic Prefix Caching (APC)（docker-compose.yml 的 `--enable_prefix_caching`）。System prompt、对话历史等共享前缀的 KV 会被自动缓存，后续请求命中缓存时 prefill 几乎免费，显著降低 TTFT。注：同事所说的 "input cache" 即此 prefix caching 机制。 |
+| Input Cache（Prefix Caching）| ✅ | 服务启用了 vLLM Automatic Prefix Caching (APC)（docker-compose.yml 的 `--enable_prefix_caching`）。System prompt、对话历史等共享前缀的 KV 会被自动缓存，后续请求命中缓存时 prefill 几乎免费，显著降低 TTFT。注："input cache" 即此 prefix caching 机制。 |
 | Response 支持 usage | ✅ | 每个响应均包含 `usage` 字段，报告本次请求的 `prompt_tokens`、`completion_tokens`、`total_tokens`（见下方 §1 示例）。 |
 
 ---
