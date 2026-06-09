@@ -3,7 +3,7 @@
 **模型**: 0GM-1.0-35B-A3B-Instruct (Qwen3.5/3.6 MoE arch)
 **当前基线**: SIA ~32 tok/s vs noSIA ~98 tok/s → **3× 慢**
 **per-INTERVENE**: ~94 ms (HTTP /classify)，干预率 ~10%
-**核心约束**: 只有 vllm 0.19 支持 `Qwen3_5MoeForConditionalGeneration`，无法降级
+**当前最优**: P0 已通过，vllm 0.18.0 + b2 inproc + `SIA_RM_CUDAGRAPH=none` — ~1.5× vs HTTP
 
 ---
 
@@ -26,25 +26,44 @@
 
 ## 可行方案（按可行性 × 收益排序）
 
-### P0 — vllm 0.18.x 试探
+### P0 — vllm 0.18.x 试探 ✅ **已通过 (2026-06-09)**
 
-**工作量**: 30 分钟 | **潜在收益**: 若成功 → 端到端 ~1.4–1.5×
+**结果**: 成功。0GM-35B + b2 inproc + vllm 0.18.0 完全可用，无 RM 错误。
 
-PyPI 上存在 0.18.0 / 0.18.1，但从未测试过。需同时满足：
-
-1. 支持 `Qwen3_5MoeForConditionalGeneration` 架构
-2. PIECEWISE 仍是 AOT capture（如 0.17.1），而非 runtime trigger（如 0.19）
-
-若两者都满足，0GM-35B 就能走和 VL-30B 完全相同的 b2 inproc 路径，预计获得 VL-30B 同等加速（1.46×）。
-
-成本极低，30 分钟内出结论。失败了也只是在失败表里加一行。
-
+**测试配置**:
 ```bash
-python3 -m venv /opt/venv-0gm-018
-source /opt/venv-0gm-018/bin/activate
-pip install vllm==0.18.0
-python -c "from vllm.model_executor.models import ModelRegistry; print([k for k in ModelRegistry.get_supported_archs() if 'Qwen3' in k or 'Moe' in k])"
+SIA_LLM_CUDAGRAPH=piecewise SIA_RM_CUDAGRAPH=none \
+SIA_RM_MULTIPROCESS=0 \
+python src/sia_vllm_server.py \
+  --llm /workspace/SIA/models/0GM-1.0-35B-A3B-0427 \
+  --rm_backend b2 --rm_model /workspace/SIA/models/VM-Qwen3-4B-merged-for-vllm \
+  --llm_gpu_mem 0.55 --rm_b2_gpu_mem 0.15 \
+  --topk 10 --weight 1.0 --entropy_threshold 1.0 \
+  --max_model_len 2048 --port 8000
 ```
+
+**为什么用 `SIA_RM_CUDAGRAPH=none`（而非 `piecewise`）**：
+- `piecewise` 也失败了：vllm 0.18.0 RM 的 PIECEWISE 在推理时遇到前缀缓存新生成的 batch_descriptor，试图新建 CUDA graph，但 capturing 已禁止 → `validate_cudagraph_capturing_enabled()` 抛出异常
+- `none`（eager RM）完全绕过 `CUDAGraphWrapper`，避免所有 capture 尝试
+- vllm 0.18.0 主 LLM 的 PIECEWISE 在推理时只 replay 已捕获的 graph（不进入 `torch.cuda.graph()` context），所以 eager RM 可以自由运行
+
+**实测吞吐（H200，单卡，2026-06-09）**:
+| 模式 | tok/s |
+|------|-------|
+| noSIA (b2 inproc, sia_weight=0) | ~54 |
+| SIA (b2 inproc, entropy_threshold=1.0, ~8% intervention) | ~49 |
+| SIA (HTTP vllm RM, 旧方案) | ~32 |
+
+b2 inproc vs HTTP: **~1.5× speedup** ✅ (匹配 VL-30B 的 1.46×)
+
+**SIA 干预日志示例**:
+```
+[SIA] req=0 DONE  intervened=17/200  ratio=8.5%  top1_flip=15/17 (88.2%)
+```
+
+**可复用配置**:
+- requirements: `requirements/0gm35b-b2-inproc.txt`
+- 安装脚本: `scripts/setup_venv_0gm35b_b2.sh`
 
 ---
 

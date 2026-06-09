@@ -2,6 +2,42 @@
 
 SIA（Sparse Inference-time Alignment）per-token 干预推理服务，兼容 OpenAI Chat API，可与 0g-serving-broker 对接。
 
+论文：[Inference-time Alignment via Sparse Junction Steering](https://arxiv.org/pdf/2602.21215)（Runyi Hu et al.）
+
+---
+
+## 相比论文的附加工作
+
+论文提供了核心算法（SIA LogitsProcessor + entropy gate）和 Value Model checkpoints，但推理代码是基于 transformers 的手写 forward loop，未覆盖生产部署。本项目在此基础上完成了以下工作：
+
+**1. 生产级 vLLM 集成**
+重写为 vLLM v1 `LogitsProcessor` 接口，接入异步批处理引擎，支持并发请求和真·token-level streaming（而非先生成完再模拟）。
+
+**2. OpenAI 兼容 HTTP 服务**
+`/v1/chat/completions` 完整实现，支持 streaming SSE，可直接接入 OpenAI SDK 客户端和 0g broker 双路由。
+
+**3. b2 inproc RM backend（核心加速）**
+把 RM 从独立 HTTP server 改为同进程嵌套 vLLM `LLM()`，利用 prefix caching 实现增量 decode（前缀 KV 复用）。设计了 `RMClient` 状态机（`new_session / fix_a_token / score_candidates`）。实测结果：
+- VL-30B：RM call p50 71ms → 11ms（**6.4×**），端到端 **1.46× 加速**，AlpacaEval Skywork reward 统计等价（p=0.73）
+- 0GM-35B：端到端 **~1.5× 加速** vs HTTP backend
+
+**4. 异构 tokenizer 支持**
+论文假设 LLM 和 RM 共享词表；项目实现了 cross-tokenizer bridge（decode→text→re-encode），支持 LLM 和 RM 词表不同的场景（如 0GM-35B 248k vocab + VM-Qwen3-4B 152k vocab）。
+
+**5. 逐请求参数覆盖**
+`sia_weight / sia_topk / sia_entropy_threshold` 支持在每次 HTTP 请求中独立覆盖，无需重启服务。
+
+**6. 关键 bug 修复：`repetition_penalty` 偏差**
+发现 `repetition_penalty=1.3` 默认开启叠加 vLLM sampler 顺序，造成 AlpacaEval Skywork score +3.09 vs 论文 +10.30。修复后（`repetition_penalty=1.0`）三组配置（Qwen3-14B / VL-30B / 14B 复现）SIA gain 与论文统计等价（p=0.43）。
+
+**7. 多模型验证**
+论文只验证 Qwen3-14B；项目在 Qwen3-VL-30B（7.5× weak-to-strong）和 0GM-1.0-35B-A3B（自研模型）上完成 AlpacaEval / MMLU 端到端评测，确认 SIA gain 可迁移。
+
+**8. vLLM 版本适配工程**
+系统排查 vllm 0.17 / 0.18 / 0.19 三版本在 PIECEWISE cudagraph 上的差异，确定各模型的可用版本（VL-30B → 0.17.1，0GM-35B → 0.18.0），提供各自独立的 venv setup 脚本和 requirements 文件。
+
+---
+
 ## 文件说明
 
 | 文件 | 说明 |
