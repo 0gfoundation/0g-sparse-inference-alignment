@@ -118,7 +118,7 @@ noSIA arm 同样通过 per-request `--sia_weight 0` 实现，无需切换服务�
 | `--limit` | 5 |
 | `--temperature` | 1.0 |
 | `--repetition_penalty` | 1.0 |
-| thinking 模式 | 默认开启（不加 `--disable_thinking`） |
+| thinking 模式 | N/A（Qwen3-VL-30B-A3B-Instruct 是 Instruct 变体，非 thinking model，不输出 `<think>` 块） |
 
 ### 5.2 结果
 
