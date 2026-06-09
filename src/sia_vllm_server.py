@@ -91,6 +91,10 @@ class ChatCompletionRequest(BaseModel):
     # 透传给 apply_chat_template 的额外 kwargs (e.g. {"enable_thinking": False})
     # 用法: 跟 OpenAI 兼容 — eval client 传 chat_template_kwargs={"enable_thinking": False}
     chat_template_kwargs: Optional[dict] = None
+    # Per-request SIA overrides. None = use server default (from --weight / --topk / --entropy_threshold).
+    sia_weight: Optional[float] = None            # 0.0 = disable SIA for this request
+    sia_topk: Optional[int] = None                # override number of RM candidates
+    sia_entropy_threshold: Optional[float] = None  # override entropy gate; 0 = always intervene
 
 
 class CompletionRequest(BaseModel):
@@ -166,6 +170,15 @@ def _build_sampling_params(req: ChatCompletionRequest) -> SamplingParams:
     )
     if req.top_k is not None:
         kwargs["top_k"] = req.top_k
+    sia_extra: dict = {}
+    if req.sia_weight is not None:
+        sia_extra["sia_weight"] = req.sia_weight
+    if req.sia_topk is not None:
+        sia_extra["sia_topk"] = req.sia_topk
+    if req.sia_entropy_threshold is not None:
+        sia_extra["sia_entropy_threshold"] = req.sia_entropy_threshold
+    if sia_extra:
+        kwargs["extra_args"] = sia_extra
     return SamplingParams(**kwargs)
 
 
@@ -215,7 +228,9 @@ async def list_models():
 
 
 async def _log_rm_status():
-    """查询 RM server /status 并打印到日志，失败时静默跳过。"""
+    """查询 RM server /status 并打印到日志，失败时静默跳过。b2 inproc 无 HTTP server，跳过。"""
+    if _args.rm_backend == "b2":
+        return
     try:
         async with httpx.AsyncClient(timeout=3.0) as client:
             resp = await client.get(f"{_args.rm_url}/status")
@@ -422,6 +437,15 @@ def parse_args():
                         "省服务端 re-tokenize（~3-5ms/call）。需要 RM server 用 "
                         "scripts/vllm_serve_with_token_ids.py 启动以打 Pydantic 补丁。")
     p.add_argument("--max_model_len", type=int, default=4096)
+    # vllm Automatic Prefix Caching (APC). Default ON (生产推荐):
+    # 多 request 共享前缀时 2-10x prefill 加速; SIA 跟 APC 正交不冲突。
+    # 想关传 --disable_prefix_caching.
+    p.add_argument("--enable_prefix_caching", dest="enable_prefix_caching",
+                   action="store_true", default=True,
+                   help="Enable vllm APC (default).")
+    p.add_argument("--disable_prefix_caching", dest="enable_prefix_caching",
+                   action="store_false",
+                   help="Disable vllm APC (not recommended for production).")
     p.add_argument("--enable_thinking", choices=["true", "false"], default=None,
                    help="透传 enable_thinking 给 RM prefix 构造, 跟 LLM 实际看到的 prompt 100% 一致。"
                         "Qwen3 Instruct 模型 default=true (含 <think> 注入); "
@@ -500,7 +524,9 @@ def main():
         gpu_memory_utilization=_args.llm_gpu_mem,
         logits_processors=[SIAProcessor],
         disable_log_stats=True,
+        enable_prefix_caching=_args.enable_prefix_caching,
     )
+    print(f"[SIA] main LLM prefix_caching = {_args.enable_prefix_caching}")
     # Optional main-LLM cudagraph override. Default = vllm's default (keeps
     # legacy Qwen14B / vllm 0.10 path untouched). Set to "piecewise" when
     # running a nested-vllm RM under vllm >= 0.15: FULL_AND_PIECEWISE on the

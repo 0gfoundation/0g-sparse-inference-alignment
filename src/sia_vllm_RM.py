@@ -259,6 +259,8 @@ def make_sia_processor(
             self._prompt_user: dict[int, str] = {}
             self._output_ids: dict[int, list] = {}
             self._weight_per_req: dict[int, float] = {}
+            self._topk_per_req: dict[int, int] = {}
+            self._entropy_per_req: dict[int, Optional[float]] = {}
             # 干预统计：每个请求的 total token steps 和实际干预次数
             self._total_steps: dict[int, int] = {}
             self._intervened_steps: dict[int, int] = {}
@@ -947,11 +949,28 @@ def make_sia_processor(
             # 触发一次 GPU→CPU sync，阻塞 LLM forward pipeline。
             # 这里改成在 loop 外面整体算 + 一次性 sync，把 batch_size 次
             # sync 压成 1 次。
-            topk_result = torch.topk(logits, self._TOPK, dim=-1)
-            # numerically-stable entropy via log_softmax，避免 log(0)
-            log_probs = F.log_softmax(topk_result.values.float(), dim=-1)
+            # Per-request effective topk (may differ per request if sia_topk was set).
+            # Use the batch maximum so a single torch.topk covers all requests.
+            if self._topk_per_req:
+                effective_topks = [self._topk_per_req.get(i, self._TOPK) for i in range(batch_size)]
+                max_topk = max(effective_topks)
+            else:
+                effective_topks = None
+                max_topk = self._TOPK
+            # Entropy gate always uses the global _TOPK window so the threshold
+            # remains calibrated regardless of per-request sia_topk. A small
+            # sia_topk (e.g. 1) would make softmax entropy near-zero over just
+            # one element, wrongly suppressing all interventions.
+            entropy_topk_result = torch.topk(logits, self._TOPK, dim=-1)
+            log_probs = F.log_softmax(entropy_topk_result.values.float(), dim=-1)
             probs = log_probs.exp()
             entropies = -(probs * log_probs).sum(dim=-1)  # (batch,)
+            # Scoring topk may differ from entropy topk when sia_topk is set.
+            scoring_topk_result = (
+                torch.topk(logits, max_topk, dim=-1)
+                if max_topk != self._TOPK
+                else entropy_topk_result
+            )
 
             # 注: 上面 GPU work 还没 sync, 真正 sync 在下面 .cpu().tolist()。
             # 拆分 timer: t_after_gpu_dispatch = topk+entropy "Python dispatch" 完成
@@ -963,7 +982,7 @@ def make_sia_processor(
             # 开 SIA_DEBUG_HIST=1 时, 把 entropy + top1/top2 gap 合并到一次 sync 里
             # (避免引入额外的 CUDA sync round-trip)。
             if self._DEBUG_HIST:
-                gap_tensor = topk_result.values[:, 0] - topk_result.values[:, 1]  # (batch,)
+                gap_tensor = entropy_topk_result.values[:, 0] - entropy_topk_result.values[:, 1]  # (batch,)
                 # 一次性同步 entropy + gap, 比独立 .cpu() 省一次 round-trip
                 combined = torch.stack([entropies, gap_tensor], dim=1)  # (batch, 2)
                 combined_cpu = combined.cpu().tolist()
@@ -1008,13 +1027,19 @@ def make_sia_processor(
                 ]
             else:
                 intervene_flags = [True] * batch_size
+            # Override per-request entropy threshold where set
+            if self._entropy_per_req:
+                for i in range(batch_size):
+                    if i in self._entropy_per_req:
+                        thr = self._entropy_per_req[i]
+                        intervene_flags[i] = (thr is None) or (entropy_values[i] >= thr)
 
             # 至少有一个要 INTERVENE 才把 topk_indices 拉到 CPU；纯 SKIP 省 sync。
             # A-2: 不再需要 topk_values_lists — flip 检测改走 GPU argmax 路径,
             #      verbose log 的 pre_top1/post_top1 只需要 topk_indices_lists。
             verbose = self._LOG_LEVEL == "verbose"
             if any(intervene_flags):
-                topk_indices_lists = topk_result.indices.cpu().tolist()
+                topk_indices_lists = scoring_topk_result.indices.cpu().tolist()
             else:
                 topk_indices_lists = None
 
@@ -1050,8 +1075,20 @@ def make_sia_processor(
                 user_content = self._prompt_user.get(i, "")
                 req_step = self._total_steps[i]
 
+                # Early exit when weight=0: no RM call, no logit modification,
+                # not counted as intervened (noSIA semantics for this request).
+                effective_weight = self._weight_per_req.get(i, self._WEIGHT)
+                if effective_weight == 0.0:
+                    continue
+
                 topk_indices_i = topk_indices_lists[i]            # list[int] (CPU)
-                topk_indices_gpu = topk_result.indices[i]         # GPU view，用于索引 logits
+                topk_indices_gpu = scoring_topk_result.indices[i]  # GPU view，用于索引 logits
+                # Per-request topk override: slice both CPU and GPU views
+                if effective_topks is not None:
+                    eff_k = effective_topks[i]
+                    if eff_k < max_topk:
+                        topk_indices_i = topk_indices_i[:eff_k]
+                        topk_indices_gpu = topk_indices_gpu[:eff_k]
 
                 response_so_far = self._get_response_so_far(i, output_ids)
                 t_intv_prepare_end = time.perf_counter() if pf_on else 0.0
@@ -1084,7 +1121,6 @@ def make_sia_processor(
                 # === apply_logits 计时起点 (RM call 之后) ===
                 t_intv_apply_start = time.perf_counter() if pf_on else 0.0
 
-                effective_weight = self._weight_per_req.get(i, self._WEIGHT)
                 # B-1: rm_scores 在 inproc 模式下是 GPU bfloat16 (score head 输出
                 # dtype); legacy 模式下是 CPU float32 (read_rewards 已 cast)。
                 # 统一 cast 到 logits 的 device + dtype, 否则后续 op 会因为
@@ -1098,14 +1134,12 @@ def make_sia_processor(
                 #   rewards = -inf 处处, 仅 top-k 位置 = raw RM logits
                 #   combined = rewards * weight + orig_logits
                 #   → 非 top-k 位置永远是 -inf, softmax 后 prob=0, sampling 只能从 top-k 选
-                # 我们之前只 index_add 到 top-k, 不 mask 非 top-k, 让 vllm sampler 看到
-                # 完整 vocab → 干预语义偏离官方。
-                # Fix: weight != 0 时, 把所有非 top-k 位置 set 到 -inf, 跟官方等价。
-                if effective_weight != 0.0:
-                    modified_top5 = topk_result.values[i] + rm_deltas
-                    logits[i].fill_(float('-inf'))
-                    logits[i].index_copy_(0, topk_indices_gpu, modified_top5)
-                # else: weight=0 (noSIA semantics) → 保留原 logits 不变
+                # Fix: 把所有非 top-k 位置 set 到 -inf, 跟官方等价。
+                topk_vals_i = (scoring_topk_result.values[i] if effective_topks is None
+                               else scoring_topk_result.values[i, :effective_topks[i]])
+                modified_topk = topk_vals_i + rm_deltas
+                logits[i].fill_(float('-inf'))
+                logits[i].index_copy_(0, topk_indices_gpu, modified_topk)
 
                 self._intervened_steps[i] = self._intervened_steps.get(i, 0) + 1
 
@@ -1114,7 +1148,7 @@ def make_sia_processor(
                 # 干预后 top-1 取 topk 内的 argmax（SIA 加权幅度远小于 topk 内 logit gap，
                 # argmax 极少跳到 topk 外，topk 内排序足够代表实际选中变化）。
                 # A-3: 改走 GPU argmax 路径, 1 次 int sync 取代原来 5 元素 .tolist() + Python max。
-                modified_topk_vals = topk_result.values[i] + rm_deltas
+                modified_topk_vals = topk_vals_i + rm_deltas
                 post_top1_local = int(modified_topk_vals.argmax().item())
                 pre_top1 = topk_indices_i[0]
                 post_top1 = topk_indices_i[post_top1_local]
@@ -1213,6 +1247,8 @@ def make_sia_processor(
                 self._output_ids.pop(idx, None)
                 self._prompt_user.pop(idx, None)
                 self._weight_per_req.pop(idx, None)
+                self._topk_per_req.pop(idx, None)
+                self._entropy_per_req.pop(idx, None)
                 self._decoded_text.pop(idx, None)
                 self._decoded_token_count.pop(idx, None)
                 self._chat_prefix_per_req.pop(idx, None)
@@ -1232,6 +1268,8 @@ def make_sia_processor(
                 old_out = dict(self._output_ids)
                 old_prompt = dict(self._prompt_user)
                 old_weight = dict(self._weight_per_req)
+                old_topk = dict(self._topk_per_req)
+                old_entropy = dict(self._entropy_per_req)
                 old_total = dict(self._total_steps)
                 old_intervened = dict(self._intervened_steps)
                 old_flipped = dict(self._flipped_steps)
@@ -1246,6 +1284,14 @@ def make_sia_processor(
                         self._prompt_user[i2] = old_prompt.get(i1, "")
                         if i1 in old_weight:
                             self._weight_per_req[i2] = old_weight[i1]
+                        if i1 in old_topk:
+                            self._topk_per_req[i2] = old_topk[i1]
+                        else:
+                            self._topk_per_req.pop(i2, None)
+                        if i1 in old_entropy:
+                            self._entropy_per_req[i2] = old_entropy[i1]
+                        else:
+                            self._entropy_per_req.pop(i2, None)
                         self._total_steps[i2] = old_total.get(i1, 0)
                         self._intervened_steps[i2] = old_intervened.get(i1, 0)
                         self._flipped_steps[i2] = old_flipped.get(i1, 0)
@@ -1270,6 +1316,22 @@ def make_sia_processor(
                             self._weight_per_req[i2] = old_weight[i1]
                         else:
                             self._weight_per_req.pop(i2, None)
+                        if i2 in old_topk:
+                            self._topk_per_req[i1] = old_topk[i2]
+                        else:
+                            self._topk_per_req.pop(i1, None)
+                        if i1 in old_topk:
+                            self._topk_per_req[i2] = old_topk[i1]
+                        else:
+                            self._topk_per_req.pop(i2, None)
+                        if i2 in old_entropy:
+                            self._entropy_per_req[i1] = old_entropy[i2]
+                        else:
+                            self._entropy_per_req.pop(i1, None)
+                        if i1 in old_entropy:
+                            self._entropy_per_req[i2] = old_entropy[i1]
+                        else:
+                            self._entropy_per_req.pop(i2, None)
                         self._total_steps[i1] = old_total.get(i2, 0)
                         self._total_steps[i2] = old_total.get(i1, 0)
                         self._intervened_steps[i1] = old_intervened.get(i2, 0)
@@ -1313,6 +1375,13 @@ def make_sia_processor(
             for idx, params, prompt_ids, output_ids in batch_update.added:
                 self._output_ids[idx] = output_ids
                 self._prompt_user[idx] = self._extract_user_content(list(prompt_ids))
+                extra = (params.extra_args or {}) if params is not None else {}
+                if "sia_weight" in extra:
+                    self._weight_per_req[idx] = float(extra["sia_weight"])
+                if "sia_topk" in extra:
+                    self._topk_per_req[idx] = int(extra["sia_topk"])
+                if "sia_entropy_threshold" in extra:
+                    self._entropy_per_req[idx] = extra["sia_entropy_threshold"]
                 # ===== SIA DEBUG HISTOGRAM START =====
                 # 新请求进 slot, 清除前一个请求残留的 dbg state (兜底, 正常 removed 已清)
                 if self._DEBUG_HIST:
