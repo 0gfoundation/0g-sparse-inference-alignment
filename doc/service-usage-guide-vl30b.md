@@ -268,7 +268,7 @@ data: [DONE]
 | `temperature` | float | 0.7 | 采样温度，0 为贪婪解码，越高越随机 |
 | `top_p` | float | — | nucleus sampling 概率阈值 |
 | `top_k` | int | — | 只从概率最高的 k 个 token 里采样 |
-| `repetition_penalty` | float | — | 重复惩罚，推荐 1.0（关闭）或 1.05 |
+| `repetition_penalty` | float | 1.0 | 重复惩罚，1.0=关闭，1.05 轻度抑制重复 |
 | `stream` | bool | false | 开启 SSE 流式输出 |
 | `sia_weight` | float | 1.0 | **SIA 干预强度**，0=关闭，>1=加强 |
 | `sia_topk` | int | 10 | **SIA 候选 token 数**，越大越精细但越慢 |
