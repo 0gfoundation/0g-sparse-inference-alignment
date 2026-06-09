@@ -64,31 +64,6 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
   }' | python3 -m json.tool
 ```
 
-**Response:**
-```json
-{
-    "id": "chatcmpl-b7c4d2e1",
-    "object": "chat.completion",
-    "created": 1749340860,
-    "model": "/workspace/models/Qwen3-VL-30B-A3B-Instruct",
-    "choices": [
-        {
-            "index": 0,
-            "message": {
-                "role": "assistant",
-                "content": "The capital of France is Paris."
-            },
-            "finish_reason": "stop"
-        }
-    ],
-    "usage": {
-        "prompt_tokens": 34,
-        "completion_tokens": 10,
-        "total_tokens": 44
-    }
-}
-```
-
 ---
 
 ## 3. SIA 参数说明
@@ -123,31 +98,6 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
   }' | python3 -m json.tool
 ```
 
-**Response:**
-```json
-{
-    "id": "chatcmpl-c1d5e3f2",
-    "object": "chat.completion",
-    "created": 1749340920,
-    "model": "/workspace/models/Qwen3-VL-30B-A3B-Instruct",
-    "choices": [
-        {
-            "index": 0,
-            "message": {
-                "role": "assistant",
-                "content": "A neural network is a machine learning model loosely inspired by the human brain. It consists of layers of interconnected nodes (\"neurons\"). Each connection has a weight; during training, these weights are adjusted so the network learns to map inputs to correct outputs. Neural networks excel at tasks like image recognition, language understanding, and game playing."
-            },
-            "finish_reason": "stop"
-        }
-    ],
-    "usage": {
-        "prompt_tokens": 21,
-        "completion_tokens": 83,
-        "total_tokens": 104
-    }
-}
-```
-
 **服务端日志**（`docker compose logs sia-vl30b`）会显示：
 ```
 [SIA] req=2 DONE  intervened=0/83  ratio=0.0%  top1_flip=0/0 (0.0%)
@@ -173,31 +123,6 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
   }' | python3 -m json.tool
 ```
 
-**Response:**
-```json
-{
-    "id": "chatcmpl-d2e6f4a3",
-    "object": "chat.completion",
-    "created": 1749340980,
-    "model": "/workspace/models/Qwen3-VL-30B-A3B-Instruct",
-    "choices": [
-        {
-            "index": 0,
-            "message": {
-                "role": "assistant",
-                "content": "The ocean breathes in silver swells,\nits depths hold more than language tells.\nEach wave that breaks upon the shore\nwhispers of a world before.\n\nSalt and silence, vast and free—\nwe are small beside the sea."
-            },
-            "finish_reason": "stop"
-        }
-    ],
-    "usage": {
-        "prompt_tokens": 20,
-        "completion_tokens": 73,
-        "total_tokens": 93
-    }
-}
-```
-
 ---
 
 ## 6. 调节干预频率（`sia_entropy_threshold`）
@@ -220,31 +145,6 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
     "temperature": 0.7,
     "sia_entropy_threshold": 0
   }' | python3 -m json.tool
-```
-
-**Response:**
-```json
-{
-    "id": "chatcmpl-e3f7a5b4",
-    "object": "chat.completion",
-    "created": 1749341040,
-    "model": "/workspace/models/Qwen3-VL-30B-A3B-Instruct",
-    "choices": [
-        {
-            "index": 0,
-            "message": {
-                "role": "assistant",
-                "content": "1. **Red** — apples, strawberries\n2. **Yellow** — bananas, lemons\n3. **Green** — grapes, kiwis"
-            },
-            "finish_reason": "stop"
-        }
-    ],
-    "usage": {
-        "prompt_tokens": 16,
-        "completion_tokens": 40,
-        "total_tokens": 56
-    }
-}
 ```
 
 服务端日志：
@@ -289,31 +189,6 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
     "temperature": 0.7,
     "sia_topk": 20
   }' | python3 -m json.tool
-```
-
-**Response:**
-```json
-{
-    "id": "chatcmpl-f4a8b6c5",
-    "object": "chat.completion",
-    "created": 1749341100,
-    "model": "/workspace/models/Qwen3-VL-30B-A3B-Instruct",
-    "choices": [
-        {
-            "index": 0,
-            "message": {
-                "role": "assistant",
-                "content": "Regular exercise offers several important benefits:\n\n- **Physical health**: strengthens the heart, improves circulation, builds muscle and bone density, and helps maintain a healthy weight.\n- **Mental health**: reduces anxiety and depression, boosts mood through endorphin release, and improves sleep quality.\n- **Cognitive function**: enhances memory, focus, and long-term brain health.\n- **Longevity**: associated with lower risk of chronic diseases such as type 2 diabetes and cardiovascular disease."
-            },
-            "finish_reason": "stop"
-        }
-    ],
-    "usage": {
-        "prompt_tokens": 19,
-        "completion_tokens": 100,
-        "total_tokens": 119
-    }
-}
 ```
 
 ---
