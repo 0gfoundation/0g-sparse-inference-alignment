@@ -24,29 +24,27 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
 **Response:**
 ```json
 {
-    "id": "chatcmpl-a3f2e1b0",
+    "id": "chatcmpl-0fdb87be20e3",
     "object": "chat.completion",
-    "created": 1749340800,
+    "created": 1780971415,
     "model": "/workspace/models/Qwen3-VL-30B-A3B-Instruct",
     "choices": [
         {
             "index": 0,
             "message": {
                 "role": "assistant",
-                "content": "<think>\nThe user wants three colors commonly associated with fruit. Let me think of clear examples.\n</think>\n\nHere are 3 common colors of fruit:\n\n1. **Red** — apples, strawberries, cherries\n2. **Yellow** — bananas, lemons, mangoes\n3. **Orange** — oranges, papayas, tangerines"
+                "content": "Three common colors of fruit are:\n\n1. **Red** – Example: Apple, strawberry, cherry  \n2. **Yellow** – Example: Banana, peach, mango  \n3. **Green** – Example: Green apple, kiwi, green grape  \n\nThese colors represent just a few of the many naturally occurring fruit colors!"
             },
             "finish_reason": "stop"
         }
     ],
     "usage": {
-        "prompt_tokens": 18,
-        "completion_tokens": 87,
-        "total_tokens": 105
+        "prompt_tokens": 16,
+        "completion_tokens": 67,
+        "total_tokens": 83
     }
 }
 ```
-
-> 模型默认开启 thinking 模式，回复内容里包含 `<think>...</think>` 推理过程，之后是正式答案。
 
 ---
 
@@ -78,15 +76,15 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
             "index": 0,
             "message": {
                 "role": "assistant",
-                "content": "<think>\nSimple factual question.\n</think>\n\nThe capital of France is Paris."
+                "content": "The capital of France is Paris."
             },
             "finish_reason": "stop"
         }
     ],
     "usage": {
         "prompt_tokens": 34,
-        "completion_tokens": 24,
-        "total_tokens": 58
+        "completion_tokens": 10,
+        "total_tokens": 44
     }
 }
 ```
@@ -137,22 +135,22 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
             "index": 0,
             "message": {
                 "role": "assistant",
-                "content": "<think>\nI'll give a clear, accessible explanation of neural networks.\n</think>\n\nA neural network is a machine learning model loosely inspired by the human brain. It consists of layers of interconnected nodes (\"neurons\"). Each connection has a weight; during training, these weights are adjusted so the network learns to map inputs to correct outputs. Neural networks excel at tasks like image recognition, language understanding, and game playing."
+                "content": "A neural network is a machine learning model loosely inspired by the human brain. It consists of layers of interconnected nodes (\"neurons\"). Each connection has a weight; during training, these weights are adjusted so the network learns to map inputs to correct outputs. Neural networks excel at tasks like image recognition, language understanding, and game playing."
             },
             "finish_reason": "stop"
         }
     ],
     "usage": {
         "prompt_tokens": 21,
-        "completion_tokens": 103,
-        "total_tokens": 124
+        "completion_tokens": 83,
+        "total_tokens": 104
     }
 }
 ```
 
 **服务端日志**（`docker compose logs sia-vl30b`）会显示：
 ```
-[SIA] req=2 DONE  intervened=0/103  ratio=0.0%  top1_flip=0/0 (0.0%)
+[SIA] req=2 DONE  intervened=0/83  ratio=0.0%  top1_flip=0/0 (0.0%)
 ```
 
 ratio=0% 确认 RM 完全跳过。
@@ -187,15 +185,15 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
             "index": 0,
             "message": {
                 "role": "assistant",
-                "content": "<think>\nA short poem about the ocean. I'll focus on vivid imagery.\n</think>\n\nThe ocean breathes in silver swells,\nits depths hold more than language tells.\nEach wave that breaks upon the shore\nwhispers of a world before.\n\nSalt and silence, vast and free—\nwe are small beside the sea."
+                "content": "The ocean breathes in silver swells,\nits depths hold more than language tells.\nEach wave that breaks upon the shore\nwhispers of a world before.\n\nSalt and silence, vast and free—\nwe are small beside the sea."
             },
             "finish_reason": "stop"
         }
     ],
     "usage": {
         "prompt_tokens": 20,
-        "completion_tokens": 91,
-        "total_tokens": 111
+        "completion_tokens": 73,
+        "total_tokens": 93
     }
 }
 ```
@@ -236,22 +234,22 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
             "index": 0,
             "message": {
                 "role": "assistant",
-                "content": "<think>\nSimple question about fruit colors.\n</think>\n\n1. **Red** — apples, strawberries\n2. **Yellow** — bananas, lemons\n3. **Green** — grapes, kiwis"
+                "content": "1. **Red** — apples, strawberries\n2. **Yellow** — bananas, lemons\n3. **Green** — grapes, kiwis"
             },
             "finish_reason": "stop"
         }
     ],
     "usage": {
-        "prompt_tokens": 18,
-        "completion_tokens": 58,
-        "total_tokens": 76
+        "prompt_tokens": 16,
+        "completion_tokens": 40,
+        "total_tokens": 56
     }
 }
 ```
 
 服务端日志：
 ```
-[SIA] req=5 DONE  intervened=58/58  ratio=100.0%  top1_flip=12/58 (20.7%)
+[SIA] req=5 DONE  intervened=40/40  ratio=100.0%  top1_flip=8/40 (20.0%)
 ```
 
 ### 降低干预频率（`sia_entropy_threshold=2.0`）
@@ -305,15 +303,15 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
             "index": 0,
             "message": {
                 "role": "assistant",
-                "content": "<think>\nKey benefits of exercise across physical and mental health.\n</think>\n\nRegular exercise offers several important benefits:\n\n- **Physical health**: strengthens the heart, improves circulation, builds muscle and bone density, and helps maintain a healthy weight.\n- **Mental health**: reduces anxiety and depression, boosts mood through endorphin release, and improves sleep quality.\n- **Cognitive function**: enhances memory, focus, and long-term brain health.\n- **Longevity**: associated with lower risk of chronic diseases such as type 2 diabetes and cardiovascular disease."
+                "content": "Regular exercise offers several important benefits:\n\n- **Physical health**: strengthens the heart, improves circulation, builds muscle and bone density, and helps maintain a healthy weight.\n- **Mental health**: reduces anxiety and depression, boosts mood through endorphin release, and improves sleep quality.\n- **Cognitive function**: enhances memory, focus, and long-term brain health.\n- **Longevity**: associated with lower risk of chronic diseases such as type 2 diabetes and cardiovascular disease."
             },
             "finish_reason": "stop"
         }
     ],
     "usage": {
         "prompt_tokens": 19,
-        "completion_tokens": 122,
-        "total_tokens": 141
+        "completion_tokens": 100,
+        "total_tokens": 119
     }
 }
 ```
@@ -360,11 +358,7 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
 
 **Response（逐行流式）:**
 ```
-data: {"id":"chatcmpl-g5b9c7d6","object":"chat.completion.chunk","choices":[{"delta":{"role":"assistant","content":"<think>"},"index":0}]}
-
-data: {"id":"chatcmpl-g5b9c7d6","object":"chat.completion.chunk","choices":[{"delta":{"content":"\nSimple counting task.\n"},"index":0}]}
-
-data: {"id":"chatcmpl-g5b9c7d6","object":"chat.completion.chunk","choices":[{"delta":{"content":"</think>\n\n"},"index":0}]}
+data: {"id":"chatcmpl-g5b9c7d6","object":"chat.completion.chunk","choices":[{"delta":{"role":"assistant","content":""},"index":0}]}
 
 data: {"id":"chatcmpl-g5b9c7d6","object":"chat.completion.chunk","choices":[{"delta":{"content":"1, 2, 3, 4, 5."},"index":0}]}
 
