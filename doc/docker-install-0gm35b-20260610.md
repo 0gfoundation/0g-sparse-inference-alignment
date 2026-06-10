@@ -600,14 +600,13 @@ echo "noSIA arm PID=$!"
 
 > SIA arm 约 50-60 min（~65 tok/s）；noSIA arm 约 15 min（~107 tok/s）。
 
-### Phase 2 — Skywork 打分（需要停 server 释放显存）
+### Phase 2 — Skywork 打分（server 无需停机）
+
+H200（141GB）上默认配置（`llm_gpu_mem=0.55 + rm_b2_gpu_mem=0.15`）占用约 99GB，剩余 ~42GB，足够加载 Skywork 8B BF16（~16GB）。**无需停掉 SIA server**，直接进容器跑打分即可。
 
 ```bash
-# 在宿主机停 server
-docker compose -f docker-compose.0gm35b.yml stop sia-0gm35b
-
-# 起临时容器跑打分
-docker compose -f docker-compose.0gm35b.yml run --rm sia-0gm35b bash
+# 进入正在运行的容器
+docker compose -f docker-compose.0gm35b.yml exec sia-0gm35b bash
 cd /workspace/sia-repo/0g-sparse-inference-alignment
 RM=/workspace/models/Skywork-Reward-V2-Llama-3.1-8B
 
@@ -623,6 +622,8 @@ python scripts/measure_alpaca_reward.py \
 ```
 
 各约 3-5 min（Skywork 8B BF16，~2.5 题/s）。
+
+> 如果 GPU 剩余显存不足 20GB（例如有其他进程额外占用），才需要先停 server：`docker compose -f docker-compose.0gm35b.yml stop sia-0gm35b`，打分后再 `start`。
 
 ### Phase 3 — 对比结果
 
@@ -646,10 +647,9 @@ print(f"Δ      {delta_abs:+.4f}  ({delta_rel:+.2f}%)")
 EOF
 ```
 
-打分完重启服务：
+打分完退出容器：
 ```bash
-exit   # 退出打分容器
-docker compose -f docker-compose.0gm35b.yml start sia-0gm35b
+exit
 ```
 
 ---
