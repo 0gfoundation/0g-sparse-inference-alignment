@@ -2,7 +2,7 @@
 
 **最后更新**: 2026-06-10  
 **适用 docker image**: `pytorch/pytorch:2.11.0-cuda12.8-cudnn9-devel`  
-**适用配置**: 0GM-1.0-35B-A3B SIA b2 inproc 加速路径 (vllm 0.18.0, [`requirements/0gm35b-b2-inproc.txt`](../requirements/0gm35b-b2-inproc.txt))
+**适用配置**: 0GM-1.0-35B-A3B-0427 SIA b2 inproc 加速路径 (vllm 0.18.0, [`requirements/0gm35b-b2-inproc.txt`](../requirements/0gm35b-b2-inproc.txt))
 
 > 本 doc 覆盖 3 条部署路径 (临时跑 / Dockerfile build / **生产 compose**), 每条都包含: **构建 image** → **启动 server** → **smoke test** → **停止 / 重启 / 清理**。生产部署推荐直接看 [Path C](#path-c--docker-compose--生产推荐)。
 
@@ -72,7 +72,7 @@ Path B/C 把整个 `/dstack/persistent/SIA` 挂载到容器 `/workspace`，需�
 ```
 /dstack/persistent/SIA/
 ├── models/
-│   ├── 0GM-1.0-35B-A3B/                    ← 主 LLM，~70 GB  (§5.2)
+│   ├── 0GM-1.0-35B-A3B-0427/                    ← 主 LLM，~70 GB  (§5.2)
 │   ├── Qwen3-4B-Base/                       ← RM convert 原料，~8 GB   (§5.3，仅选项 B)
 │   ├── SIA-checkpoints/                     ← LoRA checkpoints，~3 GB  (§5.3，仅选项 B)
 │   └── VM-Qwen3-4B-merged-for-vllm/        ← RM 最终 checkpoint，~11 GB (§5.4)
@@ -96,26 +96,26 @@ git clone <your-repo-url> \
   /dstack/persistent/SIA/sia-repo/0g-sparse-inference-alignment
 ```
 
-#### 5.2 主 LLM — 0GM-1.0-35B-A3B (~70 GB)
+#### 5.2 主 LLM — 0GM-1.0-35B-A3B-0427 (~70 GB)
 
 0GM 是 0G Foundation 的内部模型，下载方式请联系模型管理员获取具体路径或 HuggingFace 仓库名。示例：
 
 ```bash
 # 替换 <ORG>/<REPO> 为实际仓库名
-huggingface-cli download <ORG>/0GM-1.0-35B-A3B \
-  --local-dir /dstack/persistent/SIA/models/0GM-1.0-35B-A3B
+huggingface-cli download <ORG>/0GM-1.0-35B-A3B-0427 \
+  --local-dir /dstack/persistent/SIA/models/0GM-1.0-35B-A3B-0427
 ```
 
 或从已有存储直接 rsync/copy：
 
 ```bash
-rsync -av /path/to/existing/0GM-1.0-35B-A3B/ \
-  /dstack/persistent/SIA/models/0GM-1.0-35B-A3B/
+rsync -av /path/to/existing/0GM-1.0-35B-A3B-0427/ \
+  /dstack/persistent/SIA/models/0GM-1.0-35B-A3B-0427/
 ```
 
 验证：
 ```bash
-ls /dstack/persistent/SIA/models/0GM-1.0-35B-A3B/
+ls /dstack/persistent/SIA/models/0GM-1.0-35B-A3B-0427/
 # 预期看到: config.json  model-*.safetensors  tokenizer*.json  ...
 ```
 
@@ -167,8 +167,8 @@ ls /dstack/persistent/SIA/models/VM-Qwen3-4B-merged-for-vllm/
 
 ```bash
 ls /dstack/persistent/SIA/models/
-# 选项 A: 0GM-1.0-35B-A3B  VM-Qwen3-4B-merged-for-vllm
-# 选项 B: 0GM-1.0-35B-A3B  Qwen3-4B-Base  SIA-checkpoints  VM-Qwen3-4B-merged-for-vllm
+# 选项 A: 0GM-1.0-35B-A3B-0427  VM-Qwen3-4B-merged-for-vllm
+# 选项 B: 0GM-1.0-35B-A3B-0427  Qwen3-4B-Base  SIA-checkpoints  VM-Qwen3-4B-merged-for-vllm
 ```
 
 **以上前提全部满足后，再进入下面的三条路径。**
@@ -336,7 +336,7 @@ nohup env \
   SIA_RM_CUDAGRAPH=none \
   SIA_RM_MULTIPROCESS=0 \
   python src/sia_vllm_server.py \
-    --llm        /workspace/models/0GM-1.0-35B-A3B \
+    --llm        /workspace/models/0GM-1.0-35B-A3B-0427 \
     --rm_backend b2 \
     --rm_model   /workspace/models/VM-Qwen3-4B-merged-for-vllm \
     --llm_gpu_mem    0.55 \
@@ -395,7 +395,7 @@ Server 已 ready（Path A/B 看到 "Uvicorn running on http://0.0.0.0:8000"，Pa
 curl -s -X POST http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "/workspace/models/0GM-1.0-35B-A3B",
+    "model": "/workspace/models/0GM-1.0-35B-A3B-0427",
     "messages": [{"role":"user","content":"What are 3 colors of fruit?"}],
     "max_tokens": 100,
     "temperature": 0.7
@@ -411,7 +411,7 @@ pip install openai
 from openai import OpenAI
 client = OpenAI(base_url="http://localhost:8000/v1", api_key="dummy")
 resp = client.chat.completions.create(
-    model="/workspace/models/0GM-1.0-35B-A3B",
+    model="/workspace/models/0GM-1.0-35B-A3B-0427",
     messages=[{"role": "user", "content": "What are 3 colors of fruit?"}],
     max_tokens=100, temperature=0.7,
 )
@@ -425,7 +425,7 @@ print("usage:", resp.usage)
 docker compose -f docker-compose.0gm35b.yml exec sia-0gm35b bash -c \
   'curl -s -X POST http://localhost:8000/v1/chat/completions \
      -H "Content-Type: application/json" \
-     -d "{\"model\":\"/workspace/models/0GM-1.0-35B-A3B\",\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}],\"max_tokens\":50}"'
+     -d "{\"model\":\"/workspace/models/0GM-1.0-35B-A3B-0427\",\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}],\"max_tokens\":50}"'
 ```
 
 ### 验证 SIA 真的在干预
@@ -457,7 +457,7 @@ SIA 支持在单次 request 里覆盖全局参数（`sia_weight` / `sia_topk` / 
 curl -s -X POST http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "/workspace/models/0GM-1.0-35B-A3B",
+    "model": "/workspace/models/0GM-1.0-35B-A3B-0427",
     "messages": [{"role":"user","content":"What are 3 colors of fruit?"}],
     "max_tokens": 100,
     "temperature": 0.7,
@@ -473,7 +473,7 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
 curl -s -X POST http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "/workspace/models/0GM-1.0-35B-A3B",
+    "model": "/workspace/models/0GM-1.0-35B-A3B-0427",
     "messages": [{"role":"user","content":"What are 3 colors of fruit?"}],
     "max_tokens": 100,
     "temperature": 0.7,
@@ -569,7 +569,7 @@ ls /dstack/persistent/SIA/sia-repo/0g-sparse-inference-alignment/data/alpaca_eva
 ```bash
 docker compose -f docker-compose.0gm35b.yml exec sia-0gm35b bash
 cd /workspace/sia-repo/0g-sparse-inference-alignment
-MODEL=/workspace/models/0GM-1.0-35B-A3B
+MODEL=/workspace/models/0GM-1.0-35B-A3B-0427
 mkdir -p /workspace/exp
 ```
 

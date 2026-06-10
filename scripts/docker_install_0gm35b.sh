@@ -106,14 +106,14 @@ echo
 echo "Next steps:"
 echo "  1. Activate venv:  source ${VENV_PATH}/bin/activate"
 echo "  2. Make sure model weights are available:"
-echo "     - <YOUR_MODELS_DIR>/0GM-1.0-35B-A3B                  (main LLM, ~70 GB)"
+echo "     - <YOUR_MODELS_DIR>/0GM-1.0-35B-A3B-0427                  (main LLM, ~70 GB)"
 echo "     - <YOUR_MODELS_DIR>/VM-Qwen3-4B-merged-for-vllm      (RM, ~11 GB)"
 echo "  3. Launch SIA server (requires H200/141GB+ GPU):"
 cat <<'LAUNCH'
         SIA_RM_CUDAGRAPH=none \
         SIA_RM_MULTIPROCESS=0 \
         python src/sia_vllm_server.py \
-          --llm <YOUR_MODELS_DIR>/0GM-1.0-35B-A3B \
+          --llm <YOUR_MODELS_DIR>/0GM-1.0-35B-A3B-0427 \
           --rm_backend b2 \
           --rm_model <YOUR_MODELS_DIR>/VM-Qwen3-4B-merged-for-vllm \
           --rm_b2_gpu_mem 0.15 --llm_gpu_mem 0.55 \
@@ -123,4 +123,4 @@ LAUNCH
 echo "  4. Smoke test (once 'Uvicorn running on http://0.0.0.0:8000' appears):"
 echo "     curl -s -X POST http://localhost:8000/v1/chat/completions \\"
 echo "       -H 'Content-Type: application/json' \\"
-echo "       -d '{\"model\":\"<YOUR_MODELS_DIR>/0GM-1.0-35B-A3B\",\"messages\":[{\"role\":\"user\",\"content\":\"Hello\"}],\"max_tokens\":50}'"
+echo "       -d '{\"model\":\"<YOUR_MODELS_DIR>/0GM-1.0-35B-A3B-0427\",\"messages\":[{\"role\":\"user\",\"content\":\"Hello\"}],\"max_tokens\":50}'"
