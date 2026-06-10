@@ -95,7 +95,7 @@ python src/sia_vllm_server.py --llm /path/to/llm \
 **0GM-35B b2 inproc（推荐，比 HTTP 快 ~1.5×）:**
 
 ```bash
-SIA_LLM_CUDAGRAPH=piecewise SIA_RM_CUDAGRAPH=none \
+SIA_RM_CUDAGRAPH=none \
 SIA_RM_MULTIPROCESS=0 \
 python src/sia_vllm_server.py \
   --llm /path/to/0GM-1.0-35B-A3B \
