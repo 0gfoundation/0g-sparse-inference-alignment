@@ -457,3 +457,71 @@ python src/sia_vllm_server.py \
   --topk 10 --weight 1.0 --entropy_threshold 1.0 \
   --max_model_len 2048 --port 8000
 ```
+
+---
+
+## 十. AlpacaEval 200Q 对比实验（2026-06-10）
+
+### 10.1 实验配置
+
+| 项目 | 值 |
+|------|---|
+| 主 LLM | 0GM-1.0-35B-A3B-0427 |
+| Value Model | VM-Qwen3-4B-merged-for-vllm（b2 inproc） |
+| venv / vllm | venv6 / 0.18.0 |
+| AlpacaEval | 200Q，natural thinking，max_tokens=2048 |
+| 打分模型 | Skywork-Reward-V2-Llama-3.1-8B（`--strip_think`）|
+
+**noSIA**（`exp/alpaca-0gm35b-b2-inproc-20260609/alpaca_0gm35b_b2_08_nosia_fixed`）：SIA server 加载 RM 但不干预。
+
+**SIA**（`exp/alpaca-0gm35b-stable-prefix-20260610/alpaca_0gm35b_stable_prefix_sia`）：`topk=10, weight=1.0, entropy_threshold=1.0`，stable prefix cross-tokenizer 优化已启用。
+
+**关键优化（相比本 doc §一 的旧基线）**：
+1. 去掉 `SIA_LLM_CUDAGRAPH=piecewise`（主 LLM 切回 FULL_AND_PIECEWISE 默认）
+2. stable prefix：RM prefix 编码一次，10 个 candidate 共享相同前缀 → APC 有效命中，b2_score_call 从 34–55ms（随长度递增）降至 ~30ms（稳定）
+
+### 10.2 吞吐量
+
+| 运行 | 题数 | 总 tokens | 耗时 | **tok/s** | avg tok/q |
+|------|:---:|:---:|:---:|:---:|:---:|
+| noSIA | 200 | 342,752 | 3,202s | **107.0** | 1,714 |
+| SIA (stable prefix) | 269 | 193,207 | 2,964s | **65.2** | 718 |
+| **SIA / noSIA** | — | — | — | **61%** | — |
+
+> noSIA avg tok/q（1714）远高于 SIA（718），原因：noSIA 输出极长 chain-of-thought；SIA 干预引导模型倾向更精炼的答案，同时受 `max_tokens=2048` 截断，部分 noSIA 回答被截断（9 题 RM 评分时超过 2048 token 上限）。
+
+### 10.3 SIA 干预指标
+
+全部 269 题（194,235 个 decode step）：
+
+| 指标 | 值 |
+|------|:---:|
+| 干预步数 / 总步数 | 39,035 / 194,235 |
+| **干预率（intv_rate）** | **20.1%** |
+| top-1 flip 次数 | 25,421 / 39,035 |
+| **Flip rate（top-1 改变）** | **65.1%** |
+
+> `entropy_threshold=1.0` 时仅在高熵（模型不确定）的 token 位置干预，20.1% 的 step 触发 RM 打分。其中 65.1% 的干预实际改变了 top-1 选择（flip），说明 RM 在多数干预点都有明确偏好。
+
+### 10.4 SkyWork 打分结果（200 题）
+
+打分范围：SIA 取前 200 题，noSIA 取全部 200 题。
+
+| 指标 | noSIA | SIA (stable prefix) |
+|------|:---:|:---:|
+| 有效打分 | **191 / 200** | **200 / 200** |
+| 跳过（RM token 超 2048）| 9 | 0 |
+| **mean reward** | **24.01** | **29.36** |
+| p50 reward | 23.38 | 28.31 |
+| min / max | −3.72 / 63.50 | 3.72 / 59.50 |
+
+**配对对比（191 道均有分的题）**：
+
+| 口径 | noSIA mean | SIA mean | delta |
+|------|:---:|:---:|:---:|
+| 191 道配对 | 24.01 | 29.46 | **+5.45（+22.7%）** |
+| 200 道（noSIA 跳过按 0 分）| 22.93 | 29.36 | **+6.43（+28.0%）** |
+
+**胜负统计（191 配对）**：SIA 赢 125 题 / 平 1 题 / 输 65 题，**win rate 65.4%**。
+
+> noSIA 有 9 题因输出过长（>2048 RM tokens）无法评分，其 SIA 版本对应得分均值约 27 分（接近整体均值），说明 noSIA 在这些题上属于冗长输出而非高质量输出，实际差距只大不小。
