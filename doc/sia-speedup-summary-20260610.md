@@ -25,7 +25,7 @@
 
 SIA 每生成一个 token，都要调用 RM 对 topk=10 个候选打分。原始方案直接用 HuggingFace `AutoModel` 加载 RM，每次打分就调用一次 `model.forward()`。
 
-PyTorch 的 `forward()` 没有任何记忆——每次调用都从第 1 个 token 算到最后，完整计算整条序列的 KV。假设目前已生成 300 个 token：
+PyTorch 的 `forward()` 没有任何记忆——每次调用都从第 1 个 token 算到最后，完整计算整条序列的 KV（键值向量，Transformer attention 计算的中间结果，下文§4.1有详细解释）。假设目前已生成 300 个 token：
 
 - **第 300 步**：PyTorch 对 10 个候选各算一次，每次把前 300 个 token 的 KV 全算一遍。前 300 个 token 的 KV 在 10 个候选里完全相同，却被重算了 10 次。
 - **第 301 步**：前 301 个 token 的 KV 又从头算一遍，完全不记得第 300 步刚算过。
@@ -55,7 +55,7 @@ vLLM 有两个关键机制：
 | vLLM HTTP | ~34 ms | ~42 ms | ~57 ms |
 | **降幅** | **-56%** | **-46%** | **-27%** |
 
-> 序列越长，vLLM 的优势越小——因为前缀越长，第一次计算前缀的开销本身就越大，而 PyTorch 的开销相对固定（每次全算）。
+> 序列越长，vLLM 的绝对延迟也在上涨（34 ms → 57 ms），原因：即使命中缓存，attention 计算仍要读取所有已缓存的 KV，这部分 IO 随序列增长。PyTorch 的开销同样在增长，只是表中区间的测量点恰好显示 PyTorch 相对更"平稳"（它每次全算，没有缓存带来的额外管理开销）。
 
 ---
 
@@ -141,9 +141,11 @@ VL-30B 的 RM（VM-Qwen3-4B）使用 vllm 0.17.1，该版本在**模型初始化
 
 0GM-35B 使用 vllm 0.18.0，尝试给 RM 也开启 CUDA graph，遇到了两个独立的问题：
 
-**问题一：vllm 版本行为差异导致崩溃**
+**问题一：vllm 0.18.0 遇到未预录形状时崩溃**
 
-vllm 0.18.0 的 CUDA graph 机制在推理过程中会遇到此前录制时没见过的 batch 形态（开启前缀缓存后，每步实际需要 forward 的 token 数量是动态变化的，不像 VL-30B 那样固定）。遇到新形态时，vllm 会尝试临时录制新 graph，但此时录制条件已不满足，直接抛出 RuntimeError。VL-30B 的 vllm 0.17.1 不存在这个问题。
+vllm 初始化时会提前录制一批"固定形状"的 CUDA graph：比如 1 条序列各 forward N 个 token、2 条序列各 forward M 个 token……覆盖几组常见的（序列数 × 每条序列新 token 数）组合。运行时遇到匹配的形状，直接 replay；遇到没有录过的形状，vllm 0.18.0 会尝试**临时录制新 graph**，但录制只能在初始化阶段进行，运行时条件已不满足，因此抛出 RuntimeError。
+
+vllm 0.17.1（VL-30B 所用版本）在遇到未预录的形状时，选择**直接退回 eager 逐 kernel 执行**，而不是尝试临时录制，所以 VL-30B 的 RM 不会崩溃，CUDA graph 也能正常发挥作用。
 
 **问题二：RM 的工作模式与 CUDA graph 不匹配**
 
