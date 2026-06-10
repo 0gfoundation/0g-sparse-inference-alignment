@@ -1,0 +1,59 @@
+# Dockerfile for 0GM-35B SIA b2 inproc (vllm 0.18.0 sweet-spot path).
+#
+# This image bakes in all heavy dependencies (vllm 0.18.0, torch 2.10.0,
+# transformers 4.57.6, etc.) so they're cached across runs. The actual SIA
+# source code and model weights are NOT baked in — they're expected to be
+# bind-mounted at container runtime (see doc/docker-install-0gm35b-20260610.md).
+#
+# Assumed runtime layout (matches `docker run -v /dstack/persistent/SIA:/workspace`):
+#   /workspace/models/                                ← model weights mount
+#       0GM-1.0-35B-A3B/
+#       VM-Qwen3-4B-merged-for-vllm/
+#   /workspace/sia-repo/0g-sparse-inference-alignment/  ← repo mount
+#       src/sia_vllm_server.py
+#       pyproject.toml
+#       ...
+#
+# Build:
+#   docker build -f Dockerfile.0gm35b -t sia-0gm35b:0.18.0 .
+#
+# Run:
+#   docker run -it --rm --gpus all --shm-size=16g --ipc=host \
+#     -p 8000:8000 \
+#     -v /dstack/persistent/SIA:/workspace \
+#     sia-0gm35b:0.18.0 bash
+
+FROM pytorch/pytorch:2.11.0-cuda12.8-cudnn9-devel
+
+# ---- System dependencies -----------------------------------------------
+# - python3.12-venv : pytorch image's system Python lacks ensurepip support
+# - curl            : smoke-test the HTTP endpoint after launch
+# - ca-certificates : pip / huggingface_hub use HTTPS
+RUN apt-get update -qq && \
+    apt-get install -y --no-install-recommends \
+      ca-certificates curl python3.12-venv && \
+    rm -rf /var/lib/apt/lists/*
+
+# ---- Create venv with all heavy Python deps ----------------------------
+# Isolated from the docker's pre-installed conda torch 2.11 — vllm 0.18.0
+# pulls its own torch 2.10.0 inside the venv.
+ENV VENV_PATH=/opt/venv-0gm35b
+ENV VIRTUAL_ENV=${VENV_PATH}
+ENV PATH=${VENV_PATH}/bin:${PATH}
+
+# Copy ONLY the requirements files; source code is bind-mounted at runtime.
+COPY requirements/ /tmp/requirements/
+
+RUN python3 -m venv ${VENV_PATH} && \
+    ${VENV_PATH}/bin/pip install --upgrade --no-cache-dir pip wheel && \
+    ${VENV_PATH}/bin/pip install --no-cache-dir -r /tmp/requirements/0gm35b-b2-inproc.txt && \
+    rm -rf /tmp/requirements
+
+# ---- Entrypoint: register sia_rm vllm plugin against the mounted repo --
+COPY scripts/docker_entrypoint_0gm35b.sh /usr/local/bin/sia-entrypoint
+RUN chmod +x /usr/local/bin/sia-entrypoint
+
+WORKDIR /workspace/sia-repo/0g-sparse-inference-alignment
+
+ENTRYPOINT ["/usr/local/bin/sia-entrypoint"]
+CMD ["bash"]
