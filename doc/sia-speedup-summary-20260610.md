@@ -30,11 +30,6 @@ PyTorch 的 `forward()` 没有任何记忆——每次调用都从第 1 个 toke
 - **第 300 步**：PyTorch 对 10 个候选各算一次，每次把前 300 个 token 的 KV 全算一遍。前 300 个 token 的 KV 在 10 个候选里完全相同，却被重算了 10 次。
 - **第 301 步**：前 301 个 token 的 KV 又从头算一遍，完全不记得第 300 步刚算过。
 
-这里存在两层浪费：
-
-- **同一步内的重复**：10 个候选共享同一段前缀，前缀 KV 重算 10 次。
-- **跨步的重复**：每一步都把之前所有步骤算过的 KV 重算一遍，序列越长浪费越多。
-
 **vLLM 如何解决**
 
 vLLM 有两个关键机制：
@@ -44,8 +39,6 @@ vLLM 有两个关键机制：
    同样是第 300 步打分：vLLM 发现前 300 个 token 的前缀 KV 上一步已经算过，直接从缓存读取。10 个候选只需各自计算自己那 1-2 个候选 token 的新 KV。前缀越长，这个节省越显著。
 
 2. **动态 batching**：10 个候选在一次 GPU forward 里并行处理，而不是串行。
-
-两者叠加，RM 单次调用延迟大幅下降。
 
 **实测数据（RM 单次调用延迟）**
 
@@ -129,11 +122,7 @@ noSIA 提升更大（+52–88%），是因为 noSIA 几乎全是 decode step，1
 
 ### 3.1 RM 也使用 CUDA Graph
 
-**为什么 RM forward 也能走 CUDA graph**
-
-2.3 节讲的 CUDA graph 同样适用于 RM——RM 本质上也是一个 transformer，forward 过程同样由大量 kernel 组成，同样受益于 graph replay。
-
-VL-30B 的 RM（VM-Qwen3-4B）使用 vllm 0.17.1，该版本在**模型初始化阶段**一次性把所有常见的 batch 大小（1 条、2 条、4 条……到 topk=10 条）都录制成 CUDA graph，推理时直接查表 replay，不会临时录制新 graph。
+VL-30B 的 RM（VM-Qwen3-4B）使用 vllm 0.17.1，在**模型初始化阶段**一次性把所有常见 batch 大小（1 条、2 条……到 topk=10 条）都录制成 CUDA graph，推理时直接查表 replay。
 
 效果：RM 单次调用从 ~71ms（eager）→ ~11ms（CUDA graph），**6.4×**。
 
@@ -165,7 +154,7 @@ LLM 的 decode 阶段每步只生成 1 个 token，每次 forward 的 batch 大�
 
 **② KV Cache**：Transformer 在处理每个 token 时，会为它计算"键（K）"和"值（V）"两个向量，并把结果存起来。之后处理更长的序列时，前面已算过的 token 的 KV 可以直接读取，不用重算。这份缓存叫 KV Cache。
 
-**③ APC（Automatic Prefix Caching）**：vllm 的优化机制。如果两条序列的前缀 token ID 完全相同，vllm 认为它们的前缀 KV Cache 也相同，可以共享。具体做法：把每 16 个 token 的 ID 计算一个 hash，只要 hash 相同，就直接复用那段 KV，不重新 forward。
+**③ APC（Automatic Prefix Caching）**：§2.1 已介绍原理（前缀 token ID 相同则共享 KV Cache）。关键实现细节：vllm 以每 **16 个 token** 为一个 block 计算 hash，block 内只要有 1 个 token ID 不同，整块 KV 都不能复用。
 
 ---
 
@@ -223,7 +212,7 @@ for 候选 in [A, B, ..., J]:
 | RM 调用延迟（序列长）| ~55 ms（持续增长）| **~30 ms（稳定不增长）** |
 | SIA tok/s | 54.1 | **65.2（+20%）** |
 
-旧方案延迟随序列增长，说明 APC 在持续失效、反复重算；新方案延迟稳定，说明 APC 始终命中，无论序列多长 RM 每步的工作量都恒定。
+新方案延迟稳定不增长——APC 始终命中，每步 RM 工作量恒定。
 
 **为何 VL-30B 不需要此优化**
 
