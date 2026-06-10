@@ -578,7 +578,7 @@ mkdir -p /workspace/exp
 nohup python -u eval/alpaca_eval.py \
   --base_url http://localhost:8000/v1 \
   --model "$MODEL" \
-  --limit 200 --max_tokens 1800 \
+  --limit 200 --max_tokens 2048 \
   --temperature 1.0 --top_p 0.95 --top_k 20 --repetition_penalty 1.0 \
   --output /workspace/exp/alpaca_0gm35b_sia_$(date +%Y%m%d_%H%M%S).json \
   > /workspace/exp/alpaca_0gm35b_sia_gen.log 2>&1 &
@@ -590,7 +590,7 @@ echo "SIA arm PID=$!"
 nohup python -u eval/alpaca_eval.py \
   --base_url http://localhost:8000/v1 \
   --model "$MODEL" \
-  --limit 200 --max_tokens 1800 \
+  --limit 200 --max_tokens 2048 \
   --temperature 1.0 --top_p 0.95 --top_k 20 --repetition_penalty 1.0 \
   --sia_weight 0 \
   --output /workspace/exp/alpaca_0gm35b_nosia_$(date +%Y%m%d_%H%M%S).json \
