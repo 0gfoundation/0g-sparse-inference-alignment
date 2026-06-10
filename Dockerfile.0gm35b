@@ -7,7 +7,7 @@
 #
 # Assumed runtime layout (matches `docker run -v /dstack/persistent/SIA:/workspace`):
 #   /workspace/models/                                ← model weights mount
-#       0GM-1.0-35B-A3B/
+#       0GM-1.0-35B-A3B-0427/
 #       VM-Qwen3-4B-merged-for-vllm/
 #   /workspace/sia-repo/0g-sparse-inference-alignment/  ← repo mount
 #       src/sia_vllm_server.py
