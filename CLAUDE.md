@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Communication Language
+
+**只用中文和英文**。正文用中文，技术术语（命令、参数名、模型名等）用英文。严禁出现日文、韩文或其他语言。
+
 ## Project Overview
 
 **SIA (Sparse Inference-time Alignment)** — a per-token intervention system for LLM inference. It wraps vLLM with a custom `LogitsProcessor` that scores candidate tokens using a Reward Model (RM) at each generation step, biasing token selection toward higher-reward outputs.

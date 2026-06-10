@@ -60,7 +60,8 @@ services:
 
     # ------ Environment (SIA / vllm cudagraph mode for b2 inproc) -----------
     environment:
-      SIA_LLM_CUDAGRAPH: piecewise
+      # SIA_LLM_CUDAGRAPH 不设置 → 默认 FULL_AND_PIECEWISE，比 piecewise-only 快 ~2×
+      # 在 vllm 0.17.1 (AOT capture) 上安全，详见 doc/0gm-35b-sia-perf-breakdown-20260609.md §六
       SIA_RM_CUDAGRAPH: piecewise
       SIA_RM_MULTIPROCESS: "0"
 

@@ -1,0 +1,539 @@
+The tokenizer you are loading from '/workspace/SIA/models/0GM-1.0-35B-A3B-0427' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.
+Loading tokenizer: /workspace/SIA/models/0GM-1.0-35B-A3B-0427 ...
+Tokenizer loaded.
+============================================================
+Model ID : 0GM-1.0-35B-A3B-0427
+LLM      : /workspace/SIA/models/0GM-1.0-35B-A3B-0427
+RM URL   : http://localhost:8001
+RM mode  : b2
+topk=10  weight=1.0  entropy_threshold=1.0  use_token_ids=False
+Server   : http://0.0.0.0:8000
+============================================================
+Loading vLLM AsyncLLMEngine...
+[SIA] main LLM prefix_caching = True
+[SIA] main LLM cudagraph_mode=PIECEWISE (SIA_LLM_CUDAGRAPH=piecewise)
+INFO 06-09 09:49:06 [model.py:533] Resolved architecture: Qwen3_5MoeForConditionalGeneration
+INFO 06-09 09:49:06 [model.py:1582] Using max model len 4096
+INFO 06-09 09:49:06 [scheduler.py:231] Chunked prefill is enabled with max_num_batched_tokens=2048.
+WARNING 06-09 09:49:06 [config.py:372] Mamba cache mode is set to 'align' for Qwen3_5MoeForConditionalGeneration by default when prefix caching is enabled
+INFO 06-09 09:49:06 [config.py:392] Warning: Prefix caching in Mamba cache 'align' mode is currently enabled. Its support for Mamba layers is experimental. Please report any issues you may observe.
+INFO 06-09 09:49:06 [config.py:212] Setting attention block size to 1056 tokens to ensure that attention page size is >= mamba page size.
+INFO 06-09 09:49:06 [config.py:243] Padding mamba page size by 0.76% to ensure that mamba page size and attention page size are exactly equal.
+INFO 06-09 09:49:06 [vllm.py:754] Asynchronous scheduling is enabled.
+The tokenizer you are loading from '/workspace/SIA/models/0GM-1.0-35B-A3B-0427' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.
+The tokenizer you are loading from '/workspace/SIA/models/0GM-1.0-35B-A3B-0427' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.
+The tokenizer you are loading from '/workspace/SIA/models/0GM-1.0-35B-A3B-0427' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.
+The tokenizer you are loading from '/workspace/SIA/models/0GM-1.0-35B-A3B-0427' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.
+WARNING 06-09 09:49:14 [system_utils.py:152] We must use the `spawn` multiprocessing start method. Overriding VLLM_WORKER_MULTIPROC_METHOD to 'spawn'. See https://docs.vllm.ai/en/latest/usage/troubleshooting.html#python-multiprocessing for more information. Reasons: CUDA is initialized
+(EngineCore pid=662994) INFO 06-09 09:49:23 [core.py:103] Initializing a V1 LLM engine (v0.18.0) with config: model='/workspace/SIA/models/0GM-1.0-35B-A3B-0427', speculative_config=None, tokenizer='/workspace/SIA/models/0GM-1.0-35B-A3B-0427', skip_tokenizer_init=False, tokenizer_mode=auto, revision=None, tokenizer_revision=None, trust_remote_code=False, dtype=torch.bfloat16, max_seq_len=4096, download_dir=None, load_format=auto, tensor_parallel_size=1, pipeline_parallel_size=1, data_parallel_size=1, decode_context_parallel_size=1, dcp_comm_backend=ag_rs, disable_custom_all_reduce=False, quantization=None, enforce_eager=False, enable_return_routed_experts=False, kv_cache_dtype=auto, device_config=cuda, structured_outputs_config=StructuredOutputsConfig(backend='auto', disable_any_whitespace=False, disable_additional_properties=False, reasoning_parser='', reasoning_parser_plugin='', enable_in_reasoning=False), observability_config=ObservabilityConfig(show_hidden_metrics_for_version=None, otlp_traces_endpoint=None, collect_detailed_traces=None, kv_cache_metrics=False, kv_cache_metrics_sample=0.01, cudagraph_metrics=False, enable_layerwise_nvtx_tracing=False, enable_mfu_metrics=False, enable_mm_processor_stats=False, enable_logging_iteration_details=False), seed=0, served_model_name=/workspace/SIA/models/0GM-1.0-35B-A3B-0427, enable_prefix_caching=True, enable_chunked_prefill=True, pooler_config=None, compilation_config={'mode': <CompilationMode.VLLM_COMPILE: 3>, 'debug_dump_path': None, 'cache_dir': '', 'compile_cache_save_format': 'binary', 'backend': 'inductor', 'custom_ops': ['none'], 'splitting_ops': ['vllm::unified_attention', 'vllm::unified_attention_with_output', 'vllm::unified_mla_attention', 'vllm::unified_mla_attention_with_output', 'vllm::mamba_mixer2', 'vllm::mamba_mixer', 'vllm::short_conv', 'vllm::linear_attention', 'vllm::plamo2_mamba_mixer', 'vllm::gdn_attention_core', 'vllm::olmo_hybrid_gdn_full_forward', 'vllm::kda_attention', 'vllm::sparse_attn_indexer', 'vllm::rocm_aiter_sparse_attn_indexer', 'vllm::unified_kv_cache_update', 'vllm::unified_mla_kv_cache_update'], 'compile_mm_encoder': False, 'compile_sizes': [], 'compile_ranges_endpoints': [2048], 'inductor_compile_config': {'enable_auto_functionalized_v2': False, 'combo_kernels': True, 'benchmark_combo_kernel': True}, 'inductor_passes': {}, 'cudagraph_mode': <CUDAGraphMode.PIECEWISE: 1>, 'cudagraph_num_of_warmups': 1, 'cudagraph_capture_sizes': [1, 2, 4, 8, 16, 24, 32, 40, 48, 56, 64, 72, 80, 88, 96, 104, 112, 120, 128, 136, 144, 152, 160, 168, 176, 184, 192, 200, 208, 216, 224, 232, 240, 248, 256], 'cudagraph_copy_inputs': False, 'cudagraph_specialize_lora': True, 'use_inductor_graph_partition': False, 'pass_config': {'fuse_norm_quant': False, 'fuse_act_quant': False, 'fuse_attn_quant': False, 'enable_sp': False, 'fuse_gemm_comms': False, 'fuse_allreduce_rms': False}, 'max_cudagraph_capture_size': 256, 'dynamic_shapes_config': {'type': <DynamicShapesType.BACKED: 'backed'>, 'evaluate_guards': False, 'assume_32_bit_indexing': False}, 'local_cache_dir': None, 'fast_moe_cold_start': True, 'static_all_moe_layers': []}
+(EngineCore pid=662994) The tokenizer you are loading from '/workspace/SIA/models/0GM-1.0-35B-A3B-0427' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.
+(EngineCore pid=662994) INFO 06-09 09:49:24 [parallel_state.py:1395] world_size=1 rank=0 local_rank=0 distributed_init_method=tcp://172.17.0.2:50807 backend=nccl
+(EngineCore pid=662994) INFO 06-09 09:49:24 [parallel_state.py:1717] rank 0 in world size 1 is assigned as DP rank 0, PP rank 0, PCP rank 0, TP rank 0, EP rank 0, EPLB rank N/A
+(EngineCore pid=662994) [SIA] Loading LLM tokenizer: /workspace/SIA/models/0GM-1.0-35B-A3B-0427
+(EngineCore pid=662994) The tokenizer you are loading from '/workspace/SIA/models/0GM-1.0-35B-A3B-0427' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.
+(EngineCore pid=662994) [SIA] RM URL: http://localhost:8001
+(EngineCore pid=662994) [SIA-b2] Starting RMClient(model=/workspace/SIA/models/VM-Qwen3-4B-merged-for-vllm, gpu_mem=0.15) ...
+(EngineCore pid=662994) [RMClient] enforce_eager=True (SIA_RM_CUDAGRAPH=none)
+(EngineCore pid=662994) INFO 06-09 09:49:26 [utils.py:233] non-default args: {'dtype': 'bfloat16', 'max_model_len': 2048, 'enable_prefix_caching': True, 'gpu_memory_utilization': 0.15, 'disable_log_stats': True, 'hf_overrides': {'architectures': ['Qwen3WithScoreForCausalLM']}, 'enforce_eager': True, 'model': '/workspace/SIA/models/VM-Qwen3-4B-merged-for-vllm'}
+(EngineCore pid=662994) WARNING 06-09 09:49:26 [arg_utils.py:1352] The global random seed is set to 0. Since VLLM_ENABLE_V1_MULTIPROCESSING is set to False, this may affect the random state of the Python process that launched vLLM.
+(EngineCore pid=662994) INFO 06-09 09:49:34 [model.py:533] Resolved architecture: Qwen3WithScoreForCausalLM
+(EngineCore pid=662994) INFO 06-09 09:49:34 [model.py:1582] Using max model len 2048
+(EngineCore pid=662994) INFO 06-09 09:49:34 [scheduler.py:231] Chunked prefill is enabled with max_num_batched_tokens=16384.
+(EngineCore pid=662994) INFO 06-09 09:49:34 [vllm.py:754] Asynchronous scheduling is enabled.
+(EngineCore pid=662994) WARNING 06-09 09:49:34 [vllm.py:788] Enforce eager set, disabling torch.compile and CUDAGraphs. This is equivalent to setting -cc.mode=none -cc.cudagraph_mode=none
+(EngineCore pid=662994) WARNING 06-09 09:49:34 [vllm.py:799] Inductor compilation was disabled by user settings, optimizations settings that are only active during inductor compilation will be ignored.
+(EngineCore pid=662994) INFO 06-09 09:49:34 [vllm.py:964] Cudagraph is disabled under eager mode
+(EngineCore pid=662994) INFO 06-09 09:49:34 [compilation.py:289] Enabled custom fusions: norm_quant, act_quant
+(EngineCore pid=662994) The tokenizer you are loading from '/workspace/SIA/models/VM-Qwen3-4B-merged-for-vllm' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.
+(EngineCore pid=662994) INFO 06-09 09:49:34 [core.py:103] Initializing a V1 LLM engine (v0.18.0) with config: model='/workspace/SIA/models/VM-Qwen3-4B-merged-for-vllm', speculative_config=None, tokenizer='/workspace/SIA/models/VM-Qwen3-4B-merged-for-vllm', skip_tokenizer_init=False, tokenizer_mode=auto, revision=None, tokenizer_revision=None, trust_remote_code=False, dtype=torch.bfloat16, max_seq_len=2048, download_dir=None, load_format=auto, tensor_parallel_size=1, pipeline_parallel_size=1, data_parallel_size=1, decode_context_parallel_size=1, dcp_comm_backend=ag_rs, disable_custom_all_reduce=False, quantization=None, enforce_eager=True, enable_return_routed_experts=False, kv_cache_dtype=auto, device_config=cuda, structured_outputs_config=StructuredOutputsConfig(backend='auto', disable_any_whitespace=False, disable_additional_properties=False, reasoning_parser='', reasoning_parser_plugin='', enable_in_reasoning=False), observability_config=ObservabilityConfig(show_hidden_metrics_for_version=None, otlp_traces_endpoint=None, collect_detailed_traces=None, kv_cache_metrics=False, kv_cache_metrics_sample=0.01, cudagraph_metrics=False, enable_layerwise_nvtx_tracing=False, enable_mfu_metrics=False, enable_mm_processor_stats=False, enable_logging_iteration_details=False), seed=0, served_model_name=/workspace/SIA/models/VM-Qwen3-4B-merged-for-vllm, enable_prefix_caching=True, enable_chunked_prefill=True, pooler_config=None, compilation_config={'mode': <CompilationMode.NONE: 0>, 'debug_dump_path': None, 'cache_dir': '', 'compile_cache_save_format': 'binary', 'backend': 'inductor', 'custom_ops': ['all'], 'splitting_ops': [], 'compile_mm_encoder': False, 'compile_sizes': [], 'compile_ranges_endpoints': [16384], 'inductor_compile_config': {'enable_auto_functionalized_v2': False, 'combo_kernels': True, 'benchmark_combo_kernel': True}, 'inductor_passes': {}, 'cudagraph_mode': <CUDAGraphMode.NONE: 0>, 'cudagraph_num_of_warmups': 0, 'cudagraph_capture_sizes': [], 'cudagraph_copy_inputs': False, 'cudagraph_specialize_lora': True, 'use_inductor_graph_partition': False, 'pass_config': {'fuse_norm_quant': True, 'fuse_act_quant': True, 'fuse_attn_quant': False, 'enable_sp': False, 'fuse_gemm_comms': False, 'fuse_allreduce_rms': False}, 'max_cudagraph_capture_size': 0, 'dynamic_shapes_config': {'type': <DynamicShapesType.BACKED: 'backed'>, 'evaluate_guards': False, 'assume_32_bit_indexing': False}, 'local_cache_dir': None, 'fast_moe_cold_start': True, 'static_all_moe_layers': []}
+(EngineCore pid=662994) WARNING 06-09 09:49:34 [workspace.py:231] WorkspaceManager already initialized on device cuda:0, reinitializing on device cuda:0
+(EngineCore pid=662994) INFO 06-09 09:49:34 [gpu_model_runner.py:4481] Starting to load model /workspace/SIA/models/VM-Qwen3-4B-merged-for-vllm...
+(EngineCore pid=662994) INFO 06-09 09:49:35 [cuda.py:317] Using FLASH_ATTN attention backend out of potential backends: ['FLASH_ATTN', 'FLASHINFER', 'TRITON_ATTN', 'FLEX_ATTENTION'].
+(EngineCore pid=662994) INFO 06-09 09:49:35 [flash_attn.py:598] Using FlashAttention version 3
+(EngineCore pid=662994) Loading safetensors checkpoint shards:   0% Completed | 0/2 [00:00<?, ?it/s]
+(EngineCore pid=662994) Loading safetensors checkpoint shards:  50% Completed | 1/2 [00:08<00:08,  8.08s/it]
+(EngineCore pid=662994) Loading safetensors checkpoint shards: 100% Completed | 2/2 [00:13<00:00,  6.37s/it]
+(EngineCore pid=662994) Loading safetensors checkpoint shards: 100% Completed | 2/2 [00:13<00:00,  6.63s/it]
+(EngineCore pid=662994) 
+(EngineCore pid=662994) INFO 06-09 09:49:49 [default_loader.py:384] Loading weights took 13.35 seconds
+(EngineCore pid=662994) INFO 06-09 09:49:49 [gpu_model_runner.py:4566] Model loading took 7.56 GiB memory and 13.913267 seconds
+(EngineCore pid=662994) INFO 06-09 09:49:51 [gpu_worker.py:456] Available KV cache memory: 10.97 GiB
+(EngineCore pid=662994) INFO 06-09 09:49:51 [kv_cache_utils.py:1316] GPU KV cache size: 79,856 tokens
+(EngineCore pid=662994) INFO 06-09 09:49:51 [kv_cache_utils.py:1321] Maximum concurrency for 2,048 tokens per request: 38.99x
+(EngineCore pid=662994) INFO 06-09 09:49:51 [core.py:281] init engine (profile, create kv cache, warmup model) took 1.74 seconds
+(EngineCore pid=662994) The tokenizer you are loading from '/workspace/SIA/models/VM-Qwen3-4B-merged-for-vllm' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.
+(EngineCore pid=662994) INFO 06-09 09:49:52 [llm.py:391] Supported tasks: ('generate',)
+(EngineCore pid=662994) The tokenizer you are loading from '/workspace/SIA/models/VM-Qwen3-4B-merged-for-vllm' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.
+(EngineCore pid=662994) [RMClient] cross-tokenizer bridge ON: LLM vocab=248044, RM vocab=151643. score_candidates will decode→encode via text.
+(EngineCore pid=662994) [SIA-b2] RMClient ready
+(EngineCore pid=662994) The tokenizer you are loading from '/workspace/SIA/models/0GM-1.0-35B-A3B-0427' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.
+(EngineCore pid=662994) The tokenizer you are loading from '/workspace/SIA/models/0GM-1.0-35B-A3B-0427' with an incorrect regex pattern: https://huggingface.co/mistralai/Mistral-Small-3.1-24B-Instruct-2503/discussions/84#69121093e8b480e709447d5e. This will lead to incorrect tokenization. You should set the `fix_mistral_regex=True` flag when loading this tokenizer to fix this issue.
+(EngineCore pid=662994) INFO 06-09 09:49:57 [gpu_model_runner.py:4481] Starting to load model /workspace/SIA/models/0GM-1.0-35B-A3B-0427...
+(EngineCore pid=662994) INFO 06-09 09:49:58 [cuda.py:373] Using backend AttentionBackendEnum.FLASH_ATTN for vit attention
+(EngineCore pid=662994) INFO 06-09 09:49:58 [mm_encoder_attention.py:230] Using AttentionBackendEnum.FLASH_ATTN for MMEncoderAttention.
+(EngineCore pid=662994) INFO 06-09 09:49:58 [qwen3_next.py:191] Using FlashInfer GDN prefill kernel
+(EngineCore pid=662994) INFO 06-09 09:49:58 [qwen3_next.py:192] FlashInfer GDN prefill kernel is JIT-compiled; first run may take a while to compile. Set `--gdn-prefill-backend triton` to avoid JIT compile time.
+(EngineCore pid=662994) INFO 06-09 09:49:58 [unquantized.py:186] Using TRITON backend for Unquantized MoE
+(EngineCore pid=662994) <frozen importlib._bootstrap_external>:1297: FutureWarning: The cuda.cudart module is deprecated and will be removed in a future release, please switch to use the cuda.bindings.runtime module instead.
+(EngineCore pid=662994) <frozen importlib._bootstrap_external>:1297: FutureWarning: The cuda.nvrtc module is deprecated and will be removed in a future release, please switch to use the cuda.bindings.nvrtc module instead.
+(EngineCore pid=662994) Loading safetensors checkpoint shards:   0% Completed | 0/26 [00:00<?, ?it/s]
+(EngineCore pid=662994) Loading safetensors checkpoint shards:   4% Completed | 1/26 [00:07<03:05,  7.41s/it]
+(EngineCore pid=662994) Loading safetensors checkpoint shards:   8% Completed | 2/26 [00:09<01:45,  4.40s/it]
+(EngineCore pid=662994) Loading safetensors checkpoint shards:  12% Completed | 3/26 [00:15<01:54,  5.00s/it]
+(EngineCore pid=662994) Loading safetensors checkpoint shards:  15% Completed | 4/26 [00:21<01:56,  5.32s/it]
+(EngineCore pid=662994) Loading safetensors checkpoint shards:  19% Completed | 5/26 [00:26<01:55,  5.48s/it]
+(EngineCore pid=662994) Loading safetensors checkpoint shards:  23% Completed | 6/26 [00:33<01:58,  5.92s/it]
+(EngineCore pid=662994) Loading safetensors checkpoint shards:  27% Completed | 7/26 [00:35<01:27,  4.63s/it]
+(EngineCore pid=662994) Loading safetensors checkpoint shards:  31% Completed | 8/26 [00:42<01:35,  5.28s/it]
+(EngineCore pid=662994) Loading safetensors checkpoint shards:  35% Completed | 9/26 [00:44<01:12,  4.24s/it]
+(EngineCore pid=662994) Loading safetensors checkpoint shards:  38% Completed | 10/26 [00:51<01:19,  5.00s/it]
+(EngineCore pid=662994) Loading safetensors checkpoint shards:  42% Completed | 11/26 [00:53<01:01,  4.07s/it]
+(EngineCore pid=662994) Loading safetensors checkpoint shards:  46% Completed | 12/26 [00:59<01:05,  4.65s/it]
+(EngineCore pid=662994) Loading safetensors checkpoint shards:  50% Completed | 13/26 [01:02<00:53,  4.15s/it]
+(EngineCore pid=662994) Loading safetensors checkpoint shards:  54% Completed | 14/26 [01:07<00:55,  4.67s/it]
+(EngineCore pid=662994) Loading safetensors checkpoint shards:  58% Completed | 15/26 [01:10<00:45,  4.15s/it]
+(EngineCore pid=662994) Loading safetensors checkpoint shards:  62% Completed | 16/26 [01:17<00:49,  4.93s/it]
+(EngineCore pid=662994) Loading safetensors checkpoint shards:  65% Completed | 17/26 [01:19<00:36,  4.04s/it]
+(EngineCore pid=662994) Loading safetensors checkpoint shards:  69% Completed | 18/26 [01:26<00:38,  4.83s/it]
+(EngineCore pid=662994) Loading safetensors checkpoint shards:  73% Completed | 19/26 [01:28<00:27,  3.95s/it]
+(EngineCore pid=662994) Loading safetensors checkpoint shards:  77% Completed | 20/26 [01:33<00:26,  4.48s/it]
+(EngineCore pid=662994) Loading safetensors checkpoint shards:  81% Completed | 21/26 [01:36<00:19,  3.98s/it]
+(EngineCore pid=662994) Loading safetensors checkpoint shards:  85% Completed | 22/26 [01:42<00:17,  4.49s/it]
+(EngineCore pid=662994) Loading safetensors checkpoint shards:  88% Completed | 23/26 [01:47<00:14,  4.85s/it]
+(EngineCore pid=662994) Loading safetensors checkpoint shards:  92% Completed | 24/26 [01:53<00:10,  5.14s/it]
+(EngineCore pid=662994) Loading safetensors checkpoint shards:  96% Completed | 25/26 [01:58<00:05,  5.02s/it]
+(EngineCore pid=662994) Loading safetensors checkpoint shards: 100% Completed | 26/26 [02:01<00:00,  4.33s/it]
+(EngineCore pid=662994) Loading safetensors checkpoint shards: 100% Completed | 26/26 [02:01<00:00,  4.66s/it]
+(EngineCore pid=662994) 
+(EngineCore pid=662994) INFO 06-09 09:51:59 [default_loader.py:384] Loading weights took 121.29 seconds
+(EngineCore pid=662994) INFO 06-09 09:51:59 [gpu_model_runner.py:4566] Model loading took 65.53 GiB memory and 121.647137 seconds
+(EngineCore pid=662994) INFO 06-09 09:51:59 [gpu_model_runner.py:5488] Encoder cache will be initialized with a budget of 16384 tokens, and profiled with 1 image items of the maximum feature size.
+(EngineCore pid=662994) INFO 06-09 09:52:03 [backends.py:988] Using cache directory: /home/claude/.cache/vllm/torch_compile_cache/a953b3b0b9/rank_0_0/backbone for vLLM's torch.compile
+(EngineCore pid=662994) INFO 06-09 09:52:03 [backends.py:1048] Dynamo bytecode transform time: 2.29 s
+(EngineCore pid=662994) INFO 06-09 09:52:05 [backends.py:284] Directly load the compiled graph(s) for compile range (1, 2048) from the cache, took 1.384 s
+(EngineCore pid=662994) INFO 06-09 09:52:05 [monitor.py:48] torch.compile took 4.00 s in total
+(EngineCore pid=662994) INFO 06-09 09:52:05 [decorators.py:296] Directly load AOT compilation from path /home/claude/.cache/vllm/torch_compile_cache/torch_aot_compile/4a9afa4ad75348317d765b0acd44303e7abd700f2b96a674cd163da02772880e/rank_0_0/model
+(EngineCore pid=662994) WARNING 06-09 09:52:05 [fused_moe.py:1093] Using default MoE config. Performance might be sub-optimal! Config file not found at /workspace/SIA/venv6/lib/python3.12/site-packages/vllm/model_executor/layers/fused_moe/configs/E=256,N=512,device_name=NVIDIA_H200.json
+(EngineCore pid=662994) INFO 06-09 09:52:06 [monitor.py:76] Initial profiling/warmup run took 0.65 s
+(EngineCore pid=662994) INFO 06-09 09:52:06 [kv_cache_utils.py:826] Overriding num_gpu_blocks=0 with num_gpu_blocks_override=256
+(EngineCore pid=662994) INFO 06-09 09:52:06 [gpu_model_runner.py:5607] Profiling CUDA graph memory: PIECEWISE=35 (largest=256)
+(EngineCore pid=662994) INFO 06-09 09:52:07 [gpu_model_runner.py:5686] Estimated CUDA graph memory: 0.64 GiB total
+(EngineCore pid=662994) INFO 06-09 09:52:07 [gpu_worker.py:456] Available KV cache memory: 43.81 GiB
+(EngineCore pid=662994) INFO 06-09 09:52:07 [gpu_worker.py:490] In v0.19, CUDA graph memory profiling will be enabled by default (VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS=1), which more accurately accounts for CUDA graph memory during KV cache allocation. To try it now, set VLLM_MEMORY_PROFILER_ESTIMATE_CUDAGRAPHS=1 and increase --gpu-memory-utilization from 0.8000 to 0.8046 to maintain the same effective KV cache size.
+(EngineCore pid=662994) INFO 06-09 09:52:07 [kv_cache_utils.py:1316] GPU KV cache size: 573,408 tokens
+(EngineCore pid=662994) INFO 06-09 09:52:07 [kv_cache_utils.py:1321] Maximum concurrency for 4,096 tokens per request: 217.50x
+(EngineCore pid=662994) Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):   0%|          | 0/35 [00:00<?, ?it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):   3%|▎         | 1/35 [00:00<00:05,  6.63it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):   6%|▌         | 2/35 [00:00<00:04,  6.73it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):   9%|▊         | 3/35 [00:00<00:07,  4.07it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  11%|█▏        | 4/35 [00:00<00:06,  4.66it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  14%|█▍        | 5/35 [00:01<00:06,  4.98it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  17%|█▋        | 6/35 [00:01<00:07,  3.96it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  20%|██        | 7/35 [00:01<00:06,  4.40it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  23%|██▎       | 8/35 [00:01<00:05,  4.76it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  26%|██▌       | 9/35 [00:02<00:06,  3.99it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  29%|██▊       | 10/35 [00:02<00:05,  4.48it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  31%|███▏      | 11/35 [00:02<00:06,  3.91it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  34%|███▍      | 12/35 [00:02<00:05,  4.35it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  37%|███▋      | 13/35 [00:02<00:04,  4.70it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  40%|████      | 14/35 [00:03<00:05,  3.91it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  43%|████▎     | 15/35 [00:03<00:04,  4.32it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  46%|████▌     | 16/35 [00:03<00:04,  4.71it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  49%|████▊     | 17/35 [00:03<00:04,  3.78it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  51%|█████▏    | 18/35 [00:04<00:04,  4.22it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  54%|█████▍    | 19/35 [00:04<00:03,  4.59it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  57%|█████▋    | 20/35 [00:04<00:03,  3.87it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  60%|██████    | 21/35 [00:04<00:03,  4.23it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  63%|██████▎   | 22/35 [00:05<00:03,  3.83it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  66%|██████▌   | 23/35 [00:05<00:02,  4.23it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  69%|██████▊   | 24/35 [00:05<00:02,  4.61it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  71%|███████▏  | 25/35 [00:05<00:02,  4.02it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  74%|███████▍  | 26/35 [00:06<00:02,  4.44it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  77%|███████▋  | 27/35 [00:06<00:01,  4.74it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  80%|████████  | 28/35 [00:06<00:01,  3.96it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  83%|████████▎ | 29/35 [00:06<00:01,  4.34it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  86%|████████▌ | 30/35 [00:07<00:01,  3.80it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  89%|████████▊ | 31/35 [00:07<00:00,  4.25it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  91%|█████████▏| 32/35 [00:07<00:00,  4.66it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  94%|█████████▍| 33/35 [00:07<00:00,  3.90it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE):  97%|█████████▋| 34/35 [00:07<00:00,  4.38it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE): 100%|██████████| 35/35 [00:08<00:00,  4.16it/s]Capturing CUDA graphs (mixed prefill-decode, PIECEWISE): 100%|██████████| 35/35 [00:08<00:00,  4.28it/s]
+(EngineCore pid=662994) INFO 06-09 09:52:16 [gpu_model_runner.py:5746] Graph capturing finished in 9 secs, took 0.66 GiB
+(EngineCore pid=662994) INFO 06-09 09:52:16 [gpu_worker.py:617] CUDA graph pool memory: 0.66 GiB (actual), 0.64 GiB (estimated), difference: 0.02 GiB (2.9%).
+(EngineCore pid=662994) INFO 06-09 09:52:16 [core.py:281] init engine (profile, create kv cache, warmup model) took 16.50 seconds
+LLM loaded.
+
+Starting HTTP server on http://0.0.0.0:8000 ...
+INFO:     Started server process [662614]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:41062 - "GET /health HTTP/1.1" 200 OK
+WARNING 06-09 09:52:32 [input_processor.py:227] Passing raw prompts to InputProcessor is deprecated and will be removed in v0.18. You should instead pass the outputs of Renderer.render_cmpl() or Renderer.render_chat().
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:41068 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:40094 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:44434 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:33754 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1513  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:53984 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1629  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:38670 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1511  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:38316 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:39982 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1999  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:57702 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:34398 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:49380 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:41864 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:55760 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:44954 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1211  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:58042 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1707  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:34430 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:48378 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:43260 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1006  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:53666 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:56748 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1615  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:59094 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:46372 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1398  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:35862 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:55004 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1102  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:50320 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:50316 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1333  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:49022 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1782  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:41792 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1817  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:33082 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1560  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:56628 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:44240 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:46234 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1997  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:50808 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1922  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:59856 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/619  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:55500 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/988  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:45890 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1921  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:55654 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1753  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:47004 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1589  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:49062 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1806  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:47058 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1340  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:40484 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1784  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:54328 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:50322 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1065  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:51558 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:48982 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:60506 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1851  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:47104 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:37426 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1469  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:51944 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1897  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:57732 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/622  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:44630 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/996  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:35722 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:59876 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:36264 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1208  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:56570 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:48358 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:51212 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2020  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:34370 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:38998 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:48680 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:37952 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:36272 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:43834 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1952  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:44290 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:53958 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1388  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:50962 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1423  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:54298 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:33576 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:47104 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1450  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:44970 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/748  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:50930 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:53122 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:40020 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1350  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:58888 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:50120 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1961  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:57344 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:38144 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:56354 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1811  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:42212 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1795  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:36522 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1789  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:57304 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:47692 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:48920 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:35930 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1756  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:40680 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:43324 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:46114 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:54984 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/744  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:58220 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:44130 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:57680 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1333  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:42468 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2047  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:60186 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/581  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:41910 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1948  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:54152 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:56926 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1693  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:43796 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1279  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:53098 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1932  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:57484 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1550  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:56890 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:39062 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:48032 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1258  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:57254 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1904  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:49566 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1487  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:40188 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/875  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:60882 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1094  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:37860 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2045  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:50570 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:38692 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1847  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:58470 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:38414 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1491  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:52870 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1063  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:52322 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/429  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:45810 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1471  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:35694 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:57226 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:53354 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:47568 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/744  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:54202 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:36296 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1015  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:59874 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1296  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:54020 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/769  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:53946 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:54590 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1798  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:46112 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/905  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:36506 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:53862 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1736  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:33804 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/911  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:56776 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:54132 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:46650 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/691  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:57752 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:37586 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/841  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:53926 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:59072 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1340  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:57680 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:59282 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:56102 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:44562 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:59952 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:42618 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:45006 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1741  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:53974 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:37288 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:33950 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/462  ratio=0.0%  top1_flip=0/0 (0.0%)
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:52860 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1791  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:34022 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:51256 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:58168 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:46268 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1310  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:37900 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:60188 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:34618 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:52594 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:46432 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1671  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:60638 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:39080 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:47670 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1125  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:57466 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/581  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:55468 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1765  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:48504 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:43816 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:60844 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1632  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:54152 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/849  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:53064 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1634  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:53448 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1835  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:52322 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:47186 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1498  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:50738 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:60402 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:50500 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:39512 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:36524 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1383  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:54996 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/732  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:54966 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:40994 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:34898 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:57674 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1503  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:59238 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1719  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:60110 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:54812 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1740  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:54796 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:48074 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:56334 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1342  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:45246 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:36340 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:53796 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:34186 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:52810 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:53936 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:42560 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2013  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:40784 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:47394 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:35368 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:49120 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1005  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:58190 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/2048  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:42114 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1576  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:38936 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/1801  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:39410 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+(EngineCore pid=662994) [SIA] req=0 DONE  intervened=0/156  ratio=0.0%  top1_flip=0/0 (0.0%)
+INFO:     127.0.0.1:47268 - "POST /v1/chat/completions HTTP/1.1" 200 OK
+/usr/lib/python3.12/multiprocessing/resource_tracker.py:254: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown
+  warnings.warn('resource_tracker: There appear to be %d '
