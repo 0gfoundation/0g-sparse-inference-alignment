@@ -9,6 +9,7 @@ fastapi>=0.136
 uvicorn>=0.46
 httpx==0.28.1
 pydantic>=2.13
+Pillow>=10.0          # multimodal image decoding (sia_vllm_server.py)
 
 # ---- Eval client (eval/alpaca_eval.py, eval/mmlu_eval.py) -------------
 requests>=2.32
