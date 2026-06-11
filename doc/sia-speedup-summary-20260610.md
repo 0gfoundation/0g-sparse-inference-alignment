@@ -217,15 +217,40 @@ VL-30B 的 LLM 和 VM 使用同一套分词器，LLM token ID 可以直接传给
 
 ### 5.1 单步耗时分布
 
-SIA 在每个 decode step 调用一次 `SIALogitsProcessor.apply()` 回调。`pf-summary` 统计该回调内各阶段耗时（p50，单位 ms）：
+SIA 在每个 decode step 调用一次 `SIALogitsProcessor.apply()` 回调。下图展示每步各阶段的发生顺序（横轴为时间，纵轴为执行主体）：
+
+```
+── 非干预步（skip step，占绝大多数 token）────────────────────────────────
+
+         t=0              t≈3.6ms  t≈4.1ms
+          │                  │        │
+LLM GPU  [████ FULL graph decode ████]·· (空闲，等 SIA 回调返回) ··
+SIA CPU       [←─ cpu_sync ─→][topk/ent] → 回调返回，vLLM 提交下步
+              │  等 GPU 完成  │ ~0.5ms
+VM GPU   ──────────── 不调用 ────────────────────────────────────
+
+              ←──── skip_step ~4.1ms ────►
+
+── 干预步（intervened step，占 ~12%/20%）──────────────────────────────────────────────────────────
+
+         t=0              t≈3.6ms  t≈4.1ms  t≈4.2ms         t≈4.2+17ms(VL)/30ms(0GM)   t末
+          │                  │        │        │                       │                   │
+LLM GPU  [████ FULL graph decode ████]·····LLM 空闲（等待 SIA 回调返回）·················[下步▶]
+SIA CPU       [←─ cpu_sync ─→][topk/ent][prep][←──── b2_score_call（等 VM）────────────►][appl]
+              │  等 GPU 完成  │ ~0.5ms  │0.07m│                                           │0.5m│
+VM GPU   ─────────────────────────────────────[████ VM forward（APC 复用前缀 KV cache）████]
+                                               ←──── b2_score_call ~17ms(VL)/~30ms(0GM) ──►
+```
+
+各指标含义说明（`pf-summary` 统计 p50，单位 ms）：
 
 | 指标 | 说明 | VL-30B | 0GM-35B |
 |------|------|:---:|:---:|
-| **b2_score_call** | VM forward + 取分（仅干预步调用）| **~17 ms** | **~30 ms** |
-| **apply_cpu_sync** | 等待 LLM FULL graph 在 GPU 上完成，之后才能读取 logits | ~3.6 ms | ~3.9 ms |
-| **intv_prepare** | 取出候选文字、组装 VM 请求对象（Python 侧准备，不含分词）| ~0.07 ms | ~0.07 ms |
+| **b2_score_call** | VM GPU 计算时间（含分词 + forward + 取分）；仅干预步调用 | **~17 ms** | **~30 ms** |
+| **apply_cpu_sync** | SIA 回调开始时等待 LLM GPU 完成 FULL graph（即 LLM 单步 decode 耗时）；是 skip_step 的主体 | ~3.6 ms | ~3.9 ms |
+| **intv_prepare** | 取出候选文字、组装 VM 请求对象（Python 侧，不含分词） | ~0.07 ms | ~0.07 ms |
 | **intv_apply_logits** | 将 VM 分值写回 logit 分布 | ~0.46 ms | ~0.42 ms |
-| **skip_step** | 非干预步 SIA 回调总耗时；其中 ~3.6ms 为 cpu_sync（等待主模型完成当前 token 的 GPU decode，即主模型单步 decode 耗时的直接体现），SIA 自身额外引入的计算（topk/entropy）仅 ~0.5ms | ~4.1 ms | ~4.3 ms |
+| **skip_step** | 非干预步 SIA 回调总耗时 = cpu_sync + topk/entropy；SIA 自身引入的额外计算（topk/entropy）仅 ~0.5ms | ~4.1 ms | ~4.3 ms |
 | **干预率（intv_rate）** | 实际调用 VM 的步骤比例（以 token 计）| 11.7% | 20.1% |
 
 **各实验实测吞吐**（同一实验组内 SIA vs noSIA 对比）：
