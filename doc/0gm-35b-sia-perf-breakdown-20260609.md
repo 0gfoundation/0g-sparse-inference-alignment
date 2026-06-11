@@ -1,4 +1,4 @@
-# 0GM-35B SIA 性能瓶颈分析与优化路线图 (2026-06-09, 更新 2026-06-10)
+# 0GM-35B SIA 性能瓶颈分析与优化路线图 (2026-06-09, 更新 2026-06-11)
 
 **TL;DR（最终结论）**：经过三轮优化，0GM-35B SIA b2 inproc 从 37.8 tok/s 最终提升至 **66–68 tok/s（≈ noSIA 的 59%）**。
 - **阶段一**：去掉 `SIA_LLM_CUDAGRAPH=piecewise` → 37.8 → **54.1 tok/s（+43%）**
@@ -525,3 +525,57 @@ python src/sia_vllm_server.py \
 **胜负统计（191 配对）**：SIA 赢 125 题 / 平 1 题 / 输 65 题，**win rate 65.4%**。
 
 > noSIA 有 9 题因输出过长（>2048 RM tokens）无法评分，其 SIA 版本对应得分均值约 27 分（接近整体均值），说明 noSIA 在这些题上属于冗长输出而非高质量输出，实际差距只大不小。
+
+---
+
+## 十一. Docker 部署验证实验（2026-06-10）
+
+### 11.1 实验配置
+
+| 项目 | 值 |
+|------|---|
+| 主 LLM | 0GM-1.0-35B-A3B-0427 |
+| Value Model | VM-Qwen3-4B-merged-for-vllm（b2 inproc） |
+| 镜像 / vllm | sia-0gm35b:0.18.0 / vllm 0.18.0 |
+| AlpacaEval | 200Q，natural thinking，max_tokens=2048 |
+| 打分模型 | Skywork-Reward-V2-Llama-3.1-8B（`--strip_think`）|
+| 优化项 | stable prefix 跨分词器优化，`SIA_RM_CUDAGRAPH=none` |
+
+**SIA**（[`exp/alpaca-0gm35b-docker-20260610/alpaca_0gm35b_sia_20260610_125628.json`](../exp/alpaca-0gm35b-docker-20260610/alpaca_0gm35b_sia_20260610_125628.json)）：服务端默认参数（`topk=10, weight=1.0, entropy_threshold=1.0`），客户端不传 `--sia_weight` / `--sia_topk`。
+
+**noSIA**（[`exp/alpaca-0gm35b-docker-20260610/alpaca_0gm35b_nosia_20260610_141907.json`](../exp/alpaca-0gm35b-docker-20260610/alpaca_0gm35b_nosia_20260610_141907.json)）：客户端传 `--sia_weight 0`，VM 已加载但不干预。
+
+### 11.2 吞吐量
+
+| 运行 | 题数 | 总 tokens | 耗时 | **tok/s** | avg tok/q |
+|------|:---:|:---:|:---:|:---:|:---:|
+| noSIA（VM 加载，`sia_weight=0`）| 200 | 339,875 | 3,025s | **112.3** | 1,699 |
+| SIA | 200 | 312,516 | 4,721s | **66.2** | 1,562 |
+| **SIA / noSIA** | — | — | — | **59%** | — |
+
+66.2 tok/s 与 §八 stable prefix 预测（66–68 tok/s）吻合，验证 docker 环境配置正确。
+
+### 11.3 SkyWork 打分结果
+
+| 指标 | noSIA | SIA |
+|------|:---:|:---:|
+| 有效打分 | **176 / 200** | **200 / 200** |
+| 跳过（error/empty）| 1 | 0 |
+| **mean reward** | **22.08** | **26.33** |
+| p50 reward | 21.75 | 27.63 |
+| min / max | −4.75 / 56.75 | 1.62 / 56.50 |
+
+**SIA Δ = +4.25（+19.2%）**（基于 noSIA mean 22.08）。
+
+> **noSIA 评分仅覆盖前 176 题**（ID 1–177，1 题 error，ID 178–200 评分进程被中断）。noSIA mean 22.08 为不完整统计，仅供参考；与 §十 noSIA mean（24.01，191 题）的差距，主因是本次 noSIA 使用 `sia_weight=0`（VM 同进程加载）而非纯 vLLM，以及随机采样差异。
+
+### 11.4 实验文件
+
+| 文件 | 说明 |
+|------|------|
+| [`exp/alpaca-0gm35b-docker-20260610/alpaca_0gm35b_sia_20260610_125628.json`](../exp/alpaca-0gm35b-docker-20260610/alpaca_0gm35b_sia_20260610_125628.json) | SIA 生成结果（200 题）|
+| [`exp/alpaca-0gm35b-docker-20260610/alpaca_0gm35b_sia_gen.log`](../exp/alpaca-0gm35b-docker-20260610/alpaca_0gm35b_sia_gen.log) | SIA 生成进度日志 |
+| [`exp/alpaca-0gm35b-docker-20260610/alpaca_0gm35b_sia_scored.json`](../exp/alpaca-0gm35b-docker-20260610/alpaca_0gm35b_sia_scored.json) | SIA Skywork 打分（200/200）|
+| [`exp/alpaca-0gm35b-docker-20260610/alpaca_0gm35b_nosia_20260610_141907.json`](../exp/alpaca-0gm35b-docker-20260610/alpaca_0gm35b_nosia_20260610_141907.json) | noSIA 生成结果（200 题）|
+| [`exp/alpaca-0gm35b-docker-20260610/alpaca_0gm35b_nosia_gen.log`](../exp/alpaca-0gm35b-docker-20260610/alpaca_0gm35b_nosia_gen.log) | noSIA 生成进度日志 |
+| [`exp/alpaca-0gm35b-docker-20260610/alpaca_0gm35b_nosia_scored.json`](../exp/alpaca-0gm35b-docker-20260610/alpaca_0gm35b_nosia_scored.json) | noSIA Skywork 打分（176/200，部分中断）|
