@@ -277,7 +277,19 @@ b2_score_call 占干预步总 SIA 耗时的约 80%（VL-30B：17ms / ~21ms）和
 
 0GM-35B 干预率更高（20% vs 12%）且单次 VM 更慢（30ms vs 17ms），双重叠加导致其 SIA/noSIA 比值（59%）低于 VL-30B（64%）。
 
-**② 为何 VL-30B b2_score_call 更短（~17ms vs ~30ms）**
+**② 为何 VM（4B dense）比主推理模型更慢**
+
+表面上 VM 参数量（4B）远小于主模型（30B / 35B），但实测 b2_score_call（17–30ms）却高于 apply_cpu_sync 反映的主模型单步耗时（3.6ms）。原因有四：
+
+1. **MoE vs Dense 架构**：两个主模型均为 MoE（Mixture of Experts），"30B/35B"是总参数量，每个 token 实际只激活约 **3B** 参数（"A3B"即 Active 3B）。VM-Qwen3-4B 是全量 dense 模型，4B 参数在每次 forward 中全部激活。实际计算量：**VM 4B dense > 主模型 ~3B active**。
+
+2. **每步评估 topk=10 个候选**：主模型每步只生成 1 个 token；VM 每步需对 10 个候选各做一次 forward（即使借助 APC 只计算候选末尾的 1–2 个新 token，总量仍是主模型的 10×）。
+
+3. **Small-batch memory-bound**：每次 VM 调用的 batch 极小（10 candidates × 1–2 token，等效 M≈15 的矩阵乘法），GPU 处于 memory-bound 而非 compute-bound 状态，算力无法充分利用，耗时由内存带宽决定。
+
+4. **无 CUDA graph（0GM-35B）**：每次 VM forward 需要数百次逐 kernel dispatch，累计调度开销可达数毫秒（VL-30B 通过 CUDA graph 消除了这部分，详见 §3.1）。
+
+**③ 为何 VL-30B b2_score_call 更短（~17ms vs ~30ms）**
 
 VL-30B 的 VM 使用 vllm 0.17.1，开启了 CUDA graph（§3.1），VM forward 从 ~71ms（eager）降至约 11–17ms 水平。较低的 b2_score_call 值还受益于 VL-30B 与 VM 共用同一套 Qwen3 分词器——无需跨分词器转换，LLM token ID 直接传给 VM，节省约 2ms 的 CPU 编码时间。
 
