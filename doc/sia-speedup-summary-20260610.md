@@ -225,7 +225,7 @@ SIA 在每个 decode step 调用一次 `SIALogitsProcessor.apply()` 回调。`pf
 | **apply_cpu_sync** | 等待 LLM FULL graph 在 GPU 上完成，之后才能读取 logits | ~3.6 ms | ~3.9 ms |
 | **intv_prepare** | 取出候选文字、组装 VM 请求对象（Python 侧准备，不含分词）| ~0.07 ms | ~0.07 ms |
 | **intv_apply_logits** | 将 VM 分值写回 logit 分布 | ~0.46 ms | ~0.42 ms |
-| **skip_step** | 非干预步总耗时（含 cpu_sync + topk/entropy 计算）| ~4.1 ms | ~4.3 ms |
+| **skip_step** | 非干预步 SIA 回调总耗时；其中 ~3.6ms 为 cpu_sync（等待主模型完成当前 token 的 GPU decode，即主模型单步 decode 耗时的直接体现），SIA 自身额外引入的计算（topk/entropy）仅 ~0.5ms | ~4.1 ms | ~4.3 ms |
 | **干预率（intv_rate）** | 实际调用 VM 的步骤比例（以 token 计）| 11.7% | 20.1% |
 
 **各实验实测吞吐**（同一实验组内 SIA vs noSIA 对比）：
