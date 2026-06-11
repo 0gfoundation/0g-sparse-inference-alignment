@@ -129,6 +129,8 @@ VL-30B 的 VM（VM-Qwen3-4B）使用 vllm 0.17.1，在**模型初始化阶段**�
 
 效果：VM 单次调用从 ~71ms（eager）→ ~11ms（CUDA graph），**6.4×**。（[详细报告](vl30b-b2-inproc-speedup-20260605.md)）
 
+> **注**：~11ms 为该报告中短序列场景的测量值。AlpacaEval 长序列实验（§五）的稳态 b2_score_call p50 约 17ms——序列越长、每步候选文字越多，VM forward 时间略有增加。
+
 **为何 0GM-35B 不能复用**：见 [Appendix B](#appendix-b0gm-35b-vm-无法使用-cuda-graph-的原因)。
 
 ---
@@ -221,7 +223,7 @@ SIA 在每个 decode step 调用一次 `SIALogitsProcessor.apply()` 回调。`pf
 |------|------|:---:|:---:|
 | **b2_score_call** | VM forward + 取分（仅干预步调用）| **~17 ms** | **~30 ms** |
 | **apply_cpu_sync** | 等待 LLM FULL graph 在 GPU 上完成，之后才能读取 logits | ~3.6 ms | ~3.9 ms |
-| **intv_prepare** | 准备 VM 输入（候选文字 → token IDs）| ~0.07 ms | ~0.07 ms |
+| **intv_prepare** | 取出候选文字、组装 VM 请求对象（Python 侧准备，不含分词）| ~0.07 ms | ~0.07 ms |
 | **intv_apply_logits** | 将 VM 分值写回 logit 分布 | ~0.46 ms | ~0.42 ms |
 | **skip_step** | 非干预步总耗时（含 cpu_sync + topk/entropy 计算）| ~4.1 ms | ~4.3 ms |
 | **干预率（intv_rate）** | 实际调用 VM 的步骤比例（以 token 计）| 11.7% | 20.1% |
@@ -232,6 +234,8 @@ SIA 在每个 decode step 调用一次 `SIALogitsProcessor.apply()` 回调。`pf
 |------|:---:|:---:|:---:|
 | VL-30B | 122.8 tok/s | 78.3 tok/s | **64%** |
 | 0GM-35B | 112.3 tok/s | 66.2 tok/s | **59%** |
+
+> **与§一基线的差值**：§一"纯 vLLM（无 VM）"为完全不加载 VM 的原生 vLLM 推理（VL-30B 127.4 / 0GM-35B 114.1 tok/s）。本表 noSIA 是 VM 已加载但 `weight=0`，SIA 回调仍在每步触发（含 apply_cpu_sync 等开销），因此比纯 vLLM 略低 3–5 tok/s。两者均可作为 SIA 的对比基准，§一选纯 vLLM 体现理论上限，本表选同组实验确保比较条件一致。
 
 ---
 
@@ -276,7 +280,7 @@ SIA 回调在每步开始时调用 `torch.cuda.synchronize()`，等待 LLM FULL 
 
 **0GM-35B 专属方向**
 
-- **训练与 0GM-35B 相同词表的 VM**：从根本消除跨分词器转换开销，b2_score_call 延迟有望接近 VL-30B 的 11ms 水平
+- **训练与 0GM-35B 相同词表的 VM**：从根本消除跨分词器转换开销，并有望恢复 CUDA graph，b2_score_call 延迟有望接近 VL-30B 当前实测的 ~17ms 水平
 
 ---
 
