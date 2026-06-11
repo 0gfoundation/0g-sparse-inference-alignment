@@ -19,13 +19,15 @@ Usage:
 """
 
 import argparse
+import base64
+import io
 import json
 import os
 import re
 import sys
 import time
 import uuid
-from typing import AsyncIterator, Optional
+from typing import AsyncIterator, Optional, Union
 
 # 匹配 "Answer:" + 可选空格 + A/B/C/D（不紧跟其他字母）
 _ANSWER_RE = re.compile(r"Answer:\s*([ABCD])(?![a-zA-Z])")
@@ -72,7 +74,7 @@ app.add_middleware(
 # ---------------------------------------------------------------------------
 class ChatMessage(BaseModel):
     role: str
-    content: str
+    content: Union[str, list]  # list for multimodal (OpenAI image_url format)
 
 
 class ChatCompletionRequest(BaseModel):
@@ -120,6 +122,89 @@ class CompletionRequest(BaseModel):
 # 工具函数
 # ---------------------------------------------------------------------------
 
+def _has_image(messages: list[ChatMessage]) -> bool:
+    """Return True if any message contains image content (OpenAI image_url format)."""
+    for msg in messages:
+        if isinstance(msg.content, list):
+            for part in msg.content:
+                if isinstance(part, dict) and part.get("type") in ("image_url", "image"):
+                    return True
+    return False
+
+
+async def _messages_to_multimodal_prompt(
+    messages: list[ChatMessage],
+    chat_template_kwargs: Optional[dict] = None,
+) -> dict:
+    """Build vLLM multimodal prompt dict for requests that contain images.
+
+    Converts OpenAI image_url content parts to PIL Images, builds the chat
+    template string with image placeholders, and returns a vLLM prompt dict
+    suitable for VL models.
+    """
+    try:
+        from PIL import Image as _PILImage
+    except ImportError:
+        raise RuntimeError("Pillow is required for multimodal inputs: pip install Pillow")
+
+    images = []
+    qwen_msgs = []
+
+    for msg in messages:
+        if isinstance(msg.content, str):
+            qwen_msgs.append({"role": msg.role, "content": msg.content})
+            continue
+
+        content_parts = []
+        for part in msg.content:
+            if not isinstance(part, dict):
+                continue
+            ptype = part.get("type", "")
+            if ptype == "image_url":
+                # OpenAI format: {"type": "image_url", "image_url": {"url": "..."}}
+                url = part["image_url"]["url"]
+                if url.startswith("data:"):
+                    # base64-encoded data URI: data:<mime>;base64,<data>
+                    _, b64data = url.split(",", 1)
+                    img = _PILImage.open(io.BytesIO(base64.b64decode(b64data))).convert("RGB")
+                else:
+                    async with httpx.AsyncClient(timeout=30.0) as client:
+                        resp = await client.get(url)
+                        resp.raise_for_status()
+                        img = _PILImage.open(io.BytesIO(resp.content)).convert("RGB")
+                images.append(img)
+                content_parts.append({"type": "image"})  # placeholder for chat template
+            elif ptype == "image":
+                # Qwen-native format: {"type": "image", "image": url_or_path}
+                img_ref = part.get("image") or ""
+                if img_ref.startswith("data:"):
+                    _, b64data = img_ref.split(",", 1)
+                    img = _PILImage.open(io.BytesIO(base64.b64decode(b64data))).convert("RGB")
+                else:
+                    async with httpx.AsyncClient(timeout=30.0) as client:
+                        resp = await client.get(img_ref)
+                        resp.raise_for_status()
+                        img = _PILImage.open(io.BytesIO(resp.content)).convert("RGB")
+                images.append(img)
+                content_parts.append({"type": "image"})  # placeholder for chat template
+            elif ptype == "text":
+                content_parts.append({"type": "text", "text": part.get("text", "")})
+        qwen_msgs.append({"role": msg.role, "content": content_parts})
+
+    extra = chat_template_kwargs or {}
+    text = _llm_tok.apply_chat_template(
+        qwen_msgs,
+        tokenize=False,
+        add_generation_prompt=True,
+        **extra,
+    )
+
+    prompt: dict = {"prompt": text}
+    if images:
+        prompt["multi_modal_data"] = {"image": images}
+    return prompt
+
+
 def _messages_to_prompt(messages: list[ChatMessage],
                         chat_template_kwargs: Optional[dict] = None) -> dict:
     """
@@ -130,7 +215,17 @@ def _messages_to_prompt(messages: list[ChatMessage],
     chat_template_kwargs: 透传给 apply_chat_template 的额外 kwargs。
         典型用法: {"enable_thinking": False} 对 Qwen3 Instruct 关掉 thinking 模式。
     """
-    msgs = [{"role": m.role, "content": m.content} for m in messages]
+    msgs = []
+    for m in messages:
+        if isinstance(m.content, str):
+            msgs.append({"role": m.role, "content": m.content})
+        else:
+            # Multimodal content — extract text parts only (images go via multimodal path)
+            text = " ".join(
+                p.get("text", "") for p in m.content
+                if isinstance(p, dict) and p.get("type") == "text"
+            )
+            msgs.append({"role": m.role, "content": text})
     if getattr(_llm_tok, "chat_template", None):
         extra = chat_template_kwargs or {}
         token_ids = _llm_tok.apply_chat_template(
@@ -247,7 +342,16 @@ async def _log_rm_status():
 
 async def _handle_chat(req: ChatCompletionRequest):
     await _log_rm_status()
-    prompt = _messages_to_prompt(req.messages, req.chat_template_kwargs)
+
+    if _has_image(req.messages):
+        # VM is text-only: bypass SIA entirely for image-containing requests.
+        # sia_weight=0 triggers the early-exit path in SIALogitsProcessor (no VM call).
+        prompt = await _messages_to_multimodal_prompt(req.messages, req.chat_template_kwargs)
+        req = req.model_copy(update={"sia_weight": 0.0})
+        print("[SIA] multimodal request detected — SIA bypassed (VM is text-only)", flush=True)
+    else:
+        prompt = _messages_to_prompt(req.messages, req.chat_template_kwargs)
+
     sampling_params = _build_sampling_params(req)
     model = req.model or _model_id
     request_id = f"chatcmpl-{uuid.uuid4().hex[:12]}"
