@@ -508,6 +508,40 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
 
 > 三个参数可以在同一个 request 里组合使用，例如 `"sia_weight": 2.0, "sia_topk": 20, "sia_entropy_threshold": 0.5`。未传的参数沿用 server 启动时的全局默认值（`--weight` / `--topk` / `--entropy_threshold`）。
 
+### 4.5 多模态输入（图像 + 文本）smoke test
+
+Qwen3-VL-30B 是 Vision-Language 模型，支持图像输入。VM-Qwen3-4B 是纯文本模型，不能对图像上下文打分，因此 **server 检测到图像后会自动将 `sia_weight` 强制设为 `0.0`**，跳过 VM 直接用原始模型推理。
+
+```bash
+curl -s -X POST http://localhost:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "max_tokens": 200,
+    "messages": [
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "image_url",
+            "image_url": {
+              "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAAKklEQVR4nO3NsQ0AAAjDsF7L/x/AE3SzlDnOTqp17wAAAAAAAAAAAOCxA0O5lEwRQVLnAAAAAElFTkSuQmCC"
+            }
+          },
+          {"type": "text", "text": "这张图片里是什么颜色？"}
+        ]
+      }
+    ]
+  }' | python3 -m json.tool
+```
+
+预期 server 日志（`docker compose logs -f sia-vl30b`）：
+```
+[SIA] multimodal request detected — SIA bypassed (VM is text-only)
+(EngineCore_DP0 pid=...) [SIA] req=0 DONE  intervened=0/N  ratio=0.0%  top1_flip=0/0 (0.0%)
+```
+
+`ratio=0.0%` 确认 VM 完全跳过。模型应正确描述图像内容（示例图为橙色方块）。
+
 ---
 
 ## Step 5 — 停止 / 重启 / 清理 (per path)

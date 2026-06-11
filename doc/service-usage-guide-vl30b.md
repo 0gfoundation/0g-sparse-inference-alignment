@@ -276,7 +276,60 @@ data: [DONE]
 
 ---
 
-## 11. 服务健康检查
+## 11. 多模态输入（图像 + 文本）
+
+Qwen3-VL-30B 是 Vision-Language 模型，支持 OpenAI `image_url` 格式的图像输入。
+
+**重要**：Value Model（VM-Qwen3-4B）是纯文本模型，无法对含图像上下文的候选 token 打分。因此，**当 request 包含图像时，server 会自动将 `sia_weight` 强制设为 `0.0`，跳过 VM 评分，直接用原始模型推理**。无需在 request 里手动设置 `sia_weight`——server 自动处理。
+
+```bash
+curl -s -X POST http://localhost:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "max_tokens": 200,
+    "messages": [
+      {
+        "role": "user",
+        "content": [
+          {
+            "type": "image_url",
+            "image_url": {
+              "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAAKklEQVR4nO3NsQ0AAAjDsF7L/x/AE3SzlDnOTqp17wAAAAAAAAAAAOCxA0O5lEwRQVLnAAAAAElFTkSuQmCC"
+            }
+          },
+          {"type": "text", "text": "这张图片里是什么颜色？"}
+        ]
+      }
+    ]
+  }' | python3 -m json.tool
+```
+
+**服务端日志**（`docker compose logs sia-vl30b`）会打印：
+```
+[SIA] multimodal request detected — SIA bypassed (VM is text-only)
+(EngineCore_DP0 pid=...) [SIA] req=0 DONE  intervened=0/N  ratio=0.0%  top1_flip=0/0 (0.0%)
+```
+
+`ratio=0.0%` 确认 VM 完全跳过，推理由原始模型独立完成。
+
+**Response 示例：**
+```json
+{
+    "choices": [
+        {
+            "message": {
+                "role": "assistant",
+                "content": "这张图片里是橙色。"
+            },
+            "finish_reason": "stop"
+        }
+    ]
+}
+```
+
+---
+
+## 12. 服务健康检查
 
 ```bash
 curl -s http://localhost:8000/health
