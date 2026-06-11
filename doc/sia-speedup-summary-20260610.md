@@ -209,7 +209,62 @@ VL-30B 的 LLM 和 VM 使用同一套分词器，LLM token ID 可以直接传给
 
 ---
 
-## 五、后续可能的优化方向
+## 五、当前优化态耗时分析
+
+数据来源：`exp/alpaca-vl30b-b2-docker-20260610/docker_log.txt`（VL-30B）、`exp/alpaca-0gm35b-stable-prefix-20260610/server.log`（0GM-35B），均取稳态阶段 pf-summary 数据（步骤数 @15000–25000 / @5000–15000，各取 100 个采样点中位数）。
+
+### 5.1 单步耗时分布
+
+SIA 在每个 decode step 调用一次 `SIALogitsProcessor.apply()` 回调。`pf-summary` 统计该回调内各阶段耗时（p50，单位 ms）：
+
+| 指标 | 说明 | VL-30B | 0GM-35B |
+|------|------|:---:|:---:|
+| **b2_score_call** | VM forward + 取分（仅干预步调用）| **~17 ms** | **~30 ms** |
+| **apply_cpu_sync** | 等待 LLM FULL graph 在 GPU 上完成，之后才能读取 logits | ~3.6 ms | ~3.9 ms |
+| **intv_prepare** | 准备 VM 输入（候选文字 → token IDs）| ~0.07 ms | ~0.07 ms |
+| **intv_apply_logits** | 将 VM 分值写回 logit 分布 | ~0.46 ms | ~0.42 ms |
+| **skip_step** | 非干预步总耗时（含 cpu_sync + topk/entropy 计算）| ~4.1 ms | ~4.3 ms |
+| **干预率（intv_rate）** | 实际调用 VM 的步骤比例（以 token 计）| 11.7% | 20.1% |
+
+**各实验实测吞吐**（同一实验组内 SIA vs noSIA 对比）：
+
+| 模型 | noSIA（VM 加载，weight=0）| SIA | 比值 |
+|------|:---:|:---:|:---:|
+| VL-30B | 122.8 tok/s | 78.3 tok/s | **64%** |
+| 0GM-35B | 112.3 tok/s | 66.2 tok/s | **59%** |
+
+---
+
+### 5.2 瓶颈分析
+
+**① VM forward（b2_score_call）是干预步的主要开销**
+
+b2_score_call 占干预步总 SIA 耗时的约 80%（VL-30B：17ms / ~21ms）和 87%（0GM-35B：30ms / ~34ms），是 SIA 性能瓶颈的核心。
+
+以干预率加权后，每步平均 VM 开销为：
+
+- VL-30B：11.7% × 17 ms ≈ **2.0 ms/step**
+- 0GM-35B：20.1% × 30 ms ≈ **6.0 ms/step**
+
+0GM-35B 干预率更高（20% vs 12%）且单次 VM 更慢（30ms vs 17ms），双重叠加导致其 SIA/noSIA 比值（59%）低于 VL-30B（64%）。
+
+**② 为何 VL-30B b2_score_call 更短（~17ms vs ~30ms）**
+
+VL-30B 的 VM 使用 vllm 0.17.1，开启了 CUDA graph（§3.1），VM forward 从 ~71ms（eager）降至约 11–17ms 水平。较低的 b2_score_call 值还受益于 VL-30B 与 VM 共用同一套 Qwen3 分词器——无需跨分词器转换，LLM token ID 直接传给 VM，节省约 2ms 的 CPU 编码时间。
+
+0GM-35B 的 VM 无法使用 CUDA graph（见 Appendix B），只能逐 kernel 的 eager 执行。§4.1 的 stable prefix 优化已将 APC miss 引起的延迟波动消除，把长序列延迟从 ~55ms 稳定压回至 ~30ms。但相比 VL-30B 的 CUDA graph 路径，0GM-35B 的 VM forward 仍慢约 1.8×。
+
+**③ apply_cpu_sync（~3.6–3.9ms）**
+
+SIA 回调在每步开始时调用 `torch.cuda.synchronize()`，等待 LLM FULL graph 在 GPU 上执行完毕后，才能读取 logits。这约 3.6–3.9ms 的等待在两个模型上几乎相同，主要反映 LLM decode 的 GPU 执行时长——是 SIA 与 LLM 之间必要的时序屏障，并非 SIA 引入的额外计算。
+
+**④ 非干预步开销（skip_step ~4.1–4.3ms）**
+
+非干预步不调用 VM，只做 cpu_sync（~3.6ms）+ topk/entropy 计算（~0.46ms）。其中 cpu_sync 大半属于等待 GPU 完成 LLM forward 的"必要等待"，SIA 自身额外引入的计算仅 0.5ms 左右。
+
+---
+
+## 六、后续可能的优化方向
 
 以下方向尚未实施，不提供加速比预估。
 
@@ -225,7 +280,7 @@ VL-30B 的 LLM 和 VM 使用同一套分词器，LLM token ID 可以直接传给
 
 ---
 
-## Appendix：小优化清单
+## Appendix A：小优化清单
 
 以下优化已实施，单项提升 ≤5%，不单独展开。
 
