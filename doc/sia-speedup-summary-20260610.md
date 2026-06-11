@@ -302,7 +302,6 @@ SIA 回调在每步开始时调用 `torch.cuda.synchronize()`，等待 LLM FULL 
 纯工程改进，不改变候选打分逻辑，生成内容的 Reward 分数理论上不受影响。
 
 - **VM 并行化**：在主 LLM forward 期间同时在独立 CUDA stream 上准备 VM 输入，将 intv_prepare 的 ~0.07ms 与 LLM decode 重叠执行，消除串行等待
-- **VM FP8 量化**：将 VM 权重从 BF16 量化为 FP8，减少 GPU 显存占用和 forward 延迟；BF16→FP8 量化损耗极小，但仍需实验验证打分质量无回归
 
 ### 6.2 效果有损优化（速度–质量权衡）
 
@@ -311,7 +310,6 @@ SIA 回调在每步开始时调用 `torch.cuda.synchronize()`，等待 LLM FULL 
 - **减少 `--topk`**：每步候选从 10 降到 5 或 3，VM batch 缩小，b2_score_call 时间线性缩短；代价是候选池变小，可能错过更优 token
 - **增大 `--entropy_threshold`**：提高跳过干预的熵阈值，降低干预率（当前 VL-30B 11.7%、0GM-35B 20.1%）；代价是部分高熵关键决策点被跳过，不再受 VM 引导
 - **更小的 VM（Qwen3-1.7B）**：替代 Qwen3-4B，b2_score_call 显著缩短；代价是 VM 打分精度降低
-- **VM INT8/INT4 量化**：比 FP8 更激进的量化，速度和显存收益更大；代价是 VM 打分精度损失明显，需要较充分的质量评估
 
 ### 6.3 模型专属方向
 
@@ -329,6 +327,7 @@ SIA 回调在每步开始时调用 `torch.cuda.synchronize()`，等待 LLM FULL 
 | VM APC 默认开启 | 两者 | b2 inproc 模式下保持 VM prefix caching 开启 | ~+2–4% |
 | `max_num_batched_tokens` 修复（0GM-35B）| 0GM-35B | 防止 topk×length 超限导致 chunked prefill 错误 reward，消除每步跳过干预的 bug | 间接（修 bug）|
 | WeakSet 隔离修复（0GM-35B）| 0GM-35B | 防止主 LLM profiling 阶段 `clear_all_graphs()` 清空 VM CUDA graph，消除 RuntimeError | 间接（修 bug）|
+| VM FP8 / INT8 / INT4 量化 | 两者 | 已实测（FP8_DYNAMIC，600 题 MMLU）：端到端吞吐 **+0.5%**，在噪声范围内，加速效果可忽略。根因：SIA 每次 VM 调用只算 topk×1–3 token，GEMM shape 极"瘦长"（M≈15, K=2560），处于 memory-bound 而非 compute-bound 区，所有量化方案（FP8/INT8/INT4/AWQ）均无法提升实际速度。详见 [`doc/rm-fp8-dynamic-quantization-plan.md`](rm-fp8-dynamic-quantization-plan.md) §9。 | **~0%**（已放弃）|
 
 ---
 
