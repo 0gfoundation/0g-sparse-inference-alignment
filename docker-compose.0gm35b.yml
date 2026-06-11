@@ -1,0 +1,70 @@
+# Production docker-compose for 0GM-35B SIA b2 inproc.
+#
+# Pairs with Dockerfile.0gm35b + scripts/docker_entrypoint_0gm35b.sh.
+#
+# Build + start:
+#   docker compose -f docker-compose.0gm35b.yml up --build -d
+#   docker compose -f docker-compose.0gm35b.yml logs -f sia-0gm35b
+#   docker compose -f docker-compose.0gm35b.yml down
+
+services:
+  sia-0gm35b:
+    image: sia-0gm35b:0.18.0
+    container_name: sia-0gm35b-server
+
+    build:
+      context: .
+      dockerfile: Dockerfile.0gm35b
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+    shm_size: 16g
+    ipc: host
+
+    ports:
+      - "8000:8000"
+
+    volumes:
+      - /dstack/persistent/SIA:/workspace
+      - vllm-compile-cache-0gm35b:/root/.cache/vllm
+
+    environment:
+      # 主 LLM：不设置 SIA_LLM_CUDAGRAPH，默认 FULL_AND_PIECEWISE
+      # （比 piecewise-only 快 ~2×；vllm 0.18.0 AOT capture，推理时只 replay）
+      # RM：必须 none（eager），不能用 piecewise——0.18.0 RM 在推理时遇到新
+      # batch_descriptor 会尝试 runtime capture，触发 RuntimeError
+      SIA_RM_CUDAGRAPH: "none"
+      SIA_RM_MULTIPROCESS: "0"
+
+    command: >
+      python src/sia_vllm_server.py
+        --llm        /workspace/models/0GM-1.0-35B-A3B-0427
+        --rm_backend b2
+        --rm_model   /workspace/models/VM-Qwen3-4B-merged-for-vllm
+        --llm_gpu_mem    0.55
+        --rm_b2_gpu_mem  0.15
+        --topk 10 --weight 1.0 --entropy_threshold 1.0
+        --max_model_len 2048
+        --enable_prefix_caching
+        --host 0.0.0.0
+        --port 8000
+
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 25m
+
+    stop_grace_period: 30s
+
+volumes:
+  vllm-compile-cache-0gm35b:

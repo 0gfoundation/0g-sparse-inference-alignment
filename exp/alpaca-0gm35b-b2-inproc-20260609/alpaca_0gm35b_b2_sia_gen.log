@@ -1,0 +1,912 @@
+loaded 200 prompts from data/alpaca_eval/alpaca_eval.json
+base_url    : http://localhost:8000/v1
+model       : 0GM-1.0-35B-A3B-0427
+max_tokens  : 2048
+temperature : 1.0
+top_p / top_k / rep_penalty: 0.95 / 20 / 1.0
+disable_thinking: False
+no_think_prompt : True
+sia_weight / sia_topk / sia_entropy_threshold: None / None / None
+output      : exp/alpaca-0gm35b-b2-inproc-20260609/alpaca_0gm35b_b2_sia_20260609_073834.json
+------------------------------------------------------------
+[1/200] last=7.4s avg=7.4s/q  cum_tps=42.4 tok/s  tokens=314
+  Q: What are the names of some famous actors that started their careers on Broadway?
+  A: There are several famous actors who began their careers on Broadway before going on to achieve success in film, televisi...
+[2/200] last=9.4s avg=8.4s/q  cum_tps=40.4 tok/s  tokens=366
+  Q: How did US states get their names?
+  A: There are a wide variety of origins for the names of United States states, reflecting the diverse linguistic and cultura...
+[3/200] last=12.5s avg=9.8s/q  cum_tps=38.2 tok/s  tokens=442
+  Q: Hi, my sister and her girlfriends want me to play kickball with them. Can you ex...
+  A: Absolutely! Kickball is a fun and relatively simple game played on a rectangular field with four bases at each corner of...
+[4/200] last=5.6s avg=8.7s/q  cum_tps=38.6 tok/s  tokens=227
+  Q: What is some cool music from the 1920s?
+  A: The Jazz Age of the 1920s gave rise to some of the most iconic and influential music of the twentieth century, character...
+[5/200] last=4.0s avg=7.8s/q  cum_tps=38.3 tok/s  tokens=142
+  Q: How do I wrap a present neatly?
+  A: To wrap a present neatly, follow these steps: First, lay out the wrapping paper shiny side down on a flat surface and pl...
+[6/200] last=7.8s avg=7.8s/q  cum_tps=37.9 tok/s  tokens=280
+  Q: How do I dice without slicing my finger
+  A: Here are a few tips to help you dice safely without slicing your finger:
+
+1. Use a sharp knife: A dull knife requires mo...
+[7/200] last=0.5s avg=6.7s/q  cum_tps=37.9 tok/s  tokens=19
+  Q: Hi, I'm trying to solve a crossword puzzle, but I've never done one of these bef...
+  A: Absolutely, I'd be happy to help! What clues are you currently stuck on?
+
+[8/200] last=4.3s avg=6.4s/q  cum_tps=38.3 tok/s  tokens=187
+  Q: Who is Larry Page?
+  A: Larry Page is an American internet entrepreneur, computer scientist, and one of the co-founders of Google. Born on March...
+[9/200] last=0.3s avg=5.8s/q  cum_tps=38.3 tok/s  tokens=12
+  Q: What are different drawers I should have for clothes?
+  A: Socks, underwear, t-shirts, sweaters
+
+[10/200] last=11.2s avg=6.3s/q  cum_tps=39.3 tok/s  tokens=492
+  Q: I like to host guests at my home from time to time, and I am gathering  recipes ...
+  A: Certainly! Kubdari is a traditional Georgian dish made with minced meat filling inside a dough pastry. Here's a recipe f...
+[11/200] last=4.3s avg=6.1s/q  cum_tps=39.5 tok/s  tokens=182
+  Q: do you think retinoid is effective on removing the acne? because I have a lot of...
+  A: Yes, retinoids can be highly effective in treating acne. Retinoids are a class of vitamin A derivatives that work by inc...
+[12/200] last=12.3s avg=6.6s/q  cum_tps=37.9 tok/s  tokens=359
+  Q: I'm trying to teach myself to have nicer handwriting. Can you help?
+  A: Absolutely! Having nicer handwriting can be achieved through practice and proper techniques. Here are some tips and step...
+[13/200] last=8.7s avg=6.8s/q  cum_tps=38.4 tok/s  tokens=370
+  Q: I like to host guests at my home from time to time, and I am gathering  recipes ...
+  A: Certainly! Canjeero is a popular Somali flatbread that is thin, slightly crispy, and similar to a crepe. It is commonly ...
+[14/200] last=8.6s avg=6.9s/q  cum_tps=38.3 tok/s  tokens=329
+  Q: What are the best exercises for beginners?
+  A: For beginners, it's important to start with exercises that are low-impact, easy to learn, and help build a foundation of...
+[15/200] last=5.7s avg=6.9s/q  cum_tps=38.1 tok/s  tokens=193
+  Q: Do you know why turkeys became the official food of thanksgiving?
+  A: Turkey is the main dish served during the Thanksgiving feast in the United States due to historical and cultural reasons...
+[16/200] last=12.8s avg=7.2s/q  cum_tps=37.7 tok/s  tokens=448
+  Q: I want to get better at networking at work
+  A: Improving your networking skills at work can open up new opportunities, help you build strong relationships, and enhance...
+[17/200] last=8.6s avg=7.3s/q  cum_tps=37.5 tok/s  tokens=300
+  Q: Are there any weird Christmas traditions?
+  A: Yes, there are several quirky and unusual Christmas traditions around the world. Some examples include:
+
+1. La Tomatina ...
+[18/200] last=12.1s avg=7.6s/q  cum_tps=37.3 tok/s  tokens=426
+  Q: Hi, I'm interested in learning to play badminton. Can you explain the game to me...
+  A: Sure, I'd be happy to help! Badminton is a racket sport that can be played both individually against one opponent (singl...
+[19/200] last=3.0s avg=7.3s/q  cum_tps=37.3 tok/s  tokens=101
+  Q: Do you know why cats always rub up against your legs?
+  A: Cats rub up against human legs for a variety of reasons. Some possible explanations include marking territory, showing a...
+[20/200] last=14.0s avg=7.7s/q  cum_tps=37.3 tok/s  tokens=528
+  Q: I am going to try to roast a pig at home for Thanksgiving this year. What equipm...
+  A: To successfully roast a whole pig at home, you will need specialized equipment and a well-thought-out roasting technique...
+[21/200] last=1.9s avg=7.4s/q  cum_tps=37.2 tok/s  tokens=61
+  Q: Help me find a good rated electric saw.
+  A: Sure! To help you find a well-rated electric saw, I'll need some more information. What kind of use are you looking for ...
+[22/200] last=7.2s avg=7.4s/q  cum_tps=37.1 tok/s  tokens=251
+  Q: What are some artists I might like if I like Billy Joel?
+  A: If you enjoy Billy Joel, you might also appreciate artists who share his piano-driven, classic rock/pop sound and heartf...
+[23/200] last=2.1s avg=7.2s/q  cum_tps=37.0 tok/s  tokens=66
+  Q: What type of soil is suitable for cactus?
+  A: Sandy and well-drained soil is generally best for cacti since they need excellent drainage to prevent root rot. A mix of...
+[24/200] last=9.5s avg=7.3s/q  cum_tps=36.8 tok/s  tokens=315
+  Q: How do you become an author?
+  A: Becoming an author involves several key steps and continuous practice:
+
+1. Develop a passion for writing: Start by culti...
+[25/200] last=0.2s avg=7.0s/q  cum_tps=36.8 tok/s  tokens=4
+  Q: What breed dog is smallest?
+  A: Yorkie
+
+[26/200] last=8.0s avg=7.0s/q  cum_tps=36.8 tok/s  tokens=295
+  Q: What are some species of bears that are now extinct?
+  A: There are several species of bears that have gone extinct in recent history or prehistoric times. Some notable examples ...
+[27/200] last=8.0s avg=7.0s/q  cum_tps=36.8 tok/s  tokens=284
+  Q: What causes the northern lights?
+  A: The northern lights, also known as the aurora borealis, are caused by a natural phenomenon resulting from interactions b...
+[28/200] last=8.1s avg=7.1s/q  cum_tps=36.8 tok/s  tokens=300
+  Q: What are some good foods to eat when you are sick? I am looking for something to...
+  A: When you're sick, it's important to eat foods that are easy to digest and provide necessary nutrients for recovery. Here...
+[29/200] last=8.9s avg=7.1s/q  cum_tps=36.6 tok/s  tokens=298
+  Q: Why is kobe beef so damn expensive?
+  A: Kobe beef is expensive due to several factors that contribute to its high price and exclusive nature. Here are some key ...
+[30/200] last=6.0s avg=7.1s/q  cum_tps=36.7 tok/s  tokens=226
+  Q: How do I clean my armpits?
+  A: It's important to maintain good hygiene by regularly washing your body and specifically cleaning your armpits to prevent...
+[31/200] last=3.0s avg=7.0s/q  cum_tps=36.6 tok/s  tokens=104
+  Q: How do I detail a car?
+  A: To detail a car, start by washing and drying it thoroughly to remove dirt and debris. Clean and condition leather or vin...
+[32/200] last=9.1s avg=7.0s/q  cum_tps=37.1 tok/s  tokens=432
+  Q: I am going to make pumpkin pie for the first time.  Can you help me?
+  A: Of course, I'd be happy to help you with your first pumpkin pie! Here are the basic steps and ingredients you will need:...
+[33/200] last=11.8s avg=7.2s/q  cum_tps=37.2 tok/s  tokens=451
+  Q: What kind of foods do they eat in Thailand
+  A: Thai cuisine is renowned for its bold flavors and fresh ingredients, balancing sweet, sour, salty, spicy, and umami tast...
+[34/200] last=10.5s avg=7.3s/q  cum_tps=37.0 tok/s  tokens=351
+  Q: What are some good browser alternatives to Chrome?
+  A: There are several good alternatives to the Google Chrome browser depending on your needs and preferences. Here are a few...
+[35/200] last=0.2s avg=7.1s/q  cum_tps=37.0 tok/s  tokens=9
+  Q: Who created the Superman cartoon character?
+  A: Jerry Siegel and Joe Shuster
+
+[36/200] last=3.4s avg=7.0s/q  cum_tps=37.0 tok/s  tokens=117
+  Q: What is Atlantis?
+  A: Atlantis is a legendary city described by Plato in his dialogues Timaeus and Critias. It is said to have been a powerful...
+[37/200] last=14.2s avg=7.2s/q  cum_tps=36.9 tok/s  tokens=498
+  Q: How do I make escargot?
+  A: Making escargot at home is surprisingly doable with ingredients from most grocery stores or farmers markets. Here's a cl...
+[38/200] last=3.2s avg=7.1s/q  cum_tps=36.8 tok/s  tokens=106
+  Q: What exactly causes volcanoes to form?
+  A: Volcanoes form when hot, molten rock called magma rises through cracks and weaknesses in the Earth's crust and erupts at...
+[39/200] last=9.1s avg=7.1s/q  cum_tps=36.8 tok/s  tokens=331
+  Q: Hi, I have some falafel, but no tahini to put on them. Can you give me a recipe ...
+  A: Certainly! Tahini is a Middle Eastern sesame seed paste made from roasted sesame seeds ground into a smooth, nutty, and ...
+[40/200] last=11.2s avg=7.2s/q  cum_tps=36.6 tok/s  tokens=347
+  Q: Should I get my children a nanny? I'm so exhausted.
+  A: Deciding whether or not to get your children a nanny is a personal choice that depends on several factors, such as your ...
+[41/200] last=3.1s avg=7.1s/q  cum_tps=36.6 tok/s  tokens=114
+  Q: When was Canada colonized?
+  A: The colonization of Canada began in the early 16th century with the arrival of European explorers such as Jacques Cartie...
+[42/200] last=7.2s avg=7.1s/q  cum_tps=36.5 tok/s  tokens=229
+  Q: How can I  use my phone less?
+  A: There are many effective strategies for reducing phone usage and improving digital wellness. Some practical tips include...
+[43/200] last=11.4s avg=7.2s/q  cum_tps=36.3 tok/s  tokens=379
+  Q: How did mankind discover that the earth was spherical, and why did they initiall...
+  A: Mankind's discovery that the Earth was spherical came gradually over several centuries through observations, experiments...
+[44/200] last=3.2s avg=7.1s/q  cum_tps=36.3 tok/s  tokens=108
+  Q: What is Gremolata?
+  A: Gremolata is a traditional Italian sauce or condiment made primarily from finely chopped fresh parsley, garlic, and lemo...
+[45/200] last=12.0s avg=7.2s/q  cum_tps=36.1 tok/s  tokens=362
+  Q: Why did humans evolve to believe in God?
+  A: This is a complex question with many possible answers, depending on the perspective from which it is approached. Here ar...
+[46/200] last=2.6s avg=7.1s/q  cum_tps=36.0 tok/s  tokens=81
+  Q: what should i build a cabin out of?
+  A: Wooden logs or reclaimed barn wood would be ideal for building a cabin out of due to their natural aesthetic and durabil...
+[47/200] last=9.1s avg=7.2s/q  cum_tps=35.9 tok/s  tokens=295
+  Q: Why do a lot of Scientists not believe in God or Satan?
+  A: There isn't a definitive answer to why a large number of scientists may not believe in God or Satan, as personal beliefs...
+[48/200] last=10.0s avg=7.2s/q  cum_tps=36.1 tok/s  tokens=418
+  Q: I like to host guests at my home from time to time, and I am gathering  recipes ...
+  A: Sure, I can help you with that! Mine Frite is a popular Mauritian street food made with thin, crispy noodles fried to pe...
+[49/200] last=3.4s avg=7.2s/q  cum_tps=36.1 tok/s  tokens=106
+  Q: Why can I see the moon during the day?
+  A: You can see the moon during the day because it reflects sunlight and is sufficiently bright to be visible against the da...
+[50/200] last=10.7s avg=7.2s/q  cum_tps=36.0 tok/s  tokens=364
+  Q: How do I take care of a wooden table?
+  A: To care for a wooden table, regular maintenance and appropriate cleaning methods are essential. Here are some tips to he...
+[51/200] last=0.2s avg=7.1s/q  cum_tps=36.0 tok/s  tokens=6
+  Q: What year was the Yamato Battleship built?
+  A: 1940
+
+[52/200] last=2.2s avg=7.0s/q  cum_tps=36.0 tok/s  tokens=74
+  Q: Did they ever announce the release date for the new elder scrolls game?
+  A: Based on the information provided in the image, there is no announcement or date visible related to a new Elder Scrolls ...
+[53/200] last=9.5s avg=7.0s/q  cum_tps=36.1 tok/s  tokens=396
+  Q: I like to host guests at my home from time to time, and I am gathering  recipes ...
+  A: Certainly! Flæskesteg is a traditional Danish pork roast dish that is very popular during holiday seasons and special oc...
+[54/200] last=0.2s avg=6.9s/q  cum_tps=36.1 tok/s  tokens=2
+  Q: Please tell me about the romantic relationship between Julius Caesar and Cleopat...
+  A: 
+
+[55/200] last=4.8s avg=6.9s/q  cum_tps=36.2 tok/s  tokens=210
+  Q: Hi, I'm in the mood for a Bloody Mary. Can you give me a recipe for making one?
+  A: Sure, here's a classic Bloody Mary recipe that you can try at home:
+
+Ingredients:
+- 2 oz vodka
+- 4 oz tomato juice
+- 1 t...
+[56/200] last=9.6s avg=6.9s/q  cum_tps=36.2 tok/s  tokens=329
+  Q: What are some famous world music artists?
+  A: There are numerous world music artists from various cultural backgrounds and regions around the globe. Some prominent fi...
+[57/200] last=7.6s avg=6.9s/q  cum_tps=36.2 tok/s  tokens=275
+  Q: what are some good ways to spread ashes?
+  A: There are several environmentally friendly and respectful ways to spread ashes after cremation. Here are a few popular m...
+[58/200] last=5.3s avg=6.9s/q  cum_tps=36.2 tok/s  tokens=209
+  Q: I like to host guests at my home from time to time, and I am gathering  recipes ...
+  A: Certainly! Here's a Ukrainian-style Okroshka recipe for you and your guests:
+Ingredients:
+- 1000 ml cold kefir or sour m...
+[59/200] last=4.6s avg=6.9s/q  cum_tps=36.3 tok/s  tokens=203
+  Q: I like to host guests at my home from time to time, and I am gathering  recipes ...
+  A: Certainly! Koldskål is a traditional Danish cold soup made with buttermilk, sweetened condensed milk, vanilla, and often...
+[60/200] last=2.8s avg=6.8s/q  cum_tps=36.3 tok/s  tokens=106
+  Q: I've read the book "The Twelve Caesars" by Suetonius, a few times. I'm curious a...
+  A: The Twelve Caesars by Suetonius was written approximately AD 117-121 CE. This period falls within the Roman Empire's Hig...
+[61/200] last=9.7s avg=6.9s/q  cum_tps=36.4 tok/s  tokens=386
+  Q: Please tell me the history of Walt Disney.
+  A: Walter Elias Disney (December 5, 1901 – December 15, 1966) was an American entrepreneur, animator, writer, voice actor, ...
+[62/200] last=9.6s avg=6.9s/q  cum_tps=36.4 tok/s  tokens=362
+  Q: Can you help me figure out how to sew a button on a shirt?
+  A: Sure! Sewing a button onto a shirt is a useful skill to have. Here's a step-by-step guide using a needle and thread:
+
+1....
+[63/200] last=14.3s avg=7.0s/q  cum_tps=36.2 tok/s  tokens=435
+  Q: How did serial killers get away with murder for so long in the 70s and 80s?
+  A: There are several factors that contributed to the difficulty in apprehending serial killers during the 70s and 80s:
+
+1. ...
+[64/200] last=9.1s avg=7.0s/q  cum_tps=36.2 tok/s  tokens=337
+  Q: How do I make apple juice?
+  A: Making fresh apple juice at home is a great way to enjoy a natural and delicious beverage. Follow these steps to make ap...
+[65/200] last=11.1s avg=7.1s/q  cum_tps=36.3 tok/s  tokens=417
+  Q: I like to host guests at my home from time to time, and I am gathering  recipes ...
+  A: Certainly! Israeli Cheese Bourekas are a delicious and popular pastry that combines crispy pastry and creamy cheese fill...
+[66/200] last=6.7s avg=7.1s/q  cum_tps=36.3 tok/s  tokens=273
+  Q: How can I make bubble solution?
+  A: Making bubble solution is easy and can be done at home with common household ingredients. Here are some recipes you can ...
+[67/200] last=9.1s avg=7.1s/q  cum_tps=36.4 tok/s  tokens=358
+  Q: How to make frosting with crisco
+  A: Frosting made with Crisco is a type of creamed shortening frosting, which is popular for being light and fluffy. Here's ...
+[68/200] last=8.6s avg=7.2s/q  cum_tps=36.5 tok/s  tokens=357
+  Q: I like to host guests at my home from time to time, and I am gathering  recipes ...
+  A: Certainly! Tunisian Kammounia is a delicious and aromatic Tunisian lamb stew flavored with cumin, tomatoes, and other sp...
+[69/200] last=2.6s avg=7.1s/q  cum_tps=36.5 tok/s  tokens=92
+  Q: I want to learn more about airplanes. How were they created?
+  A: The Wright Brothers created the first successful powered and controlled airplane on December 17, 1903. The Wright Flyer ...
+[70/200] last=5.0s avg=7.1s/q  cum_tps=36.5 tok/s  tokens=208
+  Q: Can you tell me a very easy to way clean a showerhead?
+  A: Sure, one easy way to clean a showerhead is by using a vinegar and water solution. Here's a step-by-step guide:
+
+1. Turn...
+[71/200] last=1.4s avg=7.0s/q  cum_tps=36.6 tok/s  tokens=66
+  Q: Please give me a list of planets in our solar system.  I am going to choose whic...
+  A: Sure, here's a list of the planets in our solar system:
+
+1. Mercury
+2. Venus
+3. Earth
+4. Mars
+5. Jupiter
+6. Saturn
+7. Ur...
+[72/200] last=0.1s avg=6.9s/q  cum_tps=36.6 tok/s  tokens=5
+  Q: Who was the first lead vocal for the rock band Starship?
+  A: Grace Slick
+
+[73/200] last=5.9s avg=6.9s/q  cum_tps=36.6 tok/s  tokens=242
+  Q: I need to get my nephew a birthday gift. I'm thinking of giving him a game for h...
+  A: Sure, I can help with that. Recently, several highly-rated and popular games have been released for the Nintendo Switch....
+[74/200] last=8.8s avg=6.9s/q  cum_tps=36.6 tok/s  tokens=313
+  Q: Best way to defrost a refrigerator freezer?
+  A: Defrosting a refrigerator freezer is an essential maintenance task that helps maintain the energy efficiency and optimal...
+[75/200] last=3.1s avg=6.8s/q  cum_tps=36.6 tok/s  tokens=95
+  Q: What are some toys I can buy my kids for imaginative play?
+  A: There are a variety of toys designed for imaginative play that can foster creativity and cognitive skills in children. S...
+[76/200] last=8.8s avg=6.9s/q  cum_tps=36.6 tok/s  tokens=318
+  Q: How do I know if my house has a water leak?
+  A: There are several signs that can indicate a water leak in your house. Here are some common indicators:
+
+1. Unusual water...
+[77/200] last=12.7s avg=6.9s/q  cum_tps=36.7 tok/s  tokens=537
+  Q: I like to host guests at my home from time to time, and I am gathering  recipes ...
+  A: Absolutely! Here's a recipe for Vitel toné (Vitel Tonné), a classic Uruguayan cold meat dish that's perfect for hosting:...
+[78/200] last=8.0s avg=7.0s/q  cum_tps=36.7 tok/s  tokens=319
+  Q: I like to host guests at my home from time to time, and I am gathering  recipes ...
+  A: Certainly! Opor Ayam is a flavorful Indonesian dish made with chicken simmered in a rich coconut milk-based gravy. Here'...
+[79/200] last=7.2s avg=7.0s/q  cum_tps=36.6 tok/s  tokens=211
+  Q: What do the different octane values of gasoline mean?
+  A: Octane numbers measure a fuel's ability to resist premature, or abnormal, combustion during engine operation. This abnor...
+[80/200] last=2.8s avg=6.9s/q  cum_tps=36.6 tok/s  tokens=94
+  Q: How can I fix a leaking roof?
+  A: To fix a leaking roof, first locate the source of the leak by checking the attic or interior for water stains, damp spot...
+[81/200] last=2.7s avg=6.9s/q  cum_tps=36.6 tok/s  tokens=86
+  Q: I have a hard time falling asleep.  Is there any type of music that can help me ...
+  A: Yes, there are certain types of music that can help with falling asleep. Research suggests that slow tempo instrumental ...
+[82/200] last=9.6s avg=6.9s/q  cum_tps=36.6 tok/s  tokens=325
+  Q: What are places to visit in Montgomery, Alabama?
+  A: Montgomery is the capital of Alabama and has a rich history and several interesting places to visit. Here are some popul...
+[83/200] last=15.3s avg=7.0s/q  cum_tps=36.5 tok/s  tokens=547
+  Q: Hi, I've decided to keep a rat as a pet. How do I house, feed, and otherwise car...
+  A: Keeping a rat as a pet can be an incredibly rewarding experience, but it does come with responsibilities. Here's a compr...
+[84/200] last=4.3s avg=7.0s/q  cum_tps=36.5 tok/s  tokens=133
+  Q: How do you get water in the desert?
+  A: There is no easy answer to this question as finding water in the desert can be extremely difficult and time consuming. T...
+[85/200] last=8.8s avg=7.0s/q  cum_tps=36.4 tok/s  tokens=290
+  Q: How do I get better at aiming with my slingshot?
+  A: To improve your aim with a slingshot, consider these techniques:
+
+1. Practice regularly: Consistent practice is key to b...
+[86/200] last=9.1s avg=7.0s/q  cum_tps=36.5 tok/s  tokens=358
+  Q: I like to host guests at my home from time to time, and I am gathering  recipes ...
+  A: Certainly! Here's a recipe for Milanesa de peceto, a popular Argentinian dish. It is similar to traditional milanesa (br...
+[87/200] last=16.1s avg=7.1s/q  cum_tps=36.4 tok/s  tokens=539
+  Q: I have my grandfather's antique fountain pen and a bottle of ink, but have never...
+  A: Refilling your grandfather's antique fountain pen can be a wonderful way to honor and continue the legacy of a cherished...
+[88/200] last=11.0s avg=7.2s/q  cum_tps=36.5 tok/s  tokens=444
+  Q: Hi, I'd like to play ice hockey. Can you explain how the game works?
+  A: Sure! Ice hockey is a popular team sport played on ice skates on a rectangular ice rink. Here's a brief overview of how ...
+[89/200] last=1.1s avg=7.1s/q  cum_tps=36.5 tok/s  tokens=35
+  Q: What is kevlar made out of?
+  A: Kevlar is made out of synthetic organic polymers. Specifically, it is a para-aramid synthetic fiber, made from long-chai...
+[90/200] last=15.9s avg=7.2s/q  cum_tps=36.4 tok/s  tokens=523
+  Q: Hi, I'd like to learn how to play racquetball. Can you explain the game to me?
+  A: Certainly! Racquetball is a racket sport played inside a four-walled court with a hollow rubber ball. It's similar to te...
+[91/200] last=8.9s avg=7.2s/q  cum_tps=36.4 tok/s  tokens=332
+  Q: What are some  good books to buy for a sci fi fan?
+  A: Here are ten highly regarded science fiction books that are widely considered must-reads for fans of the genre, spanning...
+[92/200] last=1.5s avg=7.1s/q  cum_tps=36.4 tok/s  tokens=53
+  Q: When were smart phones first made?
+  A: The first smart phones were made by IBM in 1994 for use by business customers. However, they were expensive and not wide...
+[93/200] last=14.4s avg=7.2s/q  cum_tps=36.5 tok/s  tokens=585
+  Q: Hi, I'd like to learn to bake challah. Can you give me a recipe for that?
+  A: Sure! Here's a classic challah recipe that you can try at home:
+
+Ingredients:
+- 4 ½ cups all-purpose flour
+- 1 ½ cups wa...
+[94/200] last=3.5s avg=7.2s/q  cum_tps=36.4 tok/s  tokens=105
+  Q: Did Facebook corporation change its name?
+  A: Yes, Facebook parent company Meta Platforms Inc., formerly Facebook Inc. has changed its name. Meta Platforms was offici...
+[95/200] last=10.5s avg=7.2s/q  cum_tps=36.4 tok/s  tokens=365
+  Q: I like to host guests at my home from time to time, and I am gathering  recipes ...
+  A: Certainly! Tong Sui is a traditional Hong Kong dessert that translates to "sweet soup" in Chinese. It's a light, sweet, ...
+[96/200] last=14.6s avg=7.3s/q  cum_tps=36.3 tok/s  tokens=461
+  Q: I want to start saving some money by growing my own food. Can I do this during t...
+  A: Yes, you can grow certain crops indoors during the winter, allowing you to save money on fresh produce even when outdoor...
+[97/200] last=11.8s avg=7.3s/q  cum_tps=36.2 tok/s  tokens=348
+  Q: How can I spice things up in the bedroom?
+  A: Spicing things up in the bedroom can involve a variety of approaches to keep intimacy and passion alive in a relationshi...
+[98/200] last=1.0s avg=7.3s/q  cum_tps=36.2 tok/s  tokens=30
+  Q: Is human blood ever any color other than red?
+  A: Short answer: yes
+Explanation: Deoxygenated blood is dark red, almost brown in color. Blue tint is often mistakenly perc...
+[99/200] last=5.2s avg=7.3s/q  cum_tps=36.2 tok/s  tokens=192
+  Q: Please tell me about pearls.  Where are they found?
+  A: Pearls are organic gemstones formed within the soft tissue of certain mollusks, particularly oysters and freshwater muss...
+[100/200] last=3.1s avg=7.2s/q  cum_tps=36.2 tok/s  tokens=117
+  Q: What are some herbs I can dry out?
+  A: There are many herbs you can dry out for use in cooking or tea-making. Some popular options include rosemary, thyme, bas...
+[101/200] last=10.1s avg=7.2s/q  cum_tps=36.2 tok/s  tokens=371
+  Q: I like to host guests at my home from time to time, and I am gathering  recipes ...
+  A: Sure, I'd be happy to help you with that. Here's a recipe for Tahu Gejrot Cirebon, an Indonesian street food dish from t...
+[102/200] last=2.8s avg=7.2s/q  cum_tps=36.2 tok/s  tokens=82
+  Q: What is a scary Halloween costume idea?
+  A: For a scary Halloween costume, consider dressing as a creepy clown, a haunted house doll, a zombie, or a ghoul. Another ...
+[103/200] last=0.2s avg=7.1s/q  cum_tps=36.2 tok/s  tokens=8
+  Q: Whats the largest star in our galaxy?
+  A: Answer: UY Scuti
+
+[104/200] last=13.7s avg=7.2s/q  cum_tps=36.1 tok/s  tokens=405
+  Q: I'm trying to draw out a hopscotch game on my driveway. Can you walk me through ...
+  A: Absolutely! Drawing a hopscotch game on your driveway is a great way to have fun with kids or stay active outdoors. Here...
+[105/200] last=5.1s avg=7.2s/q  cum_tps=36.2 tok/s  tokens=264
+  Q: Can you tell me how to make chocolate chip cookies?
+  A: Sure! Here's a classic recipe for chocolate chip cookies:
+Ingredients:
+1 cup softened butter
+¾ cup granulated sugar
+¾ cu...
+[106/200] last=2.8s avg=7.1s/q  cum_tps=36.2 tok/s  tokens=113
+  Q: Where is Indonesia?
+  A: Indonesia is located in Southeast Asia. It is an archipelagic country made up of over 17,000 islands, situated between t...
+[107/200] last=0.7s avg=7.1s/q  cum_tps=36.2 tok/s  tokens=27
+  Q: Hi, I need to find the area of a 20 sided die for my math homework. Can you help...
+  A: Sure, I can help you with that. First, please provide the measurements or dimensions of the 20 sided die.
+
+[108/200] last=3.9s avg=7.0s/q  cum_tps=36.2 tok/s  tokens=126
+  Q: I'm trying to learn how to install window blinds.
+  A: Sure, I can help with that. First, you'll need to gather all the materials you will need such as blinds, mounting bracke...
+[109/200] last=11.1s avg=7.1s/q  cum_tps=36.2 tok/s  tokens=394
+  Q: I want to learn more about becoming a CPA. How long does it take to become a CPA...
+  A: Becoming a Certified Public Accountant (CPA) involves meeting educational, examination, and experience requirements set ...
+[110/200] last=1.5s avg=7.0s/q  cum_tps=36.2 tok/s  tokens=58
+  Q: I want to talk about "Smooth",  a song by Rob Thomas.
+  A: Sure, I'd be happy to discuss "Smooth" by Rob Thomas. Released in 1999, it features Santana on the guitar. It won multip...
+[111/200] last=20.3s avg=7.2s/q  cum_tps=35.9 tok/s  tokens=558
+  Q: I'd like you to write me a story in the style of Don Delillo, about a bunch of i...
+  A: Here is a draft of a story in the style of Don Delillo, titled "The Purr-manent Residents" – an allegorical and existent...
+[112/200] last=3.5s avg=7.1s/q  cum_tps=36.0 tok/s  tokens=146
+  Q: I like to host guests at my home from time to time, and I am gathering  recipes ...
+  A: Answer: Sure, here is the recipe for Chola Sandwich:
+
+Ingredients:
+
+- Bread rolls or Bolillo rolls
+
+- Avocado mash
+
+- Sl...
+[113/200] last=2.8s avg=7.1s/q  cum_tps=36.0 tok/s  tokens=110
+  Q: Is it true that the native Australians were really prisoners of England?
+  A: No. Indigenous Australians were not prisoners of England. They are the original inhabitants of the Australian continent,...
+[114/200] last=2.3s avg=7.0s/q  cum_tps=36.0 tok/s  tokens=95
+  Q: What color is the sky
+  A: The color of the sky can vary depending on various factors such as the time of day, weather conditions, and atmospheric ...
+[115/200] last=3.3s avg=7.0s/q  cum_tps=36.0 tok/s  tokens=108
+  Q: Is there a meaning for Christmas wreaths?
+  A: Yes, Christmas wreaths hold symbolic meaning and have been a part of holiday traditions for centuries. Wreaths typically...
+[116/200] last=10.3s avg=7.0s/q  cum_tps=36.1 tok/s  tokens=447
+  Q: I like to host guests at my home from time to time, and I am gathering  recipes ...
+  A: Certainly! Frikadeļu zupa, also known as Latvian meatball soup, is a hearty and delicious traditional Latvian dish. This...
+[117/200] last=10.0s avg=7.1s/q  cum_tps=36.1 tok/s  tokens=421
+  Q: Hi, I'd like to make my own peanut brittle. Can you give me a recipe and cooking...
+  A: Yes, I can certainly help you with that! Here is a classic recipe for peanut brittle.
+
+Ingredients:
+- 1 cup granulated s...
+[118/200] last=11.1s avg=7.1s/q  cum_tps=36.1 tok/s  tokens=378
+  Q: I'm trying to stop my neighbour's cat from coming in to my garden and fighting w...
+  A: It's important to approach this issue with a humane and peaceful solution to ensure the well-being of both cats. Here ar...
+[119/200] last=2.3s avg=7.1s/q  cum_tps=36.1 tok/s  tokens=97
+  Q: does the dinosaurs really exist?
+  A: Yes, dinosaurs really did exist. They were a diverse group of reptiles that lived on Earth for around 165 million years,...
+[120/200] last=8.4s avg=7.1s/q  cum_tps=36.2 tok/s  tokens=360
+  Q: what are some big cat hybrids?
+  A: There are several big cat hybrids, which are created by cross-breeding two different species of big cats. Some well-know...
+[121/200] last=2.6s avg=7.0s/q  cum_tps=36.2 tok/s  tokens=102
+  Q: what is the name of chris tucker first movie
+  A: Chris Tucker's first movie appearance was in Spike Lee's "House Party 2" (1991), although he had a small role. However, ...
+[122/200] last=2.0s avg=7.0s/q  cum_tps=36.2 tok/s  tokens=73
+  Q: How long does it take our eyes to fully adapt to darkness?
+  A: It takes approximately 30 to 45 minutes for our eyes to fully adapt to complete darkness. However, initial adaptation oc...
+[123/200] last=2.1s avg=6.9s/q  cum_tps=36.2 tok/s  tokens=78
+  Q: Has there been any news regarding a potential release date for Starcraft 3?
+  A: Currently, there has been no official announcement or news regarding a potential release date for Starcraft 3. Blizzard ...
+[124/200] last=3.2s avg=6.9s/q  cum_tps=36.2 tok/s  tokens=93
+  Q: How is oil turned into gasoline?
+  A: Crude oil is turned into gasoline and other petroleum products at refineries by distillation and cracking. First, crude ...
+[125/200] last=11.1s avg=7.0s/q  cum_tps=36.2 tok/s  tokens=393
+  Q: Can you give any tips on how to cook a juicy, medium-rare steak?
+  A: Sure, cooking a juicy, medium-rare steak can be achieved with proper techniques and attention to detail. Here are some t...
+[126/200] last=2.5s avg=6.9s/q  cum_tps=36.2 tok/s  tokens=94
+  Q: When was hip hop invented?
+  A: Hip hop emerged in the Bronx, New York during the late 1960s and early 1970s among predominantly African American and La...
+[127/200] last=9.1s avg=6.9s/q  cum_tps=36.1 tok/s  tokens=283
+  Q: Hi, I recently inherited a S&W 1006 and I don't even know how to load it. Can yo...
+  A: First and foremost, always ensure safety by keeping the muzzle pointed in a safe direction and finger off the trigger un...
+[128/200] last=2.0s avg=6.9s/q  cum_tps=36.1 tok/s  tokens=70
+  Q: My friend's dog just died and they're really sad. How do I comfort them?
+  A: This is a really tough situation. First and foremost, listen to your friend and be present for them. Validate their feel...
+[129/200] last=0.1s avg=6.8s/q  cum_tps=36.1 tok/s  tokens=3
+  Q: Is the US border open to Canada?
+  A: No
+
+[130/200] last=5.3s avg=6.8s/q  cum_tps=36.1 tok/s  tokens=219
+  Q: Can you list the top 20 films or movies between 1930 and 1940 that are in Englis...
+  A: Sure, here are 20 English-language films from the United States that entered the public domain between 1930 and 1940:
+1....
+[131/200] last=14.3s avg=6.9s/q  cum_tps=36.1 tok/s  tokens=438
+  Q: Take MLK speech "I had a dream" but turn it into a top 100 rap song
+  A: Here’s a rap version of Martin Luther King Jr.’s iconic "I Had a Dream" speech, transformed into a contemporary hip-hop ...
+[132/200] last=1.9s avg=6.9s/q  cum_tps=36.1 tok/s  tokens=94
+  Q: List the layers of the TCP/IP model and for each layer identify one protocol.
+  A: 1. Application Layer: Protocol - HTTP (Hypertext Transfer Protocol)
+2. Transport Layer: Protocol - TCP (Transmission Con...
+[133/200] last=7.8s avg=6.9s/q  cum_tps=36.1 tok/s  tokens=257
+  Q: Why can't bank use cash as capital as a buffer for potential losses?
+  A: Banks cannot use cash as capital as a buffer for potential losses for several reasons:
+
+1. Regulatory requirements: Fina...
+[134/200] last=14.4s avg=6.9s/q  cum_tps=36.3 tok/s  tokens=727
+  Q: convert December 21 · 1:00 – 1:50pm pacific to asia/taipei time
+  A: To convert 1:00 – 1:50 PM Pacific Time to Asia/Taipei time, you need to account for the time difference between the two ...
+[135/200] last=12.3s avg=7.0s/q  cum_tps=36.2 tok/s  tokens=363
+  Q: Can you tell my a story about nuclear physics like dr Seuss?
+  A: Once upon a time, in a far-flung land called Atomsville,
+Lived tiny particles, bustling and lively,
+Protons, neutrons, a...
+[136/200] last=2.5s avg=6.9s/q  cum_tps=36.2 tok/s  tokens=90
+  Q: Message to client for accepting offer for summary video
+  A: Dear [Client's Name],
+Thank you for your prompt response to our recent offer. We are delighted to accept your offer for ...
+[137/200] last=15.8s avg=7.0s/q  cum_tps=36.1 tok/s  tokens=453
+  Q: Can you write a short story where Hildibrand Manderville somehow gets transforme...
+  A: Title: The Grey Gentleman's Quest
+
+Chapter 1: The Unexpected Transformation
+
+Hildibrand Manderville, ever the gentleman ...
+[138/200] last=15.6s avg=7.0s/q  cum_tps=36.0 tok/s  tokens=457
+  Q: I'm currently studying Bioengineering in Argentina, focusing on computational ne...
+  A: Congratulations on your upcoming graduation! Studying Bioengineering with a focus on computational neuroscience is a fas...
+[139/200] last=25.7s avg=7.2s/q  cum_tps=35.7 tok/s  tokens=724
+  Q: Write an interview between a Female Film director and a journalist. Use advanced...
+  A: assistant
+**Interview: Breaking Barriers – A Dialogue with Elena Voss, Award-Winning Director**
+
+**Journalist:** Elena, ...
+[140/200] last=14.9s avg=7.2s/q  cum_tps=35.7 tok/s  tokens=530
+  Q: Give me a sample 5 day itienary for a switzerland holiday, starting from Basel
+  A: Here's a sample 5-day itinerary for a Switzerland holiday starting from Basel:
+
+Day 1: Basel and its surrounding areas
+
+...
+[141/200] last=14.5s avg=7.3s/q  cum_tps=35.7 tok/s  tokens=450
+  Q: explain The Death of Ivan Ilych
+  A: 
+assistant
+"The Death of Ivan Ilych" is a novella written by Russian author Leo Tolstoy and published in 1886. The story...
+[142/200] last=11.0s avg=7.3s/q  cum_tps=35.6 tok/s  tokens=356
+  Q: Why is it that only proteins, carbohydrates and fats are deemed to have caloric ...
+  A: Short answer: because vitamins/minerals/electrolytes cannot be oxidized for energy. Calories on food labels measure ener...
+[143/200] last=6.2s avg=7.3s/q  cum_tps=35.6 tok/s  tokens=212
+  Q: Navina has $30 more to her weekly budget than her younger sister and can afford ...
+  A: Let’s break down the problem step by step.
+
+1. Navina has $30 more than her younger sister.
+2. Both of them have enough ...
+[144/200] last=10.8s avg=7.3s/q  cum_tps=35.6 tok/s  tokens=321
+  Q: rank the following companies by how pro-consumer they are:
+Microsoft, Google, Ni...
+  A: 
+
+
+Ranking companies by how pro-consumer they are is subjective and can vary depending on the metrics used (e.g., pricin...
+[145/200] last=0.1s avg=7.3s/q  cum_tps=35.6 tok/s  tokens=1
+  Q: Anytown Bank obtaining and using consumer reports in connection with any credit ...
+  A: 
+[146/200] last=12.1s avg=7.3s/q  cum_tps=35.5 tok/s  tokens=396
+  Q: I’m planning to visit Okinawa Japan from April 7th to April 10th. Do you have an...
+  A: Ok! April is the cherry blossom season in Japan, including Okinawa. It will be a beautiful time to visit Okinawa as you'...
+[147/200] last=8.1s avg=7.3s/q  cum_tps=35.5 tok/s  tokens=243
+  Q: I have this text: <br><br>We use professional processes. Use the photo delivery ...
+  A: 
+---
+
+Our Journey: Crafting Memories, One Image at a Time<br><br>In the early 2000s, a passion for preserving precious m...
+[148/200] last=8.4s avg=7.3s/q  cum_tps=35.5 tok/s  tokens=263
+  Q: define a new language that contains words that are with numbers and letters such...
+  A: Sure! I'll create a fictional language called "Numblish." This language incorporates numbers and letters into a unique l...
+[149/200] last=37.4s avg=7.5s/q  cum_tps=35.2 tok/s  tokens=1015
+  Q: Write me a 2000 word essay on a water safety engineering project.
+  A: Title: Design and Implementation of an Automated Water Safety System for Coastal Communities
+
+Abstract:
+This essay prese...
+[150/200] last=3.5s avg=7.5s/q  cum_tps=35.2 tok/s  tokens=158
+  Q: Marie is at the music store for a store day. She bought two $50 combos. Then, fo...
+  A: First, Marie bought two $50 combos, which cost 2 x $50 = $100.
+Then, she bought two t-shirts for $5 each, which cost 2 x...
+[151/200] last=4.5s avg=7.5s/q  cum_tps=35.2 tok/s  tokens=191
+  Q: Mick pays his teacher $800 for 40 lessons worth 2 hours each. If this will be al...
+  A: First, Mick paid a total of $800 for 40 lessons. Each lesson is worth 2 hours, so 40 lessons * 2 hours = 80 hours of tea...
+[152/200] last=19.9s avg=7.6s/q  cum_tps=35.1 tok/s  tokens=549
+  Q: How to improve instance segmentation AP metrics with human knowledge
+  A: Instance segmentation is a computer vision task that combines object detection and semantic segmentation, identifying in...
+[153/200] last=9.0s avg=7.6s/q  cum_tps=35.1 tok/s  tokens=321
+  Q: what is needed for self-sufficient living spaces
+  A: Creating self-sufficient living spaces involves designing environments that minimize reliance on external resources and ...
+[154/200] last=0.8s avg=7.5s/q  cum_tps=35.1 tok/s  tokens=41
+  Q: please act like a business consultant that is doing a project of estimating the ...
+  A: 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[155/200] last=0.1s avg=7.5s/q  cum_tps=35.1 tok/s  tokens=2
+  Q: Expand on the relation between inconsistency and ideological thinking
+  A: 
+
+[156/200] last=4.3s avg=7.5s/q  cum_tps=35.1 tok/s  tokens=141
+  Q: Why do people give Reddit Gold to admins?
+  A: People give Reddit Gold to admins primarily as a way to express gratitude, appreciation, and support for their work in m...
+[157/200] last=11.7s avg=7.5s/q  cum_tps=35.1 tok/s  tokens=438
+  Q: Create an Annotated Bibliography, in APA citation style, with six entries descri...
+  A: Here is an annotated bibliography in APA citation style with six entries, each describing a different social media techn...
+[158/200] last=3.8s avg=7.5s/q  cum_tps=35.1 tok/s  tokens=116
+  Q: What does Nassim Nicholas Taleb say about market efficiency?
+  A: Nassim Nicholas Taleb argues that financial markets are not fully efficient and that this inefficiency can be exploited ...
+[159/200] last=16.5s avg=7.5s/q  cum_tps=35.1 tok/s  tokens=608
+  Q: Can a boy and girl be just be best friends only ever
+
+  A: Whether a boy and a girl can "just" be best friends—meaning strictly platonically forever, with no romantic evolution—is...
+[160/200] last=0.2s avg=7.5s/q  cum_tps=35.1 tok/s  tokens=3
+  Q: If a tree is on the top of a mountain and the mountain is far from the see then ...
+  A: No
+
+[161/200] last=10.4s avg=7.5s/q  cum_tps=35.1 tok/s  tokens=343
+  Q: hat would be the reason for the popularity of youtube compared to other video sh...
+  A: There are several reasons for the popularity of YouTube compared to other video-sharing websites. Here are some key fact...
+[162/200] last=0.9s avg=7.5s/q  cum_tps=35.1 tok/s  tokens=31
+  Q: Tell me something I don’t know
+  A: Did you know that honey never spoils and can last indefinitely if properly stored? Archaeologists have even found edible...
+[163/200] last=15.1s avg=7.5s/q  cum_tps=35.1 tok/s  tokens=458
+  Q: You are a script-writer. Write a script for the opening scene of a Miami-based d...
+  A: Here's a script for the opening scene of the Miami-based dark comedy show, titled "Beefy's Beach Club":
+INT. BEEFY'S BEA...
+[164/200] last=4.0s avg=7.5s/q  cum_tps=35.1 tok/s  tokens=140
+  Q: Do you know something about the book  ＂the art of thinking clearly" wrote by Rol...
+  A: Yes, I'm familiar with Rolf Dobelli's book "The Art of Thinking Clearly." Published in 2011, this book is a collection o...
+[165/200] last=0.3s avg=7.4s/q  cum_tps=35.1 tok/s  tokens=9
+  Q: antennas that transmit an equal amount of energy in the horizontal direction are...
+  A: Answer: Omnidirectional antennas.
+
+[166/200] last=2.9s avg=7.4s/q  cum_tps=35.1 tok/s  tokens=105
+  Q: write an introduction of a person for resume who worked as an in-house IT for 18...
+  A: Here's an example of a resume introduction for this individual:
+
+Results-oriented IT professional with 18 years of exper...
+[167/200] last=2.0s avg=7.4s/q  cum_tps=35.0 tok/s  tokens=55
+  Q: Hi, I have a question about MFCC (mel frequency cepstral coefficients). Are they...
+  A: Short answer: MFCC is derived from a MEL-spectrogram. A mel-spectrogram is the magnitude of a mel-frequency filtered sho...
+[168/200] last=0.2s avg=7.3s/q  cum_tps=35.0 tok/s  tokens=6
+  Q: who was the black cabinet member who went on to play an important role in the ci...
+  A: Robert C. Weaver
+
+[169/200] last=0.3s avg=7.3s/q  cum_tps=35.0 tok/s  tokens=10
+  Q: “One One was a race horse Two Two was one too. One One won one race. Two Two won...
+  A: There are two horses in this story.
+
+[170/200] last=0.8s avg=7.3s/q  cum_tps=35.0 tok/s  tokens=19
+  Q: Over two thousand years, the moon has covered every point on the Earth once. At ...
+  A: Answer: 0.004 degrees or about 444 meters.
+
+[171/200] last=6.2s avg=7.3s/q  cum_tps=35.1 tok/s  tokens=268
+  Q: twenty names of famous horses and who they belonged to
+  A: 1. Secretariat - Owned by Penny Chenery
+2. Man o' War - Owned by Samuel Riddle
+3. Zenyatta - Owned by Jerry and Ann Moss...
+[172/200] last=19.0s avg=7.3s/q  cum_tps=35.0 tok/s  tokens=565
+  Q: Write an interesting and detailed backstory for my half-elf ranger character for...
+  A: 
+
+
+
+
+**The Whispering Thicket: A Backstory for Your Half-Elf Ranger**
+
+In the shadow of the mist-shrouded peaks of the T...
+[173/200] last=1.5s avg=7.3s/q  cum_tps=35.0 tok/s  tokens=68
+  Q: In this math problem, we are asked to figure out the percentage of total profits...
+  A: To answer this question, we need to add up the percentages and divide by 4: 90 + 92 + 81 + 88 = 351. 351 / 4 = 87.75%.
+S...
+[174/200] last=2.6s avg=7.3s/q  cum_tps=35.0 tok/s  tokens=78
+  Q: Why is it a bad idea to give a mouse a cookie?
+  A: Short answer: mice are rodents, and rodents are generally not known for appreciating cookies as treats. In fact, feeding...
+[175/200] last=0.9s avg=7.2s/q  cum_tps=35.0 tok/s  tokens=25
+  Q: which second messenger molecule acts on the endoplasmic reticulum to release cal...
+  A: Answer :  IP3. Explanation: IP3 binds to receptor channel protein, opening the channel and releasing calcium.
+
+[176/200] last=14.5s avg=7.3s/q  cum_tps=35.0 tok/s  tokens=471
+  Q: How can anti-deressants make people think or act suicidally? Suicidal thoughts o...
+  A: I appreciate you reaching out with this important and sensitive question. First, it's essential to emphasize that if you...
+[177/200] last=12.0s avg=7.3s/q  cum_tps=35.0 tok/s  tokens=434
+  Q: Create a lesson plan in two different levels: in CEFR A1 and A2 on the topic of ...
+  A: ### Lesson Plan: Friendship - CEFR A1 & A2 Levels
+
+#### Lesson 1: A1 Level (Basic)
+
+**Duration**: 45 minutes
+
+**Objectiv...
+[178/200] last=12.7s avg=7.3s/q  cum_tps=34.9 tok/s  tokens=411
+  Q: Draft a ministerial speech outlining the top five benefits that innovation bring...
+  A: **Speech by the Hon. Minister for Industry, Science and Energy**
+
+Good morning, distinguished guests, industry leaders, ...
+[179/200] last=5.6s avg=7.3s/q  cum_tps=34.9 tok/s  tokens=200
+  Q: Is online casino legal in India?
+  A: Online casino is not explicitly legal or illegal in India. The legal status of online gambling in India is a complex and...
+[180/200] last=10.9s avg=7.3s/q  cum_tps=34.9 tok/s  tokens=334
+  Q: Write a section for an award application detailing how photography has insipired...
+  A: Section: Inspiring Power of Photography
+
+Photography is an art form that transcends mere visual representation, delving ...
+[181/200] last=3.7s avg=7.3s/q  cum_tps=35.0 tok/s  tokens=204
+  Q: I want to eventually become a plant/manufacturing/production manager, and eventu...
+  A: 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+...
+[182/200] last=6.3s avg=7.3s/q  cum_tps=35.0 tok/s  tokens=257
+  Q: explain the basics of area and perimeter
+  A: Area and perimeter are fundamental concepts in geometry that help us understand and measure the space occupied by and th...
+[183/200] last=19.4s avg=7.4s/q  cum_tps=34.9 tok/s  tokens=563
+  Q: Write a story about Anakin Skywalker encountering a Jedi who speaks and acts lik...
+  A: 
+Title: The Aristocrat's Dilemma
+In a remote corner of the galaxy, Anakin Skywalker stumbled upon a peculiar Jedi named ...
+[184/200] last=8.6s avg=7.4s/q  cum_tps=34.9 tok/s  tokens=246
+  Q: what are the possible performance issues in a learning program on cross cultural...
+  A: When a learning program on cross-cultural communication doesn't deliver the desired outcomes, it can lead to misundersta...
+[185/200] last=6.6s avg=7.4s/q  cum_tps=34.9 tok/s  tokens=207
+  Q: write description for 925 sterling silver miami cuban link chain
+  A: Here's a description for a 925 sterling silver Miami Cuban link chain:
+
+Experience elegance and timeless style with this...
+[186/200] last=7.2s avg=7.4s/q  cum_tps=34.9 tok/s  tokens=330
+  Q: cost of fuel for a 14 mile journey in a car with 48mpg, fuel costs 625 pence per...
+  A: To calculate the cost of fuel for a 14-mile journey in a car with 48 miles per gallon (mpg), fuel costs 625 pence per ga...
+[187/200] last=0.1s avg=7.3s/q  cum_tps=34.9 tok/s  tokens=1
+  Q: How does money go from my pocket, through the stock market, and to support the b...
+  A: 
+[188/200] last=10.0s avg=7.4s/q  cum_tps=34.9 tok/s  tokens=329
+  Q: Can you provide a list of health food brands owned by Hispanic founders
+  A: Here is a list of health food brands owned by Hispanic founders:
+1. Ynati - Founded by Maria Elena Ayala in 1999, Ynati ...
+[189/200] last=53.6s avg=7.6s/q  cum_tps=34.7 tok/s  tokens=1542
+  Q: 63-year-old male with diabetes for seven to eight years (BbA1c consistently betw...
+  A: Disclaimer: I am an AI and cannot replace professional medical advice. Please consult your nephrologist or endocrinologi...
+[190/200] last=6.6s avg=7.6s/q  cum_tps=34.6 tok/s  tokens=201
+  Q: What if people only valued and took pride in the things that were true about the...
+  A: If people only valued and took pride in things that were truly true about themselves, it could lead to a more authentic ...
+[191/200] last=0.2s avg=7.6s/q  cum_tps=34.6 tok/s  tokens=4
+  Q: It's officially 2023, and as we enter a brand new year, what better time to set ...
+  A: Peak Performance
+
+[192/200] last=9.5s avg=7.6s/q  cum_tps=34.6 tok/s  tokens=316
+  Q: I need to learn English could you help me and make a exercise
+  A: Absolutely, I can help you practice English! Below is a simple exercise to improve your vocabulary and sentence structur...
+[193/200] last=3.4s avg=7.5s/q  cum_tps=34.6 tok/s  tokens=110
+  Q: Why does warmth make you feel tired?
+  A: Warmth can make you feel tired because it affects your body's physiological responses and the way you perceive energy le...
+[194/200] last=12.1s avg=7.6s/q  cum_tps=34.6 tok/s  tokens=351
+  Q: write an article informing customer of my saas software that this currently is  ...
+  A: Here is an article to inform your customers about the current beta version of your SaaS software and your efforts to imp...
+[195/200] last=11.4s avg=7.6s/q  cum_tps=34.6 tok/s  tokens=387
+  Q: Explain me the Finite Elemente Method
+  A: Here's a step-by-step explanation of the Finite Element Method (FEM) with examples and a simple analogy to help you unde...
+[196/200] last=0.3s avg=7.5s/q  cum_tps=34.6 tok/s  tokens=11
+  Q: I've put a plate on top of an apple, and take the plate from kitchen to dinning ...
+  A: The apple is now in the dining room.
+
+[197/200] last=11.8s avg=7.6s/q  cum_tps=34.6 tok/s  tokens=393
+  Q: Introduce the ”financial markets and institutions“ by Frederic S. Mishkin
+  A: Frederic S. Mishkin's "Financial Markets and Institutions" is a widely recognized textbook that provides a comprehensive...
+[198/200] last=5.0s avg=7.6s/q  cum_tps=34.6 tok/s  tokens=161
+  Q: when are hops added to the brewing process?
+  A: Hops are added at specific stages during the brewing process to achieve different flavors and aromas. Here are a few com...
+[199/200] last=3.5s avg=7.5s/q  cum_tps=34.6 tok/s  tokens=127
+  Q: Can a Liebherr LTM 11200-9.1 hypothetically lift Mount everest
+  A: No, a Liebherr LTM 11200-9.1 crawler crane, despite being the world's most powerful mobile crane, cannot hypothetically ...
+[200/200] last=0.2s avg=7.5s/q  cum_tps=34.6 tok/s  tokens=4
+  Q: Write "Test"
+  A: Test.
+
+
+=== summary ===
+  saved 200 results to exp/alpaca-0gm35b-b2-inproc-20260609/alpaca_0gm35b_b2_sia_20260609_073834.json
+  errors: 0
+  total tokens: 51830
+  total wall time: 1500s (25.0 min)
+  throughput: 34.6 tok/s

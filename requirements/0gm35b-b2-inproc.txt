@@ -1,0 +1,38 @@
+# Configuration: 0GM-1.0-35B-A3B as main LLM, b2 inproc (fast path).
+# Validated 2026-06-09: vllm 0.18.0 is the sweet spot for 0GM-35B b2 inproc:
+#   - 0.18.0 supports Qwen3_5MoeForConditionalGeneration (not in 0.17.x)
+#   - 0.18.0 PIECEWISE is still AOT capture (no runtime cudagraph flag conflict)
+#   - SIA_RM_CUDAGRAPH=none required (eager RM, no cudagraph):
+#       RM's PIECEWISE creates new batch_descriptors at inference time due to
+#       prefix caching, which would try to capture new graphs post-startup but
+#       capturing is disabled. Eager avoids this entirely.
+#   - 0.19 PIECEWISE became per-piece runtime trigger → 100% RM error (all
+#       configurations tested, all fail). See doc/0gm-35b-sia-rm-inproc-path-*.md
+#
+# Measured performance (2026-06-09, H200, llm_gpu_mem=0.55, rm_gpu_mem=0.15):
+#   noSIA: ~54 tok/s | SIA (entropy_threshold=1.0, ~8% intervention): ~49 tok/s
+#   HTTP-backend SIA (baseline): ~32 tok/s → b2 inproc is ~1.5× faster
+#
+# Install:
+#   python3 -m venv /path/to/venv-0gm35b-b2
+#   source /path/to/venv-0gm35b-b2/bin/activate
+#   pip install -r requirements/0gm35b-b2-inproc.txt
+#   pip install -e .
+#
+# Or run the helper script:
+#   scripts/setup_venv_0gm35b_b2.sh /path/to/venv-0gm35b-b2
+#
+# Launch (b2 inproc — single process):
+#   SIA_LLM_CUDAGRAPH=piecewise SIA_RM_CUDAGRAPH=none \
+#   SIA_RM_MULTIPROCESS=0 \
+#   python src/sia_vllm_server.py --llm <0GM-35B-path> --rm_backend b2 \
+#     --rm_model <VM-merged-path> --rm_b2_gpu_mem 0.15 --llm_gpu_mem 0.55 \
+#     --topk 10 --weight 1.0 --entropy_threshold 1.0 \
+#     --max_model_len 2048 --port 8000
+
+-r base.txt
+
+# ---- vLLM + LLM stack (0.18.0 specifically — see top comment) --------
+vllm==0.18.0
+# torch auto-pulled by vllm wheel (2.10.0+cu128)
+transformers==4.57.6

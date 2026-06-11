@@ -61,6 +61,7 @@ class RMClient:
         cuda_graph_sizes: Optional[list] = None,
         multiprocessing: bool = False,
         llm_tokenizer=None,
+        max_num_batched_tokens: Optional[int] = None,
     ):
         """
         cuda_graph_sizes: optional list of batch sizes to capture in the
@@ -131,22 +132,43 @@ class RMClient:
                   flush=True)
         elif rm_cg_mode == "piecewise":
             compilation_config = {"cudagraph_mode": 1}  # 1 = PIECEWISE
-            print("[RMClient] cudagraph_mode=PIECEWISE (workaround for "
-                  "vllm 0.19 nested vLLM FULL cudagraph conflict)", flush=True)
+            print("[RMClient] cudagraph_mode=PIECEWISE", flush=True)
         elif rm_cg_mode == "full":
             compilation_config = {"cudagraph_mode": 2}  # 2 = FULL
             print("[RMClient] cudagraph_mode=FULL", flush=True)
+
+        # SIA_RM_PREFIX_CACHING=0 disables APC on the RM vLLM instance.
+        # Needed for vllm 0.18.0 + PIECEWISE: APC generates new batch_descriptors
+        # at inference time, triggering RuntimeError in PIECEWISE graph mode.
+        # vllm 0.17.1 (AOT capture) is unaffected — leave at default 1 for VL-30B.
+        rm_apc = os.environ.get("SIA_RM_PREFIX_CACHING", "1").strip() not in ("0", "false", "no")
+        print(f"[RMClient] enable_prefix_caching={rm_apc} (SIA_RM_PREFIX_CACHING="
+              f"{'1' if rm_apc else '0'})", flush=True)
 
         llm_kwargs = dict(
             model=model_path,
             hf_overrides={"architectures": ["Qwen3WithScoreForCausalLM"]},
             dtype="bfloat16",
-            enable_prefix_caching=True,
+            enable_prefix_caching=rm_apc,
             gpu_memory_utilization=gpu_mem,
             max_model_len=max_model_len,
             enforce_eager=enforce_eager,
             disable_log_stats=True,
         )
+        # Prevent chunked-prefill reward count mismatch.
+        # 当 APC 关闭时, 每个候选都需全序列 forward; 10 候选 × max_model_len 可能
+        # 超过 vllm 默认 max_num_batched_tokens=16384, 导致 batch 被拆成多步,
+        # compute_logits 对 partial prefill 序列也写 reward → numel mismatch.
+        # 修复: 设 max_num_batched_tokens ≥ max_model_len × topk.
+        if max_num_batched_tokens is not None:
+            llm_kwargs["max_num_batched_tokens"] = max_num_batched_tokens
+            print(f"[RMClient] max_num_batched_tokens={max_num_batched_tokens} "
+                  f"(caller-specified)", flush=True)
+        elif not rm_apc and not multiprocessing:
+            safe_mbt = max_model_len * 32  # covers topk ≤ 32
+            llm_kwargs["max_num_batched_tokens"] = safe_mbt
+            print(f"[RMClient] APC disabled: max_num_batched_tokens={safe_mbt} "
+                  f"(prevents chunked-prefill reward count mismatch)", flush=True)
         if compilation_config is not None:
             llm_kwargs["compilation_config"] = compilation_config
         if cuda_graph_sizes is not None:
@@ -216,6 +238,29 @@ class RMClient:
         if not multiprocessing:
             clear_inproc_rewards(self._fid)
 
+        # vllm 0.18.0 CUDAGraph 跨实例清除修复:
+        # gpu_model_runner.py 在 profiling 阶段结束时调用
+        # CUDAGraphWrapper.clear_all_graphs(), 它通过类级 WeakSet _all_instances
+        # 清空进程内 ALL CUDAGraphWrapper 的 concrete_cudagraph_entries——包括
+        # RM 的。此后 RM inference 遇任何 batch size 都找不到捕获图, 触发重新
+        # capture → global flag=False → RuntimeError.
+        #
+        # 修复: RM init 完毕后立即把 _all_instances 替换为新空 WeakSet。
+        # 主 LLM 的 wrappers 将注册到新 WeakSet; clear_all_graphs() 只清 RM-free
+        # 的新 WeakSet。RM 的 wrappers 保留 concrete_cudagraph_entries, inference
+        # 时正常 replay。
+        if not multiprocessing and rm_cg_mode in ("piecewise", "full"):
+            try:
+                import weakref
+                from vllm.compilation.cuda_graph import CUDAGraphWrapper
+                n = len(list(CUDAGraphWrapper._all_instances))
+                CUDAGraphWrapper._all_instances = weakref.WeakSet()
+                print(f"[RMClient] Isolated {n} RM CUDAGraphWrapper instances from "
+                      f"global registry (prevents main LLM clear_all_graphs from "
+                      f"clearing RM captured graphs).", flush=True)
+            except (ImportError, AttributeError):
+                pass  # vllm 0.10/0.16/0.17 没有这个问题
+
         # vllm 0.17+ workspace lock 跨实例冲突修复:
         # vllm 在每个 GPUModelRunner 完成 cudagraph capture 后会 lock 全局
         # workspace (gpu_model_runner.py:6040 + workspace.py:58). 因为
@@ -282,19 +327,32 @@ class RMClient:
         if self._cross_tokenizer:
             # P-1: token-id bridge for incompatible tokenizers (e.g. 0GM-35B
             # + VM-Qwen3-4B). Decode the LLM-side prefix + each candidate to
-            # text, then re-encode with the RM tokenizer. BPE is deterministic
-            # on a full string, so this round-trip is consistent (calling it
-            # twice with the same LLM prefix yields the same RM token ids,
-            # so vLLM prefix caching still hits across calls).
+            # text, then re-encode with the RM tokenizer.
+            #
+            # P-2: 稳定前缀优化 — 对前缀文本只编码一次，让 10 个候选共享完全
+            # 相同的 rm_ids 前缀。好处：
+            #   同一步内：所有候选的 prompt_token_ids 前缀完全相同 → vllm APC
+            #     在第一个候选 forward 时缓存 KV，其余 9 个直接命中，每个候选
+            #     实际只 forward 1-3 个 suffix token（候选本身）。
+            #   跨步之间：前缀每步增长 ~1-2 个 RM token，98%+ 的 block 不变
+            #     → APC 跨步几乎全命中，增量 forward 极少。
+            # 近似误差：split 编码与整体编码在 BPE 边界处差 1-2 个 token，
+            # 但 SIA 只看相对排名，边界噪声可忽略。
             prefix_text = self._llm_tok.decode(
                 prefix, skip_special_tokens=False
+            )
+            stable_rm_prefix_ids = self._rm_tok.encode(
+                prefix_text, add_special_tokens=False
             )
             prompts = []
             for c in candidate_token_ids:
                 cand_text = self._llm_tok.decode([c], skip_special_tokens=False)
-                full_text = prefix_text + cand_text
-                rm_ids = self._rm_tok.encode(full_text, add_special_tokens=False)
-                prompts.append(TP(prompt_token_ids=rm_ids))
+                cand_rm_ids = self._rm_tok.encode(
+                    cand_text, add_special_tokens=False
+                )
+                prompts.append(
+                    TP(prompt_token_ids=stable_rm_prefix_ids + cand_rm_ids)
+                )
         else:
             # Zero-overhead path: tokenizer-compatible (Qwen3-14B + VM-Qwen3-4B).
             # X-5: candidate_token_ids comes from SIA processor topk (list[int]),

@@ -1,0 +1,20 @@
+`torch_dtype` is deprecated! Use `dtype` instead!
+loading Skywork RM: /workspace/SIA/models/Skywork-Reward-V2-Llama-3.1-8B
+Loading checkpoint shards:   0%|          | 0/4 [00:00<?, ?it/s]Loading checkpoint shards:  25%|██▌       | 1/4 [00:20<01:00, 20.13s/it]Loading checkpoint shards:  50%|█████     | 2/4 [00:28<00:25, 12.94s/it]Loading checkpoint shards:  75%|███████▌  | 3/4 [00:40<00:12, 12.82s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:40<00:00,  7.81s/it]Loading checkpoint shards: 100%|██████████| 4/4 [00:40<00:00, 10.21s/it]
+RM ready on cuda:0
+scoring 200 samples from exp/alpaca-0gm35b-stable-prefix-20260610/alpaca_0gm35b_stable_prefix_sia_200q.json
+strip_think = True
+  [50/200] scored 50 (skip_err=0 skip_long=0), cur_mean_reward=31.3163
+  [100/200] scored 100 (skip_err=0 skip_long=0), cur_mean_reward=29.8100
+  [150/200] scored 150 (skip_err=0 skip_long=0), cur_mean_reward=29.0331
+  [200/200] scored 200 (skip_err=0 skip_long=0), cur_mean_reward=29.3586
+
+=== summary ===
+  total samples: 200
+  scored: 200
+  skipped (error/empty): 0
+  skipped (too long > 2048): 0
+  mean reward: 29.3586
+  p50: 28.3750
+  min: 3.7188  max: 59.5000
+  saved scored JSON to: exp/alpaca-0gm35b-stable-prefix-20260610/alpaca_0gm35b_stable_prefix_sia_200q_scored.json

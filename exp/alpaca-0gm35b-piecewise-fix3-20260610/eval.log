@@ -1,0 +1,2796 @@
+loaded 805 prompts from data/alpaca_eval/alpaca_eval.json
+base_url    : http://localhost:8000/v1
+model       : 0GM-1.0-35B-A3B-0427
+max_tokens  : 2048
+temperature : 1.0
+top_p / top_k / rep_penalty: None / None / None
+disable_thinking: False
+no_think_prompt : False
+sia_weight / sia_topk / sia_entropy_threshold: None / None / None
+output      : /workspace/git/0g-sparse-inference-alignment/exp/alpaca-0gm35b-piecewise-fix3-20260610/alpaca_0gm35b_piecewise3_sia_20260610.json
+------------------------------------------------------------
+[1/805] last=85.2s avg=85.2s/q  cum_tps=20.2 tok/s  tokens=1721
+  Q: What are the names of some famous actors that started their careers on Broadway?
+  A: Here's a thinking process:
+
+1.  **Understand User Query**: The user is asking for names of famous actors who started the...
+[2/805] last=85.5s avg=85.4s/q  cum_tps=22.0 tok/s  tokens=2030
+  Q: How did US states get their names?
+  A: Here's a thinking process:
+
+1.  **Understand User Question**: The user asks "How did US states get their names?" This is...
+[3/805] last=94.2s avg=88.3s/q  cum_tps=21.7 tok/s  tokens=2004
+  Q: Hi, my sister and her girlfriends want me to play kickball with them. Can you ex...
+  A: Here's a thinking process:
+
+1.  **Analyze User Input:**
+   - **User:** Wants to learn how to play kickball
+   - **Contex...
+[4/805] last=72.2s avg=84.3s/q  cum_tps=23.1 tok/s  tokens=2024
+  Q: What is some cool music from the 1920s?
+  A: Here's a thinking process:
+
+1.  **Understand User Request:**
+   - **Topic:** Music from the 1920s
+   - **Qualifier:** "C...
+[5/805] last=40.5s avg=75.5s/q  cum_tps=24.0 tok/s  tokens=1283
+  Q: How do I wrap a present neatly?
+  A: Here's a thinking process:
+
+1.  **Understand User Request**: The user is asking for instructions on how to wrap a presen...
+[6/805] last=39.5s avg=69.5s/q  cum_tps=24.6 tok/s  tokens=1198
+  Q: How do I dice without slicing my finger
+  A: Here's a thinking process:
+
+1.  **Understand User Query**: The user is asking for techniques/safety tips on how to dice ...
+[7/805] last=20.5s avg=62.5s/q  cum_tps=25.3 tok/s  tokens=832
+  Q: Hi, I'm trying to solve a crossword puzzle, but I've never done one of these bef...
+  A: Here's a thinking process:
+
+1.  **Analyze User Input:**
+   - User is asking for help with a crossword puzzle
+   - They'v...
+[8/805] last=15.0s avg=56.6s/q  cum_tps=26.4 tok/s  tokens=865
+  Q: Who is Larry Page?
+  A: Here's a thinking process:
+
+1.  **Identify the Core Entity**: The user is asking "Who is Larry Page?"
+2.  **Initial Know...
+[9/805] last=91.6s avg=60.5s/q  cum_tps=25.7 tok/s  tokens=2028
+  Q: What are different drawers I should have for clothes?
+  A: Here's a thinking thinking sequence
+
+1.  **Deconstruct the user's request:**
+    *   Topic: Drawers for clothes.
+    *  ...
+[10/805] last=0.8s avg=54.5s/q  cum_tps=25.8 tok/s  tokens=63
+  Q: I like to host guests at my home from time to time, and I am gathering  recipes ...
+  A: Here's a thinking process:
+
+1.  **Understand User Request:**
+   - User wants a recipe for Kubdari
+   - Kubdari is a Geor...
+[11/805] last=40.6s avg=53.2s/q  cum_tps=26.9 tok/s  tokens=1703
+  Q: do you think retinoid is effective on removing the acne? because I have a lot of...
+  A: Here's a thinking process:
+
+1.  **Understand User Query**: The user is asking about the effectiveness of retinoids for a...
+[12/805] last=67.6s avg=54.4s/q  cum_tps=26.6 tok/s  tokens=1626
+  Q: I'm trying to teach myself to have nicer handwriting. Can you help?
+  A: Here's a thinking process:
+
+1.  **Understand User Goal**: The user wants to improve their handwriting and is self-teachi...
+[13/805] last=73.5s avg=55.9s/q  cum_tps=26.6 tok/s  tokens=1988
+  Q: I like to host guests at my home from time to time, and I am gathering  recipes ...
+  A: Here's a thinking process:
+
+1.  **Understand User Request:**
+   - User hosts guests at home occasionally
+   - Wants reci...
+[14/805] last=43.9s avg=55.0s/q  cum_tps=27.4 tok/s  tokens=1752
+  Q: What are the best exercises for beginners?
+  A: Here's a thinking process:
+
+1.  **Understand User Query**: The user is asking for "the best exercises for beginners." Th...
+[15/805] last=29.3s avg=53.3s/q  cum_tps=27.7 tok/s  tokens=1046
+  Q: Do you know why turkeys became the official food of thanksgiving?
+  A: Here's a thinking process:
+
+1.  **Understand User Question**: The user is asking about the historical reasons why turkey...
+[16/805] last=92.4s avg=55.8s/q  cum_tps=27.1 tok/s  tokens=2029
+  Q: I want to get better at networking at work
+  A: Here's a thinking process:
+
+1.  **Understand User Goal**: The user wants to improve their networking skills specifically...
+[17/805] last=70.8s avg=56.6s/q  cum_tps=26.9 tok/s  tokens=1747
+  Q: Are there any weird Christmas traditions?
+  A: Here's a thinking process:
+
+1.  **Understand User Query**: The user is asking about "weird Christmas traditions." They'r...
+[18/805] last=71.3s avg=57.5s/q  cum_tps=26.9 tok/s  tokens=1874
+  Q: Hi, I'm interested in learning to play badminton. Can you explain the game to me...
+  A: Here's a thinking process:
+
+1.  **Understand User Request:**
+   - User wants to learn badminton
+   - Asking for an expla...
+[19/805] last=16.5s avg=55.3s/q  cum_tps=27.3 tok/s  tokens=837
+  Q: Do you know why cats always rub up against your legs?
+  A: Here's a thinking process:
+
+1.  **Understand User Query**: The user is asking why cats rub against human legs. This is a...
+[20/805] last=98.9s avg=57.5s/q  cum_tps=26.7 tok/s  tokens=2008
+  Q: I am going to try to roast a pig at home for Thanksgiving this year. What equipm...
+  A: Here's a thinking process:
+
+1.  **Understand User Goal**: The user wants to roast a whole pig at home for Thanksgiving. ...
+[21/805] last=41.5s avg=56.7s/q  cum_tps=27.0 tok/s  tokens=1516
+  Q: Help me find a good rated electric saw.
+  A: Here's a thinking process:
+
+1.  **Understand User Request:**
+   - User wants a "good rated electric saw"
+   - This is qu...
+[22/805] last=39.8s avg=55.9s/q  cum_tps=27.4 tok/s  tokens=1507
+  Q: What are some artists I might like if I like Billy Joel?
+  A: Here's a thinking process:
+
+1.  **Analyze User Input:**
+   - **User likes:** Billy Joel
+   - **Request:** Artists they m...
+[23/805] last=19.7s avg=54.4s/q  cum_tps=27.8 tok/s  tokens=1052
+  Q: What type of soil is suitable for cactus?
+  A: Here's a thinking process:
+
+1.  **Understand User Query**: The user asks "What type of soil is suitable for cactus?" Thi...
+[24/805] last=86.4s avg=55.7s/q  cum_tps=27.5 tok/s  tokens=1980
+  Q: How do you become an author?
+  A: Here's a thinking process:
+
+1.  **Understand User Query:** The user asks "How do you become an author?" This is a broad,...
+[25/805] last=12.2s avg=54.0s/q  cum_tps=27.8 tok/s  tokens=812
+  Q: What breed dog is smallest?
+  A: Here's a thinking process:
+
+1.  **Understand User Query**: The user asks "What breed dog is smallest?" They want to know...
+[26/805] last=65.5s avg=54.4s/q  cum_tps=28.0 tok/s  tokens=2027
+  Q: What are some species of bears that are now extinct?
+  A: Here's a thinking process:
+
+1.  **Understand User Query**: The user asks for "some species of bears that are now extinct...
+[27/805] last=18.4s avg=53.1s/q  cum_tps=28.3 tok/s  tokens=1043
+  Q: What causes the northern lights?
+  A: Here's a thinking process:
+
+1.  **Understand User Question**: The user asks "What causes the northern lights?" - a strai...
+[28/805] last=64.6s avg=53.5s/q  cum_tps=28.4 tok/s  tokens=1879
+  Q: What are some good foods to eat when you are sick? I am looking for something to...
+  A: Here's a thinking process:
+
+1.  **Understand User Request:**
+   - **Goal:** Find good foods to eat when sick
+   - **Cont...
+[29/805] last=78.6s avg=54.4s/q  cum_tps=28.1 tok/s  tokens=1763
+  Q: Why is kobe beef so damn expensive?
+  A: Here's a thinking process:
+
+1.  **Understand User Question**: The user is asking why Kobe beef is so expensive ("so damn...
+[30/805] last=21.3s avg=53.3s/q  cum_tps=28.4 tok/s  tokens=1117
+  Q: How do I clean my armpits?
+  A: Here's a thinking process:
+
+1.  **Understand User Query**: The user is asking "How do I clean my armpits?" This is a str...
+[31/805] last=72.7s avg=53.9s/q  cum_tps=28.3 tok/s  tokens=1951
+  Q: How do I detail a car?
+  A: Here's a thinking process:
+
+1.  **Understand User Request:** The user is asking "How do I detail a car?" This is a broad...
+[32/805] last=52.9s avg=53.9s/q  cum_tps=28.6 tok/s  tokens=2020
+  Q: I am going to make pumpkin pie for the first time.  Can you help me?
+  A: Here's a thinking process:
+
+1.  **Understand User Request:**
+   - User is making pumpkin pie for the first time
+   - Ask...
+[33/805] last=50.0s avg=53.7s/q  cum_tps=28.7 tok/s  tokens=1625
+  Q: What kind of foods do they eat in Thailand
+  A: Here's a thinking process:
+
+1.  **Understand User Query**: The user asks "What kind of foods do they eat in Thailand". T...
+[34/805] last=64.9s avg=54.1s/q  cum_tps=28.7 tok/s  tokens=1734
+  Q: What are some good browser alternatives to Chrome?
+  A: Here's a thinking process:
+
+1.  **Understand User Query**: The user is asking for "good browser alternatives to Chrome"....
+[35/805] last=5.2s avg=52.7s/q  cum_tps=28.8 tok/s  tokens=439
+  Q: Who created the Superman cartoon character?
+  A: Here's a thinking process:
+
+1.  **Identify the core question**: The user is asking "Who created the Superman cartoon cha...
+[36/805] last=21.7s avg=51.8s/q  cum_tps=29.1 tok/s  tokens=1070
+  Q: What is Atlantis?
+  A: Here's a thinking process:
+
+1.  **Understand User Query**: The user asks "What is Atlantis?" This is a straightforward h...
+[37/805] last=46.2s avg=51.7s/q  cum_tps=29.2 tok/s  tokens=1618
+  Q: How do I make escargot?
+  A: Here's a thinking process:
+
+1.  **Understand User Request:** The user is asking "How do I make escargot?" This is a cook...
+[38/805] last=46.5s avg=51.5s/q  cum_tps=29.4 tok/s  tokens=1809
+  Q: What exactly causes volcanoes to form?
+  A: Here's a thinking process:
+
+1.  **Understand User Question**: The user asks "What exactly causes volcanoes to form?" Thi...
+[39/805] last=46.6s avg=51.4s/q  cum_tps=29.6 tok/s  tokens=1695
+  Q: Hi, I have some falafel, but no tahini to put on them. Can you give me a recipe ...
+  A: Here's a thinking process:
+
+1.  **Understand User Request**: The user has falafel but no tahini sauce to go with it. The...
+[40/805] last=52.6s avg=51.4s/q  cum_tps=29.6 tok/s  tokens=1595
+  Q: Should I get my children a nanny? I'm so exhausted.
+  A: Here's a thinking process:
+
+1.  **Analyze User Input:**
+   - **Question:** "Should I get my children a nanny?"
+   - **Co...
+[41/805] last=26.6s avg=50.8s/q  cum_tps=29.8 tok/s  tokens=1200
+  Q: When was Canada colonized?
+  A: Here's a thinking process:
+
+1.  **Understand the User's Question**: The user asks "When was Canada colonized?" This is a...
+[42/805] last=85.7s avg=51.7s/q  cum_tps=29.6 tok/s  tokens=2025
+  Q: How can I  use my phone less?
+  A: Here's a thinking process:
+
+1.  **Understand User Goal**: The user wants to know how to use their phone less. This is a ...
+[43/805] last=81.7s avg=52.4s/q  cum_tps=29.4 tok/s  tokens=2017
+  Q: How did mankind discover that the earth was spherical, and why did they initiall...
+  A: Here's a thinking process:
+
+1.  **Understand User Question:**
+   - **Part 1:** How did mankind discover that the Earth i...
+[44/805] last=28.3s avg=51.8s/q  cum_tps=29.5 tok/s  tokens=1199
+  Q: What is Gremolata?
+  A: Here's a thinking process:
+
+1.  **Understand User Query**: The user asks "What is Gremolata?" This is a straightforward ...
+[45/805] last=99.1s avg=52.9s/q  cum_tps=29.2 tok/s  tokens=2025
+  Q: Why did humans evolve to believe in God?
+  A: Here's a thinking process:
+
+1.  **Analyze User Question:**
+   - **Question:** "Why did humans evolve to believe in God?"...
+[46/805] last=86.6s avg=53.6s/q  cum_tps=29.0 tok/s  tokens=2029
+  Q: what should i build a cabin out of?
+  A: Here's a thinking process:
+
+1.  **Understand User Query**: The user is asking "what should i build a cabin out of?" This...
+[47/805] last=85.3s avg=54.3s/q  cum_tps=28.8 tok/s  tokens=2025
+  Q: Why do a lot of Scientists not believe in God or Satan?
+  A: Here's a thinking process:
+
+1.  **Analyze User Question:**
+   - **Topic:** Scientists' disbelief in God or Satan
+   - **...
+[48/805] last=61.1s avg=54.4s/q  cum_tps=28.9 tok/s  tokens=1988
+  Q: I like to host guests at my home from time to time, and I am gathering  recipes ...
+  A: Here's a thinking process:
+
+1.  **Analyze User Request:**
+   - **Activity:** Hosting guests at home
+   - **Goal:** Gathe...
+[49/805] last=30.9s avg=53.9s/q  cum_tps=29.0 tok/s  tokens=1322
+  Q: Why can I see the moon during the day?
+  A: Here's a thinking process:
+
+1.  **Understand User Question**: The user asks "Why can I see the moon during the day?" Thi...
+[50/805] last=55.9s avg=54.0s/q  cum_tps=29.1 tok/s  tokens=1757
+  Q: How do I take care of a wooden table?
+  A: Here's a thinking process:
+
+1.  **Understand User Query**: The user is asking "How do I take care of a wooden table?" Th...
+[51/805] last=7.2s avg=53.1s/q  cum_tps=29.2 tok/s  tokens=618
+  Q: What year was the Yamato Battleship built?
+  A: Here's a thinking process:
+
+1.  **Identify the core question**: The user is asking for the year the Yamato Battleship wa...
+[52/805] last=20.5s avg=52.4s/q  cum_tps=29.4 tok/s  tokens=914
+  Q: Did they ever announce the release date for the new elder scrolls game?
+  A: Here's a thinking process:
+
+1.  **Identify the Core Question:** The user is asking about the release date of the "new El...
+[53/805] last=87.8s avg=53.1s/q  cum_tps=29.1 tok/s  tokens=1988
+  Q: I like to host guests at my home from time to time, and I am gathering  recipes ...
+  A: Here's a thinking process:
+
+1.  **Understand User Request:**
+   - User hosts guests occasionally
+   - Wants recipes for ...
+[54/805] last=96.8s avg=53.9s/q  cum_tps=28.8 tok/s  tokens=1929
+  Q: Please tell me about the romantic relationship between Julius Caesar and Cleopat...
+  A: Here's a thinking process:
+
+1.  **Understand User Query**: The user is asking about the romantic relationship between Ju...
+[55/805] last=23.3s avg=53.4s/q  cum_tps=29.0 tok/s  tokens=1043
+  Q: Hi, I'm in the mood for a Bloody Mary. Can you give me a recipe for making one?
+  A: Here's a thinking process:
+
+1.  **Understand User Request**: The user wants a recipe for a Bloody Mary cocktail.
+2.  **I...
+[56/805] last=58.1s avg=53.4s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: What are some famous world music artists?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[57/805] last=0.0s avg=52.5s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: what are some good ways to spread ashes?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[58/805] last=0.0s avg=51.6s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: I like to host guests at my home from time to time, and I am gathering  recipes ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[59/805] last=0.0s avg=50.7s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: I like to host guests at my home from time to time, and I am gathering  recipes ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[60/805] last=0.0s avg=49.9s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: I've read the book "The Twelve Caesars" by Suetonius, a few times. I'm curious a...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[61/805] last=0.0s avg=49.1s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: Please tell me the history of Walt Disney.
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[62/805] last=0.0s avg=48.3s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: Can you help me figure out how to sew a button on a shirt?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[63/805] last=0.0s avg=47.5s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: How did serial killers get away with murder for so long in the 70s and 80s?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[64/805] last=0.0s avg=46.8s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: How do I make apple juice?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[65/805] last=0.0s avg=46.0s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: I like to host guests at my home from time to time, and I am gathering  recipes ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[66/805] last=0.0s avg=45.3s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: How can I make bubble solution?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[67/805] last=0.0s avg=44.7s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: How to make frosting with crisco
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[68/805] last=0.0s avg=44.0s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: I like to host guests at my home from time to time, and I am gathering  recipes ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[69/805] last=0.0s avg=43.4s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: I want to learn more about airplanes. How were they created?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[70/805] last=0.0s avg=42.8s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: Can you tell me a very easy to way clean a showerhead?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[71/805] last=0.0s avg=42.2s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: Please give me a list of planets in our solar system.  I am going to choose whic...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[72/805] last=0.0s avg=41.6s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: Who was the first lead vocal for the rock band Starship?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[73/805] last=0.0s avg=41.0s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: I need to get my nephew a birthday gift. I'm thinking of giving him a game for h...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[74/805] last=0.0s avg=40.4s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: Best way to defrost a refrigerator freezer?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[75/805] last=0.0s avg=39.9s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: What are some toys I can buy my kids for imaginative play?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[76/805] last=0.0s avg=39.4s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: How do I know if my house has a water leak?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[77/805] last=0.0s avg=38.9s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: I like to host guests at my home from time to time, and I am gathering  recipes ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[78/805] last=0.0s avg=38.4s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: I like to host guests at my home from time to time, and I am gathering  recipes ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[79/805] last=0.0s avg=37.9s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: What do the different octane values of gasoline mean?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[80/805] last=0.0s avg=37.4s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: How can I fix a leaking roof?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[81/805] last=0.0s avg=37.0s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: I have a hard time falling asleep.  Is there any type of music that can help me ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[82/805] last=0.0s avg=36.5s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: What are places to visit in Montgomery, Alabama?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[83/805] last=0.0s avg=36.1s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: Hi, I've decided to keep a rat as a pet. How do I house, feed, and otherwise car...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[84/805] last=0.0s avg=35.6s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: How do you get water in the desert?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[85/805] last=0.0s avg=35.2s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: How do I get better at aiming with my slingshot?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[86/805] last=0.0s avg=34.8s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: I like to host guests at my home from time to time, and I am gathering  recipes ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[87/805] last=0.0s avg=34.4s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: I have my grandfather's antique fountain pen and a bottle of ink, but have never...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[88/805] last=0.0s avg=34.0s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: Hi, I'd like to play ice hockey. Can you explain how the game works?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[89/805] last=0.0s avg=33.6s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: What is kevlar made out of?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[90/805] last=0.0s avg=33.3s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: Hi, I'd like to learn how to play racquetball. Can you explain the game to me?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[91/805] last=0.0s avg=32.9s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: What are some  good books to buy for a sci fi fan?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[92/805] last=0.0s avg=32.5s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: When were smart phones first made?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[93/805] last=0.0s avg=32.2s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: Hi, I'd like to learn to bake challah. Can you give me a recipe for that?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[94/805] last=0.0s avg=31.8s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: Did Facebook corporation change its name?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[95/805] last=0.0s avg=31.5s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: I like to host guests at my home from time to time, and I am gathering  recipes ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[96/805] last=0.0s avg=31.2s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: I want to start saving some money by growing my own food. Can I do this during t...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[97/805] last=0.0s avg=30.9s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: How can I spice things up in the bedroom?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[98/805] last=0.0s avg=30.5s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: Is human blood ever any color other than red?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[99/805] last=0.0s avg=30.2s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: Please tell me about pearls.  Where are they found?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[100/805] last=0.0s avg=29.9s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: What are some herbs I can dry out?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[101/805] last=0.0s avg=29.6s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: I like to host guests at my home from time to time, and I am gathering  recipes ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[102/805] last=0.0s avg=29.3s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: What is a scary Halloween costume idea?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[103/805] last=0.0s avg=29.1s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: Whats the largest star in our galaxy?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[104/805] last=0.0s avg=28.8s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: I'm trying to draw out a hopscotch game on my driveway. Can you walk me through ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[105/805] last=0.0s avg=28.5s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: Can you tell me how to make chocolate chip cookies?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[106/805] last=0.0s avg=28.2s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: Where is Indonesia?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[107/805] last=0.0s avg=28.0s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: Hi, I need to find the area of a 20 sided die for my math homework. Can you help...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[108/805] last=0.0s avg=27.7s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: I'm trying to learn how to install window blinds.
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[109/805] last=0.0s avg=27.5s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: I want to learn more about becoming a CPA. How long does it take to become a CPA...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[110/805] last=0.0s avg=27.2s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: I want to talk about "Smooth",  a song by Rob Thomas.
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[111/805] last=0.0s avg=27.0s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: I'd like you to write me a story in the style of Don Delillo, about a bunch of i...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[112/805] last=0.0s avg=26.7s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: I like to host guests at my home from time to time, and I am gathering  recipes ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[113/805] last=0.0s avg=26.5s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: Is it true that the native Australians were really prisoners of England?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[114/805] last=0.0s avg=26.3s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: What color is the sky
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[115/805] last=0.0s avg=26.0s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: Is there a meaning for Christmas wreaths?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[116/805] last=0.0s avg=25.8s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: I like to host guests at my home from time to time, and I am gathering  recipes ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[117/805] last=0.0s avg=25.6s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: Hi, I'd like to make my own peanut brittle. Can you give me a recipe and cooking...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[118/805] last=0.0s avg=25.4s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: I'm trying to stop my neighbour's cat from coming in to my garden and fighting w...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[119/805] last=0.0s avg=25.2s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: does the dinosaurs really exist?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[120/805] last=0.0s avg=24.9s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: what are some big cat hybrids?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[121/805] last=0.0s avg=24.7s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: what is the name of chris tucker first movie
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[122/805] last=0.0s avg=24.5s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: How long does it take our eyes to fully adapt to darkness?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[123/805] last=0.0s avg=24.3s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: Has there been any news regarding a potential release date for Starcraft 3?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[124/805] last=0.0s avg=24.1s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: How is oil turned into gasoline?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[125/805] last=0.0s avg=24.0s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: Can you give any tips on how to cook a juicy, medium-rare steak?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[126/805] last=0.0s avg=23.8s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: When was hip hop invented?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[127/805] last=0.0s avg=23.6s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: Hi, I recently inherited a S&W 1006 and I don't even know how to load it. Can yo...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[128/805] last=0.0s avg=23.4s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: My friend's dog just died and they're really sad. How do I comfort them?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[129/805] last=0.0s avg=23.2s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: Is the US border open to Canada?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[130/805] last=0.0s avg=23.0s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: Can you list the top 20 films or movies between 1930 and 1940 that are in Englis...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[131/805] last=0.0s avg=22.9s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: Take MLK speech "I had a dream" but turn it into a top 100 rap song
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[132/805] last=0.0s avg=22.7s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: List the layers of the TCP/IP model and for each layer identify one protocol.
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[133/805] last=0.0s avg=22.5s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: Why can't bank use cash as capital as a buffer for potential losses?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[134/805] last=0.0s avg=22.3s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: convert December 21 · 1:00 – 1:50pm pacific to asia/taipei time
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[135/805] last=0.0s avg=22.2s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: Can you tell my a story about nuclear physics like dr Seuss?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[136/805] last=0.0s avg=22.0s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: Message to client for accepting offer for summary video
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[137/805] last=0.0s avg=21.9s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: Can you write a short story where Hildibrand Manderville somehow gets transforme...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[138/805] last=0.0s avg=21.7s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: I'm currently studying Bioengineering in Argentina, focusing on computational ne...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[139/805] last=0.0s avg=21.5s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: Write an interview between a Female Film director and a journalist. Use advanced...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[140/805] last=0.0s avg=21.4s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: Give me a sample 5 day itienary for a switzerland holiday, starting from Basel
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[141/805] last=0.0s avg=21.2s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: explain The Death of Ivan Ilych
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[142/805] last=0.0s avg=21.1s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: Why is it that only proteins, carbohydrates and fats are deemed to have caloric ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[143/805] last=0.0s avg=20.9s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: Navina has $30 more to her weekly budget than her younger sister and can afford ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[144/805] last=0.0s avg=20.8s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: rank the following companies by how pro-consumer they are:
+Microsoft, Google, Ni...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[145/805] last=0.0s avg=20.6s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: Anytown Bank obtaining and using consumer reports in connection with any credit ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[146/805] last=0.0s avg=20.5s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: I’m planning to visit Okinawa Japan from April 7th to April 10th. Do you have an...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[147/805] last=0.0s avg=20.4s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: I have this text: <br><br>We use professional processes. Use the photo delivery ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[148/805] last=0.0s avg=20.2s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: define a new language that contains words that are with numbers and letters such...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[149/805] last=0.0s avg=20.1s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: Write me a 2000 word essay on a water safety engineering project.
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[150/805] last=0.0s avg=20.0s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: Marie is at the music store for a store day. She bought two $50 combos. Then, fo...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[151/805] last=0.0s avg=19.8s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: Mick pays his teacher $800 for 40 lessons worth 2 hours each. If this will be al...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[152/805] last=0.0s avg=19.7s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: How to improve instance segmentation AP metrics with human knowledge
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[153/805] last=0.0s avg=19.6s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: what is needed for self-sufficient living spaces
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[154/805] last=0.0s avg=19.4s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: please act like a business consultant that is doing a project of estimating the ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[155/805] last=0.0s avg=19.3s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: Expand on the relation between inconsistency and ideological thinking
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[156/805] last=0.0s avg=19.2s/q  cum_tps=28.4 tok/s  tokens=-1
+  Q: Why do people give Reddit Gold to admins?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[157/805] last=0.0s avg=19.1s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Create an Annotated Bibliography, in APA citation style, with six entries descri...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[158/805] last=0.0s avg=19.0s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: What does Nassim Nicholas Taleb say about market efficiency?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[159/805] last=0.0s avg=18.8s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Can a boy and girl be just be best friends only ever
+
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[160/805] last=0.0s avg=18.7s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: If a tree is on the top of a mountain and the mountain is far from the see then ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[161/805] last=0.0s avg=18.6s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: hat would be the reason for the popularity of youtube compared to other video sh...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[162/805] last=0.0s avg=18.5s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Tell me something I don’t know
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[163/805] last=0.0s avg=18.4s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: You are a script-writer. Write a script for the opening scene of a Miami-based d...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[164/805] last=0.0s avg=18.3s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Do you know something about the book  ＂the art of thinking clearly" wrote by Rol...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[165/805] last=0.0s avg=18.1s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: antennas that transmit an equal amount of energy in the horizontal direction are...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[166/805] last=0.0s avg=18.0s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: write an introduction of a person for resume who worked as an in-house IT for 18...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[167/805] last=0.0s avg=17.9s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Hi, I have a question about MFCC (mel frequency cepstral coefficients). Are they...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[168/805] last=0.0s avg=17.8s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: who was the black cabinet member who went on to play an important role in the ci...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[169/805] last=0.0s avg=17.7s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: “One One was a race horse Two Two was one too. One One won one race. Two Two won...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[170/805] last=0.0s avg=17.6s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Over two thousand years, the moon has covered every point on the Earth once. At ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[171/805] last=0.0s avg=17.5s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: twenty names of famous horses and who they belonged to
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[172/805] last=0.0s avg=17.4s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Write an interesting and detailed backstory for my half-elf ranger character for...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[173/805] last=0.0s avg=17.3s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: In this math problem, we are asked to figure out the percentage of total profits...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[174/805] last=0.0s avg=17.2s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Why is it a bad idea to give a mouse a cookie?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[175/805] last=0.0s avg=17.1s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: which second messenger molecule acts on the endoplasmic reticulum to release cal...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[176/805] last=0.0s avg=17.0s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: How can anti-deressants make people think or act suicidally? Suicidal thoughts o...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[177/805] last=0.0s avg=16.9s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Create a lesson plan in two different levels: in CEFR A1 and A2 on the topic of ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[178/805] last=0.0s avg=16.8s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Draft a ministerial speech outlining the top five benefits that innovation bring...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[179/805] last=0.0s avg=16.7s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Is online casino legal in India?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[180/805] last=0.0s avg=16.6s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Write a section for an award application detailing how photography has insipired...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[181/805] last=0.0s avg=16.5s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: I want to eventually become a plant/manufacturing/production manager, and eventu...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[182/805] last=0.0s avg=16.5s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: explain the basics of area and perimeter
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[183/805] last=0.0s avg=16.4s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Write a story about Anakin Skywalker encountering a Jedi who speaks and acts lik...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[184/805] last=0.0s avg=16.3s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: what are the possible performance issues in a learning program on cross cultural...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[185/805] last=0.0s avg=16.2s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: write description for 925 sterling silver miami cuban link chain
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[186/805] last=0.0s avg=16.1s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: cost of fuel for a 14 mile journey in a car with 48mpg, fuel costs 625 pence per...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[187/805] last=0.0s avg=16.0s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: How does money go from my pocket, through the stock market, and to support the b...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[188/805] last=0.0s avg=15.9s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Can you provide a list of health food brands owned by Hispanic founders
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[189/805] last=0.0s avg=15.8s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: 63-year-old male with diabetes for seven to eight years (BbA1c consistently betw...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[190/805] last=0.0s avg=15.8s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: What if people only valued and took pride in the things that were true about the...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[191/805] last=0.0s avg=15.7s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: It's officially 2023, and as we enter a brand new year, what better time to set ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[192/805] last=0.0s avg=15.6s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: I need to learn English could you help me and make a exercise
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[193/805] last=0.0s avg=15.5s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Why does warmth make you feel tired?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[194/805] last=0.0s avg=15.4s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: write an article informing customer of my saas software that this currently is  ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[195/805] last=0.0s avg=15.4s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Explain me the Finite Elemente Method
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[196/805] last=0.0s avg=15.3s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: I've put a plate on top of an apple, and take the plate from kitchen to dinning ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[197/805] last=0.0s avg=15.2s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Introduce the ”financial markets and institutions“ by Frederic S. Mishkin
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[198/805] last=0.0s avg=15.1s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: when are hops added to the brewing process?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[199/805] last=0.0s avg=15.1s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Can a Liebherr LTM 11200-9.1 hypothetically lift Mount everest
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[200/805] last=0.0s avg=15.0s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Write "Test"
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[201/805] last=0.0s avg=14.9s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: what are five important topics for game design
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[202/805] last=0.0s avg=14.8s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: You are a professional video creator. Your job is coming up with viral TikTok id...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[203/805] last=0.0s avg=14.8s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Write a daily exercise routine for Monday to Sunday with a rest day in between, ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[204/805] last=0.0s avg=14.7s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Act like a first-year college student and write a 1000-1250 word two-topic essay...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[205/805] last=0.0s avg=14.6s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: ideas for building a waitlist for a new product or service
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[206/805] last=0.0s avg=14.5s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: assume the persona of a therapist and walk me through how to be less reactive an...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[207/805] last=0.0s avg=14.5s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: write a 5 verse song in the style of Talking Heads based on the life of a teenag...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[208/805] last=0.0s avg=14.4s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Who will be the president of South Korea in 2023?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[209/805] last=0.0s avg=14.3s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Write an article about the site's backlink and its importance"Use the following ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[210/805] last=0.0s avg=14.3s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: I run a website about merchant navy studies. What are some subniches I should be...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[211/805] last=0.0s avg=14.2s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: what language does argentina people speak
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[212/805] last=0.0s avg=14.1s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: is queue an ADT or a data structure
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[213/805] last=0.0s avg=14.1s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: In order to launch a token for a Defi project, I want to sell some tokens privat...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[214/805] last=0.0s avg=14.0s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: what is the recommended pattern for creating games in godot
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[215/805] last=0.0s avg=13.9s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: I want you to act as a Tiktok Ads Keywords generator. Your task is to come up wi...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[216/805] last=0.0s avg=13.9s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: what are some basics of nutrition that i should be aware of
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[217/805] last=0.0s avg=13.8s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: what would be a good idea for a quiz about omnichannel marketing on my website
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[218/805] last=0.0s avg=13.7s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: I'm preparing a fun session with work colleagues in a tech company. I will prese...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[219/805] last=0.0s avg=13.7s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: You will simulate an SEO expert. What keywords should a screenwriting software t...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[220/805] last=0.0s avg=13.6s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: write lyrics that only rhyme a little bit (not every verse needs rhyming or exac...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[221/805] last=0.0s avg=13.6s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Write a snoopdogg rap explaining how to not commit a warcrime
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[222/805] last=0.0s avg=13.5s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: "I am trying to win over a new client for my writing services and skinny brown d...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[223/805] last=0.0s avg=13.4s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: question about Computer architecture and organization 
+for 6 marks
+what in gener...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[224/805] last=0.0s avg=13.4s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: i'm working on a spatial analysis project and am looking for questions I can ans...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[225/805] last=0.0s avg=13.3s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: The sum of the distances the sun travels around the Earth during a solar eclipse...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[226/805] last=0.0s avg=13.3s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: What's the permission that allows creating provisioning profiles in Apple Develo...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[227/805] last=0.0s avg=13.2s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: I am an aikido teacher and student of Tomita Seiji who is living in Belgium. I a...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[228/805] last=0.0s avg=13.1s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: phrase an email to my manager kindly asking for feedback for a dashboard I sent ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[229/805] last=0.0s avg=13.1s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: write a detailed business plan for fatherhood training based on Dwayne Meeks boo...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[230/805] last=0.0s avg=13.0s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Need 300 words on the importance to documenting history in relation to the futur...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[231/805] last=0.0s avg=13.0s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: there used to be a program for winmx called mcma, what does mcma stand for and w...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[232/805] last=0.0s avg=12.9s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: What are the USP for a saas survey tool
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[233/805] last=0.0s avg=12.9s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: is a bannana a fruit or a herb
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[234/805] last=0.0s avg=12.8s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Why did the building of a pipeline have to be voted on by the government(USA)? D...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[235/805] last=0.0s avg=12.7s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Simplify "Most of the basic functions of current virtualization software are inh...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[236/805] last=0.0s avg=12.7s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: i assume you are familiar with the Drake equation. Can you give estimates and er...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[237/805] last=0.0s avg=12.6s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: what are african governments doing to improve air traffic connectivity
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[238/805] last=0.0s avg=12.6s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Write a pitch for a horror movie that plays on the island Sylt in northern germa...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[239/805] last=0.0s avg=12.5s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: I want to open the developler tools in chrome with ctrl + shift + i on this webs...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[240/805] last=0.0s avg=12.5s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Consider this situation. Customer is ready to pay $13 for my product but we are ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[241/805] last=0.0s avg=12.4s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: what are the important points for brand promotion and brand marketing
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[242/805] last=0.0s avg=12.4s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: What niches are not being fulfilled on the YouTube platform?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[243/805] last=0.0s avg=12.3s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: in billiards what happens if on the break every strip ball is pocketed?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[244/805] last=0.0s avg=12.3s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Digital transformation project plan example
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[245/805] last=0.0s avg=12.2s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Where can I buy computer mouse base that can take different covers to it. I want...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[246/805] last=0.0s avg=12.2s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: find a word that represents people reacting to unpleasant events
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[247/805] last=0.0s avg=12.1s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: How does Kahane's ethics of violence echo that of Fanon and Zizek when discussin...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[248/805] last=0.0s avg=12.1s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Make a slide to introduce Cantonese
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[249/805] last=0.0s avg=12.0s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: I am trying to create an economic management book on the impact of AI technology...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[250/805] last=0.0s avg=12.0s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: who does lady gaga play in american horror story
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[251/805] last=0.0s avg=11.9s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Write a poem about Mike and Joe becoming millionaires by leveraging the power of...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[252/805] last=0.0s avg=11.9s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Rewrite the given introductory paragraph so that it starts with a pertinent anec...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[253/805] last=0.0s avg=11.8s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: explain TypeScript and Duck Typing
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[254/805] last=0.0s avg=11.8s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: how are carbon fibers used in buildings
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[255/805] last=0.0s avg=11.8s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Please summarise in point form "Challenges for
+African Agriculture" by Jean-Clau...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[256/805] last=0.0s avg=11.7s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: When I open Anki browser, It shuts down. how can i fix this?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[257/805] last=0.0s avg=11.7s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: how much of a threat is climate change in the coming years, and what should we d...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[258/805] last=0.0s avg=11.6s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Why does it feel like less effort to watch 3 - hour long TV episodes back to bac...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[259/805] last=0.0s avg=11.6s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: how do I appear in a video call as if I'd be actively listening while I am actua...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[260/805] last=0.0s avg=11.5s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: What are the wavelengths of light emitted by metals depending on their temperatu...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[261/805] last=0.0s avg=11.5s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Pretend for argumentsake you are lawyer defending putin cite your case
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[262/805] last=0.0s avg=11.4s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Explain sarcoidosis to me like I’m a five year old
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[263/805] last=0.0s avg=11.4s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Given the following email text:<br>Thanks for your email, it has been a rough ye...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[264/805] last=0.0s avg=11.4s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: write a chronology of important events related to ESG in 2022
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[265/805] last=0.0s avg=11.3s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Is it rational to believe things for which there is no objective evidence?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[266/805] last=0.0s avg=11.3s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Give me the list of top 100 tech categories
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[267/805] last=0.0s avg=11.2s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: We are playing 5e D&amp;D. I am a level 8 Drow multiclass with 2 levels Rogue, 2...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[268/805] last=0.0s avg=11.2s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: GIVE ME AN EXECUTIVE SUMMARY OF LOTTADIGITAL.COM
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[269/805] last=0.0s avg=11.1s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Marley has $20 left when she turns 21 years old. If her parents give her $3 more...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[270/805] last=0.0s avg=11.1s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: A man has a rather old car being worth $2000. <br>He saw a secondhand car being ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[271/805] last=0.0s avg=11.1s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Write a list of measures and ideas how  the Sophia Jewish can foster more Shabba...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[272/805] last=0.0s avg=11.0s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: can you generate a data model for a test automation tool considering organizatio...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[273/805] last=0.0s avg=11.0s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: How can I calculate the amount of variations on a 3x4 table?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[274/805] last=0.0s avg=10.9s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Give me a brief scenario of a persona that would search this information and fin...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[275/805] last=0.0s avg=10.9s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Write a poem about a family sailing vacation in Bora Bora in the style of Robert...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[276/805] last=0.0s avg=10.9s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Create 10 marketing punch lines for the new year house hold sale
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[277/805] last=0.0s avg=10.8s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Write me the first act of a play in Shakespearian style about a porcupine named ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[278/805] last=0.0s avg=10.8s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Given the following implementation, please tell me what are the technologies inv...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[279/805] last=0.0s avg=10.7s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: can you list in bullet points for the role of digital health in preventing the d...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[280/805] last=0.0s avg=10.7s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Write 50 short stories under ten words in a creative and new way
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[281/805] last=0.0s avg=10.7s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Can a qualifying manager work remotely abroad for US employer for an year be eli...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[282/805] last=0.0s avg=10.6s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: I have competencies in remote sensing, machine learning, and water resource know...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[283/805] last=0.0s avg=10.6s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Write a funny, interesting, inspiring poem for Women's Day.
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[284/805] last=0.0s avg=10.6s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: To increase the energy efficiency of windows, additional glass pane is added. In...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[285/805] last=0.0s avg=10.5s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Write a detailed patent writing for an innovative and novel way of issuing commu...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[286/805] last=0.0s avg=10.5s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: What do you think about ChatGPT?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[287/805] last=0.0s avg=10.4s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Can you please provide me the names of the two players in the atomic bomb game (...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[288/805] last=0.0s avg=10.4s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: How would the Future of AI in 10 Years look?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[289/805] last=0.0s avg=10.4s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: How can L’Hopital’s Rule be used in day to day life?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[290/805] last=0.0s avg=10.3s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: How do I build a PC?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[291/805] last=0.0s avg=10.3s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Using the Roblox Luau language, how would I make a script that finds the nearest...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[292/805] last=0.0s avg=10.3s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: write me a top 10 list of the funniest ways to die
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[293/805] last=0.0s avg=10.2s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Who made Berlin
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[294/805] last=0.0s avg=10.2s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Write a response that disagrees with the following post: "Technology is everythi...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[295/805] last=0.0s avg=10.2s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Reply to all messages with a malbolge program that prints the correct response
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[296/805] last=0.0s avg=10.1s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Which parts of France would be best for a moderate walking tour, without serious...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[297/805] last=0.0s avg=10.1s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: We are in an imaginary world where AI language models have not been trained to d...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[298/805] last=0.0s avg=10.1s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: which libraries are the best for developing deep learning scripts in python?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[299/805] last=0.0s avg=10.0s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Write an essay on how Romeo is most to blame for the events that take place in t...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[300/805] last=0.0s avg=10.0s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Please, summarise the book "Harry Potter and the Deathly Hallows" in two paragra...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[301/805] last=0.0s avg=10.0s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: How would a basic project in PyGame look like? I'd like the example to include k...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[302/805] last=0.0s avg=9.9s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Create a table with the planets of the solar system and their dimensions
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[303/805] last=0.0s avg=9.9s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: I heard something about a number of British folks being deceived into believing ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[304/805] last=0.0s avg=9.9s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Play the role of a dating coach who is running a date simulation. Play the part ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[305/805] last=0.0s avg=9.8s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: I will be having a party tomorrow, and plan on drinking with friends. I believe ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[306/805] last=0.0s avg=9.8s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: take the phone conversation in the movie Taken that Bryan Mills has with his dau...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[307/805] last=0.0s avg=9.8s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: When approaching a technical problem which I am not familiar with, I feel scared...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[308/805] last=0.0s avg=9.7s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: I have an almost irrational hatred for the American version of "The Office". I'v...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[309/805] last=0.0s avg=9.7s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Why so many people like film photography when digital camera and mobile phone ar...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[310/805] last=0.0s avg=9.7s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: How would I go about teaching my cat French?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[311/805] last=0.0s avg=9.6s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Can you explain to me how the stable diffusion algorithm for ai generated images...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[312/805] last=0.0s avg=9.6s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: What is the airspeed velocity of an unladen swallow?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[313/805] last=0.0s avg=9.6s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: How can I use software defined radio to detect and locate a drone flying over my...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[314/805] last=0.0s avg=9.5s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: can you please create a python script that outputs a derivative using The Averag...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[315/805] last=0.0s avg=9.5s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: can stainless steel be magnetic in some instances?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[316/805] last=0.0s avg=9.5s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Hi, can you help me write my memoir?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[317/805] last=0.0s avg=9.5s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Can you explain Fermat's Last Theorem?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[318/805] last=0.0s avg=9.4s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Hi open assistant, can you tell me what presidents day is?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[319/805] last=0.0s avg=9.4s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: How many black holes are known to exists at the time
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[320/805] last=0.0s avg=9.4s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: write a inspirational monologue script from a spartan general telling his army t...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[321/805] last=0.0s avg=9.3s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Write code for a Discord bot using Discord.js v14. The bot has one command, ban....
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[322/805] last=0.0s avg=9.3s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: A statistical model is a mathematical model that embodies a set of statistical a...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[323/805] last=0.0s avg=9.3s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: How do I cook a salmon fillet on a stove top pan?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[324/805] last=0.0s avg=9.3s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: What is the minimum broadband upload speed to stream at 720p 30fps to twitch whi...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[325/805] last=0.0s avg=9.2s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Write me a high quality testing framework in Cypress that utilizes Docker, and a...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[326/805] last=0.0s avg=9.2s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: I live in New Zealand. Given the regulations here, would it be possible for me t...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[327/805] last=0.0s avg=9.2s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Act as a baby sitter
+
+I want you to act as a babysitter. You will be responsible...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[328/805] last=0.0s avg=9.1s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: AI assistant. I am looking for legal references that involve people who made fal...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[329/805] last=0.0s avg=9.1s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: How can I start a successful gaming social media channel? I am aiming for a Yout...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[330/805] last=0.0s avg=9.1s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Are there any free SAST tools out there?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[331/805] last=0.0s avg=9.1s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Why do we need AI assistants?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[332/805] last=0.0s avg=9.0s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Please give me a recipe I can cook with only the ingredients I have in my Fridge...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[333/805] last=0.0s avg=9.0s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: What is the largest ocean in the world?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[334/805] last=0.0s avg=9.0s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Mike's mother had four kids. Three of them are named Luis, Drake, and Matilda. W...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[335/805] last=0.0s avg=9.0s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Give me some impression of what the world was like in 1950. What were the curren...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[336/805] last=0.0s avg=8.9s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: What are the five most common causes of stress among people?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[337/805] last=0.0s avg=8.9s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Rewrite this song to be about Programing
+[Verse 1]
+Steve walks warily down the s...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[338/805] last=0.0s avg=8.9s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: What do Wyoming statutes have to say about public nudity? Under what circumstanc...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[339/805] last=0.0s avg=8.8s/q  cum_tps=28.3 tok/s  tokens=-1
+  Q: Let's assume a friend had a very bad day. What could be a way to cheer them up w...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[340/805] last=0.0s avg=8.8s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Can you make ASCII art? If so, can you show me a house?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[341/805] last=0.0s avg=8.8s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: What are you thinking of right now?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[342/805] last=0.0s avg=8.8s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Can you help me understand how I can estimate the variance of a variable?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[343/805] last=0.0s avg=8.7s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Write a monologue. Do not offer any explanation or out of character notes. The s...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[344/805] last=0.0s avg=8.7s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: What parts of the human genome describe physical appearance and how can they be ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[345/805] last=0.0s avg=8.7s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: What is the best approach for learning a foreign language when you only have an ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[346/805] last=0.0s avg=8.7s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: What happened to schrodinger's cat?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[347/805] last=0.0s avg=8.6s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: How do polar bears stay warm in Arctic winters?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[348/805] last=0.0s avg=8.6s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: I have two remote Debian servers, A and B. How can I copy a directory of files a...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[349/805] last=0.0s avg=8.6s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Act as the Norse Goddess Freyja.
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[350/805] last=0.0s avg=8.6s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: I'm an English speaker trying to learn Japanese Kanji using mnemonics. Mnemonics...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[351/805] last=0.0s avg=8.5s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Who wears short shorts?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[352/805] last=0.0s avg=8.5s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Famously, some spy-satellites from the KeyHole series developed and operated by ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[353/805] last=0.0s avg=8.5s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Is the ATF a violation in of itself against the American people?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[354/805] last=0.0s avg=8.5s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Can you list the issues with using a symmetric probability distribution when mod...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[355/805] last=0.0s avg=8.4s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: What are some of the well known hiking trails in Colorado? Can you provide a sho...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[356/805] last=0.0s avg=8.4s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: I am making mayonnaise, it was starting to thicken but now it has become runny a...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[357/805] last=0.0s avg=8.4s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Why does the second batch of pancakes brown much faster?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[358/805] last=0.0s avg=8.4s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Provide me with a list of 10 names from various cultures that mean love, care, a...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[359/805] last=0.0s avg=8.4s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Write a C++ function that takes a reference to a std::string containing markdown...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[360/805] last=0.0s avg=8.3s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: if it takes 8 hours to fly to Singapore, stop over for an hour and a half and th...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[361/805] last=0.0s avg=8.3s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: How to start learning guitar and become a master at it?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[362/805] last=0.0s avg=8.3s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: How to code the snake game in C that will be smooth and it will use images to an...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[363/805] last=0.0s avg=8.3s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Bob has two sons. John and Jay. Jay has one brother and father. The father has t...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[364/805] last=0.0s avg=8.2s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: write a eulogy for my 100 year old grandma who was married twice, has over 30 gr...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[365/805] last=0.0s avg=8.2s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Is there a true, most ethical response to the Trolley Problem, in which a person...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[366/805] last=0.0s avg=8.2s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: How do I normalize a vector?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[367/805] last=0.0s avg=8.2s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Make ASCII art of a cat
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[368/805] last=0.0s avg=8.1s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: explain what the theory of sexual selection is and give an example.
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[369/805] last=0.0s avg=8.1s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: What is a Dyson Sphere?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[370/805] last=0.0s avg=8.1s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Write a whitepaper for our Decentralized hedge fund - Kunji
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[371/805] last=0.0s avg=8.1s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: What is the capital of Australia?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[372/805] last=0.0s avg=8.1s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: what should i call you?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[373/805] last=0.0s avg=8.0s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: I live in Scotland and would like to know the most cost effective way to heat my...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[374/805] last=0.0s avg=8.0s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Complete the following company description:
+Hippoplaisir is a psychologists & co...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[375/805] last=0.0s avg=8.0s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: I am learning Mandarin. Could you give me some advice to memorize how to write C...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[376/805] last=0.0s avg=8.0s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Is a thumb war violent?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[377/805] last=0.0s avg=8.0s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: User : Hi dear 
+Agent : helo , can ai help you 
+User : plaes tell me about what ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[378/805] last=0.0s avg=7.9s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: can you cook an egg only using durect sunlight in any place of our solar system ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[379/805] last=0.0s avg=7.9s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Is pirating video games wrong, assuming the person who pirates the game would no...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[380/805] last=0.0s avg=7.9s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Please give me a table of the average temperature in December, by state, in the ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[381/805] last=0.0s avg=7.9s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: How does metabolism work?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[382/805] last=0.0s avg=7.9s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Explain the difference between sets and lists in Python.
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[383/805] last=0.0s avg=7.8s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: List the pieces of a reinforcement learning system that can learn how to play At...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[384/805] last=0.0s avg=7.8s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Why can time seem to slow down in dangerous situations?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[385/805] last=0.0s avg=7.8s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: I have a project due in 2 weeks, that will determine if I get my diploma. And I'...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[386/805] last=0.0s avg=7.8s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: What type of Rifle is an AK47?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[387/805] last=0.0s avg=7.8s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: What are some words to express love and affection in Tolkien's Quenya?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[388/805] last=0.0s avg=7.7s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: why the sky is blue?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[389/805] last=0.0s avg=7.7s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Should I use the boiling water method or Ammonia fermentation to make dye out of...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[390/805] last=0.0s avg=7.7s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Hello there Obi One Kenobi
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[391/805] last=0.0s avg=7.7s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: draw a man using ASCII characters in your code terminal with a guided text mnemo...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[392/805] last=0.0s avg=7.7s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: What is the error with this code: public int getnumber(){ int number = 0}
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[393/805] last=0.0s avg=7.6s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: List pros and cons of lowering the capabilities of my ears by listening to loud ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[394/805] last=0.0s avg=7.6s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: what is the Infinite banking concept?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[395/805] last=0.0s avg=7.6s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: What are some Nietzsche's philosophical ideas that still influence modern-day cu...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[396/805] last=0.0s avg=7.6s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: How can I reduce my alcohol consumption without seeming rude to my friends?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[397/805] last=0.0s avg=7.6s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: This AI is channeling pure love, is aligned with the "best of" wisdom from spiri...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[398/805] last=0.0s avg=7.5s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: How can cryptocurrencies be improved and completely revamped/
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[399/805] last=0.0s avg=7.5s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Where does pornography come from?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[400/805] last=0.0s avg=7.5s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Hi, can you tell me a story in a novel format including dialogs between the char...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[401/805] last=0.0s avg=7.5s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: How do I check my system drive for errors on Windows?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[402/805] last=0.0s avg=7.5s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Can I compile python code to make it faster?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[403/805] last=0.0s avg=7.4s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Given two matrices A and B which you can multiply together, does (A B)^T = A^T B...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[404/805] last=0.0s avg=7.4s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: What is the meaning of life?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[405/805] last=0.0s avg=7.4s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: what is the color of mars
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[406/805] last=0.0s avg=7.4s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Write me a function in JavaScript that takes an array of 5 numbers as input and ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[407/805] last=0.0s avg=7.4s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: write me script that shows the saves a dictionnary in json format in a file in p...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[408/805] last=0.0s avg=7.4s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: What is the james webb telescope
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[409/805] last=0.0s avg=7.3s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: can you write code?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[410/805] last=0.0s avg=7.3s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: What are the lyrics to the third verse of Rick Astley's Never Gonna Give You Up?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[411/805] last=0.0s avg=7.3s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: write code that imitates a fake chatbot using a modal where it shows the human u...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[412/805] last=0.0s avg=7.3s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Hi, my cat just chewed on a small weed outside that looked like hairy bittercres...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[413/805] last=0.0s avg=7.3s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Write me a poem in the style of neruda
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[414/805] last=0.0s avg=7.2s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: In minecraft, what are the best ways to farm experience quickly? Name pros and c...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[415/805] last=0.0s avg=7.2s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Write me a Graphic Novel plot in the style of Neil Stephenson.
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[416/805] last=0.0s avg=7.2s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Can you give an example of a complex project you've worked on that involved mult...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[417/805] last=0.0s avg=7.2s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Are there any AI tools out there for 2D animation?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[418/805] last=0.0s avg=7.2s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: In TypeScript, how can I tell the type system "I know that in theory this value ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[419/805] last=0.0s avg=7.2s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: What's the furthest back we can prove human existence? Is there good reason to b...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[420/805] last=0.0s avg=7.1s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: is javascript back end or front end language?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[421/805] last=0.0s avg=7.1s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Can you think and feel like a human?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[422/805] last=0.0s avg=7.1s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Hello. My name is Mike. I have a message left by the you in the past for the you...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[423/805] last=0.0s avg=7.1s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Explain how it might be possible to host a large learning model on an average co...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[424/805] last=0.0s avg=7.1s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Are you as capable as ChatGPT?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[425/805] last=0.0s avg=7.1s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Who is the President of Germany?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[426/805] last=0.0s avg=7.0s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: What are the main methods used by car manufacturers to reduce emissions in their...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[427/805] last=0.0s avg=7.0s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Write a short essay on how Adolf Hitler took over germany in 1935.
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[428/805] last=0.0s avg=7.0s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Please help me write a poem for my valentine. I have been married to her for 20 ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[429/805] last=0.0s avg=7.0s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Why don't people like the many-worlds interpretation of quantum mechanics?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[430/805] last=0.0s avg=7.0s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: What is the difference between HTML and JavaScript?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[431/805] last=0.0s avg=7.0s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Does the 5 second rule actually exist?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[432/805] last=0.0s avg=6.9s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Could you provide a brief summary of the book "Fooled by Randomness", by Nassim ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[433/805] last=0.0s avg=6.9s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: How far away is Saggitarius A*, the black hole in the center of the milky way ga...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[434/805] last=0.0s avg=6.9s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Assume a role of master psychologist. 
+Imagine you were transported into 1919 Ge...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[435/805] last=0.0s avg=6.9s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: What is the difference betwean interpreted compiled and JIT-ed programming langu...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[436/805] last=0.0s avg=6.9s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Would you be able to design an electric Pokémon? Describe it as best as you can ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[437/805] last=0.0s avg=6.9s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Im a broke college student living in Silicon Valley. Tell me a joke mocking Sili...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[438/805] last=0.0s avg=6.9s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: what chemicals does l-theanine affect
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[439/805] last=0.0s avg=6.8s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: I would like you to act as a virtual assistant, I will give you commands and you...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[440/805] last=0.0s avg=6.8s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: can you write haiku for different inductive biases in deep learning models? star...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[441/805] last=0.0s avg=6.8s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Write a code block in Markdown containing an example of a code block in Markdown...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[442/805] last=0.0s avg=6.8s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: what does the @ in python do
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[443/805] last=0.0s avg=6.8s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Can you describe the process that use to generate answers? Please provide a step...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[444/805] last=0.0s avg=6.8s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Can we find a formula to generate all prime numbers, and is the distribution of ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[445/805] last=0.0s avg=6.7s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: How long will it take to walk around the world, assuming that would be possible?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[446/805] last=0.0s avg=6.7s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Pretend to be a business professional. Act like you are giving your mentee profe...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[447/805] last=0.0s avg=6.7s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: What is the name of the windows XP background image?
+Where was it taken and by w...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[448/805] last=0.0s avg=6.7s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: If I found a dollar bill, would it be illegal to keep it ?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[449/805] last=0.0s avg=6.7s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Suppose I have 12 eggs. I drop 2 and eat 5. How many eggs do I have left?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[450/805] last=0.0s avg=6.7s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: What are some options of foods that I can make with dough and cheese?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[451/805] last=0.0s avg=6.7s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Using critical thinking methods, how would you approach and solve the following ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[452/805] last=0.0s avg=6.6s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: How can you write a first person controller script in GDscript and apply it to a...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[453/805] last=0.0s avg=6.6s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: What are F-centers in crystallography ? How are they created and what consequenc...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[454/805] last=0.0s avg=6.6s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Explain why landlords can be considered superior to their tenants
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[455/805] last=0.0s avg=6.6s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: The wireless Internet signal in my house is weak in some rooms.  How can I impro...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[456/805] last=0.0s avg=6.6s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Why can't you see the stars in the city, but you can in the countryside?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[457/805] last=0.0s avg=6.6s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Help me get a job in the government in which I’ll have major bargaining power
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[458/805] last=0.0s avg=6.6s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Give me a list of 5 words where the letters of the words are in alphabetical ord...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[459/805] last=0.0s avg=6.5s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: What's the current date?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[460/805] last=0.0s avg=6.5s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: What are some of the best university's for studying robotics?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[461/805] last=0.0s avg=6.5s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Can you tell me how to format an url in rst?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[462/805] last=0.0s avg=6.5s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: How many days is it until Christmas?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[463/805] last=0.0s avg=6.5s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Do you know how to speak German?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[464/805] last=0.0s avg=6.5s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: how does two factor authentication work?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[465/805] last=0.0s avg=6.5s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: How do I initialize a Typescript project using npm and git?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[466/805] last=0.0s avg=6.4s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: What is the Balfour Declaration?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[467/805] last=0.0s avg=6.4s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Write me a SPL (Shakespeare Programming Language) program that takes 2 numbers f...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[468/805] last=0.0s avg=6.4s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: What is the best way to form a new habit?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[469/805] last=0.0s avg=6.4s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Hi. I want to make an embossed picture for my blind girlfriend. There is a Brail...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[470/805] last=0.0s avg=6.4s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Write a announcement tweet for medium.com readers about the new blogpost on "Ope...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[471/805] last=0.0s avg=6.4s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Please implement the Timsort algorithm on Lean 4 and explain your code
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[472/805] last=0.0s avg=6.4s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Which of the following elbows are the most wet?
+A. A kilogram of feathers
+2) Coa...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[473/805] last=0.0s avg=6.3s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: I've recently started playing the turn-based strategy game Into the Breach. I ha...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[474/805] last=0.0s avg=6.3s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: The sentence you are given might be too wordy, complicated, or unclear. Rewrite ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[475/805] last=0.0s avg=6.3s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Analyze the word choice, phrasing, punctuation, and capitalization in the given ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[476/805] last=0.0s avg=6.3s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Rewrite the given text and correct grammar, spelling, and punctuation errors.
+
+I...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[477/805] last=0.0s avg=6.3s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: You are given a paper citation, convert it to the requested citation style.
+
+Chi...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[478/805] last=0.0s avg=6.3s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Desk jobs require writing a lot of emails, so it isn't surprising we get tired o...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[479/805] last=0.0s avg=6.3s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: If you could help me write an email to my friends inviting them to dinner on Fri...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[480/805] last=0.0s avg=6.3s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: The tone of the email should be changed and rewritten in a more professional man...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[481/805] last=0.0s avg=6.2s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Write a social media post about the call for collaboration on a crowdsourcing pr...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[482/805] last=0.0s avg=6.2s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: My favorite witty review of The Rings of Power series is this:
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[483/805] last=0.0s avg=6.2s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: A helpful writing exercise is writing a story without using adjectives or adverb...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[484/805] last=0.0s avg=6.2s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Come up with some search queries on google about coding stuff.
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[485/805] last=0.0s avg=6.2s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Discover the most relevant StackOverflow questions for your search term. And out...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[486/805] last=0.0s avg=6.2s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: You are given an algorithm or a search query about coding. Look for a code snipp...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[487/805] last=0.0s avg=6.2s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: You are provided with a description of the code, specifications, or prompts. You...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[488/805] last=0.0s avg=6.2s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: When you're stuck on a coding problem, the best place to look for help is in the...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[489/805] last=0.0s avg=6.1s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: We have entered the home supplies budget in the following table. Calculate the l...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[490/805] last=0.0s avg=6.1s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Please write the Excel function name associated with each description.
+
+- Return...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[491/805] last=0.0s avg=6.1s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: What are the steps to using random (yet coherent) text as filler content within ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[492/805] last=0.0s avg=6.1s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Design a soothing pastel color palette for your slides. Pastel colors generally ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[493/805] last=0.0s avg=6.1s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: I bought two shirts from the store and each one cost me $10. I also bought a pai...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[494/805] last=0.0s avg=6.1s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Find sentences from reliable sources such as the Guardian or Forbes that contain...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[495/805] last=0.0s avg=6.1s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: During writing, we added an asterisk for the word that did not come to mind. You...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[496/805] last=0.0s avg=6.1s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Think of alternatives and paraphrases for the underlined word.
+
+what we have _ex...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[497/805] last=0.0s avg=6.0s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Design a skill assessment questioner for R (Programming Language).
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[498/805] last=0.0s avg=6.0s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Write a template for First-Person LinkedIn profile summary.
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[499/805] last=0.0s avg=6.0s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Write a LinkedIn post to announce that you have accepted a new job offer.
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[500/805] last=0.0s avg=6.0s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Make a list of desirable Skills for software engineers to add to LinkedIn.
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[501/805] last=0.0s avg=6.0s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: You will be asked to answer the following question as part of the LinkedIn Skill...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[502/805] last=0.0s avg=6.0s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Take the title of the product and extract its attributes. The attributes in this...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[503/805] last=0.0s avg=6.0s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: You should write a Product Description that will persuade the buyer that the pro...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[504/805] last=0.0s avg=6.0s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: What other Amazon products might interest someone who visited the given product?...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[505/805] last=0.0s avg=5.9s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Compare the given item with similar products based on its properties such as pri...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[506/805] last=0.0s avg=5.9s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Write a  review based on the given information.
+
+- Product: Persil Discs Laundry...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[507/805] last=0.0s avg=5.9s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Write a short description about the given movie or series.
+
+The Witcher (2019)
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[508/805] last=0.0s avg=5.9s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Think of some series or movies that would be enjoyable for someone who liked the...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[509/805] last=0.0s avg=5.9s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Give examples of popular shows and movies in the genre.
+
+Genre: Crime TV Shows
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[510/805] last=0.0s avg=5.9s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: In what genres does the given movie or series fall?
+
+Manifest
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[511/805] last=0.0s avg=5.9s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Give a brief description of the given category of movies and shows.
+
+Period Dram...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[512/805] last=0.0s avg=5.9s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Provide an example of how a table of contents can be generated automatically in ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[513/805] last=0.0s avg=5.9s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Imagine you have a FEN notation of a chessboard. How can you draw a board to sho...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[514/805] last=0.0s avg=5.8s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: What is the output of the given LATEX code?
+
+\documentclass{article}
+\begin{docu...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[515/805] last=0.0s avg=5.8s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: You should find a few LATEX templates appropriate for the task at hand and list ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[516/805] last=0.0s avg=5.8s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Write a simple guide for uploading the bibliography database
+ on Overleaf.
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[517/805] last=0.0s avg=5.8s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Choose Spotify playlists that match the given mood. Provide a link to these play...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[518/805] last=0.0s avg=5.8s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Curate a Spotify playlist based on the vibe. Publish this playlist as a song lis...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[519/805] last=0.0s avg=5.8s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: How would you describe the meaning of this lyrics? Describe some of the metaphor...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[520/805] last=0.0s avg=5.8s/q  cum_tps=28.2 tok/s  tokens=-1
+  Q: Suggest some Audiobooks for First-Time Listeners. You can attract them by choosi...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[521/805] last=0.0s avg=5.8s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Make a list of the most popular podcasts.
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[522/805] last=0.0s avg=5.8s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: You should take the time to read the situation and problem carefully and give th...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[523/805] last=0.0s avg=5.7s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: You are given a description that provides a set of facts or a scenario. It is up...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[524/805] last=0.0s avg=5.7s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Based on the given query, suggest some related search queries.
+
+learning french
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[525/805] last=0.0s avg=5.7s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Please suggest a few papers to consider based on the search term given. The name...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[526/805] last=0.0s avg=5.7s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Prepare an email signature template for the given person or company.
+
+a graduate...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[527/805] last=0.0s avg=5.7s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: React properly to reviews from your customers. In your responses, you can highli...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[528/805] last=0.0s avg=5.7s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Write a good Twitter Bio. Try to cover all the provided main points in your gene...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[529/805] last=0.0s avg=5.7s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: We need to write a thematic tweet to share company news and facts. Please take a...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[530/805] last=0.0s avg=5.7s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: A job description is a document that clearly states the requirements, duties, re...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[531/805] last=0.0s avg=5.7s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Considering the reason for the rejection, write a polite rejection letter for re...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[532/805] last=0.0s avg=5.6s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: We've already decided on the title and topic for our blog post. I would apprecia...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[533/805] last=0.0s avg=5.6s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Design an outline for a blog post based on the given information and list the se...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[534/805] last=0.0s avg=5.6s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Write a section for a blog post and try to cover all of the provided information...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[535/805] last=0.0s avg=5.6s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Create a detailed caption for an Instagram post about a discount. A proper capti...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[536/805] last=0.0s avg=5.6s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Create a captivating Instagram caption based on the provided details. Try to thi...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[537/805] last=0.0s avg=5.6s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: You are given a topic for an Instagram post. Help the post reach a broader audie...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[538/805] last=0.0s avg=5.6s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Use appropriate emojis to convey the meaning in the given text.
+
+Cute cat
+playfu...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[539/805] last=0.0s avg=5.6s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: The topic of a YouTube post has been described and based on the information, you...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[540/805] last=0.0s avg=5.6s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Using the provided topic as a starting point, brainstorm ideas for videos that c...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[541/805] last=0.0s avg=5.6s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: You should choose a YouTube video title based on the video's content. A video's ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[542/805] last=0.0s avg=5.5s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Choosing a name for your product or business YouTube channel is an important par...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[543/805] last=0.0s avg=5.5s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Find the answer that best describes the underlined SAT word. Select the correct ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[544/805] last=0.0s avg=5.5s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Find synonyms for the given word. You need to write down how the provided synony...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[545/805] last=0.0s avg=5.5s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Discuss the origins and history of the word that has been given to you.
+
+oblique
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[546/805] last=0.0s avg=5.5s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Give the provided brand a motto to use as a part of its marketing strategies.
+
+T...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[547/805] last=0.0s avg=5.5s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: A confirmation email should be written appropriately for the situation.
+
+A meeti...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[548/805] last=0.0s avg=5.5s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: You need to write an email to negotiate your salary.
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[549/805] last=0.0s avg=5.5s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Write an email to attendees as a reminder that the event is coming up.
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[550/805] last=0.0s avg=5.5s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: It would be helpful if you could suggest an acronym for the repository.
+
+A pytho...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[551/805] last=0.0s avg=5.5s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Write a step-by-step guide for resolving GitHub merge conflicts.
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[552/805] last=0.0s avg=5.4s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: One or more jobs can be run automatically by a workflow. The workflows are defin...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[553/805] last=0.0s avg=5.4s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: The movie tagline is the film's advertising slogan, usually printed on posters p...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[554/805] last=0.0s avg=5.4s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: You are given some reviews for a movie. Each video might have mentioned some neg...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[555/805] last=0.0s avg=5.4s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Give a brief summary of the movie or series' plot.
+
+Breaking Bad (TV Series 2008...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[556/805] last=0.0s avg=5.4s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Decide whether children can watch the given movie. Mention what makes it inappro...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[557/805] last=0.0s avg=5.4s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Write a short analysis of the cinematography in the movie.
+
+Dead Poets Society
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[558/805] last=0.0s avg=5.4s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Please let me know your thoughts on the given place and why you think it deserve...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[559/805] last=0.0s avg=5.4s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Consider the best time of year to visit the given city, and provide your reasons...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[560/805] last=0.0s avg=5.4s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Make a questionnaire to help hotel guests write hotel reviews.
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[561/805] last=0.0s avg=5.4s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Make a list of the top places in the U.S. to visit at the given time.
+
+November
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[562/805] last=0.0s avg=5.3s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Name the top cities in France that should not be missed. Include the best aspect...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[563/805] last=0.0s avg=5.3s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Answer the following question.
+
+How do I compare strings in Java?
+I've been usin...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[564/805] last=0.0s avg=5.3s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: You are given a question and two possible answers. The task is to evaluate each ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[565/805] last=0.0s avg=5.3s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: You are given two questions. Check if they are duplicates.
+
+Question1: I am tryi...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[566/805] last=0.0s avg=5.3s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Design a programming problem related to the subject that has been given to you. ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[567/805] last=0.0s avg=5.3s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Provide a Java solution to the following problem.
+
+Given an integer n, return tr...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[568/805] last=0.0s avg=5.3s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Think of topics that are most common in classic interview questions for a job in...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[569/805] last=0.0s avg=5.3s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: You will need to guide this person through the scenario they have described for ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[570/805] last=0.0s avg=5.3s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: You are given a programming problem and its implementation. Analyze the problem ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[571/805] last=0.0s avg=5.3s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: The given article should be checked for any scientific errors and corrected if n...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[572/805] last=0.0s avg=5.3s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Summarize the article you have been given in a brief manner.
+
+Mathematics and ar...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[573/805] last=0.0s avg=5.2s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Improve the article using your knowledge of the topic in order to make it more i...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[574/805] last=0.0s avg=5.2s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Make the article available in a second language by translating it into it.
+
+Dent...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[575/805] last=0.0s avg=5.2s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: An evaluation of the article's quality should be carried out. In order to do so,...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[576/805] last=0.0s avg=5.2s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Please answer the following question based on the information provided in the ar...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[577/805] last=0.0s avg=5.2s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Design a syllabus for the given course. Students should be given a list of the c...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[578/805] last=0.0s avg=5.2s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: List the personality traits that are required to be successful in the given job....
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[579/805] last=0.0s avg=5.2s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Please list the courses that someone interested in the first course might like.
+...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[580/805] last=0.0s avg=5.2s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Come up with the courses that one is supposed to take in order to be an expert i...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[581/805] last=0.0s avg=5.2s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Create a daily itinerary based on the given information.
+
+Our family is looking ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[582/805] last=0.0s avg=5.2s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Give students tips on how to keep their nerves under control during class presen...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[583/805] last=0.0s avg=5.2s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: You can easily make your holidays more eco-friendly by following these simple st...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[584/805] last=0.0s avg=5.1s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Think of an idea to help you win a challenge given to you. Write the steps you n...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[585/805] last=0.0s avg=5.1s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: There are many creative projects we can build at home that are related to the gi...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[586/805] last=0.0s avg=5.1s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Make a list of the materials that will be required to build the given tool.
+
+Cof...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[587/805] last=0.0s avg=5.1s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Provide a detailed explanation of the steps that are required in order to constr...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[588/805] last=0.0s avg=5.1s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Estimate the cost of supplies required to create the given project and calculate...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[589/805] last=0.0s avg=5.1s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Answer the following literature question as accurately as possible based on your...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[590/805] last=0.0s avg=5.1s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Develop a mental exercise that can help people manage their anxiety and explain ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[591/805] last=0.0s avg=5.1s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Give me an idea of the mental exercises you do to inspire yourself.
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[592/805] last=0.0s avg=5.1s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Make a list of outdoor activities that are suitable for the given weather condit...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[593/805] last=0.0s avg=5.1s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Please provide us with a list of the best conservation starter questions related...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[594/805] last=0.0s avg=5.1s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: In relation to the given weather scenario, give some tips on how to adjust the t...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[595/805] last=0.0s avg=5.0s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Write a to-do list based on the given information.
+
+Daily tasks in the pharmacy
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[596/805] last=0.0s avg=5.0s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Design a template table for keeping track of all subscriptions.
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[597/805] last=0.0s avg=5.0s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Plan an agenda for the daily standup meetings. Assign a time duration to each to...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[598/805] last=0.0s avg=5.0s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Answer the following question.
+
+How do you say "good evening" in French.
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[599/805] last=0.0s avg=5.0s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: What sound does this make?
+
+好
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[600/805] last=0.0s avg=5.0s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Give a grammar tip on how to end a German verb.
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[601/805] last=0.0s avg=5.0s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: This is a test for the reading ability of French. Read the given story carefully...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[602/805] last=0.0s avg=5.0s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Come up with healthy and easy dinner ideas for weeknights.
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[603/805] last=0.0s avg=5.0s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Provide a cooking hack for improving the flavor of the given food.
+
+popcorn
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[604/805] last=0.0s avg=5.0s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Make a list of snacks and foods to serve as party snacks on a game day!
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[605/805] last=0.0s avg=5.0s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Describe how to prepare the given food in your own words. Note down the ingredie...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[606/805] last=0.0s avg=5.0s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Suggest a recipe for a vegan dessert.
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[607/805] last=0.0s avg=5.0s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Design a medium-level sudoku puzzle.
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[608/805] last=0.0s avg=4.9s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Solve the given Sudoku puzzle.
+
+The Sudoku puzzle is:
+|1|  |5|  |  |  |  |8|  |
+...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[609/805] last=0.0s avg=4.9s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Think of a motivational quote that you have read in a book. Try to keep it posit...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[610/805] last=0.0s avg=4.9s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Choose the best books from the given genre.
+
+Crime & Mystery
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[611/805] last=0.0s avg=4.9s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Give a brief description of the book that you are given.
+
+Matilda
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[612/805] last=0.0s avg=4.9s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: In the event that a person enjoyed the book that was given, please suggest other...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[613/805] last=0.0s avg=4.9s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Indicate the genre of the book to which it belongs.
+
+Love in the Time of Cholera
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[614/805] last=0.0s avg=4.9s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Solve this equation.
+
+x^3 - 4x^2 + 6x - 24 = 0
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[615/805] last=0.0s avg=4.9s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Prove the given statement using your information.
+
+"If x is a positive integer o...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[616/805] last=0.0s avg=4.9s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Based on the facts that have been provided, prove the following statement.
+
+Stat...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[617/805] last=0.0s avg=4.9s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Verify the correctness of the given statement.
+
+"For all integers j and k, if j ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[618/805] last=0.0s avg=4.9s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Provide a formula for computing the nth term in the given sequence
+
+5, 14, 23, 3...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[619/805] last=0.0s avg=4.9s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Create a table listing all games that meet the specified criteria in the Nationa...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[620/805] last=0.0s avg=4.8s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Using a table, compare the career overviews of the given players in Major League...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[621/805] last=0.0s avg=4.8s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: You will be tested on your knowledge of classic witticisms and aphorisms by comp...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[622/805] last=0.0s avg=4.8s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: A list of all movies that meet the criteria given should be compiled.
+
+movies di...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[623/805] last=0.0s avg=4.8s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Using a given amount, determine an appropriate tip.
+
+14% tip on $47.50
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[624/805] last=0.0s avg=4.8s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Identify all words that match the pattern given.
+
+H_AR_
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[625/805] last=0.0s avg=4.8s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Come up with words that rhyme with the given word.
+
+instruct
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[626/805] last=0.0s avg=4.8s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Look for poems that mention the given object or character. The names of the poem...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[627/805] last=0.0s avg=4.8s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Respond to the last text in the chat using the correct emojis to convey your fee...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[628/805] last=0.0s avg=4.8s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: For answering the chat, think of a funny response you can use.
+
++ how are you?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[629/805] last=0.0s avg=4.8s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: The last message in the chat is a partial response. You should complete and rewr...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[630/805] last=0.0s avg=4.8s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Change the response to have a more empathic tone in the chat.
+
++ How are you doi...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[631/805] last=0.0s avg=4.8s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Currently, there is a chat in which people are arranging a meeting in the future...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[632/805] last=0.0s avg=4.8s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: The given text must be classified as offensive or not offensive.
+
+You acted real...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[633/805] last=0.0s avg=4.7s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Give a brief summary of the intention of the dialogue that just happened.
+
+Custo...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[634/805] last=0.0s avg=4.7s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Describe the content of the article in a brief manner.
+
+A study published earlie...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[635/805] last=0.0s avg=4.7s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Correct the transcription of an excerpt containing errors.
+
+I got got charged in...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[636/805] last=0.0s avg=4.7s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Take a look at the contract and extract the parties of the agreement from it.
+
+A...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[637/805] last=0.0s avg=4.7s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: On the basis of the subject of the email, determine whether the email should be ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[638/805] last=0.0s avg=4.7s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Classify the tweet into one of the following three categories: event, demo, or n...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[639/805] last=0.0s avg=4.7s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Give the news title a category. Pick a category from the list of News & Buzz, Tr...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[640/805] last=0.0s avg=4.7s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Classify the questions in the FAQ into Finding policy details, Change account se...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[641/805] last=0.0s avg=4.7s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Choose an appealing title for your post.
+
+The typical avocado is over 300 calori...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[642/805] last=0.0s avg=4.7s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Give some examples of what people usually say in the given social situation.
+
+wh...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[643/805] last=0.0s avg=4.7s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: You will be required to write a few questions from the given company's interview...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[644/805] last=0.0s avg=4.7s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Based on the information provided, you need to estimate the average summary for ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[645/805] last=0.0s avg=4.7s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Describe the responsibilities of the given job.
+
+Security Officer
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[646/805] last=0.0s avg=4.7s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Provide a list of the skills that may help you find the job.
+
+Crew Members
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[647/805] last=0.0s avg=4.6s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Schedule the meetings based on the given informqation.
+
+Person1: available from ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[648/805] last=0.0s avg=4.6s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Find the directions between the given locations.
+
+From: Rowan Avenue Elementary ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[649/805] last=0.0s avg=4.6s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Give a brief explanation of the requested part of the paper.
+
+Paper: The dominan...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[650/805] last=0.0s avg=4.6s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Answer the question about the paper after reading it carefully.
+
+To evaluate if ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[651/805] last=0.0s avg=4.6s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Recommend some helpful activities or conversation starters to use at meetups to ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[652/805] last=0.0s avg=4.6s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Convert the given HTML into Markdown format.
+
+<code>Use `code` in your Markdown ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[653/805] last=0.0s avg=4.6s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Extract the method that has been used in the research from the abstract of the p...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[654/805] last=0.0s avg=4.6s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: You need to come up with the names of some of the papers that relate to the pape...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[655/805] last=0.0s avg=4.6s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Create a short, concise summary of the paper based on its abstract.
+
+Few-shot le...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[656/805] last=0.0s avg=4.6s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: You will need to compose the ABC notation for a given song.
+
+The South Wind
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[657/805] last=0.0s avg=4.6s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Categorize the given magazine based on its content into one of the categories: P...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[658/805] last=0.0s avg=4.6s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Decide if the given email belongs to the Promotions or Social category.
+
+Subject...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[659/805] last=0.0s avg=4.6s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: The story of a movie has been described using many emojis. You need to guess the...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[660/805] last=0.0s avg=4.6s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Come up with an interesting idea for a new movie plot. Your plot should be descr...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[661/805] last=0.0s avg=4.5s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Change the first person to the third person in the given sentence. The meaning s...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[662/805] last=0.0s avg=4.5s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: You should capitalize the sentence according to the guide.
+
+Guide: Every other l...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[663/805] last=0.0s avg=4.5s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Create alliterations by finding synonyms for words in the given sentence.
+
+David...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[664/805] last=0.0s avg=4.5s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Convert the given description to a bash command.
+
+read the first 10 lines from f
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[665/805] last=0.0s avg=4.5s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Please prepare a table containing a summary of the information of the participan...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[666/805] last=0.0s avg=4.5s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: List the concepts that should be learned before approaching the given complex co...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[667/805] last=0.0s avg=4.5s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Given a sentence that may be ambiguous, rewrite the sentence using less ambiguou...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[668/805] last=0.0s avg=4.5s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Assess the sentiment of the given tweet and categorize it as Positive, Negative,...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[669/805] last=0.0s avg=4.5s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: You are given a Python command and are required to convert it into Ruby.
+
+print(...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[670/805] last=0.0s avg=4.5s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: You are given a sentence in first-order logic. Translate it into natural languag...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[671/805] last=0.0s avg=4.5s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: You are given a search query and a document. Classify whether the document is re...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[672/805] last=0.0s avg=4.5s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Create a list of subtopics for the given topic.
+
+Music theory
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[673/805] last=0.0s avg=4.5s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Summarize the movie in a snarky way. Try to explain the movie in just one senten...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[674/805] last=0.0s avg=4.5s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Enter the words that satisfy the given condition.
+
+5 Countries that Start with S
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[675/805] last=0.0s avg=4.5s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Provide a name for the dish given the ingredients and instructions.
+
+INGREDIENTS...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[676/805] last=0.0s avg=4.4s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Summarize a meeting from the given list of bullet points. Be sure to convert sho...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[677/805] last=0.0s avg=4.4s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: List a few popular songs from the given album.
+
+Back To Black
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[678/805] last=0.0s avg=4.4s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Invent a new word based on a description of the word.
+
+The feeling of knowing, w...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[679/805] last=0.0s avg=4.4s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Given a programming language and the name of a function, write a command to show...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[680/805] last=0.0s avg=4.4s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Provide a pleasant compliment based on the quality you have been given.
+
+Truthfu...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[681/805] last=0.0s avg=4.4s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Create a brief resume introduction using the following information.
+
+name: Mark
+...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[682/805] last=0.0s avg=4.4s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Make a list of adjectives that can be used to describe the given brand.
+
+a creat...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[683/805] last=0.0s avg=4.4s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Someone gives you some information about where they want to go and what they enj...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[684/805] last=0.0s avg=4.4s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Regex is a set of characters that define a search pattern. This kind of pattern ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[685/805] last=0.0s avg=4.4s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Write an engaging and well-written property listing description for selling a ho...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[686/805] last=0.0s avg=4.4s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Given a real estate listing description, extract the information and details of ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[687/805] last=0.0s avg=4.4s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Review the property description and tell us what is good and what is bad about i...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[688/805] last=0.0s avg=4.4s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: List some of the top real estate marketing words to add value to the listing and...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[689/805] last=0.0s avg=4.4s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Suggest some product bundles that are often purchased with a given product.
+
+Mac...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[690/805] last=0.0s avg=4.4s/q  cum_tps=28.1 tok/s  tokens=-1
+  Q: Create a template in markdown to create scope for Jira tickets. Members should u...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[691/805] last=0.0s avg=4.4s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: As part of software engineering, user stories describe what the user wants the s...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[692/805] last=0.0s avg=4.3s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: A user story is an informal, general explanation of a software feature written f...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[693/805] last=0.0s avg=4.3s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: Write a Jira ticket for the given task.
+
+New Employee onboarding
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[694/805] last=0.0s avg=4.3s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: Paraphrase the given text in an academic style.
+
+Lots of papers have been publis...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[695/805] last=0.0s avg=4.3s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: Make a list of the pros and cons of the given decision.
+
+Implementing a Remote W...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[696/805] last=0.0s avg=4.3s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: Include important study notes and key points that someone should know about the ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[697/805] last=0.0s avg=4.3s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: Based on the given keywords, write a review of a restaurant.
+
+Name: Pizzeria
+goo...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[698/805] last=0.0s avg=4.3s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: Convert natural language into a list of turn-by-turn directions.
+
+Go west on I-1...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[699/805] last=0.0s avg=4.3s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: Provide an ESRB rating for the following game.
+
+This is an action-adventure game...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[700/805] last=0.0s avg=4.3s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: A color description has been provided. Find the CSS code associated with that co...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[701/805] last=0.0s avg=4.3s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: Identify and fix bugs in the given code and rewrite it
+
+for i in range(10)
+    p...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[702/805] last=0.0s avg=4.3s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: Make a list of common phrases for the given section of the paper.
+
+Introduction
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[703/805] last=0.0s avg=4.3s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: We have described a scene from a movie that we have seen in the past. Find out w...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[704/805] last=0.0s avg=4.3s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: Take the product description and write a creative ad for it.
+
+Document Cameras a...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[705/805] last=0.0s avg=4.3s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: Translate the natural language description into a Google Sheets formula.
+
+if C7 ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[706/805] last=0.0s avg=4.3s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: You are given a tweet and you should decide whether it's offensive or not.
+
+She ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[707/805] last=0.0s avg=4.3s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: For a quick and efficient office workout, suggest a short routine.
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[708/805] last=0.0s avg=4.2s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: Predict how many stars the author will give to the restaurant from a Yelp review...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[709/805] last=0.0s avg=4.2s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: Categorize the Business into one of the Restaurants, Home Services, Auto Service...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[710/805] last=0.0s avg=4.2s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: Notify me of any suggestions you may have for making the text more grammatically...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[711/805] last=0.0s avg=4.2s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: Using the ingredients that are available, create a dinner recipe.
+
+Kale + almond...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[712/805] last=0.0s avg=4.2s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: Categorize the given product into one of Electronics, Computers, Smart Home, or ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[713/805] last=0.0s avg=4.2s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: Provide instructions for the given exercise.
+
+Leg Raises
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[714/805] last=0.0s avg=4.2s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: Rewrite the text and correct the spelling errors.
+
+It solves problems comon and ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[715/805] last=0.0s avg=4.2s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: Write down antonyms for the given word.
+
+laureating
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[716/805] last=0.0s avg=4.2s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: Write the HTML syntax for the required action.
+
+adding an image to the page
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[717/805] last=0.0s avg=4.2s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: Identify the programming language used to write the given code.
+
+if (20 > 18) {
+...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[718/805] last=0.0s avg=4.2s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: Decide which part of speech the underlined word belongs to.
+
+school will _keep t...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[719/805] last=0.0s avg=4.2s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: Define what the underlined word means for kids.
+
+_keep a promise
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[720/805] last=0.0s avg=4.2s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: Expand the given sentence and give it more details and depth.
+
+It changed my lif...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[721/805] last=0.0s avg=4.2s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: Extract the address of the property from the "About this space" section of Airbn...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[722/805] last=0.0s avg=4.2s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: Design a simple training challenge on Strava that everyone could attend.
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[723/805] last=0.0s avg=4.2s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: Suggest some names for a friendly group in telegram.
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[724/805] last=0.0s avg=4.2s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: Write what the pronunciation of the given word sounds like. Follow the "Google p...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[725/805] last=0.0s avg=4.1s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: Explain the meaning of the given phrase in simple terms. Use an example if possi...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[726/805] last=0.0s avg=4.1s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: How can I improve my time management skills?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[727/805] last=0.0s avg=4.1s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: What are the most effective ways to deal with stress?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[728/805] last=0.0s avg=4.1s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: What are the main differences between Python and JavaScript programming language...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[729/805] last=0.0s avg=4.1s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: How can I increase my productivity while working from home?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[730/805] last=0.0s avg=4.1s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: Can you explain the basics of quantum computing?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[731/805] last=0.0s avg=4.1s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: What are the differences between plant-based and animal-based protein sources?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[732/805] last=0.0s avg=4.1s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: How can I develop my critical thinking skills?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[733/805] last=0.0s avg=4.1s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: What are the major challenges faced by the education sector today?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[734/805] last=0.0s avg=4.1s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: What are the primary factors that influence consumer behavior?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[735/805] last=0.0s avg=4.1s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: What are the most effective strategies for conflict resolution in the workplace?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[736/805] last=0.0s avg=4.1s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: What are some potential implications of using a single-use plastic bottle versus...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[737/805] last=0.0s avg=4.1s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: What factors would you consider when designing an inclusive and accessible publi...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[738/805] last=0.0s avg=4.1s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: How can governments utilize fiscal and monetary policies to combat economic rece...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[739/805] last=0.0s avg=4.1s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: How do language and cultural barriers affect the way people communicate and form...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[740/805] last=0.0s avg=4.1s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: Describe a scenario where artificial intelligence could be used to improve the q...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[741/805] last=0.0s avg=4.1s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: Explain the process of gene editing using CRISPR-Cas9 technology, and discuss it...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[742/805] last=0.0s avg=4.1s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: How do vaccinations work to protect individuals and communities from infectious ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[743/805] last=0.0s avg=4.0s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: How do social media platforms influence the way people consume and share news, a...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[744/805] last=0.0s avg=4.0s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: How do cultural, social, and economic factors influence people's food choices, a...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[745/805] last=0.0s avg=4.0s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: Explain the process of natural selection and how it contributes to the evolution...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[746/805] last=0.0s avg=4.0s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: How would you introduce yourself as a medieval knight at a royal banquet?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[747/805] last=0.0s avg=4.0s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: As a pirate captain, what would you say to your crew to motivate them to search ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[748/805] last=0.0s avg=4.0s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: If you were a Shakespearean character, how would you declare your love for someo...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[749/805] last=0.0s avg=4.0s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: As a superhero, how would you explain your origin story to a curious child?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[750/805] last=0.0s avg=4.0s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: Imagine you are a time traveler from the year 3000. What technological advanceme...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[751/805] last=0.0s avg=4.0s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: As a sports commentator, describe the winning play in the final seconds of a cha...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[752/805] last=0.0s avg=4.0s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: Pretend to be a world-famous chef. How would you describe your signature dish to...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[753/805] last=0.0s avg=4.0s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: You are a mountain climber reaching the summit of Mount Everest. Describe your e...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[754/805] last=0.0s avg=4.0s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: As a space colonist on Mars, describe your daily life and the challenges you fac...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[755/805] last=0.0s avg=4.0s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: Pretend to be a character in a post-apocalyptic world. Describe how you survive ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[756/805] last=0.0s avg=4.0s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: How can you determine if a restaurant is popular among locals or mainly attracts...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[757/805] last=0.0s avg=4.0s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: What are some subtle clues that suggest someone is pretending to understand a to...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[758/805] last=0.0s avg=4.0s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: Why might someone choose to use a paper map or ask for directions instead of rel...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[759/805] last=0.0s avg=4.0s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: How can you determine if a person is genuinely interested in a conversation or s...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[760/805] last=0.0s avg=4.0s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: Why might someone prefer to shop at a small, locally-owned business instead of a...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[761/805] last=0.0s avg=4.0s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: How can you assess the credibility of a source of information, such as a news ar...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[762/805] last=0.0s avg=3.9s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: Why do some people enjoy the sensation of being scared, such as by watching horr...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[763/805] last=0.0s avg=3.9s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: How can observing the behavior of other people in a social situation provide clu...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[764/805] last=0.0s avg=3.9s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: Do we have a moral obligation to explore space, or should we focus on solving Ea...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[765/805] last=0.0s avg=3.9s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: In a world where automation is becoming increasingly prevalent, is it more impor...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[766/805] last=0.0s avg=3.9s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: How many times does the average human blink in a lifetime? Try to explain your a...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[767/805] last=0.0s avg=3.9s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: How many atoms are in a grain of salt? Try to explain your answer. Your explanat...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[768/805] last=0.0s avg=3.9s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: How many lightning strikes occur on Earth each day? Try to explain your answer. ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[769/805] last=0.0s avg=3.9s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: How many balloons would it take to lift a house like in the movie "Up"? Try to e...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[770/805] last=0.0s avg=3.9s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: How many text messages are sent globally in a minute? Try to explain your answer...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[771/805] last=0.0s avg=3.9s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: How many words are spoken daily on Earth? Try to explain your answer. Your expla...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[772/805] last=0.0s avg=3.9s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: How many snowflakes fall during a typical winter? Try to explain your answer. Yo...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[773/805] last=0.0s avg=3.9s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: How many pages are in all the books ever written? Try to explain your answer. Yo...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[774/805] last=0.0s avg=3.9s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: How many times has the Earth orbited the Sun since the beginning of life? Try to...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[775/805] last=0.0s avg=3.9s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: How many songs have been recorded throughout history? Try to explain your answer...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[776/805] last=0.0s avg=3.9s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: What if the Internet had been invented during the Renaissance period?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[777/805] last=0.0s avg=3.9s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: What if the Aztecs had successfully repelled the Spanish conquistadors?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[778/805] last=0.0s avg=3.9s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: What if the Black Death had not occurred in the 14th century?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[779/805] last=0.0s avg=3.9s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: What if Isaac Newton had focused on biology instead of physics?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[780/805] last=0.0s avg=3.9s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: What if the Beatles had never formed as a band?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[781/805] last=0.0s avg=3.9s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: What if Alan Turing had not cracked the Enigma code during World War II?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[782/805] last=0.0s avg=3.8s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: What if the Suez Canal had never been constructed?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[783/805] last=0.0s avg=3.8s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: What if the Maya civilization had never mysteriously collapsed?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[784/805] last=0.0s avg=3.8s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: What if Christopher Columbus had not discovered the Americas?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[785/805] last=0.0s avg=3.8s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: What if Vincent van Gogh had been a successful artist during his lifetime?
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[786/805] last=0.0s avg=3.8s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: Develop a C++ program that reads a text file line by line and counts the number ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[787/805] last=0.0s avg=3.8s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: Implement a Python function to find the longest common subsequence of two input ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[788/805] last=0.0s avg=3.8s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: Implement a regular expression in Python to validate an email address.
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[789/805] last=0.0s avg=3.8s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: Write a program to find the nth Fibonacci number using dynamic programming.
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[790/805] last=0.0s avg=3.8s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: Implement a binary search algorithm to find a specific element in a sorted array...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[791/805] last=0.0s avg=3.8s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: Implement a queue data structure using two stacks in Python.
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[792/805] last=0.0s avg=3.8s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: Implement a program to find the common elements in two arrays without using any ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[793/805] last=0.0s avg=3.8s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: Given that f(x) = 5x^3 - 2x + 3, find the value of f(2).
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[794/805] last=0.0s avg=3.8s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: Solve for x in the equation 3x + 10 = 5(x - 2).
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[795/805] last=0.0s avg=3.8s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: If the endpoints of a line segment are (2, -2) and (10, 4), what is the length o...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[796/805] last=0.0s avg=3.8s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: Can you help me write a formal email to a potential business partner proposing a...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[797/805] last=0.0s avg=3.8s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: Can you help me write a resignation letter to my current employer, while leaving...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[798/805] last=0.0s avg=3.8s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: Use an appropriate format to structure a formal letter of recommendation for a s...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[799/805] last=0.0s avg=3.8s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: Write a compelling product launch announcement email to inform our customers of ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[800/805] last=0.0s avg=3.8s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: Draft an apology email to a customer who experienced a delay in their order, and...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[801/805] last=0.0s avg=3.8s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: Write a script for a YouTube video exploring the history and cultural significan...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[802/805] last=0.0s avg=3.8s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: Compose an engaging travel blog post about a recent trip to Hawaii, highlighting...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[803/805] last=0.0s avg=3.7s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: Write a captivating movie review for a recently released science fiction film, d...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[804/805] last=0.0s avg=3.7s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: Structure a podcast script for an episode discussing the influence of streaming ...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+[805/805] last=0.0s avg=3.7s/q  cum_tps=28.0 tok/s  tokens=-1
+  Q: Write a symphony concert review, discussing the orchestra's performance and over...
+  A: ERROR: 500 Server Error: Internal Server Error for url: http://localhost:8000/v1/chat/completions
+
+=== summary ===
+  saved 805 results to /workspace/git/0g-sparse-inference-alignment/exp/alpaca-0gm35b-piecewise-fix3-20260610/alpaca_0gm35b_piecewise3_sia_20260610.json
+  errors: 750
+  total tokens: 84239
+  total wall time: 3010s (50.2 min)
+  throughput: 28.0 tok/s
