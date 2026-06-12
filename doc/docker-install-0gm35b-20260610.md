@@ -323,7 +323,7 @@ Path C 之下，**server 在 `docker compose up -d` 后已经在自动启动**�
 
 > **谁需要看这一步**：Path A 用户（Step 2 装完依赖后），Path B 用户（Step 1B' 进容器后）。**Path C 用户跳过**——server 已经被 compose 自动启起来了。
 
-> ℹ️ **b2 inproc 是单进程拓扑**：主 LLM（0GM-35B）+ Value Model（VM-Qwen3-4B）在**同一个 Python 进程里嵌套跑**，RM 调用是直接 Python 函数调用而非 HTTP，**不需要再单独开一个 RM server**。
+> ℹ️ **b2 inproc 是单进程拓扑**：主 LLM（0GM-35B）+ Value Model（Qwen3-4B）在**同一个 Python 进程里嵌套跑**，RM 调用是直接 Python 函数调用而非 HTTP，**不需要再单独开一个 RM server**。
 
 ```bash
 source /opt/venv-0gm35b/bin/activate
@@ -359,7 +359,7 @@ tail -f "$LOG"
 |---|---|
 | `--llm` | **主推理 LLM**（0GM-35B），占 GPU 55% 显存 |
 | `--rm_backend b2` | 嵌套同进程 RM backend（vllm 0.18.0 sweet-spot 路径） |
-| `--rm_model` | **Value Model**（VM-Qwen3-4B），嵌套在主进程内，占 GPU 15% 显存 |
+| `--rm_model` | **Value Model**（Qwen3-4B），嵌套在主进程内，占 GPU 15% 显存 |
 | `--llm_gpu_mem 0.55 + --rm_b2_gpu_mem 0.15` | 合计 70%，剩 30% 给 cudagraph + KV cache 头空间（H200 141GB 上测试通过） |
 | `--topk 10 --weight 1.0 --entropy_threshold 1.0` | SIA 参数：10 个候选，干预权重 1.0，entropy > 1.0 才介入（≈ 20% 干预率） |
 | `--max_model_len 2048` | 限制最长序列 2048 token，控制 KV cache 占用 |
@@ -485,7 +485,7 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
 
 ### 4.5 多模态输入（图像 + 文本）smoke test
 
-0GM-1.0-35B 是 Vision-Language 模型，支持图像输入。VM-Qwen3-4B 是纯文本模型，不能对图像上下文打分，因此 **server 检测到图像后会自动将 `sia_weight` 强制设为 `0.0`**，跳过 VM 直接用原始模型推理。
+0GM-1.0-35B 是 Vision-Language 模型，支持图像输入。Qwen3-4B 是纯文本模型，不能对图像上下文打分，因此 **server 检测到图像后会自动将 `sia_weight` 强制设为 `0.0`**，跳过 VM 直接用原始模型推理。
 
 ```bash
 curl -s -X POST http://localhost:8000/v1/chat/completions \
