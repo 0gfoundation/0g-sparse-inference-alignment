@@ -1,7 +1,7 @@
 # SIA 推理加速优化总结
 
 **适用模型**：Qwen3-VL-30B-A3B-Instruct、0GM-1.0-35B-A3B  
-**Value Model**：VM-Qwen3-4B（两个模型共用）  
+**Value Model**：Qwen3-4B（两个模型共用）  
 **撰写日期**：2026-06-10
 
 ---
@@ -11,7 +11,7 @@
 | 术语 | 含义 |
 |------|------|
 | **SIA** | Sparse Inference-time Alignment。每生成一个 token，用 VM 对候选打分并干预 logit 分布，使输出偏向更高奖励的方向。`--entropy_threshold` 控制只在高熵（模型不确定）的步骤才干预，降低计算开销。 |
-| **VM（Value Model）** | 对候选 token 打分的小模型（本项目用 VM-Qwen3-4B），估计"沿此路径继续生成"的期望奖励。CLI 参数写作 `--rm` / `--rm_backend` 等，系历史命名遗留，含义相同。 |
+| **VM（Value Model）** | 对候选 token 打分的小模型（本项目用 Qwen3-4B），估计"沿此路径继续生成"的期望奖励。CLI 参数写作 `--rm` / `--rm_backend` 等，系历史命名遗留，含义相同。 |
 | **noSIA** | 不启用 SIA 干预，主模型正常生成。"纯 vLLM noSIA"指不加载 VM 的原生 vLLM 推理，是速度上限基线。 |
 | **b2 inproc** | 将 VM 嵌入主模型所在进程，打分变成进程内函数调用，消除 HTTP 网络往返开销。 |
 | **APC** | Automatic Prefix Caching，vllm 的 KV 自动前缀缓存。前缀 token ID 相同时 KV 不重算，直接复用。以 16 token 为一个 block 计算 hash，block 内有 1 个 ID 不同则整块不能复用。 |
@@ -125,7 +125,7 @@ CUDA Graph 相当于数据库的**执行计划**：先 dry-run 一遍 forward，
 
 ### 3.1 VM 也使用 CUDA Graph
 
-VL-30B 的 VM（VM-Qwen3-4B）使用 vllm 0.17.1，在**模型初始化阶段**一次性把所有常见 batch 大小（1 条、2 条……到 topk=10 条）都录制成 CUDA graph，推理时直接查表 replay。
+VL-30B 的 VM（Qwen3-4B）使用 vllm 0.17.1，在**模型初始化阶段**一次性把所有常见 batch 大小（1 条、2 条……到 topk=10 条）都录制成 CUDA graph，推理时直接查表 replay。
 
 效果：VM 单次调用从 ~71ms（eager）→ ~11ms（CUDA graph），**6.4×**。（[详细报告](vl30b-b2-inproc-speedup-20260605.md)）
 
@@ -281,7 +281,7 @@ b2_score_call 占干预步总 SIA 耗时的约 80%（VL-30B：17ms / ~21ms）和
 
 表面上 VM 参数量（4B）远小于主模型（30B / 35B），但实测 b2_score_call（17–30ms）却高于 apply_cpu_sync 反映的主模型单步耗时（3.6ms）。原因有四：
 
-1. **MoE vs Dense 架构**：两个主模型均为 MoE（Mixture of Experts），"30B/35B"是总参数量，每个 token 实际只激活约 **3B** 参数（"A3B"即 Active 3B）。VM-Qwen3-4B 是全量 dense 模型，4B 参数在每次 forward 中全部激活。实际计算量：**VM 4B dense > 主模型 ~3B active**。
+1. **MoE vs Dense 架构**：两个主模型均为 MoE（Mixture of Experts），"30B/35B"是总参数量，每个 token 实际只激活约 **3B** 参数（"A3B"即 Active 3B）。Qwen3-4B 是全量 dense 模型，4B 参数在每次 forward 中全部激活。实际计算量：**VM 4B dense > 主模型 ~3B active**。
 
 2. **每步评估 topk=10 个候选**：主模型每步只生成 1 个 token；VM 每步需对 10 个候选各做一次 forward（即使借助 APC 只计算候选末尾的 1–2 个新 token，总量仍是主模型的 10×）。
 
