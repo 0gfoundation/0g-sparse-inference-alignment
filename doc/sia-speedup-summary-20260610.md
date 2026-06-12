@@ -1,7 +1,7 @@
 # SIA 推理加速优化总结
 
 **适用模型**：Qwen3-VL-30B-A3B-Instruct、0GM-1.0-35B-A3B  
-**Value Model**：VM-Qwen3-4B（两个模型共用）  
+**Value Model**：Qwen3-4B（两个模型共用）  
 **撰写日期**：2026-06-10
 
 ---
@@ -11,7 +11,7 @@
 | 术语 | 含义 |
 |------|------|
 | **SIA** | Sparse Inference-time Alignment。每生成一个 token，用 VM 对候选打分并干预 logit 分布，使输出偏向更高奖励的方向。`--entropy_threshold` 控制只在高熵（模型不确定）的步骤才干预，降低计算开销。 |
-| **VM（Value Model）** | 对候选 token 打分的小模型（本项目用 VM-Qwen3-4B），估计"沿此路径继续生成"的期望奖励。CLI 参数写作 `--rm` / `--rm_backend` 等，系历史命名遗留，含义相同。 |
+| **VM（Value Model）** | 对候选 token 打分的小模型（本项目用 Qwen3-4B），估计"沿此路径继续生成"的期望奖励。CLI 参数写作 `--rm` / `--rm_backend` 等，系历史命名遗留，含义相同。 |
 | **noSIA** | 不启用 SIA 干预，主模型正常生成。"纯 vLLM noSIA"指不加载 VM 的原生 vLLM 推理，是速度上限基线。 |
 | **b2 inproc** | 将 VM 嵌入主模型所在进程，打分变成进程内函数调用，消除 HTTP 网络往返开销。 |
 | **APC** | Automatic Prefix Caching，vllm 的 KV 自动前缀缓存。前缀 token ID 相同时 KV 不重算，直接复用。以 16 token 为一个 block 计算 hash，block 内有 1 个 ID 不同则整块不能复用。 |
@@ -21,7 +21,7 @@
 
 ---
 
-## 一、速度基线
+## 一、优化前后性能对比
 
 | 模型 | 纯 vLLM（无 VM）| SIA 起点（最初）| SIA 终点（当前）|
 |------|:---:|:---:|:---:|
@@ -119,15 +119,17 @@ CUDA Graph 相当于数据库的**执行计划**：先 dry-run 一遍 forward，
 | 0GM-35B | 旧（PIECEWISE only）| 37.8 |
 | 0GM-35B | 新（FULL_AND_PIECEWISE）| **54.1（+43%）** |
 
+> 注：上表 VL-30B 的 59.2 基线已包含 §三 VM CUDA Graph 的效果，该优化在 b2 inproc 上线时即已生效，并非 §2.3 之后的额外叠加。
+
 ---
 
 ## 三、VL-30B 独有的优化
 
 ### 3.1 VM 也使用 CUDA Graph
 
-VL-30B 的 VM（VM-Qwen3-4B）使用 vllm 0.17.1，在**模型初始化阶段**一次性把所有常见 batch 大小（1 条、2 条……到 topk=10 条）都录制成 CUDA graph，推理时直接查表 replay。
+VL-30B 的 VM（Qwen3-4B）使用 vllm 0.17.1，在**模型初始化阶段**一次性把所有常见 batch 大小（1 条、2 条……到 topk=10 条）都录制成 CUDA graph，推理时直接查表 replay。
 
-效果：VM 单次调用从 ~71ms（eager）→ ~11ms（CUDA graph），**6.4×**。（[详细报告](vl30b-b2-inproc-speedup-20260605.md)）
+效果：VM 单次调用从 ~71ms（eager）→ ~11ms（CUDA graph），**6.4×**。（[详细报告](vl30b-b2-inproc-speedup-20260605.md)）此优化在 b2 inproc 上线时即已生效，是 §2.2 中 VL-30B 59.2 tok/s 基线的组成部分，78.3 tok/s 终点是在此基础上再叠加 §2.3 所得。
 
 > **注**：~11ms 为该报告中短序列场景的测量值。AlpacaEval 长序列实验（§五）的稳态 b2_score_call p50 约 17ms——序列越长、每步候选文字越多，VM forward 时间略有增加。
 
@@ -251,7 +253,7 @@ VM GPU   ───────────────────────�
 | ④ | **b2_score_call** | VM GPU 计算时间（含分词 + forward + 取分）；仅干预步调用 | **~17 ms** | **~30 ms** |
 | ⑤ | **intv_apply_logits** | 将 VM 分值写回 logit 分布 | ~0.46 ms | ~0.42 ms |
 | — | **skip_step** (①+②) | 非干预步 SIA 回调总耗时 | ~4.1 ms | ~4.3 ms |
-| — | **intv_rate** | 实际触发③④⑤的步骤占比（以 token 计）| 11.7% | 20.1% |
+| — | **intv_rate** | 实际触发③④⑤的步骤占比（以 token 计）| 24.9% | 20.1% |
 
 **各实验实测吞吐**（同一实验组内 SIA vs noSIA 对比）：
 
@@ -272,18 +274,18 @@ b2_score_call 占干预步总 SIA 耗时的约 80%（VL-30B：17ms / ~21ms）和
 
 以干预率加权后，每步平均 VM 开销为：
 
-- VL-30B：11.7% × 17 ms ≈ **2.0 ms/step**
+- VL-30B：24.9% × 17 ms ≈ **4.2 ms/step**
 - 0GM-35B：20.1% × 30 ms ≈ **6.0 ms/step**
 
-0GM-35B 干预率更高（20% vs 12%）且单次 VM 更慢（30ms vs 17ms），双重叠加导致其 SIA/noSIA 比值（59%）低于 VL-30B（64%）。
+0GM-35B 干预率略低（20% vs 25%），但单次 VM 显著更慢（30ms vs 17ms），VM 速度差距是主导因素，导致其每步平均 VM 开销仍高于 VL-30B，SIA/noSIA 比值（59%）低于 VL-30B（64%）。
 
 **② 为何 VM（4B dense）比主推理模型更慢**
 
 表面上 VM 参数量（4B）远小于主模型（30B / 35B），但实测 b2_score_call（17–30ms）却高于 apply_cpu_sync 反映的主模型单步耗时（3.6ms）。原因有四：
 
-1. **MoE vs Dense 架构**：两个主模型均为 MoE（Mixture of Experts），"30B/35B"是总参数量，每个 token 实际只激活约 **3B** 参数（"A3B"即 Active 3B）。VM-Qwen3-4B 是全量 dense 模型，4B 参数在每次 forward 中全部激活。实际计算量：**VM 4B dense > 主模型 ~3B active**。
+1. **MoE vs Dense 架构**：两个主模型均为 MoE（Mixture of Experts），"30B/35B"是总参数量，每个 token 实际只激活约 **3B** 参数（"A3B"即 Active 3B）。Qwen3-4B 是全量 dense 模型，4B 参数在每次 forward 中全部激活。实际计算量：**VM 4B dense > 主模型 ~3B active**。
 
-2. **每步评估 topk=10 个候选**：主模型每步只生成 1 个 token；VM 每步需对 10 个候选各做一次 forward（即使借助 APC 只计算候选末尾的 1–2 个新 token，总量仍是主模型的 10×）。
+2. **每步评估 topk=10 个候选**：主模型每步只生成 1 个 token；VM 每步需对 10 个候选各做一次 forward（即使借助 APC 只计算候选末尾的 1–2 个新 token，总量仍是主模型的 10×；VL-30B 同分词器恒为 1 个，0GM-35B 跨分词器为 1–2 个）。
 
 3. **Small-batch memory-bound**：每次 VM 调用的 batch 极小（10 candidates × 1–2 token，等效 M≈15 的矩阵乘法），GPU 处于 memory-bound 而非 compute-bound 状态，算力无法充分利用，耗时由内存带宽决定。
 
@@ -320,7 +322,7 @@ SIA 回调在每步开始时调用 `torch.cuda.synchronize()`，等待 LLM FULL 
 以下参数调整或替换可提升速度，但会不同程度地影响 SIA 的干预质量，需根据实际任务评估可接受的权衡点。
 
 - **减少 `--topk`**：每步候选从 10 降到 5 或 3，VM batch 缩小，b2_score_call 时间线性缩短；代价是候选池变小，可能错过更优 token
-- **增大 `--entropy_threshold`**：提高跳过干预的熵阈值，降低干预率（当前 VL-30B 11.7%、0GM-35B 20.1%）；代价是部分高熵关键决策点被跳过，不再受 VM 引导
+- **增大 `--entropy_threshold`**：提高跳过干预的熵阈值，降低干预率（当前 VL-30B 24.9%、0GM-35B 20.1%）；代价是部分高熵关键决策点被跳过，不再受 VM 引导
 - **更小的 VM（Qwen3-1.7B）**：替代 Qwen3-4B，b2_score_call 显著缩短；代价是 VM 打分精度降低
 
 ### 6.3 模型专属方向
@@ -353,8 +355,10 @@ vllm 初始化时会提前录制一批"固定形状"的 CUDA graph：比如 1 �
 
 vllm 0.17.1（VL-30B 所用版本）在遇到未预录的形状时，选择**直接退回 eager 逐 kernel 执行**，而不是尝试临时录制，所以 VL-30B 的 VM 不会崩溃，CUDA graph 也能正常发挥作用。
 
-**问题二：VM 的工作模式与 CUDA graph 不匹配**
+**问题二：VM 每步的 uncached 形状与 VL-30B 不一致**
 
-LLM 的 decode 阶段每步只生成 1 个 token，每次 forward 的 batch 大小固定（topk 个序列，每个只新增 1 个 token），非常适合 CUDA graph（固定形状，反复 replay）。
+VL-30B 的 VM 使用同一套分词器，APC 完全命中：每步每个候选只需 forward 1 个新 token，batch 形状恒为 10 × 1，vllm 在初始化时预录此形状，运行时永远 replay。
 
-0GM-35B 的 VM 情况不同：每步需要对 topk=10 条**完整序列**（从第 1 个 token 到当前最新 token）做完整的 prefill forward，序列长度随着生成推进线性增长（从几十 token 增长到几百 token）。这叫做 **prefill-heavy** 工作模式——每次 forward 的序列长度都不一样，无法用固定形状的 CUDA graph 覆盖。实测 CUDA graph 模式比 eager 模式还慢 2-3×（115–140ms vs 30ms），已放弃。
+0GM-35B 旧代码（§4.1 stable prefix 修复前）使用 `rm_tok.encode(prefix_text + cand_text)` 整段重切词，BPE 边界合并导致 prefix 末尾 1–2 个 token 的 ID 在不同候选间各异。APC 以 16 个 token 为一 block 做 hash——prefix 末尾那个 block 在 10 个候选里各有不同 hash，各自 cache miss；其余更早的 block 均命中 APC。结果每步每个候选需 forward 约 16（末尾 block）+ 1（候选 token）≈ 17 个未缓存 token，batch 形状约为 10 × 17，与 VL-30B 的 10 × 1 不同，且未被 vllm 初始化时预录，触发问题一的 RuntimeError。实测 CUDA graph 模式比 eager 还慢 2–3×（115–140ms vs 30ms），已放弃。
+
+§4.1 stable prefix 修复后，prefix 编码稳定，APC 全部命中，每步每个候选只需 forward 1–2 个新 token，问题二从根本上消除。但问题一（vllm 0.18.0 运行时崩溃）仍存在，CUDA graph 尚无法启用。

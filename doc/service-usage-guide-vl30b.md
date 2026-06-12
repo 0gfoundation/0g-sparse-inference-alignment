@@ -280,7 +280,7 @@ data: [DONE]
 
 Qwen3-VL-30B 是 Vision-Language 模型，支持 OpenAI `image_url` 格式的图像输入。
 
-**重要**：Value Model（VM-Qwen3-4B）是纯文本模型，无法对含图像上下文的候选 token 打分。因此，**当 request 包含图像时，server 会自动将 `sia_weight` 强制设为 `0.0`，跳过 VM 评分，直接用原始模型推理**。无需在 request 里手动设置 `sia_weight`——server 自动处理。
+**重要**：Value Model（Qwen3-4B）是纯文本模型，无法对含图像上下文的候选 token 打分。因此，**当 request 包含图像时，server 会自动将 `sia_weight` 强制设为 `0.0`，跳过 VM 评分，直接用原始模型推理**。无需在 request 里手动设置 `sia_weight`——server 自动处理。
 
 ```bash
 curl -s -X POST http://localhost:8000/v1/chat/completions \

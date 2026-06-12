@@ -326,7 +326,7 @@ Path C 之下, **server 在 `docker compose up -d` 后已经在自动启动**, �
 
 > **谁需要看这一步**: Path A 用户 (Step 2 装完依赖后), Path B 用户 (Step 1B' 进容器后)。**Path C 用户跳过** — server 已经被 compose 自动启起来了。
 
-> ℹ️ **重要 — b2 inproc 是单进程拓扑**: 跟 HTTP path 起两个 server (一个主 LLM, 一个 RM 在另一个端口) 不同, b2 inproc 让 **主 LLM (VL-30B) + Value Model (VM-Qwen3-4B) 在同一个 Python 进程里 nested 跑**, 共享一个 CUDA context, RM 调用是直接 Python 函数调用而非 HTTP。所以下面**这一条命令就同时启动了主 LLM + Value Model**, 不需要再开一个 RM server。
+> ℹ️ **重要 — b2 inproc 是单进程拓扑**: 跟 HTTP path 起两个 server (一个主 LLM, 一个 RM 在另一个端口) 不同, b2 inproc 让 **主 LLM (VL-30B) + Value Model (Qwen3-4B) 在同一个 Python 进程里 nested 跑**, 共享一个 CUDA context, RM 调用是直接 Python 函数调用而非 HTTP。所以下面**这一条命令就同时启动了主 LLM + Value Model**, 不需要再开一个 RM server。
 
 > Path B 容器里 venv 已在 PATH, `source /opt/venv-vl30b/bin/activate` 可省。Path A 用户记得激活。
 
@@ -366,7 +366,7 @@ tail -f "$LOG"
 |---|---|
 | `--llm` | **主推理 LLM** (VL-30B), 占 GPU 55% 显存 |
 | `--rm_backend b2` | 用 nested in-process backend (vllm 0.17.1 sweet-spot 路径) |
-| `--rm_model` | **Value Model** (VM-Qwen3-4B), nested 在主进程内, 占 GPU 15% 显存 |
+| `--rm_model` | **Value Model** (Qwen3-4B), nested 在主进程内, 占 GPU 15% 显存 |
 | `--llm_gpu_mem 0.55 + --rm_b2_gpu_mem 0.15` | 加起来 70%, 剩 30% 给 cudagraph + KV cache 头空间 |
 | `--topk 10 --weight 1.0 --entropy_threshold 1.0` | SIA 算法参数: 每个 token 候选 10 个, 干预权重 1.0, entropy > 1.0 才介入 |
 | `SIA_LLM_CUDAGRAPH=piecewise` | 强制主 LLM 用 PIECEWISE cudagraph (vllm 0.17.1 AOT 模式), 避免跟 nested RM 撞 |
@@ -510,7 +510,7 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
 
 ### 4.5 多模态输入（图像 + 文本）smoke test
 
-Qwen3-VL-30B 是 Vision-Language 模型，支持图像输入。VM-Qwen3-4B 是纯文本模型，不能对图像上下文打分，因此 **server 检测到图像后会自动将 `sia_weight` 强制设为 `0.0`**，跳过 VM 直接用原始模型推理。
+Qwen3-VL-30B 是 Vision-Language 模型，支持图像输入。Qwen3-4B 是纯文本模型，不能对图像上下文打分，因此 **server 检测到图像后会自动将 `sia_weight` 强制设为 `0.0`**，跳过 VM 直接用原始模型推理。
 
 ```bash
 curl -s -X POST http://localhost:8000/v1/chat/completions \
@@ -692,7 +692,7 @@ docker compose up -d
 在 docker 容器内直接复用 SIA server 跑 AlpacaEval 效果评测。两个 arm 共用同一个运行中的 server，通过 per-request `--sia_weight 0` 区分，无需切换服务。
 
 **脚本**: `eval/alpaca_eval.py` (generation) + `scripts/measure_alpaca_reward.py` (scoring)
-**评分模型**: Skywork-Reward-V2-Llama-3.1-8B (第三方 RM，独立于 VM-Qwen3-4B)
+**评分模型**: Skywork-Reward-V2-Llama-3.1-8B (第三方 RM，独立于 Qwen3-4B)
 **参考基线**: 旧实验 HTTP path VL-30B 200Q: noSIA mean=29.26, SIA mean=28.67, Δ=-1.57% (p=0.29)
 
 ### 前提
