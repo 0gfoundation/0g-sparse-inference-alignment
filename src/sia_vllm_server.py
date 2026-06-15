@@ -401,6 +401,7 @@ async def _handle_chat(req: ChatCompletionRequest):
     finish_reason = (final.outputs[0].finish_reason or "stop") if final else "timeout"
     prompt_tokens = len(final.prompt_token_ids)
     completion_tokens = len(final.outputs[0].token_ids)
+    cached_tokens = (final.num_cached_tokens or 0) if final else 0
 
     return JSONResponse({
         "id": request_id,
@@ -416,6 +417,7 @@ async def _handle_chat(req: ChatCompletionRequest):
             "prompt_tokens": prompt_tokens,
             "completion_tokens": completion_tokens,
             "total_tokens": prompt_tokens + completion_tokens,
+            "prompt_tokens_details": {"cached_tokens": cached_tokens},
         },
     })
 
@@ -453,6 +455,7 @@ async def _stream_sse(
     if include_usage and final_output is not None:
         prompt_tokens = len(final_output.prompt_token_ids)
         completion_tokens = len(final_output.outputs[0].token_ids)
+        cached_tokens = final_output.num_cached_tokens or 0
         usage_chunk = {
             "id": request_id,
             "object": "chat.completion.chunk",
@@ -463,6 +466,7 @@ async def _stream_sse(
                 "prompt_tokens": prompt_tokens,
                 "completion_tokens": completion_tokens,
                 "total_tokens": prompt_tokens + completion_tokens,
+                "prompt_tokens_details": {"cached_tokens": cached_tokens},
             },
         }
         yield f"data: {json.dumps(usage_chunk)}\n\n"
