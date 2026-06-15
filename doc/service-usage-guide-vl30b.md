@@ -229,7 +229,41 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
 
 ## 9. Streaming 模式
 
-加 `"stream": true` 获得逐 token 流式输出（SSE 格式）：
+加 `"stream": true` 获得逐 token 流式输出（SSE 格式）。
+
+### 9.1 带 usage 的流式（推荐，计费要求）
+
+加 `"stream_options": {"include_usage": true}`，结尾 chunk 会携带 `usage` 字段（0G router 计费强制要求，生产环境必须带此参数）：
+
+```bash
+curl -s -X POST http://localhost:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "/workspace/models/Qwen3-VL-30B-A3B-Instruct",
+    "messages": [{"role": "user", "content": "Count from 1 to 5."}],
+    "max_tokens": 100,
+    "temperature": 0.7,
+    "stream": true,
+    "stream_options": {"include_usage": true}
+  }'
+```
+
+**Response（逐行流式）:**
+```
+data: {"id":"chatcmpl-g5b9c7d6","object":"chat.completion.chunk","created":1780971415,"model":"/workspace/models/Qwen3-VL-30B-A3B-Instruct","choices":[{"index":0,"delta":{"role":"assistant","content":""},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-g5b9c7d6","object":"chat.completion.chunk","created":1780971415,"model":"/workspace/models/Qwen3-VL-30B-A3B-Instruct","choices":[{"index":0,"delta":{"content":"1, 2, 3, 4, 5."},"finish_reason":null}]}
+
+data: {"id":"chatcmpl-g5b9c7d6","object":"chat.completion.chunk","created":1780971415,"model":"/workspace/models/Qwen3-VL-30B-A3B-Instruct","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}
+
+data: {"id":"chatcmpl-g5b9c7d6","object":"chat.completion.chunk","created":1780971415,"model":"/workspace/models/Qwen3-VL-30B-A3B-Instruct","choices":[],"usage":{"prompt_tokens":14,"completion_tokens":12,"total_tokens":26}}
+
+data: [DONE]
+```
+
+### 9.2 不带 usage 的流式
+
+不传 `stream_options` 时，结尾不包含 usage chunk（直连调试用，不经过 router 计费时可用）：
 
 ```bash
 curl -s -X POST http://localhost:8000/v1/chat/completions \
@@ -241,17 +275,6 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
     "temperature": 0.7,
     "stream": true
   }'
-```
-
-**Response（逐行流式）:**
-```
-data: {"id":"chatcmpl-g5b9c7d6","object":"chat.completion.chunk","choices":[{"delta":{"role":"assistant","content":""},"index":0}]}
-
-data: {"id":"chatcmpl-g5b9c7d6","object":"chat.completion.chunk","choices":[{"delta":{"content":"1, 2, 3, 4, 5."},"index":0}]}
-
-data: {"id":"chatcmpl-g5b9c7d6","object":"chat.completion.chunk","choices":[{"delta":{},"finish_reason":"stop","index":0}]}
-
-data: [DONE]
 ```
 
 > 本服务实现的是**真·token-level streaming**，每生成一个 token 立即推送一个 SSE chunk，TTFT 与首 token 到达时间一致。

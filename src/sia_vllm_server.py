@@ -93,6 +93,7 @@ class ChatCompletionRequest(BaseModel):
     # 透传给 apply_chat_template 的额外 kwargs (e.g. {"enable_thinking": False})
     # 用法: 跟 OpenAI 兼容 — eval client 传 chat_template_kwargs={"enable_thinking": False}
     chat_template_kwargs: Optional[dict] = None
+    stream_options: Optional[dict] = None          # e.g. {"include_usage": true} — router 强制注入此字段
     # Per-request SIA overrides. None = use server default (from --weight / --topk / --entropy_threshold).
     sia_weight: Optional[float] = None            # 0.0 = disable SIA for this request
     sia_topk: Optional[int] = None                # override number of RM candidates
@@ -358,8 +359,12 @@ async def _handle_chat(req: ChatCompletionRequest):
     created = int(time.time())
 
     if req.stream:
+        include_usage = bool(
+            req.stream_options and req.stream_options.get("include_usage")
+        )
         return StreamingResponse(
-            _stream_sse(prompt, sampling_params, request_id, created, model),
+            _stream_sse(prompt, sampling_params, request_id, created, model,
+                        include_usage=include_usage),
             media_type="text/event-stream",
             headers={
                 "Cache-Control": "no-cache",
@@ -421,11 +426,18 @@ async def _stream_sse(
     request_id: str,
     created: int,
     model: str,
+    include_usage: bool = False,
 ) -> AsyncIterator[str]:
-    """每生成一个 token 立即推送一个 SSE chunk（真·token-level streaming）。"""
+    """每生成一个 token 立即推送一个 SSE chunk（真·token-level streaming）。
+
+    include_usage=True 时，在 [DONE] 前额外发一个 usage chunk（OpenAI V3 计费要求）：
+      data: {"id":...,"choices":[],"usage":{"prompt_tokens":...,"completion_tokens":...,"total_tokens":...}}
+    router 会强制在流式请求里注入 stream_options.include_usage=true，所以生产环境此路径始终触发。
+    """
     yield _make_chunk(request_id, created, model, role="assistant")
 
     prev_len = 0
+    final_output = None
     async for output in _engine.generate(prompt, sampling_params, request_id):
         new_text = output.outputs[0].text
         delta = new_text[prev_len:]
@@ -433,9 +445,27 @@ async def _stream_sse(
         if delta:
             yield _make_chunk(request_id, created, model, content=delta)
         if output.finished:
+            final_output = output
             finish_reason = output.outputs[0].finish_reason or "stop"
             yield _make_chunk(request_id, created, model, finish_reason=finish_reason)
             break
+
+    if include_usage and final_output is not None:
+        prompt_tokens = len(final_output.prompt_token_ids)
+        completion_tokens = len(final_output.outputs[0].token_ids)
+        usage_chunk = {
+            "id": request_id,
+            "object": "chat.completion.chunk",
+            "created": created,
+            "model": model,
+            "choices": [],
+            "usage": {
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens,
+                "total_tokens": prompt_tokens + completion_tokens,
+            },
+        }
+        yield f"data: {json.dumps(usage_chunk)}\n\n"
 
     yield "data: [DONE]\n\n"
 
