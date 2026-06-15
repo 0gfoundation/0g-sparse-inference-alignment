@@ -342,7 +342,7 @@ nohup env \
     --llm_gpu_mem    0.55 \
     --rm_b2_gpu_mem  0.15 \
     --topk 10 --weight 1.0 --entropy_threshold 1.0 \
-    --max_model_len 2048 --port 8000 \
+    --max_model_len 2048 --mamba_cache_mode align --port 8000 \
     > "$LOG" 2>&1 &
 
 echo "[launch] pid=$!  (process detached from this shell, log: $LOG)"
@@ -363,6 +363,7 @@ tail -f "$LOG"
 | `--llm_gpu_mem 0.55 + --rm_b2_gpu_mem 0.15` | 合计 70%，剩 30% 给 cudagraph + KV cache 头空间（H200 141GB 上测试通过） |
 | `--topk 10 --weight 1.0 --entropy_threshold 1.0` | SIA 参数：10 个候选，干预权重 1.0，entropy > 1.0 才介入（≈ 20% 干预率） |
 | `--max_model_len 2048` | 限制最长序列 2048 token，控制 KV cache 占用 |
+| `--mamba_cache_mode align` | 0GM-35B 是 hybrid 模型（full_attention + GatedDeltaNet linear_attention）。默认 `none` 模式下 mamba_block_size=max_model_len=2048，导致 APC lcm_block_size 极大，所有请求 cached_tokens=0。`align` 将 mamba_block_size 对齐到注意力 block_size（~1056 token），prompt ≥ 1056 token 的请求可在第二次请求时外报 cached_tokens > 0，满足 V7 provider-admission 要求 |
 | `SIA_RM_CUDAGRAPH=none` | RM 用 eager 模式（**必须**，否则 vllm 0.18.0 推理时抛 RuntimeError） |
 | `SIA_RM_MULTIPROCESS=0` | RM 与主 LLM 同进程，不走 subprocess |
 | `SIA_LLM_CUDAGRAPH` | **不设置**，主 LLM 默认走 FULL_AND_PIECEWISE（比强制 piecewise 快 ~2×） |

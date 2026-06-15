@@ -575,6 +575,15 @@ def parse_args():
                         "省服务端 re-tokenize（~3-5ms/call）。需要 RM server 用 "
                         "scripts/vllm_serve_with_token_ids.py 启动以打 Pydantic 补丁。")
     p.add_argument("--max_model_len", type=int, default=4096)
+    # Mamba 层 prefix caching 模式（仅对 Hybrid 模型如 0GM-35B 有效）。
+    # 默认 "none" 会把 mamba_block_size 设为 max_model_len，导致 lcm_block_size
+    # 极大，实际上所有请求都无法命中 APC；"align" 将 mamba_block_size 对齐到
+    # 注意力层 block_size（约 1056 tokens），使 prompt >= 1056 tokens 的请求能外报
+    # cached_tokens。0GM-35B 的 Qwen3.5 代码注释里明确说 "please use align"。
+    p.add_argument("--mamba_cache_mode", default=None,
+                   choices=["all", "align", "none"],
+                   help="透传给 vllm --mamba-cache-mode。Hybrid 模型 (0GM-35B) 建议 align。"
+                        "default=None 表示不传（vllm 用其默认值 none）。")
     # vllm Automatic Prefix Caching (APC). Default ON (生产推荐):
     # 多 request 共享前缀时 2-10x prefill 加速; SIA 跟 APC 正交不冲突。
     # 想关传 --disable_prefix_caching.
@@ -664,7 +673,10 @@ def main():
         disable_log_stats=True,
         enable_prefix_caching=_args.enable_prefix_caching,
     )
-    print(f"[SIA] main LLM prefix_caching = {_args.enable_prefix_caching}")
+    if _args.mamba_cache_mode is not None:
+        engine_kwargs["mamba_cache_mode"] = _args.mamba_cache_mode
+    print(f"[SIA] main LLM prefix_caching = {_args.enable_prefix_caching}, "
+          f"mamba_cache_mode = {_args.mamba_cache_mode or '(vllm default)'}")
     # Optional main-LLM cudagraph override. Default = vllm's default (keeps
     # legacy Qwen14B / vllm 0.10 path untouched). Set to "piecewise" when
     # running a nested-vllm RM under vllm >= 0.15: FULL_AND_PIECEWISE on the
