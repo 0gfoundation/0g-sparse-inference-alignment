@@ -354,3 +354,30 @@ curl -s http://localhost:8000/health
 ```json
 {"status": "ok"}
 ```
+
+---
+
+## 13. 验证 Prefix Cache 命中（`cached_tokens`）
+
+运行项目自带的测试脚本，向服务连发两次相同请求，验证第二次响应中 `cached_tokens > 0`：
+
+```bash
+python tests/test_cache_hit.py [--url http://localhost:8000]
+```
+
+**预期输出：**
+```
+目标: http://localhost:8000
+system prompt 长度: 5800 chars
+发送两次相同请求，验证第二次 cached_tokens > 0 ...
+
+请求 1: prompt_tokens=1218, cached_tokens=0    ✅
+请求 2: prompt_tokens=1218, cached_tokens=1056 ✅
+
+预期: 请求1 cached_tokens=0，请求2 cached_tokens=1056
+```
+
+**说明：**
+- `cached_tokens` 以 block 为单位，block_size ≈ 1056 tokens（由 0GM-35B 的 GatedDeltaNet 状态大小决定）
+- prompt < 1056 tokens 时永远不会命中缓存（不足一个完整 block）
+- 测试脚本构造了约 1218 tokens 的 prompt，确保超过阈值
