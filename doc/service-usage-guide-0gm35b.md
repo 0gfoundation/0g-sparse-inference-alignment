@@ -236,27 +236,19 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
 加 `"stream_options": {"include_usage": true}`，结尾 chunk 会携带 `usage` 字段（0G router 计费强制要求，生产环境必须带此参数）：
 
 ```bash
-curl -s -X POST http://localhost:8000/v1/chat/completions \
+curl -sN http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
-  -d '{
-    "model": "/workspace/models/0GM-1.0-35B-A3B-0427",
-    "messages": [{"role": "user", "content": "Count from 1 to 5."}],
-    "max_tokens": 100,
-    "temperature": 0.7,
-    "stream": true,
-    "stream_options": {"include_usage": true}
-  }'
+  -d '{"model":"/workspace/models/0GM-1.0-35B-A3B-0427","messages":[{"role":"user","content":"hi"}],"max_tokens":2048,"stream":true,"stream_options":{"include_usage":true}}'
 ```
 
-**Response（逐行流式）:**
+**Response（逐行流式，省略中间 token chunk，展示末尾关键部分）:**
 ```
-data: {"id":"chatcmpl-a1b2c3d4","object":"chat.completion.chunk","created":1749600000,"model":"/workspace/models/0GM-1.0-35B-A3B-0427","choices":[{"index":0,"delta":{"role":"assistant","content":""},"finish_reason":null}]}
+...
+data: {"id": "chatcmpl-a9d6f09e3d3a", "object": "chat.completion.chunk", "created": 1781530216, "model": "/workspace/models/0GM-1.0-35B-A3B-0427", "choices": [{"index": 0, "delta": {"content": " 😊"}, "finish_reason": null}]}
 
-data: {"id":"chatcmpl-a1b2c3d4","object":"chat.completion.chunk","created":1749600000,"model":"/workspace/models/0GM-1.0-35B-A3B-0427","choices":[{"index":0,"delta":{"content":"1, 2, 3, 4, 5."},"finish_reason":null}]}
+data: {"id": "chatcmpl-a9d6f09e3d3a", "object": "chat.completion.chunk", "created": 1781530216, "model": "/workspace/models/0GM-1.0-35B-A3B-0427", "choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}]}
 
-data: {"id":"chatcmpl-a1b2c3d4","object":"chat.completion.chunk","created":1749600000,"model":"/workspace/models/0GM-1.0-35B-A3B-0427","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}
-
-data: {"id":"chatcmpl-a1b2c3d4","object":"chat.completion.chunk","created":1749600000,"model":"/workspace/models/0GM-1.0-35B-A3B-0427","choices":[],"usage":{"prompt_tokens":14,"completion_tokens":12,"total_tokens":26}}
+data: {"id": "chatcmpl-a9d6f09e3d3a", "object": "chat.completion.chunk", "created": 1781530216, "model": "/workspace/models/0GM-1.0-35B-A3B-0427", "choices": [], "usage": {"prompt_tokens": 11, "completion_tokens": 157, "total_tokens": 168}}
 
 data: [DONE]
 ```
