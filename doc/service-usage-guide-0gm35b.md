@@ -456,7 +456,31 @@ HTTP 400
 
 ---
 
-## 14. 验证 Prefix Cache 命中（`cached_tokens`）
+## 14. 验证长上下文支持（max_model_len=32768）
+
+运行项目自带的测试脚本，发送约 28000 tokens 的长 prompt，验证服务正常返回：
+
+```bash
+python tests/test_long_context.py [--url http://localhost:8000]
+```
+
+**预期输出：**
+```
+目标: http://localhost:8000
+prompt 长度: 126000 chars（约 30000 tokens）
+发送长上下文请求...
+
+HTTP 200
+prompt_tokens   : 28018  ✅
+finish_reason   : length  ✅
+response content: ...
+
+✅ 长上下文支持验证通过（max_model_len=32768 生效）
+```
+
+---
+
+## 15. 验证 Prefix Cache 命中（`cached_tokens`）
 
 运行项目自带的测试脚本，向服务连发两次相同请求，验证第二次响应中 `cached_tokens > 0`：
 
