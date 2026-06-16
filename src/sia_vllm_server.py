@@ -323,19 +323,21 @@ async def list_models():
     }
 
 
-def _check_model(model: Optional[str]) -> None:
-    """model 字段校验：None / 空串 / _model_id / 完整路径 均合法，其余返回 404。"""
+def _check_model(model: Optional[str]) -> Optional[JSONResponse]:
+    """model 字段校验：None / 空串 / _model_id / 完整路径 均合法，其余返回 404 JSONResponse。
+    调用方：if err := _check_model(req.model): return err
+    """
     if not model:
-        return
+        return None
     if model in (_model_id, _args.llm):
-        return
-    raise HTTPException(
+        return None
+    return JSONResponse(
         status_code=404,
-        detail={
+        content={
             "error": {
                 "message": f"The model `{model}` does not exist or is not loaded.",
                 "type": "invalid_request_error",
-                "param": "model",
+                "param": None,
                 "code": "model_not_found",
             }
         },
@@ -361,7 +363,8 @@ async def _log_rm_status():
 
 
 async def _handle_chat(req: ChatCompletionRequest):
-    _check_model(req.model)
+    if err := _check_model(req.model):
+        return err
     await _log_rm_status()
 
     if _has_image(req.messages):
@@ -508,7 +511,8 @@ async def chat_completions(req: ChatCompletionRequest):
 async def _handle_completion(req: CompletionRequest):
     """Raw text completion (跳过 chat_template)。SIA logits processor 仍按
     每个 decode step 触发, 跟 chat_completion 完全一样。"""
-    _check_model(req.model)
+    if err := _check_model(req.model):
+        return err
     await _log_rm_status()
     # 直接用 raw prompt — tokenize 走 vllm 内部 (它接受 string prompt)
     prompt = req.prompt
