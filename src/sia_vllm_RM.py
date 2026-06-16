@@ -163,6 +163,7 @@ def make_sia_processor(
     rm_model: Optional[str] = None,    # rm_backend ∈ {"vllm","b2"} 时必填：RM 模型路径
     use_token_ids: bool = False,       # C2: 客户端预先 tokenize，直接发 token_ids 给 RM
     rm_b2_gpu_mem: float = 0.3,        # b2 backend: RM vLLM 实例的 gpu_memory_utilization
+    rm_max_model_len: int = 4096,      # b2 backend: RM vLLM 实例的 max_model_len
     enable_thinking: Optional[bool] = None,   # chat_template enable_thinking 透传给 RM prefix 构造,
                                               # 跟 LLM 实际看到的 prompt 100% 一致 (None=不传)
 ):
@@ -200,6 +201,7 @@ def make_sia_processor(
         _ENTROPY_THRESHOLD = entropy_threshold
         _USE_TOKEN_IDS = use_token_ids
         _RM_B2_GPU_MEM = rm_b2_gpu_mem
+        _RM_MAX_MODEL_LEN = rm_max_model_len
         _ENABLE_THINKING = enable_thinking   # None / True / False
 
         # SIA 客户端 profiling（区别于 RM_PROFILE 那套服务端 profiling）
@@ -394,7 +396,7 @@ def make_sia_processor(
                 self._rm = RMClient(
                     model_path=self._RM_MODEL,
                     gpu_mem=self._RM_B2_GPU_MEM,
-                    max_model_len=2048,
+                    max_model_len=self._RM_MAX_MODEL_LEN,
                     multiprocessing=rm_mp,
                     llm_tokenizer=self._llm_tok,
                 )

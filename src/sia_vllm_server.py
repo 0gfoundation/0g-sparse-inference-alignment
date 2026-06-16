@@ -712,6 +712,7 @@ def main():
             rm_model=_args.rm_model,
             use_token_ids=_args.use_token_ids,
             rm_b2_gpu_mem=_args.rm_b2_gpu_mem,
+            rm_max_model_len=_args.max_model_len,
             enable_thinking=_enable_thinking,
         )
 
