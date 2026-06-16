@@ -365,6 +365,18 @@ async def _log_rm_status():
 async def _handle_chat(req: ChatCompletionRequest):
     if err := _check_model(req.model):
         return err
+    if not req.messages:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "error": {
+                    "message": "[] is too short - 'messages'",
+                    "type": "invalid_request_error",
+                    "param": None,
+                    "code": None,
+                }
+            },
+        )
     await _log_rm_status()
 
     if _has_image(req.messages):
