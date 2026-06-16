@@ -323,6 +323,25 @@ async def list_models():
     }
 
 
+def _check_model(model: Optional[str]) -> None:
+    """model 字段校验：None / 空串 / _model_id / 完整路径 均合法，其余返回 404。"""
+    if not model:
+        return
+    if model in (_model_id, _args.llm):
+        return
+    raise HTTPException(
+        status_code=404,
+        detail={
+            "error": {
+                "message": f"The model `{model}` does not exist or is not loaded.",
+                "type": "invalid_request_error",
+                "param": "model",
+                "code": "model_not_found",
+            }
+        },
+    )
+
+
 async def _log_rm_status():
     """查询 RM server /status 并打印到日志，失败时静默跳过。b2 inproc 无 HTTP server，跳过。"""
     if _args.rm_backend == "b2":
@@ -342,6 +361,7 @@ async def _log_rm_status():
 
 
 async def _handle_chat(req: ChatCompletionRequest):
+    _check_model(req.model)
     await _log_rm_status()
 
     if _has_image(req.messages):
@@ -354,7 +374,7 @@ async def _handle_chat(req: ChatCompletionRequest):
         prompt = _messages_to_prompt(req.messages, req.chat_template_kwargs)
 
     sampling_params = _build_sampling_params(req)
-    model = req.model or _model_id
+    model = _model_id
     request_id = f"chatcmpl-{uuid.uuid4().hex[:12]}"
     created = int(time.time())
 
@@ -488,6 +508,7 @@ async def chat_completions(req: ChatCompletionRequest):
 async def _handle_completion(req: CompletionRequest):
     """Raw text completion (跳过 chat_template)。SIA logits processor 仍按
     每个 decode step 触发, 跟 chat_completion 完全一样。"""
+    _check_model(req.model)
     await _log_rm_status()
     # 直接用 raw prompt — tokenize 走 vllm 内部 (它接受 string prompt)
     prompt = req.prompt
@@ -507,7 +528,7 @@ async def _handle_completion(req: CompletionRequest):
     if req.bad_words:
         kwargs["bad_words"] = req.bad_words
     sampling_params = SamplingParams(**kwargs)
-    model = req.model or _model_id
+    model = _model_id
     request_id = f"cmpl-{uuid.uuid4().hex[:12]}"
     created = int(time.time())
 
