@@ -429,6 +429,31 @@ curl -s -w "\nHTTP %{http_code}\n" \
 HTTP 400
 ```
 
+### 13.4 传入 tools → 400
+
+0GM-1.0-35B 模型本身支持 tool call，但当前服务端尚未实现解析层（Value Model Qwen3-4B-Base 未经 tool call 对齐训练，评分不可靠），因此拒绝含 `tools` 的请求：
+
+```bash
+curl -s -w "\nHTTP %{http_code}\n" \
+  -X POST http://localhost:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"messages": [{"role": "user", "content": "hi"}], "tools": [{"type": "function", "function": {"name": "get_weather", "parameters": {}}}], "tool_choice": "auto", "max_tokens": 5}' \
+  | python3 -m json.tool
+```
+
+**预期输出：**
+```json
+{
+    "error": {
+        "message": "Tool calls are not yet implemented in this server.",
+        "type": "invalid_request_error",
+        "param": null,
+        "code": null
+    }
+}
+HTTP 400
+```
+
 ---
 
 ## 14. 验证 Prefix Cache 命中（`cached_tokens`）

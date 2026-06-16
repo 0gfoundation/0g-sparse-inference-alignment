@@ -98,6 +98,8 @@ class ChatCompletionRequest(BaseModel):
     sia_weight: Optional[float] = None            # 0.0 = disable SIA for this request
     sia_topk: Optional[int] = None                # override number of RM candidates
     sia_entropy_threshold: Optional[float] = None  # override entropy gate; 0 = always intervene
+    tools: Optional[list] = None                  # not supported; triggers 400 if set
+    tool_choice: Optional[object] = None          # not supported; triggers 400 if set
 
 
 class CompletionRequest(BaseModel):
@@ -371,6 +373,18 @@ async def _handle_chat(req: ChatCompletionRequest):
             content={
                 "error": {
                     "message": "[] is too short - 'messages'",
+                    "type": "invalid_request_error",
+                    "param": None,
+                    "code": None,
+                }
+            },
+        )
+    if req.tools:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "error": {
+                    "message": "Tool calls are not yet implemented in this server.",
                     "type": "invalid_request_error",
                     "param": None,
                     "code": None,
