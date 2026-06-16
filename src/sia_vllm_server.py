@@ -320,7 +320,7 @@ async def list_models():
             "id": _model_id,
             "object": "model",
             "created": int(time.time()),
-            "owned_by": "sia",
+            "owned_by": "0G Foundation",
         }],
     }
 

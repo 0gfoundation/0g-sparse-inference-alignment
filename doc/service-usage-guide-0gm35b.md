@@ -482,6 +482,31 @@ print(json.dumps(resp.json(), indent=2, ensure_ascii=False))
 HTTP 400
 ```
 
+### 13.6 `/v1/models` 返回 `owned_by`
+
+0G broker 注册层要求 `owned_by` 字段值为 `"0G Foundation"`，验证服务返回值正确：
+
+```bash
+curl -s http://localhost:8000/v1/models | python3 -m json.tool
+```
+
+**预期输出：**
+```json
+{
+    "object": "list",
+    "data": [
+        {
+            "id": "0GM-1.0-35B-A3B-0427",
+            "object": "model",
+            "created": 1749600000,
+            "owned_by": "0G Foundation"
+        }
+    ]
+}
+```
+
+关键验证点：`owned_by` 必须为 `"0G Foundation"`，`id` 为模型 basename（与启动日志 `Model ID :` 一致）。
+
 ---
 
 ## 14. 验证长上下文支持（max_model_len=32768）
