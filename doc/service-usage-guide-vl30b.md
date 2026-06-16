@@ -362,3 +362,54 @@ curl -s http://localhost:8000/health
 ```json
 {"status": "ok"}
 ```
+
+---
+
+## 13. 验证模型名称校验（OpenAI 错误格式）
+
+服务对 `model` 字段做 OpenAI 兼容校验：传入不存在的模型名时返回标准 404 错误，而非 FastAPI 默认的 `{"detail": ...}` 格式。
+
+### 13.1 不存在的模型名 → 404
+
+```bash
+curl -s -w "\nHTTP %{http_code}\n" \
+  -X POST http://localhost:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"model": "does-not-exist", "messages": [{"role": "user", "content": "hi"}], "max_tokens": 5}' \
+  | python3 -m json.tool
+```
+
+**预期输出：**
+```json
+{
+    "error": {
+        "message": "The model `does-not-exist` does not exist or is not loaded.",
+        "type": "invalid_request_error",
+        "param": null,
+        "code": "model_not_found"
+    }
+}
+HTTP 404
+```
+
+### 13.2 确认合法模型名
+
+模型名从服务日志获取（`docker compose logs <container> | grep "Model ID"`），例如 `Qwen3-VL-30B-A3B-Instruct`：
+
+```bash
+# 传正确的模型名（basename）
+curl -s -o /dev/null -w "HTTP %{http_code}\n" \
+  -X POST http://localhost:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"model": "Qwen3-VL-30B-A3B-Instruct", "messages": [{"role": "user", "content": "hi"}], "max_tokens": 5}'
+
+# 不传 model 字段（服务自动使用已加载模型）
+curl -s -o /dev/null -w "HTTP %{http_code}\n" \
+  -X POST http://localhost:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"messages": [{"role": "user", "content": "hi"}], "max_tokens": 5}'
+```
+
+两条均应返回 `HTTP 200`。
+
+> **说明**：合法值有三种——`null`/不传、`_model_id`（basename）、完整路径。实际 basename 以服务启动日志里的 `Model ID :` 为准。
