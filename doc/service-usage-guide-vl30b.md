@@ -26,7 +26,7 @@
 curl -s -X POST http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "/workspace/models/Qwen3-VL-30B-A3B-Instruct",
+    "model": "Qwen3-VL-30B-A3B-Instruct",
     "messages": [{"role": "user", "content": "What are 3 colors of fruit?"}],
     "max_tokens": 200,
     "temperature": 0.7
@@ -39,7 +39,7 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
     "id": "chatcmpl-0fdb87be20e3",
     "object": "chat.completion",
     "created": 1780971415,
-    "model": "/workspace/models/Qwen3-VL-30B-A3B-Instruct",
+    "model": "Qwen3-VL-30B-A3B-Instruct",
     "choices": [
         {
             "index": 0,
@@ -66,7 +66,7 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
 curl -s -X POST http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "/workspace/models/Qwen3-VL-30B-A3B-Instruct",
+    "model": "Qwen3-VL-30B-A3B-Instruct",
     "messages": [
       {"role": "system", "content": "You are a concise assistant. Answer in one sentence."},
       {"role": "user", "content": "What is the capital of France?"}
@@ -102,7 +102,7 @@ SIA (Sparse Inference-time Alignment) 在每个 token 生成时，用 Value Mode
 curl -s -X POST http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "/workspace/models/Qwen3-VL-30B-A3B-Instruct",
+    "model": "Qwen3-VL-30B-A3B-Instruct",
     "messages": [{"role": "user", "content": "Explain what a neural network is."}],
     "max_tokens": 200,
     "temperature": 0.7,
@@ -127,7 +127,7 @@ ratio=0% 确认 RM 完全跳过。
 curl -s -X POST http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "/workspace/models/Qwen3-VL-30B-A3B-Instruct",
+    "model": "Qwen3-VL-30B-A3B-Instruct",
     "messages": [{"role": "user", "content": "Write a short poem about the ocean."}],
     "max_tokens": 200,
     "temperature": 0.7,
@@ -151,7 +151,7 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
 curl -s -X POST http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "/workspace/models/Qwen3-VL-30B-A3B-Instruct",
+    "model": "Qwen3-VL-30B-A3B-Instruct",
     "messages": [{"role": "user", "content": "What are 3 colors of fruit?"}],
     "max_tokens": 100,
     "temperature": 0.7,
@@ -172,7 +172,7 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
 curl -s -X POST http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "/workspace/models/Qwen3-VL-30B-A3B-Instruct",
+    "model": "Qwen3-VL-30B-A3B-Instruct",
     "messages": [{"role": "user", "content": "What are 3 colors of fruit?"}],
     "max_tokens": 100,
     "temperature": 0.7,
@@ -195,7 +195,7 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
 curl -s -X POST http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "/workspace/models/Qwen3-VL-30B-A3B-Instruct",
+    "model": "Qwen3-VL-30B-A3B-Instruct",
     "messages": [{"role": "user", "content": "Summarize the benefits of exercise."}],
     "max_tokens": 150,
     "temperature": 0.7,
@@ -213,7 +213,7 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
 curl -s -X POST http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "/workspace/models/Qwen3-VL-30B-A3B-Instruct",
+    "model": "Qwen3-VL-30B-A3B-Instruct",
     "messages": [{"role": "user", "content": "What makes a good software engineer?"}],
     "max_tokens": 300,
     "temperature": 0.7,
@@ -239,7 +239,7 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
 curl -s -X POST http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "/workspace/models/Qwen3-VL-30B-A3B-Instruct",
+    "model": "Qwen3-VL-30B-A3B-Instruct",
     "messages": [{"role": "user", "content": "Count from 1 to 5."}],
     "max_tokens": 100,
     "temperature": 0.7,
@@ -250,13 +250,13 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
 
 **Response（逐行流式）:**
 ```
-data: {"id":"chatcmpl-g5b9c7d6","object":"chat.completion.chunk","created":1780971415,"model":"/workspace/models/Qwen3-VL-30B-A3B-Instruct","choices":[{"index":0,"delta":{"role":"assistant","content":""},"finish_reason":null}]}
+data: {"id":"chatcmpl-g5b9c7d6","object":"chat.completion.chunk","created":1780971415,"model":"Qwen3-VL-30B-A3B-Instruct","choices":[{"index":0,"delta":{"role":"assistant","content":""},"finish_reason":null}]}
 
-data: {"id":"chatcmpl-g5b9c7d6","object":"chat.completion.chunk","created":1780971415,"model":"/workspace/models/Qwen3-VL-30B-A3B-Instruct","choices":[{"index":0,"delta":{"content":"1, 2, 3, 4, 5."},"finish_reason":null}]}
+data: {"id":"chatcmpl-g5b9c7d6","object":"chat.completion.chunk","created":1780971415,"model":"Qwen3-VL-30B-A3B-Instruct","choices":[{"index":0,"delta":{"content":"1, 2, 3, 4, 5."},"finish_reason":null}]}
 
-data: {"id":"chatcmpl-g5b9c7d6","object":"chat.completion.chunk","created":1780971415,"model":"/workspace/models/Qwen3-VL-30B-A3B-Instruct","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}
+data: {"id":"chatcmpl-g5b9c7d6","object":"chat.completion.chunk","created":1780971415,"model":"Qwen3-VL-30B-A3B-Instruct","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}
 
-data: {"id":"chatcmpl-g5b9c7d6","object":"chat.completion.chunk","created":1780971415,"model":"/workspace/models/Qwen3-VL-30B-A3B-Instruct","choices":[],"usage":{"prompt_tokens":14,"completion_tokens":12,"total_tokens":26}}
+data: {"id":"chatcmpl-g5b9c7d6","object":"chat.completion.chunk","created":1780971415,"model":"Qwen3-VL-30B-A3B-Instruct","choices":[],"usage":{"prompt_tokens":14,"completion_tokens":12,"total_tokens":26}}
 
 data: [DONE]
 ```
@@ -269,7 +269,7 @@ data: [DONE]
 curl -s -X POST http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "/workspace/models/Qwen3-VL-30B-A3B-Instruct",
+    "model": "Qwen3-VL-30B-A3B-Instruct",
     "messages": [{"role": "user", "content": "Count from 1 to 5."}],
     "max_tokens": 100,
     "temperature": 0.7,
@@ -412,7 +412,7 @@ curl -s -o /dev/null -w "HTTP %{http_code}\n" \
 
 两条均应返回 `HTTP 200`。
 
-> **说明**：合法值有三种——`null`/不传、`_model_id`（basename）、完整路径。实际 basename 以服务启动日志里的 `Model ID :` 为准。
+> **说明**：合法值有三种——`null`/不传、basename（推荐，与 `/v1/models` 返回的 `id` 一致，实际值以服务启动日志里的 `Model ID :` 为准）、完整路径（向后兼容，不推荐）。
 
 ### 13.3 空 messages 数组 → 400
 
