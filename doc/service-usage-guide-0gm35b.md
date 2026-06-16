@@ -9,7 +9,7 @@
 | 要求 | 状态 | 说明 |
 |---|---|---|
 | OpenAI 规范 | ✅ | 完全遵循 OpenAI `/v1/chat/completions` 接口规范。请求字段（`model`、`messages`、`max_tokens`、`temperature`、`stream` 等）和响应结构（`choices[].message.content`、`finish_reason`、`usage` 等）均与 OpenAI API 一致，可直接使用 OpenAI Python SDK 或任何兼容客户端接入。服务同时暴露 `/chat/completions`（无 `/v1/` 前缀）作为 broker billing 路由，两者行为完全一致。 |
-| Input Cache（Prefix Caching）| ✅ | 服务启用了 vLLM APC（`--enable_prefix_caching --mamba_cache_mode align`）。0GM-35B 是 hybrid 模型（full_attention + GatedDeltaNet），需要 `align` 模式才能实际生效：默认 `none` 会把 mamba_block_size 设为 max_model_len=2048，导致 APC lcm_block_size 超大，事实上 cached_tokens 始终为 0。`align` 将两者 block_size 对齐（约 1056 tokens），**prompt ≥ 1056 tokens 的请求**在命中缓存时 `usage.prompt_tokens_details.cached_tokens > 0`。 |
+| Input Cache（Prefix Caching）| ✅ | 服务启用了 vLLM APC（`--enable_prefix_caching --mamba_cache_mode align`）。0GM-35B 是 hybrid 模型（full_attention + GatedDeltaNet），需要 `align` 模式才能实际生效：默认 `none` 会把 mamba_block_size 设为 max_model_len，导致 APC lcm_block_size 超大，事实上 cached_tokens 始终为 0。`align` 将两者 block_size 对齐（约 1056 tokens），**prompt ≥ 1056 tokens 的请求**在命中缓存时 `usage.prompt_tokens_details.cached_tokens > 0`。 |
 | Response 支持 usage | ✅ | 每个响应均包含 `usage` 字段，报告本次请求的 `prompt_tokens`、`completion_tokens`、`total_tokens`（见下方 §1 示例）。 |
 
 ---
@@ -279,7 +279,7 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
 |---|---|---|---|
 | `model` | string | 必填 | 填服务端模型路径 |
 | `messages` | array | 必填 | 对话历史，支持 system / user / assistant |
-| `max_tokens` | int | 512 | 最大生成 token 数，建议 ≤ 1800（受 max_model_len=2048 限制；长 system prompt 会进一步压缩上限） |
+| `max_tokens` | int | 512 | 最大生成 token 数，建议 ≤ 30000（受 max_model_len=32768 限制；长 system prompt 会进一步压缩上限） |
 | `temperature` | float | 0.7 | 采样温度，0 为贪婪解码，越高越随机 |
 | `top_p` | float | — | nucleus sampling 概率阈值 |
 | `top_k` | int | — | 只从概率最高的 k 个 token 里采样 |
