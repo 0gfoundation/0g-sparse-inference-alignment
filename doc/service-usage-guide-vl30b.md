@@ -413,3 +413,26 @@ curl -s -o /dev/null -w "HTTP %{http_code}\n" \
 两条均应返回 `HTTP 200`。
 
 > **说明**：合法值有三种——`null`/不传、`_model_id`（basename）、完整路径。实际 basename 以服务启动日志里的 `Model ID :` 为准。
+
+### 13.3 空 messages 数组 → 400
+
+```bash
+curl -s -w "\nHTTP %{http_code}\n" \
+  -X POST http://localhost:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"messages": [], "max_tokens": 5}' \
+  | python3 -m json.tool
+```
+
+**预期输出：**
+```json
+{
+    "error": {
+        "message": "[] is too short - 'messages'",
+        "type": "invalid_request_error",
+        "param": null,
+        "code": null
+    }
+}
+HTTP 400
+```

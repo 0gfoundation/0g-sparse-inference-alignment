@@ -406,6 +406,29 @@ curl -s -o /dev/null -w "HTTP %{http_code}\n" \
 
 > **说明**：合法值有三种——`null`/不传、`_model_id`（basename，如 `0GM-1.0-35B-A3B-0427`）、完整路径（如 `/workspace/models/0GM-1.0-35B-A3B-0427`）。
 
+### 13.3 空 messages 数组 → 400
+
+```bash
+curl -s -w "\nHTTP %{http_code}\n" \
+  -X POST http://localhost:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"messages": [], "max_tokens": 5}' \
+  | python3 -m json.tool
+```
+
+**预期输出：**
+```json
+{
+    "error": {
+        "message": "[] is too short - 'messages'",
+        "type": "invalid_request_error",
+        "param": null,
+        "code": null
+    }
+}
+HTTP 400
+```
+
 ---
 
 ## 14. 验证 Prefix Cache 命中（`cached_tokens`）
