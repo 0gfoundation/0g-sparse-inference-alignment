@@ -428,23 +428,30 @@ async def _handle_chat(req: ChatCompletionRequest):
     REQUEST_TIMEOUT = 600
     start_time = time.time()
     final = None
-    async for output in _engine.generate(prompt, sampling_params, request_id):
-        final = output
-        generated = output.outputs[0].text
+    try:
+        async for output in _engine.generate(prompt, sampling_params, request_id):
+            final = output
+            generated = output.outputs[0].text
 
-        # 全文检测：只要 Answer: 后跟可选空格再接 A/B/C/D，立即停止
-        if _ANSWER_RE.search(generated):
-            await _engine.abort(request_id)
-            break
+            # 全文检测：只要 Answer: 后跟可选空格再接 A/B/C/D，立即停止
+            if _ANSWER_RE.search(generated):
+                await _engine.abort(request_id)
+                break
 
-        elapsed = time.time() - start_time
-        if elapsed > REQUEST_TIMEOUT:
-            print(
-                f"[SERVER] {request_id} timed out after {elapsed:.1f}s, aborting",
-                flush=True,
-            )
-            await _engine.abort(request_id)
-            break
+            elapsed = time.time() - start_time
+            if elapsed > REQUEST_TIMEOUT:
+                print(
+                    f"[SERVER] {request_id} timed out after {elapsed:.1f}s, aborting",
+                    flush=True,
+                )
+                await _engine.abort(request_id)
+                break
+    except Exception as e:
+        return JSONResponse(
+            status_code=400,
+            content={"error": {"message": str(e), "type": "invalid_request_error",
+                                "param": None, "code": None}},
+        )
 
     text = final.outputs[0].text if final else ""
     finish_reason = (final.outputs[0].finish_reason or "stop") if final else "timeout"

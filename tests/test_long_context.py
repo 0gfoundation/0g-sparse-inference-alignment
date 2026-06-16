@@ -14,8 +14,9 @@ import requests
 
 URL_DEFAULT = "http://localhost:8000"
 
-# "The quick brown fox..." 约 9 tokens/句 × 3300 句 ≈ 30000 tokens
-LONG_CONTENT = "The quick brown fox jumps over the lazy dog. " * 3300
+# "The quick brown fox..." 约 10 tokens/句（含 chat template 开销）× 2800 句 ≈ 28000 tokens
+# 留 ~4700 tokens 余量，确保 chat template 开销后不超过 32768 上限
+LONG_CONTENT = "The quick brown fox jumps over the lazy dog. " * 2800
 
 
 def main() -> None:
