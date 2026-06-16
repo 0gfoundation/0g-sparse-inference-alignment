@@ -516,3 +516,30 @@ curl -s http://localhost:8000/v1/models | python3 -m json.tool
 ```
 
 关键验证点：`owned_by` 必须为 `"0G Foundation"`，`id` 为模型 basename（与启动日志 `Model ID :` 一致）。
+
+---
+
+## 15. 验证 Prefix Cache 命中（`cached_tokens`）
+
+运行项目自带的测试脚本，向服务连发两次相同请求，验证第二次响应中 `cached_tokens > 0`：
+
+```bash
+python tests/test_cache_hit.py [--url http://localhost:8000]
+```
+
+**预期输出：**
+```
+目标: http://localhost:8000
+system prompt 长度: 5800 chars
+发送两次相同请求，验证第二次 cached_tokens > 0 ...
+
+请求 1: prompt_tokens=1218, cached_tokens=0    ✅
+请求 2: prompt_tokens=1218, cached_tokens=1216 ✅
+
+预期: 请求1 cached_tokens=0，请求2 cached_tokens=1056
+```
+
+**说明：**
+- 30B 是纯 attention 模型，vLLM APC 默认 `block_size=16`，`cached_tokens` 为 16 的整倍数
+- prompt ≥ 16 tokens 时即可命中缓存（阈值远低于 35B 的 1056 tokens）
+- 35B（hybrid 模型）`block_size ≈ 1056`，两者期望的 `cached_tokens` 数值不同，但测试逻辑相同（第二次 > 0 即通过）

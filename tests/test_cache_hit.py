@@ -19,7 +19,6 @@ LONG_SYSTEM = "You are a helpful assistant. " * 200
 
 def send(url: str, n: int) -> None:
     payload = {
-        "model": "0gm35b",
         "messages": [
             {"role": "system", "content": LONG_SYSTEM},
             {"role": "user", "content": "Say hello."},

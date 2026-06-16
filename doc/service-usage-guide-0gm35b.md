@@ -554,6 +554,7 @@ system prompt 长度: 5800 chars
 ```
 
 **说明：**
-- `cached_tokens` 以 block 为单位，block_size ≈ 1056 tokens（由 0GM-35B 的 GatedDeltaNet 状态大小决定）
+- `cached_tokens` 以 block 为单位，block_size ≈ 1056 tokens（由 0GM-35B 的 GatedDeltaNet 状态大小决定，需 `--mamba_cache_mode align`）
 - prompt < 1056 tokens 时永远不会命中缓存（不足一个完整 block）
 - 测试脚本构造了约 1218 tokens 的 prompt，确保超过阈值
+- 30B（纯 attention 模型）`block_size=16`，阈值远低，两者测试脚本相同但期望的 `cached_tokens` 数值不同
