@@ -454,6 +454,34 @@ curl -s -w "\nHTTP %{http_code}\n" \
 HTTP 400
 ```
 
+### 13.5 context 超长 → 400
+
+prompt 超过 max_model_len=32768 时，服务返回标准 400 而非 500：
+
+```bash
+python3 -c "
+import requests, json
+long = 'x ' * 20000  # ~20000 tokens，超过 32768 上限
+resp = requests.post('http://localhost:8000/v1/chat/completions',
+    json={'messages': [{'role': 'user', 'content': long}], 'max_tokens': 50})
+print('HTTP', resp.status_code)
+print(json.dumps(resp.json(), indent=2, ensure_ascii=False))
+"
+```
+
+**预期输出：**
+```json
+{
+    "error": {
+        "message": "This model's maximum context length is 32768 tokens. However, you requested 0 output tokens and your prompt contains XXXXX input tokens ...",
+        "type": "invalid_request_error",
+        "param": null,
+        "code": null
+    }
+}
+HTTP 400
+```
+
 ---
 
 ## 14. 验证长上下文支持（max_model_len=32768）
