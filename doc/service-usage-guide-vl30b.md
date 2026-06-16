@@ -354,11 +354,13 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
 
 ## 12. 服务健康检查
 
+0G router 每 30 秒主动探活此端点，连续失败 3 次触发熔断（该 provider 被路由跳过）。**准入硬门槛之一。**
+
 ```bash
 curl -s http://localhost:8000/health
 ```
 
-**Response:**
+**预期响应（HTTP 200）：**
 ```json
 {"status": "ok"}
 ```
