@@ -582,7 +582,7 @@ system prompt 长度: 5800 chars
 - **TTFT 不受影响**：SIA 在 decode 阶段介入，prefill 不受影响，TTFT p50 与 noSIA 基本持平（60-130ms）
 - **单并发 SIA 开销 12%**：`entropy_threshold=1.0` 下约 5-8% 的 token 触发干预，开销较低
 - **高并发开销放大**：并发 4 时 SIA 开销升至 34%——每个 decode step RM 评分总量 = `并发数 × topk`，RM 压力随并发线性增长，而 LLM batch 有加速，两者增速不对称
-- **无限流（429）**：16 并发全部 200，vLLM 内部队列排队，服务无速率限制
+- **无限流（429）**：16 并发 burst 全部返回 200，延迟 p50=207ms，wall-clock=0.2s；vLLM 内部队列排队，服务本身无速率限制机制
 
 自测命令：
 ```bash
