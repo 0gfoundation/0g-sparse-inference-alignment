@@ -26,7 +26,7 @@
 curl -s -X POST http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "0GM-1.0-35B-A3B-0427",
+    "model": "0GM-1.0-35B-A3B-0427-SIA",
     "messages": [{"role": "user", "content": "What are 3 colors of fruit?"}],
     "max_tokens": 200,
     "temperature": 0.7
@@ -39,7 +39,7 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
     "id": "chatcmpl-3a7f1b92e4d0",
     "object": "chat.completion",
     "created": 1749600000,
-    "model": "0GM-1.0-35B-A3B-0427",
+    "model": "0GM-1.0-35B-A3B-0427-SIA",
     "choices": [
         {
             "index": 0,
@@ -66,7 +66,7 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
 curl -s -X POST http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "0GM-1.0-35B-A3B-0427",
+    "model": "0GM-1.0-35B-A3B-0427-SIA",
     "messages": [
       {"role": "system", "content": "You are a concise assistant. Answer in one sentence."},
       {"role": "user", "content": "What is the capital of France?"}
@@ -102,7 +102,7 @@ SIA (Sparse Inference-time Alignment) 在每个 token 生成时，用 Value Mode
 curl -s -X POST http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "0GM-1.0-35B-A3B-0427",
+    "model": "0GM-1.0-35B-A3B-0427-SIA",
     "messages": [{"role": "user", "content": "Explain what a neural network is."}],
     "max_tokens": 200,
     "temperature": 0.7,
@@ -127,7 +127,7 @@ ratio=0% 确认 VM 完全跳过。
 curl -s -X POST http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "0GM-1.0-35B-A3B-0427",
+    "model": "0GM-1.0-35B-A3B-0427-SIA",
     "messages": [{"role": "user", "content": "Write a short poem about the ocean."}],
     "max_tokens": 200,
     "temperature": 0.7,
@@ -151,7 +151,7 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
 curl -s -X POST http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "0GM-1.0-35B-A3B-0427",
+    "model": "0GM-1.0-35B-A3B-0427-SIA",
     "messages": [{"role": "user", "content": "What are 3 colors of fruit?"}],
     "max_tokens": 100,
     "temperature": 0.7,
@@ -172,7 +172,7 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
 curl -s -X POST http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "0GM-1.0-35B-A3B-0427",
+    "model": "0GM-1.0-35B-A3B-0427-SIA",
     "messages": [{"role": "user", "content": "What are 3 colors of fruit?"}],
     "max_tokens": 100,
     "temperature": 0.7,
@@ -195,7 +195,7 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
 curl -s -X POST http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "0GM-1.0-35B-A3B-0427",
+    "model": "0GM-1.0-35B-A3B-0427-SIA",
     "messages": [{"role": "user", "content": "Summarize the benefits of exercise."}],
     "max_tokens": 150,
     "temperature": 0.7,
@@ -213,7 +213,7 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
 curl -s -X POST http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "0GM-1.0-35B-A3B-0427",
+    "model": "0GM-1.0-35B-A3B-0427-SIA",
     "messages": [{"role": "user", "content": "What makes a good software engineer?"}],
     "max_tokens": 300,
     "temperature": 0.7,
@@ -238,17 +238,17 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
 ```bash
 curl -sN http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
-  -d '{"model":"0GM-1.0-35B-A3B-0427","messages":[{"role":"user","content":"hi"}],"max_tokens":2048,"stream":true,"stream_options":{"include_usage":true}}'
+  -d '{"model":"0GM-1.0-35B-A3B-0427-SIA","messages":[{"role":"user","content":"hi"}],"max_tokens":2048,"stream":true,"stream_options":{"include_usage":true}}'
 ```
 
 **Response（逐行流式，省略中间 token chunk，展示末尾关键部分）:**
 ```
 ...
-data: {"id": "chatcmpl-a9d6f09e3d3a", "object": "chat.completion.chunk", "created": 1781530216, "model": "0GM-1.0-35B-A3B-0427", "choices": [{"index": 0, "delta": {"content": " 😊"}, "finish_reason": null}]}
+data: {"id": "chatcmpl-a9d6f09e3d3a", "object": "chat.completion.chunk", "created": 1781530216, "model": "0GM-1.0-35B-A3B-0427-SIA", "choices": [{"index": 0, "delta": {"content": " 😊"}, "finish_reason": null}]}
 
-data: {"id": "chatcmpl-a9d6f09e3d3a", "object": "chat.completion.chunk", "created": 1781530216, "model": "0GM-1.0-35B-A3B-0427", "choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}]}
+data: {"id": "chatcmpl-a9d6f09e3d3a", "object": "chat.completion.chunk", "created": 1781530216, "model": "0GM-1.0-35B-A3B-0427-SIA", "choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}]}
 
-data: {"id": "chatcmpl-a9d6f09e3d3a", "object": "chat.completion.chunk", "created": 1781530216, "model": "0GM-1.0-35B-A3B-0427", "choices": [], "usage": {"prompt_tokens": 11, "completion_tokens": 157, "total_tokens": 168}}
+data: {"id": "chatcmpl-a9d6f09e3d3a", "object": "chat.completion.chunk", "created": 1781530216, "model": "0GM-1.0-35B-A3B-0427-SIA", "choices": [], "usage": {"prompt_tokens": 11, "completion_tokens": 157, "total_tokens": 168}}
 
 data: [DONE]
 ```
@@ -261,7 +261,7 @@ data: [DONE]
 curl -s -X POST http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "0GM-1.0-35B-A3B-0427",
+    "model": "0GM-1.0-35B-A3B-0427-SIA",
     "messages": [{"role": "user", "content": "Count from 1 to 5."}],
     "max_tokens": 100,
     "temperature": 0.7,
@@ -388,14 +388,14 @@ HTTP 404
 
 ### 13.2 确认合法模型名
 
-模型名从服务日志获取（`docker compose logs sia-0gm35b | grep "Model ID"`），例如 `0GM-1.0-35B-A3B-0427`：
+模型名从服务日志获取（`docker compose logs sia-0gm35b | grep "Model ID"`），例如 `0GM-1.0-35B-A3B-0427-SIA`：
 
 ```bash
 # 传正确的模型名
 curl -s -o /dev/null -w "HTTP %{http_code}\n" \
   -X POST http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
-  -d '{"model": "0GM-1.0-35B-A3B-0427", "messages": [{"role": "user", "content": "hi"}], "max_tokens": 5}'
+  -d '{"model": "0GM-1.0-35B-A3B-0427-SIA", "messages": [{"role": "user", "content": "hi"}], "max_tokens": 5}'
 
 # 不传 model 字段（服务自动使用已加载模型）
 curl -s -o /dev/null -w "HTTP %{http_code}\n" \
@@ -406,7 +406,7 @@ curl -s -o /dev/null -w "HTTP %{http_code}\n" \
 
 两条均应返回 `HTTP 200`。
 
-> **说明**：合法值有三种——`null`/不传、basename（如 `0GM-1.0-35B-A3B-0427`，推荐，与 `/v1/models` 返回的 `id` 一致）、完整路径（如 `/workspace/models/0GM-1.0-35B-A3B-0427`，向后兼容，不推荐）。
+> **说明**：合法值有三种——`null`/不传、basename（如 `0GM-1.0-35B-A3B-0427-SIA`，推荐，与 `/v1/models` 返回的 `id` 一致）、完整路径（如 `/workspace/models/0GM-1.0-35B-A3B-0427`，向后兼容，不推荐）。
 
 ### 13.3 空 messages 数组 → 400
 
@@ -498,7 +498,7 @@ curl -s http://localhost:8000/v1/models | python3 -m json.tool
     "object": "list",
     "data": [
         {
-            "id": "0GM-1.0-35B-A3B-0427",
+            "id": "0GM-1.0-35B-A3B-0427-SIA",
             "object": "model",
             "created": 1749600000,
             "owned_by": "0G Foundation"
