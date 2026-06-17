@@ -4,16 +4,30 @@ V6  vision 多模态（30B）
 发送一张橙色图（base64 PNG），模型应识别出 "orange"。
 PASS: HTTP 200, content 含 "orange"（大小写不敏感）, usage 正常
 """
-import argparse, base64, sys
+import argparse, base64, struct, sys, zlib
 import requests
 
 URL_DEFAULT = "http://localhost:8000"
 
-# 8×8 纯橙色 PNG（#FF8000），base64 编码
-ORANGE_PNG_B64 = (
-    "iVBORw0KGgoAAAANSUhEUgAAAAgAAAAICAYAAADED76LAAAAAXNSR0IArs4c6QAAAB"
-    "ZJREFUKFNj/M9w9D8DBTAxUMGuBAAp9QQJXvCE1QAAAABJRU5ErkJggg=="
-)
+
+def _make_solid_png(width: int, height: int, r: int, g: int, b: int) -> str:
+    """用 stdlib 生成合法的 RGB PNG，无需 Pillow。"""
+    def chunk(name: bytes, data: bytes) -> bytes:
+        raw = name + data
+        return struct.pack(">I", len(data)) + raw + struct.pack(">I", zlib.crc32(raw) & 0xFFFFFFFF)
+
+    raw_rows = b"".join(b"\x00" + bytes([r, g, b] * width) for _ in range(height))
+    png = (
+        b"\x89PNG\r\n\x1a\n"
+        + chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0))
+        + chunk(b"IDAT", zlib.compress(raw_rows))
+        + chunk(b"IEND", b"")
+    )
+    return base64.b64encode(png).decode()
+
+
+# 32×32 纯橙色 PNG（#FF8000），运行时生成以确保合法
+ORANGE_PNG_B64 = _make_solid_png(32, 32, 255, 128, 0)
 
 
 def check(url: str) -> bool:
