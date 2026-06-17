@@ -3,7 +3,7 @@
 
 两种扫描模式：
   1. Concurrency Sweep: input≈512 tokens, max_out=128, 并发 1/2/4/8/16
-  2. Input-Length Sweep: 变化 input 长度，超过 max_model_len=16384 的组跳过
+  2. Input-Length Sweep: 变化 input 长度，超过 max_model_len=9216 的组跳过
 
 指标：TTFT均值/p99, ITL均值, Req Latency均值, Output tok/s, Req/s
 
@@ -31,7 +31,7 @@ except ImportError:
     sys.exit(1)
 
 URL_DEFAULT = "http://localhost:8000"
-MAX_MODEL_LEN = 16384
+MAX_MODEL_LEN = 9216
 
 # 基准句子：约 10 tokens / 45 chars
 _PHRASE = "The quick brown fox jumps over the lazy dog. "
@@ -50,7 +50,7 @@ INPUT_SWEEP_CONFIGS = [
     (2048,  2),
     (4096,  2),
     (8192,  1),
-    (16384, 1),   # make_prompt 自动缩减到安全范围（含 output+template 后 ≤ 16384）
+    (9216, 1),   # make_prompt 自动缩减到安全范围（含 output+template 后 ≤ 9216）
     (32768, 1),   # > MAX_MODEL_LEN → 自动跳过
 ]
 INPUT_SWEEP_OUTPUT_TOKENS = 128

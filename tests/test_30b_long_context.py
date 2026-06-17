@@ -1,18 +1,18 @@
 """
-长上下文验证（30B，max_model_len=16384）
+长上下文验证（30B，max_model_len=9216）
 
-构造约 10000 tokens 的 prompt（留余量给 output + template），
+构造约 6000 tokens 的 prompt（留余量给 output + template），
 验证服务正常处理、prompt_tokens 符合预期。
 
-PASS: HTTP 200, prompt_tokens > 8000, finish_reason 非 null
+PASS: HTTP 200, prompt_tokens > 4000, finish_reason 非 null
 """
 import argparse, sys
 import requests
 
 URL_DEFAULT = "http://localhost:8000"
 
-# ~10 tokens/句 × 1000 句 ≈ 10000 tokens（含 chat template 约 50 tokens，总计约 10050，在 16384 内）
-LONG_CONTENT = "The quick brown fox jumps over the lazy dog. " * 1000
+# ~10 tokens/句 × 600 句 ≈ 6000 tokens（含 chat template 约 50 tokens，总计约 6050，在 9216 内）
+LONG_CONTENT = "The quick brown fox jumps over the lazy dog. " * 600
 
 
 def main():
@@ -21,7 +21,7 @@ def main():
     args = parser.parse_args()
 
     print(f"目标: {args.url}")
-    print(f"prompt 长度: {len(LONG_CONTENT)} chars（约 10000 tokens）")
+    print(f"prompt 长度: {len(LONG_CONTENT)} chars（约 6000 tokens）")
 
     payload = {
         "messages": [{"role": "user", "content": LONG_CONTENT + " Summarize in one sentence."}],
@@ -46,15 +46,15 @@ def main():
     finish = choice.get("finish_reason")
     content = choice.get("message", {}).get("content", "")
 
-    ok_tokens = pt > 8000
+    ok_tokens = pt > 4000
     ok_finish = finish is not None
 
-    print(f"prompt_tokens : {pt}  {'✅' if ok_tokens else '❌ 期望 >8000'}")
+    print(f"prompt_tokens : {pt}  {'✅' if ok_tokens else '❌ 期望 >4000'}")
     print(f"finish_reason : {finish}  {'✅' if ok_finish else '❌'}")
     print(f"response      : {content[:120]}")
 
     if ok_tokens and ok_finish:
-        print("✅ 长上下文验证通过（max_model_len=16384 内正常响应）")
+        print("✅ 长上下文验证通过（max_model_len=9216 内正常响应）")
         sys.exit(0)
     else:
         print("❌ 验证失败", file=sys.stderr)
