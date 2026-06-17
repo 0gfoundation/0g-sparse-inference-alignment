@@ -11,8 +11,9 @@ import requests
 
 URL_DEFAULT = "http://localhost:8000"
 
-# "The quick brown fox " ≈ 5 tokens / 20 chars，×8000 ≈ 40000 tokens
-OVERFLOW_CONTENT = "The quick brown fox " * 8000
+# 与 test_long_context.py 同款句子（已验证 2800 次 ≈ 28000 tokens）
+# 4000 次 ≈ 40000 tokens，可溢出 max_model_len=32768
+OVERFLOW_CONTENT = "The quick brown fox jumps over the lazy dog. " * 4000
 
 
 def check(url: str) -> bool:
@@ -20,7 +21,7 @@ def check(url: str) -> bool:
         "messages": [{"role": "user", "content": OVERFLOW_CONTENT}],
         "max_tokens": 10,
     }
-    print(f"  prompt 长度: {len(OVERFLOW_CONTENT)} chars（约 40000 tokens）")
+    print(f"  prompt 长度: {len(OVERFLOW_CONTENT)} chars（约 40000 tokens，超过 32768 上限）")
     try:
         resp = requests.post(f"{url}/v1/chat/completions", json=payload, timeout=120)
     except Exception as e:
