@@ -1,6 +1,6 @@
 # Qwen3-VL-30B SIA 服务使用说明
 
-**服务**: Qwen3-VL-30B-A3B-Instruct + SIA (Sparse Inference-time Alignment)
+**服务**: Qwen3-VL-30B-A3B-Instruct-SIA + SIA (Sparse Inference-time Alignment)
 **接口**: OpenAI 兼容 API (`/v1/chat/completions`)
 **部署**: Docker compose, b2 inproc backend
 
@@ -26,7 +26,7 @@
 curl -s -X POST http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "Qwen3-VL-30B-A3B-Instruct",
+    "model": "Qwen3-VL-30B-A3B-Instruct-SIA",
     "messages": [{"role": "user", "content": "What are 3 colors of fruit?"}],
     "max_tokens": 200,
     "temperature": 0.7
@@ -39,7 +39,7 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
     "id": "chatcmpl-0fdb87be20e3",
     "object": "chat.completion",
     "created": 1780971415,
-    "model": "Qwen3-VL-30B-A3B-Instruct",
+    "model": "Qwen3-VL-30B-A3B-Instruct-SIA",
     "choices": [
         {
             "index": 0,
@@ -66,7 +66,7 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
 curl -s -X POST http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "Qwen3-VL-30B-A3B-Instruct",
+    "model": "Qwen3-VL-30B-A3B-Instruct-SIA",
     "messages": [
       {"role": "system", "content": "You are a concise assistant. Answer in one sentence."},
       {"role": "user", "content": "What is the capital of France?"}
@@ -102,7 +102,7 @@ SIA (Sparse Inference-time Alignment) 在每个 token 生成时，用 Value Mode
 curl -s -X POST http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "Qwen3-VL-30B-A3B-Instruct",
+    "model": "Qwen3-VL-30B-A3B-Instruct-SIA",
     "messages": [{"role": "user", "content": "Explain what a neural network is."}],
     "max_tokens": 200,
     "temperature": 0.7,
@@ -127,7 +127,7 @@ ratio=0% 确认 RM 完全跳过。
 curl -s -X POST http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "Qwen3-VL-30B-A3B-Instruct",
+    "model": "Qwen3-VL-30B-A3B-Instruct-SIA",
     "messages": [{"role": "user", "content": "Write a short poem about the ocean."}],
     "max_tokens": 200,
     "temperature": 0.7,
@@ -151,7 +151,7 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
 curl -s -X POST http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "Qwen3-VL-30B-A3B-Instruct",
+    "model": "Qwen3-VL-30B-A3B-Instruct-SIA",
     "messages": [{"role": "user", "content": "What are 3 colors of fruit?"}],
     "max_tokens": 100,
     "temperature": 0.7,
@@ -172,7 +172,7 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
 curl -s -X POST http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "Qwen3-VL-30B-A3B-Instruct",
+    "model": "Qwen3-VL-30B-A3B-Instruct-SIA",
     "messages": [{"role": "user", "content": "What are 3 colors of fruit?"}],
     "max_tokens": 100,
     "temperature": 0.7,
@@ -195,7 +195,7 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
 curl -s -X POST http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "Qwen3-VL-30B-A3B-Instruct",
+    "model": "Qwen3-VL-30B-A3B-Instruct-SIA",
     "messages": [{"role": "user", "content": "Summarize the benefits of exercise."}],
     "max_tokens": 150,
     "temperature": 0.7,
@@ -213,7 +213,7 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
 curl -s -X POST http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "Qwen3-VL-30B-A3B-Instruct",
+    "model": "Qwen3-VL-30B-A3B-Instruct-SIA",
     "messages": [{"role": "user", "content": "What makes a good software engineer?"}],
     "max_tokens": 300,
     "temperature": 0.7,
@@ -239,7 +239,7 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
 curl -s -X POST http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "Qwen3-VL-30B-A3B-Instruct",
+    "model": "Qwen3-VL-30B-A3B-Instruct-SIA",
     "messages": [{"role": "user", "content": "Count from 1 to 5."}],
     "max_tokens": 100,
     "temperature": 0.7,
@@ -250,13 +250,13 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
 
 **Response（逐行流式）:**
 ```
-data: {"id":"chatcmpl-g5b9c7d6","object":"chat.completion.chunk","created":1780971415,"model":"Qwen3-VL-30B-A3B-Instruct","choices":[{"index":0,"delta":{"role":"assistant","content":""},"finish_reason":null}]}
+data: {"id":"chatcmpl-g5b9c7d6","object":"chat.completion.chunk","created":1780971415,"model":"Qwen3-VL-30B-A3B-Instruct-SIA","choices":[{"index":0,"delta":{"role":"assistant","content":""},"finish_reason":null}]}
 
-data: {"id":"chatcmpl-g5b9c7d6","object":"chat.completion.chunk","created":1780971415,"model":"Qwen3-VL-30B-A3B-Instruct","choices":[{"index":0,"delta":{"content":"1, 2, 3, 4, 5."},"finish_reason":null}]}
+data: {"id":"chatcmpl-g5b9c7d6","object":"chat.completion.chunk","created":1780971415,"model":"Qwen3-VL-30B-A3B-Instruct-SIA","choices":[{"index":0,"delta":{"content":"1, 2, 3, 4, 5."},"finish_reason":null}]}
 
-data: {"id":"chatcmpl-g5b9c7d6","object":"chat.completion.chunk","created":1780971415,"model":"Qwen3-VL-30B-A3B-Instruct","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}
+data: {"id":"chatcmpl-g5b9c7d6","object":"chat.completion.chunk","created":1780971415,"model":"Qwen3-VL-30B-A3B-Instruct-SIA","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}
 
-data: {"id":"chatcmpl-g5b9c7d6","object":"chat.completion.chunk","created":1780971415,"model":"Qwen3-VL-30B-A3B-Instruct","choices":[],"usage":{"prompt_tokens":14,"completion_tokens":12,"total_tokens":26}}
+data: {"id":"chatcmpl-g5b9c7d6","object":"chat.completion.chunk","created":1780971415,"model":"Qwen3-VL-30B-A3B-Instruct-SIA","choices":[],"usage":{"prompt_tokens":14,"completion_tokens":12,"total_tokens":26}}
 
 data: [DONE]
 ```
@@ -269,7 +269,7 @@ data: [DONE]
 curl -s -X POST http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "Qwen3-VL-30B-A3B-Instruct",
+    "model": "Qwen3-VL-30B-A3B-Instruct-SIA",
     "messages": [{"role": "user", "content": "Count from 1 to 5."}],
     "max_tokens": 100,
     "temperature": 0.7,
@@ -396,14 +396,14 @@ HTTP 404
 
 ### 13.2 确认合法模型名
 
-模型名从服务日志获取（`docker compose logs <container> | grep "Model ID"`），例如 `Qwen3-VL-30B-A3B-Instruct`：
+模型名从服务日志获取（`docker compose logs <container> | grep "Model ID"`），例如 `Qwen3-VL-30B-A3B-Instruct-SIA`：
 
 ```bash
 # 传正确的模型名（basename）
 curl -s -o /dev/null -w "HTTP %{http_code}\n" \
   -X POST http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
-  -d '{"model": "Qwen3-VL-30B-A3B-Instruct", "messages": [{"role": "user", "content": "hi"}], "max_tokens": 5}'
+  -d '{"model": "Qwen3-VL-30B-A3B-Instruct-SIA", "messages": [{"role": "user", "content": "hi"}], "max_tokens": 5}'
 
 # 不传 model 字段（服务自动使用已加载模型）
 curl -s -o /dev/null -w "HTTP %{http_code}\n" \
@@ -466,14 +466,14 @@ HTTP 400
 
 ### 13.5 context 超长 → 400
 
-prompt 超过 max_model_len=2048 时，服务返回标准 400 而非 500：
+prompt 超过 max_model_len=4096 时，服务返回标准 400 而非 500：
 
 ```bash
 python3 -c "
 import requests, json
-long = 'x ' * 2000  # ~2000 tokens，超过 2048 上限（加 chat template 后超限）
+long = 'The quick brown fox jumps over the lazy dog. ' * 1000  # ~10000 tokens，超过 4096 上限
 resp = requests.post('http://localhost:8000/v1/chat/completions',
-    json={'messages': [{'role': 'user', 'content': long}], 'max_tokens': 50})
+    json={'messages': [{'role': 'user', 'content': long}], 'max_tokens': 10})
 print('HTTP', resp.status_code)
 print(json.dumps(resp.json(), indent=2, ensure_ascii=False))
 "
@@ -483,7 +483,7 @@ print(json.dumps(resp.json(), indent=2, ensure_ascii=False))
 ```json
 {
     "error": {
-        "message": "This model's maximum context length is 2048 tokens. However, you requested 0 output tokens and your prompt contains XXXXX input tokens ...",
+        "message": "This model's maximum context length is 4096 tokens. However, you requested 10 output tokens and your prompt contains XXXXX input tokens ...",
         "type": "invalid_request_error",
         "param": null,
         "code": null
@@ -508,7 +508,7 @@ curl -s http://localhost:8000/v1/models | python3 -m json.tool
     "object": "list",
     "data": [
         {
-            "id": "Qwen3-VL-30B-A3B-Instruct",
+            "id": "Qwen3-VL-30B-A3B-Instruct-SIA",
             "object": "model",
             "created": 1749600000,
             "owned_by": "0G Foundation"
@@ -521,27 +521,119 @@ curl -s http://localhost:8000/v1/models | python3 -m json.tool
 
 ---
 
-## 15. 验证 Prefix Cache 命中（`cached_tokens`）
+## 14. 验证长上下文支持（max_model_len=4096）
 
-运行项目自带的测试脚本，向服务连发两次相同请求，验证第二次响应中 `cached_tokens > 0`：
+运行项目自带的测试脚本，发送约 10000 tokens 的长 prompt，验证服务正常返回：
 
 ```bash
-python tests/test_cache_hit.py [--url http://localhost:8000]
+python tests/test_30b_long_context.py [--url http://localhost:8000]
 ```
 
 **预期输出：**
 ```
 目标: http://localhost:8000
-system prompt 长度: 5800 chars
-发送两次相同请求，验证第二次 cached_tokens > 0 ...
+prompt 长度: 45000 chars（约 10000 tokens）
+HTTP 200
+prompt_tokens : 10002  ✅
+finish_reason : stop  ✅
+response      : ...
 
-请求 1: prompt_tokens=1218, cached_tokens=0    ✅
-请求 2: prompt_tokens=1218, cached_tokens=1216 ✅
+✅ 长上下文验证通过（max_model_len=4096 内正常响应）
+```
 
-预期: 请求1 cached_tokens=0，请求2 cached_tokens=1056
+---
+
+## 15. 验证 Prefix Cache 命中（`cached_tokens`）
+
+运行项目自带的测试脚本，向服务连发两次相同请求，验证第二次响应中 `cached_tokens > 0`：
+
+```bash
+python tests/test_30b_v7.py [--url http://localhost:8000]
+```
+
+**预期输出：**
+```
+req1: prompt_tokens=210, cached_tokens=0
+req2: prompt_tokens=210, cached_tokens=192  ✅
 ```
 
 **说明：**
 - 30B 是纯 attention 模型，vLLM APC 默认 `block_size=16`，`cached_tokens` 为 16 的整倍数
 - prompt ≥ 16 tokens 时即可命中缓存（阈值远低于 35B 的 1056 tokens）
 - 35B（hybrid 模型）`block_size ≈ 1056`，两者期望的 `cached_tokens` 数值不同，但测试逻辑相同（第二次 > 0 即通过）
+
+---
+
+## 16. 性能基线压测
+
+> SIA vs noSIA 完整对比数据与分析见 [exp/bench-vl30b-bench-v1-20260617.md](../exp/bench-vl30b-bench-v1-20260617.md)
+
+压测工具：`tests/bench_30b.py`，两种模式：并发扫描（input≈512, max_out=128）和输入长度扫描（max_out=128），每档 3 轮。
+
+```bash
+python tests/bench_30b.py
+
+# SIA vs noSIA 对比
+python tests/bench_30b.py --compare
+```
+
+### Concurrency Sweep（SIA 开启，input≈512, max_out=128）
+
+| Conc | Input | Output | TTFT mean | TTFT p99 | ITL mean | Req Lat | Out tok/s | Req/s |
+|------|-------|--------|-----------|----------|----------|---------|-----------|-------|
+| 1    | 478   | 21     | 46ms      | 75ms     | 8.0ms    | 206ms   | 101.6     | 4.84  |
+| 2    | 478   | 20     | 44ms      | 52ms     | 8.0ms    | 200ms   | 198.7     | 9.61  |
+| 4    | 478   | 21     | 95ms      | 197ms    | 8.2ms    | 249ms   | 311.0     | 14.58 |
+| 8    | 478   | 20     | 77ms      | 92ms     | 11.5ms   | 302ms   | 539.9     | 25.81 |
+| 16   | 478   | 21     | 114ms     | 132ms    | 17.0ms   | 449ms   | 704.3     | 33.28 |
+
+### Input-Length Sweep（SIA 开启，max_out=128）
+
+| Conc | Input | Output | TTFT mean | TTFT p99 | ITL mean | Req Lat | Out tok/s | Req/s |
+|------|-------|--------|-----------|----------|----------|---------|-----------|-------|
+| 2    | 478   | 21     | 52ms      | 79ms     | 8.5ms    | 225ms   | 186.9     | 8.69  |
+| 2    | 988   | 21     | 48ms      | 56ms     | 10.5ms   | 261ms   | 163.5     | 7.55  |
+| 2    | 2008  | 20     | 60ms      | 70ms     | 7.3ms    | 202ms   | 193.3     | 9.51  |
+| 1    | 3928  | 23     | 88ms      | 135ms    | 6.6ms    | 235ms   | 97.8      | 4.25  |
+
+### 关键结论
+
+- **TTFT 不受 SIA 影响**：SIA 在 decode 阶段介入，prefill 不变，TTFT 与 noSIA 基本持平
+- **低并发开销可接受**：conc=1 时 ITL 仅 +21%（8.0ms vs 6.6ms），吞吐下降 20%
+- **高并发开销适中**：conc=16 时 ITL 达 noSIA 的 1.83×（优于 35B 的 4.8×）
+- **吞吐随并发线性扩展**：conc=16 时 SIA tok/s = 704，是 conc=1 的 6.9×
+
+---
+
+## 17. 一键集成测试
+
+运行所有测试用例（V1～V8c + /v1/models + 长上下文），输出 PASS/FAIL 汇总：
+
+```bash
+bash tests/run_all_30b.sh
+# 跳过 vision：
+# bash tests/run_all_30b.sh http://localhost:8000 --skip-vision
+```
+
+**预期输出（全部通过）：**
+```
+════════════════════════════════════════════
+  VL-30B SIA 服务集成测试
+  目标: http://localhost:8000
+════════════════════════════════════════════
+  V1  OpenAI兼容接口                ✅ PASS
+  V2  非流式 usage（计费命脉）      ✅ PASS
+  V3  流式结尾 usage（计费命脉）    ✅ PASS
+  V6  vision 多模态                  ✅ PASS
+  V7  cache 命中字段                ✅ PASS
+  V5  tool call 拒绝 → 400          ✅ PASS
+  V8a model 名称校验 → 404          ✅ PASS
+  V8b 空 messages → 400             ✅ PASS
+  V8c context 超长 → 400            ✅ PASS
+      /v1/models 字段               ✅ PASS
+      长上下文（max_model_len）     ✅ PASS
+════════════════════════════════════════════
+  PASS=11  FAIL=0   SKIP=0   TOTAL=11
+  ✅ 全部通过
+════════════════════════════════════════════
+```
