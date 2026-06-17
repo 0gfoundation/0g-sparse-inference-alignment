@@ -466,12 +466,12 @@ HTTP 400
 
 ### 13.5 context 超长 → 400
 
-prompt 超过 max_model_len=9216 时，服务返回标准 400 而非 500：
+prompt 超过 max_model_len=4096 时，服务返回标准 400 而非 500：
 
 ```bash
 python3 -c "
 import requests, json
-long = 'The quick brown fox jumps over the lazy dog. ' * 1000  # ~10000 tokens，超过 9216 上限
+long = 'The quick brown fox jumps over the lazy dog. ' * 1000  # ~10000 tokens，超过 4096 上限
 resp = requests.post('http://localhost:8000/v1/chat/completions',
     json={'messages': [{'role': 'user', 'content': long}], 'max_tokens': 10})
 print('HTTP', resp.status_code)
@@ -483,7 +483,7 @@ print(json.dumps(resp.json(), indent=2, ensure_ascii=False))
 ```json
 {
     "error": {
-        "message": "This model's maximum context length is 9216 tokens. However, you requested 10 output tokens and your prompt contains XXXXX input tokens ...",
+        "message": "This model's maximum context length is 4096 tokens. However, you requested 10 output tokens and your prompt contains XXXXX input tokens ...",
         "type": "invalid_request_error",
         "param": null,
         "code": null
@@ -521,7 +521,7 @@ curl -s http://localhost:8000/v1/models | python3 -m json.tool
 
 ---
 
-## 14. 验证长上下文支持（max_model_len=9216）
+## 14. 验证长上下文支持（max_model_len=4096）
 
 运行项目自带的测试脚本，发送约 10000 tokens 的长 prompt，验证服务正常返回：
 
@@ -538,7 +538,7 @@ prompt_tokens : 10002  ✅
 finish_reason : stop  ✅
 response      : ...
 
-✅ 长上下文验证通过（max_model_len=9216 内正常响应）
+✅ 长上下文验证通过（max_model_len=4096 内正常响应）
 ```
 
 ---
@@ -596,7 +596,7 @@ python tests/bench_30b.py --compare
 | 1    | —     | —      | —         | —        | —        | —       | —         | —     |
 | 1    | —     | —      | —         | —        | —        | —       | —         | —     |
 
-> 压测结果待填入（重启服务升级 max_model_len=9216 后运行）。
+> 压测结果待填入（重启服务升级 max_model_len=4096 后运行）。
 
 ---
 
