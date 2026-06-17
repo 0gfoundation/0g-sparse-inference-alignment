@@ -560,3 +560,31 @@ system prompt 长度: 5800 chars
 - prompt < 1056 tokens 时永远不会命中缓存（不足一个完整 block）
 - 测试脚本构造了约 1218 tokens 的 prompt，确保超过阈值
 - 30B（纯 attention 模型）`block_size=16`，阈值远低，两者测试脚本相同但期望的 `cached_tokens` 数值不同
+
+---
+
+## 16. 性能基线：SIA vs noSIA 并发压测
+
+> 完整原始数据与分析见 [exp/bench-0gm35b-sia-vs-nosia-20260617.md](../exp/bench-0gm35b-sia-vs-nosia-20260617.md)
+
+压测工具：`tests/bench_35b.py`，并发度 1/2/4，每档 3 轮，prompt max_tokens=300。
+
+### 结果汇总
+
+| 并发度 | noSIA 聚合吞吐 | SIA 聚合吞吐 | SIA 开销 | noSIA 延迟 p50 | SIA 延迟 p50 |
+|--------|--------------|------------|---------|--------------|------------|
+| 1 | 115.1 tok/s | 101.7 tok/s | **-12%** | 2644 ms | 2932 ms |
+| 2 | 193.8 tok/s | 164.0 tok/s | **-15%** | 3153 ms | 3734 ms |
+| 4 | 366.8 tok/s | 241.2 tok/s | **-34%** | 3274 ms | 4995 ms |
+
+### 关键结论
+
+- **TTFT 不受影响**：SIA 在 decode 阶段介入，prefill 不受影响，TTFT p50 与 noSIA 基本持平（60-130ms）
+- **单并发 SIA 开销 12%**：`entropy_threshold=1.0` 下约 5-8% 的 token 触发干预，开销较低
+- **高并发开销放大**：并发 4 时 SIA 开销升至 34%——每个 decode step RM 评分总量 = `并发数 × topk`，RM 压力随并发线性增长，而 LLM batch 有加速，两者增速不对称
+- **无限流（429）**：16 并发全部 200，vLLM 内部队列排队，服务无速率限制
+
+自测命令：
+```bash
+python tests/bench_35b.py --compare --concurrency 1 2 4 --skip-ratelimit
+```
