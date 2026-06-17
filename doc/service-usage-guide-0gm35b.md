@@ -588,3 +588,40 @@ system prompt 长度: 5800 chars
 ```bash
 python tests/bench_35b.py --compare --concurrency 1 2 4 --skip-ratelimit
 ```
+
+---
+
+## 17. 一键集成测试
+
+运行所有测试用例（V1～V8c + /v1/models + 长上下文），输出 PASS/FAIL 汇总：
+
+```bash
+bash tests/run_all.sh
+# 跳过 vision（模型不支持多模态时）：
+# bash tests/run_all.sh http://localhost:8000 --skip-vision
+```
+
+**预期输出（全部通过）：**
+```
+════════════════════════════════════════════
+  SIA 服务集成测试
+  目标: http://localhost:8000
+════════════════════════════════════════════
+  V1  OpenAI兼容接口                ✅ PASS
+  V2  非流式 usage（计费命脉）      ✅ PASS
+  V3  流式结尾 usage（计费命脉）    ✅ PASS
+  V6  vision 多模态                  ✅ PASS
+  V7  cache 命中字段                ✅ PASS
+  V5  tool call 拒绝 → 400          ✅ PASS
+  V8a model 名称校验 → 404          ✅ PASS
+  V8b 空 messages → 400             ✅ PASS
+  V8c context 超长 → 400            ✅ PASS
+      /v1/models 字段               ✅ PASS
+      长上下文（max_model_len）     ✅ PASS
+════════════════════════════════════════════
+  PASS=11  FAIL=0   SKIP=0   TOTAL=11
+  ✅ 全部通过
+════════════════════════════════════════════
+```
+
+脚本返回值：全部通过时 exit 0，有失败时 exit N（N = 失败数），可直接用于 CI 判断。
