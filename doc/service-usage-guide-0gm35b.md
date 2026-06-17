@@ -563,31 +563,42 @@ system prompt 长度: 5800 chars
 
 ---
 
-## 16. 性能基线：SIA vs noSIA 并发压测
+## 16. 性能基线压测
 
-> 完整原始数据与分析见 [exp/bench-0gm35b-sia-vs-nosia-20260617.md](../exp/bench-0gm35b-sia-vs-nosia-20260617.md)
+> SIA vs noSIA 完整对比数据与分析见 [exp/bench-0gm35b-bench-v2-20260617.md](../exp/bench-0gm35b-bench-v2-20260617.md)
 
-压测工具：`tests/bench_35b.py`，并发度 1/2/4，每档 3 轮，prompt max_tokens=300。
+压测工具：`tests/bench_35b.py`，两种模式：并发扫描（input≈480, max_out=304）和输入长度扫描（max_out=128），每档 3 轮。
 
-### 结果汇总
+```bash
+python tests/bench_35b.py
+```
 
-| 并发度 | noSIA 聚合吞吐 | SIA 聚合吞吐 | SIA 开销 | noSIA TTFT p50 | SIA TTFT p50 | noSIA 延迟 p50 | SIA 延迟 p50 |
-|--------|--------------|------------|---------|--------------|------------|--------------|------------|
-| 1 | 115.1 tok/s | 101.7 tok/s | **-12%** | 67 ms | 59 ms | 2644 ms | 2932 ms |
-| 2 | 193.8 tok/s | 164.0 tok/s | **-15%** | 126 ms | 127 ms | 3153 ms | 3734 ms |
-| 4 | 366.8 tok/s | 241.2 tok/s | **-34%** | 99 ms | 98 ms | 3274 ms | 4995 ms |
+### Concurrency Sweep（SIA 开启，input≈480, max_out=304）
+
+| Conc | Input | Output | TTFT mean | TTFT p99 | ITL mean | Req Lat | Out tok/s | Req/s |
+|------|-------|--------|-----------|----------|----------|---------|-----------|-------|
+| 1    | 480   | 304    | 146ms     | 181ms    | 10.9ms   | 3434ms  | 88.5      | 0.29  |
+| 2    | 480   | 304    | 232ms     | 244ms    | 19.2ms   | 6036ms  | 100.7     | 0.33  |
+| 4    | 480   | 304    | 241ms     | 255ms    | 24.8ms   | 7761ms  | 156.6     | 0.52  |
+| 8    | 480   | 304    | 351ms     | 391ms    | 35.8ms   | 11185ms | 217.3     | 0.71  |
+| 16   | 480   | 304    | 477ms     | 607ms    | 65.4ms   | 20290ms | 239.4     | 0.79  |
+
+### Input-Length Sweep（SIA 开启，max_out=128）
+
+| Conc | Input | Output | TTFT mean | TTFT p99 | ITL mean | Req Lat | Out tok/s | Req/s |
+|------|-------|--------|-----------|----------|----------|---------|-----------|-------|
+| 2    | 480   | 128    | 234ms     | 243ms    | 15.8ms   | 2241ms  | 114.2     | 0.89  |
+| 2    | 2010  | 128    | 258ms     | 280ms    | 15.8ms   | 2266ms  | 112.9     | 0.88  |
+| 2    | 4060  | 128    | 286ms     | 318ms    | 18.9ms   | 2686ms  | 95.3      | 0.74  |
+| 1    | 16350 | 128    | 268ms     | 292ms    | 19.8ms   | 2759ms  | 46.4      | 0.36  |
+| 1    | 32610 | 128    | 335ms     | 368ms    | 29.2ms   | 3967ms  | 32.3      | 0.25  |
 
 ### 关键结论
 
-- **TTFT 不受影响**：SIA 在 decode 阶段介入，prefill 不受影响，TTFT p50 与 noSIA 基本持平（60-130ms）
-- **单并发 SIA 开销 12%**：`entropy_threshold=1.0` 下约 5-8% 的 token 触发干预，开销较低
-- **高并发开销放大**：并发 4 时 SIA 开销升至 34%——每个 decode step RM 评分总量 = `并发数 × topk`，RM 压力随并发线性增长，而 LLM batch 有加速，两者增速不对称
-- **无限流（429）**：16 并发 burst 全部返回 200，延迟 p50=207ms，wall-clock=0.2s；vLLM 内部队列排队，服务本身无速率限制机制
-
-自测命令：
-```bash
-python tests/bench_35b.py --compare --concurrency 1 2 4 --skip-ratelimit
-```
+- **TTFT 不受 SIA 影响**：SIA 在 decode 阶段介入，prefill 不变，TTFT 与 noSIA 基本持平
+- **低并发开销可接受**：conc=1 时 ITL 仅 +21%（10.9ms vs 9.0ms），吞吐下降 16%
+- **高并发开销显著**：conc=16 时 ITL 达 noSIA 的 4.8×；原因是每 decode step RM 评分量 = `并发 × topk`，RM 成为瓶颈
+- **长上下文 ITL 升高**：32K 输入时 SIA ITL 达 29ms（noSIA 为 8.6ms），KV cache 变大导致 RM 评分成本上升
 
 ---
 
