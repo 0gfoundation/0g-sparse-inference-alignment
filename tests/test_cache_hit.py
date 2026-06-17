@@ -65,13 +65,15 @@ def check(url: str) -> bool:
 
         pt = usage.get("prompt_tokens", "?")
         cached = usage.get("prompt_tokens_details", {}).get("cached_tokens", 0)
-        ok = (n == 1 and cached == 0) or (n == 2 and cached > 0)
-        print(f"请求 {n}: prompt_tokens={pt}, cached_tokens={cached}  {'✅' if ok else '❌'}")
-        results.append(ok)
+        print(f"请求 {n}: prompt_tokens={pt}, cached_tokens={cached}")
+        results.append({"cached": cached})
 
+    req2_cached = results[1]["cached"] if len(results) == 2 else 0
+    ok = req2_cached > 0
     print()
-    print("预期: 请求1 cached_tokens=0，请求2 cached_tokens>0")
-    return all(results)
+    print(f"请求2 cached_tokens={req2_cached}  {'✅ 缓存命中' if ok else '❌ 期望 >0'}")
+    print("说明: 请求1 cached_tokens 可能非零（服务级缓存跨请求持久），只要请求2 >0 即通过")
+    return ok
 
 
 def main() -> None:
