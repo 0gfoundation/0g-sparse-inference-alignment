@@ -71,6 +71,7 @@ services:
     command: >
       python src/sia_vllm_server.py
         --llm        /workspace/models/Qwen3-VL-30B-A3B-Instruct
+        --model_id   Qwen3-VL-30B-A3B-Instruct-SIA
         --rm_backend b2
         --rm_model   /workspace/models/VM-Qwen3-4B-merged-for-vllm
         --llm_gpu_mem    0.48
