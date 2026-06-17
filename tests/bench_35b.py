@@ -59,8 +59,14 @@ _TEMPLATE_OVERHEAD = 50  # chat template 约 50 tokens
 
 
 def make_prompt(target_input_tokens: int, reserve_output: int = 0) -> str:
-    """构造约 target_input_tokens 的用户消息，预留 reserve_output 给生成。"""
-    effective = max(1, target_input_tokens - _TEMPLATE_OVERHEAD - reserve_output)
+    """构造约 target_input_tokens 的用户消息。
+    只有当 target + reserve 接近 MAX_MODEL_LEN 时才缩减 prompt，
+    否则按 target 原值构造（小 input 不需要扣 reserve）。
+    """
+    if target_input_tokens + reserve_output + _TEMPLATE_OVERHEAD > MAX_MODEL_LEN:
+        effective = max(1, MAX_MODEL_LEN - _TEMPLATE_OVERHEAD - reserve_output)
+    else:
+        effective = max(1, target_input_tokens - _TEMPLATE_OVERHEAD)
     reps = max(1, int(effective / _PHRASE_TOKENS))
     return _PHRASE * reps + "Summarize the above text in one sentence."
 
