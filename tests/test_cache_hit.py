@@ -1,9 +1,11 @@
 """
-验证 APC prefix cache 是否正确外报 cached_tokens。
+V7  Prefix Cache 命中（cached_tokens）
 
-原理：0GM-35B 是 hybrid 模型（full_attention + GatedDeltaNet），
-需要 --mamba_cache_mode align 才能启用 APC。block_size ≈ 1056 tokens，
-prompt >= 1056 tokens 的请求在第二次命中时 cached_tokens = 1056。
+连发两次相同 prompt，第二次应命中缓存：
+  请求 1: cached_tokens == 0
+  请求 2: cached_tokens > 0
+
+适用于 35B（block_size≈1056）和 30B（block_size=16）。
 
 用法：
     python tests/test_cache_hit.py [--url http://localhost:8000]
@@ -13,11 +15,12 @@ import requests
 
 URL_DEFAULT = "http://localhost:8000"
 
-# 200 次重复 ≈ 1220 tokens（超过 1056 的 block_size 阈值）
+# 200 次重复 ≈ 1220 tokens（超过 35B block_size=1056 和 30B block_size=16 两者阈值）
 LONG_SYSTEM = "You are a helpful assistant. " * 200
 
 
-def send(url: str, n: int) -> None:
+def send_one(url: str) -> dict:
+    """发一次流式请求，返回 usage dict 或 None。"""
     payload = {
         "messages": [
             {"role": "system", "content": LONG_SYSTEM},
@@ -39,32 +42,44 @@ def send(url: str, n: int) -> None:
             chunk = json.loads(line[6:])
             if "usage" in chunk:
                 usage = chunk["usage"]
+    return usage
 
-    if usage is None:
-        print(f"请求 {n}: ERROR — 未收到 usage chunk", file=sys.stderr)
-        return
 
-    prompt_t = usage.get("prompt_tokens", "?")
-    cached = usage.get("prompt_tokens_details", {}).get("cached_tokens", 0)
-    status = "✅" if (n == 1 and cached == 0) or (n == 2 and cached > 0) else "❌"
-    print(f"请求 {n}: prompt_tokens={prompt_t}, cached_tokens={cached}  {status}")
+def check(url: str) -> bool:
+    print(f"目标: {url}")
+    print(f"system prompt 長さ: {len(LONG_SYSTEM)} chars")
+    print("発送两次相同请求，验证第二次 cached_tokens > 0 ...")
+    print()
+
+    results = []
+    for n in (1, 2):
+        try:
+            usage = send_one(url)
+        except Exception as e:
+            print(f"请求 {n}: ERROR — {e}", file=sys.stderr)
+            return False
+
+        if usage is None:
+            print(f"请求 {n}: ERROR — 未收到 usage chunk", file=sys.stderr)
+            return False
+
+        pt = usage.get("prompt_tokens", "?")
+        cached = usage.get("prompt_tokens_details", {}).get("cached_tokens", 0)
+        ok = (n == 1 and cached == 0) or (n == 2 and cached > 0)
+        print(f"请求 {n}: prompt_tokens={pt}, cached_tokens={cached}  {'✅' if ok else '❌'}")
+        results.append(ok)
+
+    print()
+    print("预期: 请求1 cached_tokens=0，请求2 cached_tokens>0")
+    return all(results)
 
 
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--url", default=URL_DEFAULT, help="SIA 服务地址")
     args = parser.parse_args()
-
-    print(f"目标: {args.url}")
-    print(f"system prompt 长度: {len(LONG_SYSTEM)} chars")
-    print("发送两次相同请求，验证第二次 cached_tokens > 0 ...")
-    print()
-
-    send(args.url, 1)
-    send(args.url, 2)
-
-    print()
-    print("预期: 请求1 cached_tokens=0，请求2 cached_tokens=1056")
+    ok = check(args.url)
+    sys.exit(0 if ok else 1)
 
 
 if __name__ == "__main__":
