@@ -93,10 +93,13 @@ class ChatCompletionRequest(BaseModel):
     # 透传给 apply_chat_template 的额外 kwargs (e.g. {"enable_thinking": False})
     # 用法: 跟 OpenAI 兼容 — eval client 传 chat_template_kwargs={"enable_thinking": False}
     chat_template_kwargs: Optional[dict] = None
+    stream_options: Optional[dict] = None          # e.g. {"include_usage": true} — router 强制注入此字段
     # Per-request SIA overrides. None = use server default (from --weight / --topk / --entropy_threshold).
     sia_weight: Optional[float] = None            # 0.0 = disable SIA for this request
     sia_topk: Optional[int] = None                # override number of RM candidates
     sia_entropy_threshold: Optional[float] = None  # override entropy gate; 0 = always intervene
+    tools: Optional[list] = None                  # not supported; triggers 400 if set
+    tool_choice: Optional[object] = None          # not supported; triggers 400 if set
 
 
 class CompletionRequest(BaseModel):
@@ -317,9 +320,30 @@ async def list_models():
             "id": _model_id,
             "object": "model",
             "created": int(time.time()),
-            "owned_by": "sia",
+            "owned_by": "0G Foundation",
         }],
     }
+
+
+def _check_model(model: Optional[str]) -> Optional[JSONResponse]:
+    """model 字段校验：None / 空串 / _model_id / 完整路径 均合法，其余返回 404 JSONResponse。
+    调用方：if err := _check_model(req.model): return err
+    """
+    if not model:
+        return None
+    if model in (_model_id, _args.llm):
+        return None
+    return JSONResponse(
+        status_code=404,
+        content={
+            "error": {
+                "message": f"The model `{model}` does not exist or is not loaded.",
+                "type": "invalid_request_error",
+                "param": None,
+                "code": "model_not_found",
+            }
+        },
+    )
 
 
 async def _log_rm_status():
@@ -341,6 +365,32 @@ async def _log_rm_status():
 
 
 async def _handle_chat(req: ChatCompletionRequest):
+    if err := _check_model(req.model):
+        return err
+    if not req.messages:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "error": {
+                    "message": "[] is too short - 'messages'",
+                    "type": "invalid_request_error",
+                    "param": None,
+                    "code": None,
+                }
+            },
+        )
+    if req.tools:
+        return JSONResponse(
+            status_code=400,
+            content={
+                "error": {
+                    "message": "Tool calls are not yet implemented in this server.",
+                    "type": "invalid_request_error",
+                    "param": None,
+                    "code": None,
+                }
+            },
+        )
     await _log_rm_status()
 
     if _has_image(req.messages):
@@ -353,13 +403,17 @@ async def _handle_chat(req: ChatCompletionRequest):
         prompt = _messages_to_prompt(req.messages, req.chat_template_kwargs)
 
     sampling_params = _build_sampling_params(req)
-    model = req.model or _model_id
+    model = _model_id
     request_id = f"chatcmpl-{uuid.uuid4().hex[:12]}"
     created = int(time.time())
 
     if req.stream:
+        include_usage = bool(
+            req.stream_options and req.stream_options.get("include_usage")
+        )
         return StreamingResponse(
-            _stream_sse(prompt, sampling_params, request_id, created, model),
+            _stream_sse(prompt, sampling_params, request_id, created, model,
+                        include_usage=include_usage),
             media_type="text/event-stream",
             headers={
                 "Cache-Control": "no-cache",
@@ -374,28 +428,36 @@ async def _handle_chat(req: ChatCompletionRequest):
     REQUEST_TIMEOUT = 600
     start_time = time.time()
     final = None
-    async for output in _engine.generate(prompt, sampling_params, request_id):
-        final = output
-        generated = output.outputs[0].text
+    try:
+        async for output in _engine.generate(prompt, sampling_params, request_id):
+            final = output
+            generated = output.outputs[0].text
 
-        # 全文检测：只要 Answer: 后跟可选空格再接 A/B/C/D，立即停止
-        if _ANSWER_RE.search(generated):
-            await _engine.abort(request_id)
-            break
+            # 全文检测：只要 Answer: 后跟可选空格再接 A/B/C/D，立即停止
+            if _ANSWER_RE.search(generated):
+                await _engine.abort(request_id)
+                break
 
-        elapsed = time.time() - start_time
-        if elapsed > REQUEST_TIMEOUT:
-            print(
-                f"[SERVER] {request_id} timed out after {elapsed:.1f}s, aborting",
-                flush=True,
-            )
-            await _engine.abort(request_id)
-            break
+            elapsed = time.time() - start_time
+            if elapsed > REQUEST_TIMEOUT:
+                print(
+                    f"[SERVER] {request_id} timed out after {elapsed:.1f}s, aborting",
+                    flush=True,
+                )
+                await _engine.abort(request_id)
+                break
+    except Exception as e:
+        return JSONResponse(
+            status_code=400,
+            content={"error": {"message": str(e), "type": "invalid_request_error",
+                                "param": None, "code": None}},
+        )
 
     text = final.outputs[0].text if final else ""
     finish_reason = (final.outputs[0].finish_reason or "stop") if final else "timeout"
     prompt_tokens = len(final.prompt_token_ids)
     completion_tokens = len(final.outputs[0].token_ids)
+    cached_tokens = (final.num_cached_tokens or 0) if final else 0
 
     return JSONResponse({
         "id": request_id,
@@ -411,6 +473,7 @@ async def _handle_chat(req: ChatCompletionRequest):
             "prompt_tokens": prompt_tokens,
             "completion_tokens": completion_tokens,
             "total_tokens": prompt_tokens + completion_tokens,
+            "prompt_tokens_details": {"cached_tokens": cached_tokens},
         },
     })
 
@@ -421,11 +484,18 @@ async def _stream_sse(
     request_id: str,
     created: int,
     model: str,
+    include_usage: bool = False,
 ) -> AsyncIterator[str]:
-    """每生成一个 token 立即推送一个 SSE chunk（真·token-level streaming）。"""
+    """每生成一个 token 立即推送一个 SSE chunk（真·token-level streaming）。
+
+    include_usage=True 时，在 [DONE] 前额外发一个 usage chunk（OpenAI V3 计费要求）：
+      data: {"id":...,"choices":[],"usage":{"prompt_tokens":...,"completion_tokens":...,"total_tokens":...}}
+    router 会强制在流式请求里注入 stream_options.include_usage=true，所以生产环境此路径始终触发。
+    """
     yield _make_chunk(request_id, created, model, role="assistant")
 
     prev_len = 0
+    final_output = None
     async for output in _engine.generate(prompt, sampling_params, request_id):
         new_text = output.outputs[0].text
         delta = new_text[prev_len:]
@@ -433,9 +503,29 @@ async def _stream_sse(
         if delta:
             yield _make_chunk(request_id, created, model, content=delta)
         if output.finished:
+            final_output = output
             finish_reason = output.outputs[0].finish_reason or "stop"
             yield _make_chunk(request_id, created, model, finish_reason=finish_reason)
             break
+
+    if include_usage and final_output is not None:
+        prompt_tokens = len(final_output.prompt_token_ids)
+        completion_tokens = len(final_output.outputs[0].token_ids)
+        cached_tokens = final_output.num_cached_tokens or 0
+        usage_chunk = {
+            "id": request_id,
+            "object": "chat.completion.chunk",
+            "created": created,
+            "model": model,
+            "choices": [],
+            "usage": {
+                "prompt_tokens": prompt_tokens,
+                "completion_tokens": completion_tokens,
+                "total_tokens": prompt_tokens + completion_tokens,
+                "prompt_tokens_details": {"cached_tokens": cached_tokens},
+            },
+        }
+        yield f"data: {json.dumps(usage_chunk)}\n\n"
 
     yield "data: [DONE]\n\n"
 
@@ -454,6 +544,8 @@ async def chat_completions(req: ChatCompletionRequest):
 async def _handle_completion(req: CompletionRequest):
     """Raw text completion (跳过 chat_template)。SIA logits processor 仍按
     每个 decode step 触发, 跟 chat_completion 完全一样。"""
+    if err := _check_model(req.model):
+        return err
     await _log_rm_status()
     # 直接用 raw prompt — tokenize 走 vllm 内部 (它接受 string prompt)
     prompt = req.prompt
@@ -473,7 +565,7 @@ async def _handle_completion(req: CompletionRequest):
     if req.bad_words:
         kwargs["bad_words"] = req.bad_words
     sampling_params = SamplingParams(**kwargs)
-    model = req.model or _model_id
+    model = _model_id
     request_id = f"cmpl-{uuid.uuid4().hex[:12]}"
     created = int(time.time())
 
@@ -541,6 +633,15 @@ def parse_args():
                         "省服务端 re-tokenize（~3-5ms/call）。需要 RM server 用 "
                         "scripts/vllm_serve_with_token_ids.py 启动以打 Pydantic 补丁。")
     p.add_argument("--max_model_len", type=int, default=4096)
+    # Mamba 层 prefix caching 模式（仅对 Hybrid 模型如 0GM-35B 有效）。
+    # 默认 "none" 会把 mamba_block_size 设为 max_model_len，导致 lcm_block_size
+    # 极大，实际上所有请求都无法命中 APC；"align" 将 mamba_block_size 对齐到
+    # 注意力层 block_size（约 1056 tokens），使 prompt >= 1056 tokens 的请求能外报
+    # cached_tokens。0GM-35B 的 Qwen3.5 代码注释里明确说 "please use align"。
+    p.add_argument("--mamba_cache_mode", default=None,
+                   choices=["all", "align", "none"],
+                   help="透传给 vllm --mamba-cache-mode。Hybrid 模型 (0GM-35B) 建议 align。"
+                        "default=None 表示不传（vllm 用其默认值 none）。")
     # vllm Automatic Prefix Caching (APC). Default ON (生产推荐):
     # 多 request 共享前缀时 2-10x prefill 加速; SIA 跟 APC 正交不冲突。
     # 想关传 --disable_prefix_caching.
@@ -618,6 +719,7 @@ def main():
             rm_model=_args.rm_model,
             use_token_ids=_args.use_token_ids,
             rm_b2_gpu_mem=_args.rm_b2_gpu_mem,
+            rm_max_model_len=_args.max_model_len,
             enable_thinking=_enable_thinking,
         )
 
@@ -630,7 +732,10 @@ def main():
         disable_log_stats=True,
         enable_prefix_caching=_args.enable_prefix_caching,
     )
-    print(f"[SIA] main LLM prefix_caching = {_args.enable_prefix_caching}")
+    if _args.mamba_cache_mode is not None:
+        engine_kwargs["mamba_cache_mode"] = _args.mamba_cache_mode
+    print(f"[SIA] main LLM prefix_caching = {_args.enable_prefix_caching}, "
+          f"mamba_cache_mode = {_args.mamba_cache_mode or '(vllm default)'}")
     # Optional main-LLM cudagraph override. Default = vllm's default (keeps
     # legacy Qwen14B / vllm 0.10 path untouched). Set to "piecewise" when
     # running a nested-vllm RM under vllm >= 0.15: FULL_AND_PIECEWISE on the

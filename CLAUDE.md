@@ -101,9 +101,9 @@ python src/sia_vllm_server.py \
   --llm /path/to/0GM-1.0-35B-A3B \
   --rm_backend b2 \
   --rm_model /path/to/VM-Qwen3-4B-merged-for-vllm \
-  --rm_b2_gpu_mem 0.15 --llm_gpu_mem 0.55 \
+  --rm_b2_gpu_mem 0.13 --llm_gpu_mem 0.75 \
   --topk 10 --weight 1.0 --entropy_threshold 1.0 \
-  --max_model_len 2048 --port 8000
+  --max_model_len 32768 --mamba_cache_mode align --port 8000
 ```
 
 **Testing the server:**

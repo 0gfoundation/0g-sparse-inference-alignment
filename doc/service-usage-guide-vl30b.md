@@ -26,7 +26,7 @@
 curl -s -X POST http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "/workspace/models/Qwen3-VL-30B-A3B-Instruct",
+    "model": "Qwen3-VL-30B-A3B-Instruct",
     "messages": [{"role": "user", "content": "What are 3 colors of fruit?"}],
     "max_tokens": 200,
     "temperature": 0.7
@@ -39,7 +39,7 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
     "id": "chatcmpl-0fdb87be20e3",
     "object": "chat.completion",
     "created": 1780971415,
-    "model": "/workspace/models/Qwen3-VL-30B-A3B-Instruct",
+    "model": "Qwen3-VL-30B-A3B-Instruct",
     "choices": [
         {
             "index": 0,
@@ -66,7 +66,7 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
 curl -s -X POST http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "/workspace/models/Qwen3-VL-30B-A3B-Instruct",
+    "model": "Qwen3-VL-30B-A3B-Instruct",
     "messages": [
       {"role": "system", "content": "You are a concise assistant. Answer in one sentence."},
       {"role": "user", "content": "What is the capital of France?"}
@@ -102,7 +102,7 @@ SIA (Sparse Inference-time Alignment) 在每个 token 生成时，用 Value Mode
 curl -s -X POST http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "/workspace/models/Qwen3-VL-30B-A3B-Instruct",
+    "model": "Qwen3-VL-30B-A3B-Instruct",
     "messages": [{"role": "user", "content": "Explain what a neural network is."}],
     "max_tokens": 200,
     "temperature": 0.7,
@@ -127,7 +127,7 @@ ratio=0% 确认 RM 完全跳过。
 curl -s -X POST http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "/workspace/models/Qwen3-VL-30B-A3B-Instruct",
+    "model": "Qwen3-VL-30B-A3B-Instruct",
     "messages": [{"role": "user", "content": "Write a short poem about the ocean."}],
     "max_tokens": 200,
     "temperature": 0.7,
@@ -151,7 +151,7 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
 curl -s -X POST http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "/workspace/models/Qwen3-VL-30B-A3B-Instruct",
+    "model": "Qwen3-VL-30B-A3B-Instruct",
     "messages": [{"role": "user", "content": "What are 3 colors of fruit?"}],
     "max_tokens": 100,
     "temperature": 0.7,
@@ -172,7 +172,7 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
 curl -s -X POST http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "/workspace/models/Qwen3-VL-30B-A3B-Instruct",
+    "model": "Qwen3-VL-30B-A3B-Instruct",
     "messages": [{"role": "user", "content": "What are 3 colors of fruit?"}],
     "max_tokens": 100,
     "temperature": 0.7,
@@ -195,7 +195,7 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
 curl -s -X POST http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "/workspace/models/Qwen3-VL-30B-A3B-Instruct",
+    "model": "Qwen3-VL-30B-A3B-Instruct",
     "messages": [{"role": "user", "content": "Summarize the benefits of exercise."}],
     "max_tokens": 150,
     "temperature": 0.7,
@@ -213,7 +213,7 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
 curl -s -X POST http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "/workspace/models/Qwen3-VL-30B-A3B-Instruct",
+    "model": "Qwen3-VL-30B-A3B-Instruct",
     "messages": [{"role": "user", "content": "What makes a good software engineer?"}],
     "max_tokens": 300,
     "temperature": 0.7,
@@ -229,29 +229,52 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
 
 ## 9. Streaming 模式
 
-加 `"stream": true` 获得逐 token 流式输出（SSE 格式）：
+加 `"stream": true` 获得逐 token 流式输出（SSE 格式）。
+
+### 9.1 带 usage 的流式（推荐，计费要求）
+
+加 `"stream_options": {"include_usage": true}`，结尾 chunk 会携带 `usage` 字段（0G router 计费强制要求，生产环境必须带此参数）：
 
 ```bash
 curl -s -X POST http://localhost:8000/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
-    "model": "/workspace/models/Qwen3-VL-30B-A3B-Instruct",
+    "model": "Qwen3-VL-30B-A3B-Instruct",
     "messages": [{"role": "user", "content": "Count from 1 to 5."}],
     "max_tokens": 100,
     "temperature": 0.7,
-    "stream": true
+    "stream": true,
+    "stream_options": {"include_usage": true}
   }'
 ```
 
 **Response（逐行流式）:**
 ```
-data: {"id":"chatcmpl-g5b9c7d6","object":"chat.completion.chunk","choices":[{"delta":{"role":"assistant","content":""},"index":0}]}
+data: {"id":"chatcmpl-g5b9c7d6","object":"chat.completion.chunk","created":1780971415,"model":"Qwen3-VL-30B-A3B-Instruct","choices":[{"index":0,"delta":{"role":"assistant","content":""},"finish_reason":null}]}
 
-data: {"id":"chatcmpl-g5b9c7d6","object":"chat.completion.chunk","choices":[{"delta":{"content":"1, 2, 3, 4, 5."},"index":0}]}
+data: {"id":"chatcmpl-g5b9c7d6","object":"chat.completion.chunk","created":1780971415,"model":"Qwen3-VL-30B-A3B-Instruct","choices":[{"index":0,"delta":{"content":"1, 2, 3, 4, 5."},"finish_reason":null}]}
 
-data: {"id":"chatcmpl-g5b9c7d6","object":"chat.completion.chunk","choices":[{"delta":{},"finish_reason":"stop","index":0}]}
+data: {"id":"chatcmpl-g5b9c7d6","object":"chat.completion.chunk","created":1780971415,"model":"Qwen3-VL-30B-A3B-Instruct","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}
+
+data: {"id":"chatcmpl-g5b9c7d6","object":"chat.completion.chunk","created":1780971415,"model":"Qwen3-VL-30B-A3B-Instruct","choices":[],"usage":{"prompt_tokens":14,"completion_tokens":12,"total_tokens":26}}
 
 data: [DONE]
+```
+
+### 9.2 不带 usage 的流式
+
+不传 `stream_options` 时，结尾不包含 usage chunk（直连调试用，不经过 router 计费时可用）：
+
+```bash
+curl -s -X POST http://localhost:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{
+    "model": "Qwen3-VL-30B-A3B-Instruct",
+    "messages": [{"role": "user", "content": "Count from 1 to 5."}],
+    "max_tokens": 100,
+    "temperature": 0.7,
+    "stream": true
+  }'
 ```
 
 > 本服务实现的是**真·token-level streaming**，每生成一个 token 立即推送一个 SSE chunk，TTFT 与首 token 到达时间一致。
@@ -331,11 +354,194 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
 
 ## 12. 服务健康检查
 
+0G router 每 30 秒主动探活此端点，连续失败 3 次触发熔断（该 provider 被路由跳过）。**准入硬门槛之一。**
+
 ```bash
 curl -s http://localhost:8000/health
 ```
 
-**Response:**
+**预期响应（HTTP 200）：**
 ```json
 {"status": "ok"}
 ```
+
+---
+
+## 13. 验证模型名称校验（OpenAI 错误格式）
+
+服务对 `model` 字段做 OpenAI 兼容校验：传入不存在的模型名时返回标准 404 错误，而非 FastAPI 默认的 `{"detail": ...}` 格式。
+
+### 13.1 不存在的模型名 → 404
+
+```bash
+curl -s -w "\nHTTP %{http_code}\n" \
+  -X POST http://localhost:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"model": "does-not-exist", "messages": [{"role": "user", "content": "hi"}], "max_tokens": 5}' \
+  | python3 -m json.tool
+```
+
+**预期输出：**
+```json
+{
+    "error": {
+        "message": "The model `does-not-exist` does not exist or is not loaded.",
+        "type": "invalid_request_error",
+        "param": null,
+        "code": "model_not_found"
+    }
+}
+HTTP 404
+```
+
+### 13.2 确认合法模型名
+
+模型名从服务日志获取（`docker compose logs <container> | grep "Model ID"`），例如 `Qwen3-VL-30B-A3B-Instruct`：
+
+```bash
+# 传正确的模型名（basename）
+curl -s -o /dev/null -w "HTTP %{http_code}\n" \
+  -X POST http://localhost:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"model": "Qwen3-VL-30B-A3B-Instruct", "messages": [{"role": "user", "content": "hi"}], "max_tokens": 5}'
+
+# 不传 model 字段（服务自动使用已加载模型）
+curl -s -o /dev/null -w "HTTP %{http_code}\n" \
+  -X POST http://localhost:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"messages": [{"role": "user", "content": "hi"}], "max_tokens": 5}'
+```
+
+两条均应返回 `HTTP 200`。
+
+> **说明**：合法值有三种——`null`/不传、basename（推荐，与 `/v1/models` 返回的 `id` 一致，实际值以服务启动日志里的 `Model ID :` 为准）、完整路径（向后兼容，不推荐）。
+
+### 13.3 空 messages 数组 → 400
+
+```bash
+curl -s -w "\nHTTP %{http_code}\n" \
+  -X POST http://localhost:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"messages": [], "max_tokens": 5}' \
+  | python3 -m json.tool
+```
+
+**预期输出：**
+```json
+{
+    "error": {
+        "message": "[] is too short - 'messages'",
+        "type": "invalid_request_error",
+        "param": null,
+        "code": null
+    }
+}
+HTTP 400
+```
+
+### 13.4 传入 tools → 400
+
+Qwen3-VL-30B 模型本身支持 tool call，但当前服务端尚未实现解析层（Value Model Qwen3-4B-Base 未经 tool call 对齐训练，评分不可靠），因此拒绝含 `tools` 的请求：
+
+```bash
+curl -s -w "\nHTTP %{http_code}\n" \
+  -X POST http://localhost:8000/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"messages": [{"role": "user", "content": "hi"}], "tools": [{"type": "function", "function": {"name": "get_weather", "parameters": {}}}], "tool_choice": "auto", "max_tokens": 5}' \
+  | python3 -m json.tool
+```
+
+**预期输出：**
+```json
+{
+    "error": {
+        "message": "Tool calls are not yet implemented in this server.",
+        "type": "invalid_request_error",
+        "param": null,
+        "code": null
+    }
+}
+HTTP 400
+```
+
+### 13.5 context 超长 → 400
+
+prompt 超过 max_model_len=2048 时，服务返回标准 400 而非 500：
+
+```bash
+python3 -c "
+import requests, json
+long = 'x ' * 2000  # ~2000 tokens，超过 2048 上限（加 chat template 后超限）
+resp = requests.post('http://localhost:8000/v1/chat/completions',
+    json={'messages': [{'role': 'user', 'content': long}], 'max_tokens': 50})
+print('HTTP', resp.status_code)
+print(json.dumps(resp.json(), indent=2, ensure_ascii=False))
+"
+```
+
+**预期输出：**
+```json
+{
+    "error": {
+        "message": "This model's maximum context length is 2048 tokens. However, you requested 0 output tokens and your prompt contains XXXXX input tokens ...",
+        "type": "invalid_request_error",
+        "param": null,
+        "code": null
+    }
+}
+HTTP 400
+```
+
+---
+
+### 13.6 `/v1/models` 返回 `owned_by`
+
+0G broker 注册层要求 `owned_by` 字段值为 `"0G Foundation"`，验证服务返回值正确：
+
+```bash
+curl -s http://localhost:8000/v1/models | python3 -m json.tool
+```
+
+**预期输出：**
+```json
+{
+    "object": "list",
+    "data": [
+        {
+            "id": "Qwen3-VL-30B-A3B-Instruct",
+            "object": "model",
+            "created": 1749600000,
+            "owned_by": "0G Foundation"
+        }
+    ]
+}
+```
+
+关键验证点：`owned_by` 必须为 `"0G Foundation"`，`id` 为模型 basename（与启动日志 `Model ID :` 一致）。
+
+---
+
+## 15. 验证 Prefix Cache 命中（`cached_tokens`）
+
+运行项目自带的测试脚本，向服务连发两次相同请求，验证第二次响应中 `cached_tokens > 0`：
+
+```bash
+python tests/test_cache_hit.py [--url http://localhost:8000]
+```
+
+**预期输出：**
+```
+目标: http://localhost:8000
+system prompt 长度: 5800 chars
+发送两次相同请求，验证第二次 cached_tokens > 0 ...
+
+请求 1: prompt_tokens=1218, cached_tokens=0    ✅
+请求 2: prompt_tokens=1218, cached_tokens=1216 ✅
+
+预期: 请求1 cached_tokens=0，请求2 cached_tokens=1056
+```
+
+**说明：**
+- 30B 是纯 attention 模型，vLLM APC 默认 `block_size=16`，`cached_tokens` 为 16 的整倍数
+- prompt ≥ 16 tokens 时即可命中缓存（阈值远低于 35B 的 1056 tokens）
+- 35B（hybrid 模型）`block_size ≈ 1056`，两者期望的 `cached_tokens` 数值不同，但测试逻辑相同（第二次 > 0 即通过）
