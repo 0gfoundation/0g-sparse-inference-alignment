@@ -11,8 +11,9 @@
 依赖：aiohttp（pip install aiohttp）
 
 用法：
-    python tests/bench_35b.py
-    python tests/bench_35b.py --url http://localhost:8000
+    python tests/bench_35b.py                          # SIA 开启（默认）
+    python tests/bench_35b.py --no-sia                 # SIA 关闭（sia_weight=0）
+    python tests/bench_35b.py --compare                # SIA vs noSIA 并排对比
     python tests/bench_35b.py --concurrency 1 2 4 --rounds 3 --burst 16
 """
 import argparse
@@ -35,13 +36,20 @@ PROMPT = (
     "with one sentence about each planet."
 )
 
-STREAM_PAYLOAD = {
+BASE_STREAM_PAYLOAD = {
     "messages": [{"role": "user", "content": PROMPT}],
     "max_tokens": 300,
     "temperature": 0.7,
     "stream": True,
     "stream_options": {"include_usage": True},
 }
+
+
+def make_payload(no_sia: bool) -> dict:
+    p = dict(BASE_STREAM_PAYLOAD)
+    if no_sia:
+        p["sia_weight"] = 0
+    return p
 
 BURST_PAYLOAD = {
     "messages": [{"role": "user", "content": "Reply with the single word: ok"}],
@@ -58,7 +66,7 @@ def pct(data: list, p: float) -> float:
     return s[idx]
 
 
-async def one_stream_request(session: aiohttp.ClientSession, url: str) -> dict:
+async def one_stream_request(session: aiohttp.ClientSession, url: str, payload: dict) -> dict:
     """发一次流式请求，返回 TTFT、延迟、token 计数、状态码。"""
     t0 = time.perf_counter()
     ttft_ms = None
@@ -70,7 +78,7 @@ async def one_stream_request(session: aiohttp.ClientSession, url: str) -> dict:
     try:
         async with session.post(
             f"{url}/v1/chat/completions",
-            json=STREAM_PAYLOAD,
+            json=payload,
             timeout=aiohttp.ClientTimeout(total=180),
         ) as resp:
             status = resp.status
@@ -126,14 +134,14 @@ async def one_stream_request(session: aiohttp.ClientSession, url: str) -> dict:
     }
 
 
-async def run_sweep(url: str, concurrency: int, rounds: int) -> tuple:
+async def run_sweep(url: str, concurrency: int, rounds: int, payload: dict) -> tuple:
     """返回 (results, wall_ms)。每轮并发 concurrency 个请求，共 rounds 轮。"""
     results = []
     async with aiohttp.ClientSession() as session:
         t_start = time.perf_counter()
         for _ in range(rounds):
             batch = await asyncio.gather(
-                *[one_stream_request(session, url) for _ in range(concurrency)]
+                *[one_stream_request(session, url, payload) for _ in range(concurrency)]
             )
             results.extend(batch)
         wall_ms = (time.perf_counter() - t_start) * 1000
@@ -244,6 +252,16 @@ async def check_health(url: str) -> bool:
         return False
 
 
+async def run_mode(url: str, concurrency: list, rounds: int, payload: dict, label: str):
+    """跑一组并发扫描并打印结果，label 用于区分 SIA / noSIA。"""
+    for c in concurrency:
+        total_req = c * rounds
+        print(f"── [{label}] 并发度 {c}（{total_req} 请求 = {c} 并发 × {rounds} 轮）──")
+        results, wall_ms = await run_sweep(url, c, rounds, payload)
+        print_sweep_summary(results, wall_ms, c, rounds)
+        print()
+
+
 async def main():
     parser = argparse.ArgumentParser(description="35B SIA 压测")
     parser.add_argument("--url", default=URL_DEFAULT, help="服务地址")
@@ -254,6 +272,8 @@ async def main():
     parser.add_argument("--rounds", type=int, default=3, help="每个并发度重复轮数（默认 3）")
     parser.add_argument("--burst", type=int, default=16, help="限流探测并发数（默认 16）")
     parser.add_argument("--skip-ratelimit", action="store_true", help="跳过限流探测")
+    parser.add_argument("--no-sia", action="store_true", help="关闭 SIA 干预（sia_weight=0）")
+    parser.add_argument("--compare", action="store_true", help="依次跑 SIA 和 noSIA，方便对比")
     args = parser.parse_args()
 
     print(f"目标服务: {args.url}")
@@ -264,13 +284,17 @@ async def main():
         sys.exit(1)
     print("✅ /health OK\n")
 
-    # 并发吞吐扫描
-    for c in args.concurrency:
-        total_req = c * args.rounds
-        print(f"── 并发度 {c}（{total_req} 请求 = {c} 并发 × {args.rounds} 轮）──")
-        results, wall_ms = await run_sweep(args.url, c, args.rounds)
-        print_sweep_summary(results, wall_ms, c, args.rounds)
-        print()
+    if args.compare:
+        # SIA 开启
+        print("═══ SIA 开启（sia_weight=default） ═══")
+        await run_mode(args.url, args.concurrency, args.rounds, make_payload(False), "SIA")
+        # SIA 关闭
+        print("═══ SIA 关闭（sia_weight=0，纯 vLLM） ═══")
+        await run_mode(args.url, args.concurrency, args.rounds, make_payload(True), "noSIA")
+    else:
+        label = "noSIA" if args.no_sia else "SIA"
+        payload = make_payload(args.no_sia)
+        await run_mode(args.url, args.concurrency, args.rounds, payload, label)
 
     # 限流探测
     if not args.skip_ratelimit:
