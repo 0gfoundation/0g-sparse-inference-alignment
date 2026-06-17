@@ -13,7 +13,7 @@ import requests
 
 URL_DEFAULT = "http://localhost:8000"
 
-# ~200 tokens（远超 block_size=16，且在 30B max_model_len=2048 内）
+# ~200 tokens（远超 block_size=16，且在 30B max_model_len=16384 内）
 SHARED_PREFIX = "You are a helpful assistant. " * 30
 
 

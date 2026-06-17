@@ -466,14 +466,14 @@ HTTP 400
 
 ### 13.5 context 超长 → 400
 
-prompt 超过 max_model_len=2048 时，服务返回标准 400 而非 500：
+prompt 超过 max_model_len=16384 时，服务返回标准 400 而非 500：
 
 ```bash
 python3 -c "
 import requests, json
-long = 'x ' * 2000  # ~2000 tokens，超过 2048 上限（加 chat template 后超限）
+long = 'The quick brown fox jumps over the lazy dog. ' * 1700  # ~17000 tokens，超过 16384 上限
 resp = requests.post('http://localhost:8000/v1/chat/completions',
-    json={'messages': [{'role': 'user', 'content': long}], 'max_tokens': 50})
+    json={'messages': [{'role': 'user', 'content': long}], 'max_tokens': 10})
 print('HTTP', resp.status_code)
 print(json.dumps(resp.json(), indent=2, ensure_ascii=False))
 "
@@ -483,7 +483,7 @@ print(json.dumps(resp.json(), indent=2, ensure_ascii=False))
 ```json
 {
     "error": {
-        "message": "This model's maximum context length is 2048 tokens. However, you requested 0 output tokens and your prompt contains XXXXX input tokens ...",
+        "message": "This model's maximum context length is 16384 tokens. However, you requested 10 output tokens and your prompt contains XXXXX input tokens ...",
         "type": "invalid_request_error",
         "param": null,
         "code": null
@@ -521,27 +521,114 @@ curl -s http://localhost:8000/v1/models | python3 -m json.tool
 
 ---
 
-## 15. 验证 Prefix Cache 命中（`cached_tokens`）
+## 14. 验证长上下文支持（max_model_len=16384）
 
-运行项目自带的测试脚本，向服务连发两次相同请求，验证第二次响应中 `cached_tokens > 0`：
+运行项目自带的测试脚本，发送约 10000 tokens 的长 prompt，验证服务正常返回：
 
 ```bash
-python tests/test_cache_hit.py [--url http://localhost:8000]
+python tests/test_30b_long_context.py [--url http://localhost:8000]
 ```
 
 **预期输出：**
 ```
 目标: http://localhost:8000
-system prompt 长度: 5800 chars
-发送两次相同请求，验证第二次 cached_tokens > 0 ...
+prompt 长度: 45000 chars（约 10000 tokens）
+HTTP 200
+prompt_tokens : 10002  ✅
+finish_reason : stop  ✅
+response      : ...
 
-请求 1: prompt_tokens=1218, cached_tokens=0    ✅
-请求 2: prompt_tokens=1218, cached_tokens=1216 ✅
+✅ 长上下文验证通过（max_model_len=16384 内正常响应）
+```
 
-预期: 请求1 cached_tokens=0，请求2 cached_tokens=1056
+---
+
+## 15. 验证 Prefix Cache 命中（`cached_tokens`）
+
+运行项目自带的测试脚本，向服务连发两次相同请求，验证第二次响应中 `cached_tokens > 0`：
+
+```bash
+python tests/test_30b_v7.py [--url http://localhost:8000]
+```
+
+**预期输出：**
+```
+req1: prompt_tokens=210, cached_tokens=0
+req2: prompt_tokens=210, cached_tokens=192  ✅
 ```
 
 **说明：**
 - 30B 是纯 attention 模型，vLLM APC 默认 `block_size=16`，`cached_tokens` 为 16 的整倍数
 - prompt ≥ 16 tokens 时即可命中缓存（阈值远低于 35B 的 1056 tokens）
 - 35B（hybrid 模型）`block_size ≈ 1056`，两者期望的 `cached_tokens` 数值不同，但测试逻辑相同（第二次 > 0 即通过）
+
+---
+
+## 16. 性能基线压测
+
+压测工具：`tests/bench_30b.py`，两种模式：并发扫描（input≈512, max_out=128）和输入长度扫描（max_out=128），每档 3 轮。
+
+```bash
+python tests/bench_30b.py
+
+# SIA vs noSIA 对比
+python tests/bench_30b.py --compare
+```
+
+### Concurrency Sweep（SIA 开启，input≈512, max_out=128）
+
+| Conc | Input | Output | TTFT mean | TTFT p99 | ITL mean | Req Lat | Out tok/s | Req/s |
+|------|-------|--------|-----------|----------|----------|---------|-----------|-------|
+| 1    | —     | —      | —         | —        | —        | —       | —         | —     |
+| 2    | —     | —      | —         | —        | —        | —       | —         | —     |
+| 4    | —     | —      | —         | —        | —        | —       | —         | —     |
+| 8    | —     | —      | —         | —        | —        | —       | —         | —     |
+| 16   | —     | —      | —         | —        | —        | —       | —         | —     |
+
+### Input-Length Sweep（SIA 开启，max_out=128）
+
+| Conc | Input | Output | TTFT mean | TTFT p99 | ITL mean | Req Lat | Out tok/s | Req/s |
+|------|-------|--------|-----------|----------|----------|---------|-----------|-------|
+| 2    | —     | —      | —         | —        | —        | —       | —         | —     |
+| 2    | —     | —      | —         | —        | —        | —       | —         | —     |
+| 2    | —     | —      | —         | —        | —        | —       | —         | —     |
+| 2    | —     | —      | —         | —        | —        | —       | —         | —     |
+| 1    | —     | —      | —         | —        | —        | —       | —         | —     |
+| 1    | —     | —      | —         | —        | —        | —       | —         | —     |
+
+> 压测结果待填入（重启服务升级 max_model_len=16384 后运行）。
+
+---
+
+## 17. 一键集成测试
+
+运行所有测试用例（V1～V8c + /v1/models + 长上下文），输出 PASS/FAIL 汇总：
+
+```bash
+bash tests/run_all_30b.sh
+# 跳过 vision：
+# bash tests/run_all_30b.sh http://localhost:8000 --skip-vision
+```
+
+**预期输出（全部通过）：**
+```
+════════════════════════════════════════════
+  VL-30B SIA 服务集成测试
+  目标: http://localhost:8000
+════════════════════════════════════════════
+  V1  OpenAI兼容接口                ✅ PASS
+  V2  非流式 usage（计费命脉）      ✅ PASS
+  V3  流式结尾 usage（计费命脉）    ✅ PASS
+  V6  vision 多模态                  ✅ PASS
+  V7  cache 命中字段                ✅ PASS
+  V5  tool call 拒绝 → 400          ✅ PASS
+  V8a model 名称校验 → 404          ✅ PASS
+  V8b 空 messages → 400             ✅ PASS
+  V8c context 超长 → 400            ✅ PASS
+      /v1/models 字段               ✅ PASS
+      长上下文（max_model_len）     ✅ PASS
+════════════════════════════════════════════
+  PASS=11  FAIL=0   SKIP=0   TOTAL=11
+  ✅ 全部通过
+════════════════════════════════════════════
+```

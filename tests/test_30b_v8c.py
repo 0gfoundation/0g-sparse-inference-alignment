@@ -1,8 +1,8 @@
 """
-V8c  context 超长（30B，max_model_len=2048）
+V8c  context 超长（30B，max_model_len=16384）
 
-发送超过 2048 tokens 的 prompt，服务应返回 400 而非 500。
-"The quick brown fox..." * 300 ≈ 3000 tokens，安全超过 2048 上限。
+发送超过 16384 tokens 的 prompt，服务应返回 400 而非 500。
+"The quick brown fox..." * 1700 ≈ 17000 tokens，安全超过 16384 上限。
 
 PASS: HTTP 400, error.type == "invalid_request_error", message 含 context/length/token
 """
@@ -11,8 +11,8 @@ import requests
 
 URL_DEFAULT = "http://localhost:8000"
 
-# ~3000 tokens，超过 30B max_model_len=2048
-OVERFLOW_CONTENT = "The quick brown fox jumps over the lazy dog. " * 300
+# ~17000 tokens，超过 30B max_model_len=16384
+OVERFLOW_CONTENT = "The quick brown fox jumps over the lazy dog. " * 1700
 
 
 def check(url: str) -> bool:
@@ -20,7 +20,7 @@ def check(url: str) -> bool:
         "messages": [{"role": "user", "content": OVERFLOW_CONTENT}],
         "max_tokens": 10,
     }
-    print(f"  prompt 长度: {len(OVERFLOW_CONTENT)} chars（约 3000 tokens，超过 2048 上限）")
+    print(f"  prompt 长度: {len(OVERFLOW_CONTENT)} chars（约 17000 tokens，超过 16384 上限）")
     try:
         resp = requests.post(f"{url}/v1/chat/completions", json=payload, timeout=120)
     except Exception as e:
@@ -45,6 +45,7 @@ def check(url: str) -> bool:
     print(f"  格式: {'OpenAI ✅' if ok_format else 'FastAPI detail ❌'}")
     print(f"  error.type   : {err_type!r}  {'✅' if ok_type else '❌'}")
     print(f"  error.message: {err_msg[:120]!r}  {'✅' if ok_msg else '❌ 期望含 context/length/token'}")
+
     return ok_format and ok_type and ok_msg
 
 

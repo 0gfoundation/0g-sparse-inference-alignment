@@ -77,7 +77,7 @@ services:
         --llm_gpu_mem    0.48
         --rm_b2_gpu_mem  0.08
         --topk 10 --weight 1.0 --entropy_threshold 1.0
-        --max_model_len 2048
+        --max_model_len 16384
         --enable_prefix_caching
         --host 0.0.0.0
         --port 8000
