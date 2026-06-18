@@ -313,9 +313,8 @@ def make_sia_processor(
                 "http_post":        [],
                 "parse_response":   [],
                 # b2 backend phases (RMClient call internals — 一次 INTERVENE 内)
-                "b2_session_init":  [],   # new_session + apply_chat_template
-                "b2_prefix_adv":    [],   # fix_a_token loop 推进 session
-                "b2_score_call":    [],   # RMClient.score_candidates 端到端
+                "b2_prefix_adv":    [],   # _prepare_b2_session (session init + fix_a_token)
+                "b2_score_call":    [],   # RMClient.score_candidates 端到端（per-request 均摊）
                 "total":            [],   # 一次 INTERVENE 端到端
 
                 # === apply() 内分段 (per-token) — 2026-06-01 新增 ===
@@ -1079,6 +1078,7 @@ def make_sia_processor(
                         _eff_k = effective_topks[_i]
                         if _eff_k < max_topk:
                             _cands = _cands[:_eff_k]
+                    _t_prep = time.perf_counter() if pf_on else 0.0
                     try:
                         _sid = self._prepare_b2_session(_i, _user, _out_ids)
                     except Exception as _prep_err:
@@ -1087,6 +1087,9 @@ def make_sia_processor(
                             flush=True,
                         )
                         continue
+                    if pf_on:
+                        self._pf_record("b2_prefix_adv",
+                                        (time.perf_counter() - _t_prep) * 1000)
                     _b2_reqs.append((_i, _sid, _cands))
 
                 if _b2_reqs:
@@ -1098,11 +1101,11 @@ def make_sia_processor(
                         for (_req_i, _, _), _s in zip(_b2_reqs, _scores_list):
                             b2_batch_scores[_req_i] = _s
                         if pf_on:
-                            self._pf_record("b2_score_call",
-                                            (time.perf_counter() - _t_batch) * 1000)
-                            # Mirror the per-INTERVENE call in _score_candidates_b2
-                            # so _pf_summary_if_due prints at the right interval.
+                            # Divide by N so b2_score_call stays per-request amortized,
+                            # comparable to the sequential fallback path's values.
+                            _amortized_ms = (time.perf_counter() - _t_batch) * 1000 / len(_b2_reqs)
                             for _ in _b2_reqs:
+                                self._pf_record("b2_score_call", _amortized_ms)
                                 self._pf_summary_if_due()
                     except Exception as _batch_err:
                         print(
