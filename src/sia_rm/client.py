@@ -482,6 +482,15 @@ class RMClient:
                 f"Likely SIA_REWARD_FILE_ID mismatch or vLLM reordered prompts."
             )
 
+        # ORDERING ASSUMPTION: offsets slicing is correct only if vLLM processes
+        # prompts in the order they were submitted to llm.generate().  This holds
+        # because vLLM v1's InprocClient adds all requests synchronously (FIFO) and
+        # the scheduler's WAITING queue is drained in arrival order (verified
+        # empirically for single-session K-prompt batches; applies to multi-session
+        # N×K batches as long as vLLM does not introduce APC-aware request reordering
+        # in a future release).  The numel check above catches count mismatches but
+        # NOT ordering errors — a silent wrong-score bug would result if vLLM ever
+        # reorders.
         return [all_rewards[start:end] for (start, end) in offsets]
 
     # ---- bench / introspection ----
