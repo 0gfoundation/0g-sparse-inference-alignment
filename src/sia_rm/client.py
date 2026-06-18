@@ -307,31 +307,39 @@ class RMClient:
     def _get_stable_rm_prefix(self, sid: int, prefix: list[int]) -> list[int]:
         """Return stable RM prefix IDs for cross-tokenizer sessions (P-3).
 
-        Encodes only the single new LLM token and appends it to the cached
-        RM prefix, instead of re-encoding the full prefix text from scratch.
-        This keeps every complete APC block's hash unchanged between steps,
-        maximising cross-step KV-cache reuse in the VM.
+        Encodes only the new LLM tokens since the last call and appends them
+        to the cached RM prefix, instead of re-encoding the full prefix text.
+        delta is typically ~4-5 (SKIP steps between INTERVENEs at 20% rate).
+        Encoding each token individually keeps every previous APC block's hash
+        unchanged across steps, maximising cross-step KV-cache reuse in the VM.
 
-        Falls back to full re-encode on first call or unexpected delta.
+        Falls back to full re-encode on first call or unexpected negative delta.
         """
         cached = self._rm_prefix_cache.get(sid)
         cur_len = len(prefix)
         if cached is not None:
             cached_len, cached_ids = cached
             delta = cur_len - cached_len
-            if delta == 1:
-                new_text = self._llm_tok.decode(
-                    [prefix[-1]], skip_special_tokens=False
-                )
-                new_rm_ids = self._rm_tok.encode(
-                    new_text, add_special_tokens=False
-                )
-                stable = cached_ids + new_rm_ids
-                self._rm_prefix_cache[sid] = (cur_len, stable)
-                return stable
             if delta == 0:
                 return cached_ids
-        # First call for this session, or unexpected jump — full re-encode.
+            if delta > 0:
+                # Encode each new LLM token individually and append.
+                # delta is typically the number of SKIP steps since the last
+                # INTERVENE (~4-5 with entropy_threshold=1.0).  Encoding one
+                # token at a time avoids BPE merges at the old prefix boundary,
+                # keeping every previous APC block's hash unchanged across steps.
+                stable = cached_ids
+                for i in range(delta):
+                    new_text = self._llm_tok.decode(
+                        [prefix[cached_len + i]], skip_special_tokens=False
+                    )
+                    new_rm_ids = self._rm_tok.encode(
+                        new_text, add_special_tokens=False
+                    )
+                    stable = stable + new_rm_ids
+                self._rm_prefix_cache[sid] = (cur_len, stable)
+                return stable
+        # First call for this session, or unexpected negative delta — full re-encode.
         prefix_text = self._llm_tok.decode(prefix, skip_special_tokens=False)
         stable = self._rm_tok.encode(prefix_text, add_special_tokens=False)
         self._rm_prefix_cache[sid] = (cur_len, stable)
