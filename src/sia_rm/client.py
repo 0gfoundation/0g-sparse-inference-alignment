@@ -378,7 +378,8 @@ class RMClient:
             # text, then re-encode with the RM tokenizer.
             #
             # P-2: 稳定前缀 — prefix 编码一次，K 个候选共享，同步内 APC 全命中。
-            # P-3: 增量缓存 — 每步只编码新增的 1 个 LLM token，append 到缓存前缀。
+            # P-3: 增量缓存 — 每步只编码新增的 delta 个 LLM token（逐 token），
+            #   append 到缓存前缀；delta ≈ 4-5（两次 INTERVENE 间的 SKIP 步数）。
             #   效果：跨步的完整 block 哈希完全不变 → APC 跨步 100% 命中，
             #   每个 prompt 仅需 forward tail (P mod 16) + candidate ≈ 8 tokens，
             #   而不是全量重编后 last-block-miss 的 ~25 tokens。
