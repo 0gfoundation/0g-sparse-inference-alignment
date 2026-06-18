@@ -673,37 +673,26 @@ def make_sia_processor(
                 user_content, response_so_far, candidate_texts
             )
 
-        def _score_candidates_b2(
+        def _prepare_b2_session(
             self,
             req_idx: int,
             user_content: str,
-            output_ids: list[int],
-            candidate_token_ids: list[int],
-        ) -> torch.Tensor:
-            """In-process RMClient path: token-level prefix + fix_a_token chain.
+            output_ids: list,
+        ) -> int:
+            """Initialize or advance the b2 RM session for req_idx.
 
-            Per-request session 维护 RM prefix:
-              session_prefix = chat_template(user_msg) + output_ids[:N]
-            每次 INTERVENE 时:
-              1. 第一次见 req_idx: new_session(chat_template tokens)
-              2. fix_a_token for any output token added since last call
-                 (entropy SKIP 时 _score_candidates 不被调用, 这里补齐)
-              3. score_candidates(candidate_token_ids)
+            Pure Python — no GPU call.  Must be called before
+            score_candidates / score_candidates_batch.
+
+            Returns the session id (sid).
             """
-            assert self._rm is not None, "RMClient not initialized"
-            pf_on = self._PROFILE_DETAIL
-            t0 = time.perf_counter() if pf_on else 0.0
-
             sid = self._b2_sessions.get(req_idx)
             if sid is None:
-                # 第一次见 req: 用 chat template 渲染 user message,
-                # add_generation_prompt=True 让 prefix 末尾是 assistant role marker
                 chat_prefix_tokens = self._llm_tok.apply_chat_template(
                     [{"role": "user", "content": user_content}],
                     tokenize=True,
                     add_generation_prompt=True,
                 )
-                # 去掉 BOS (vLLM tokens prompt 不需要 BOS, 跟主 LLM 一致)
                 bos = self._llm_tok.bos_token_id
                 if (bos is not None and chat_prefix_tokens
                         and chat_prefix_tokens[0] == bos):
@@ -711,9 +700,7 @@ def make_sia_processor(
                 sid = self._rm.new_session(chat_prefix_tokens)
                 self._b2_sessions[req_idx] = sid
                 self._b2_chat_prefix_len[req_idx] = len(chat_prefix_tokens)
-            t_sess = time.perf_counter() if pf_on else 0.0
 
-            # 推进 session 到 chat_prefix_len + len(output_ids)
             cur_len = self._rm.session_length(sid)
             chat_prefix_len = self._b2_chat_prefix_len[req_idx]
             n_already = cur_len - chat_prefix_len
@@ -721,16 +708,35 @@ def make_sia_processor(
                 n_already = 0
             for tid in output_ids[n_already:]:
                 self._rm.fix_a_token(sid, int(tid))
+
+            return sid
+
+        def _score_candidates_b2(
+            self,
+            req_idx: int,
+            user_content: str,
+            output_ids: list[int],
+            candidate_token_ids: list[int],
+        ) -> torch.Tensor:
+            """In-process RMClient path: session init/advance + scoring.
+
+            Delegates session lifecycle to _prepare_b2_session (pure Python),
+            then calls rm.score_candidates for the GPU forward.
+            """
+            assert self._rm is not None, "RMClient not initialized"
+            pf_on = self._PROFILE_DETAIL
+            t0 = time.perf_counter() if pf_on else 0.0
+
+            sid = self._prepare_b2_session(req_idx, user_content, output_ids)
             t_advance = time.perf_counter() if pf_on else 0.0
 
             rewards = self._rm.score_candidates(sid, candidate_token_ids)
             t_score = time.perf_counter() if pf_on else 0.0
 
             if pf_on:
-                self._pf_record("b2_session_init", (t_sess    - t0)      * 1000)
-                self._pf_record("b2_prefix_adv",   (t_advance - t_sess)  * 1000)
-                self._pf_record("b2_score_call",   (t_score   - t_advance) * 1000)
-                self._pf_record("total",           (t_score   - t0)      * 1000)
+                self._pf_record("b2_prefix_adv",   (t_advance - t0)          * 1000)
+                self._pf_record("b2_score_call",   (t_score   - t_advance)   * 1000)
+                self._pf_record("total",           (t_score   - t0)          * 1000)
                 self._pf_summary_if_due()
             # D-1: score_candidates 已经返回 CPU float32 tensor, 不再 list→tensor 重建
             return rewards
@@ -1045,6 +1051,69 @@ def make_sia_processor(
             else:
                 topk_indices_lists = None
 
+            # ==== b2 batch pre-scoring ==========================================
+            # For the b2 backend only: instead of N sequential score_candidates()
+            # calls (each a separate VM forward), collect all INTERVENE requests,
+            # advance their sessions (pure Python), and issue one
+            # score_candidates_batch() call (single VM forward for N×K prompts).
+            #
+            # Falls back silently to per-request sequential scoring if the batch
+            # call raises — the per-item loop then calls _score_candidates_b2()
+            # normally.  Because _prepare_b2_session() was already called for each
+            # request, _score_candidates_b2()'s fix_a_token chain is a no-op and
+            # the fallback is correct.
+            #
+            # Non-b2 backends are completely unaffected (b2_batch_scores stays {}).
+            b2_batch_scores: dict = {}   # req_idx -> Tensor (K_i,)
+            if self._RM_BACKEND == "b2" and topk_indices_lists is not None:
+                _b2_reqs: list = []   # (req_idx, sid, candidates_list)
+                for _i in range(batch_size):
+                    if not intervene_flags[_i]:
+                        continue
+                    if self._weight_per_req.get(_i, self._WEIGHT) == 0.0:
+                        continue
+                    _out_ids = list(self._output_ids.get(_i, []))
+                    _user    = self._prompt_user.get(_i, "")
+                    _cands   = topk_indices_lists[_i]
+                    if effective_topks is not None:
+                        _eff_k = effective_topks[_i]
+                        if _eff_k < max_topk:
+                            _cands = _cands[:_eff_k]
+                    try:
+                        _sid = self._prepare_b2_session(_i, _user, _out_ids)
+                    except Exception as _prep_err:
+                        print(
+                            f"[SIA] b2 session prep failed req={_i}: {_prep_err}",
+                            flush=True,
+                        )
+                        continue
+                    _b2_reqs.append((_i, _sid, _cands))
+
+                if _b2_reqs:
+                    _t_batch = time.perf_counter() if pf_on else 0.0
+                    try:
+                        _scores_list = self._rm.score_candidates_batch(
+                            [(_sid, _cands) for (_, _sid, _cands) in _b2_reqs]
+                        )
+                        for (_req_i, _, _), _s in zip(_b2_reqs, _scores_list):
+                            b2_batch_scores[_req_i] = _s
+                        if pf_on:
+                            self._pf_record("b2_score_call",
+                                            (time.perf_counter() - _t_batch) * 1000)
+                            # Mirror the per-INTERVENE call in _score_candidates_b2
+                            # so _pf_summary_if_due prints at the right interval.
+                            for _ in _b2_reqs:
+                                self._pf_summary_if_due()
+                    except Exception as _batch_err:
+                        print(
+                            f"[SIA] b2 batch scoring failed "
+                            f"(falling back to sequential): {_batch_err}",
+                            flush=True,
+                        )
+                        # b2_batch_scores stays empty; per-item loop uses
+                        # _score_candidates_b2() normally for each request.
+            # ==== end b2 batch pre-scoring =====================================
+
             # ==== Per-item loop，循环体里不再有 .item() / .tolist() sync ====
             #
             # SKIP path Python 清理 (2026-06-02):
@@ -1095,19 +1164,24 @@ def make_sia_processor(
                 response_so_far = self._get_response_so_far(i, output_ids)
                 t_intv_prepare_end = time.perf_counter() if pf_on else 0.0
 
-                try:
-                    rm_scores = self._score_candidates(
-                        i, user_content, response_so_far, topk_indices_i,
-                        output_ids,
-                    )
-                except Exception as e:
-                    # RM error 始终打印 (rare 且重要, 不受 LOG_LEVEL 影响)
-                    print(
-                        f"[SIA] {time.strftime('%H:%M:%S')}.{int(time.time() % 1 * 1_000_000):06d} "
-                        f"step={req_step:3d} req={i} RM error: {e}",
-                        flush=True,
-                    )
-                    continue
+                # Use pre-computed batch scores for b2 (fast path), or fall back
+                # to per-request scoring for non-b2 backends / batch errors.
+                if i in b2_batch_scores:
+                    rm_scores = b2_batch_scores[i]
+                else:
+                    try:
+                        rm_scores = self._score_candidates(
+                            i, user_content, response_so_far, topk_indices_i,
+                            output_ids,
+                        )
+                    except Exception as e:
+                        # RM error 始终打印 (rare 且重要, 不受 LOG_LEVEL 影响)
+                        print(
+                            f"[SIA] {time.strftime('%H:%M:%S')}.{int(time.time() % 1 * 1_000_000):06d} "
+                            f"step={req_step:3d} req={i} RM error: {e}",
+                            flush=True,
+                        )
+                        continue
 
                 # Fix #4 (2026-06-03): 去掉 mean-norm, 严格匹配官方公式
                 #   combined[top-k] = orig_logits + rm_scores * weight
@@ -1280,6 +1354,8 @@ def make_sia_processor(
                 old_chat_prefix = dict(self._chat_prefix_per_req)
                 old_chat_suffix = dict(self._chat_suffix_per_req)
                 old_manual_prefix = dict(self._manual_prefix_ids_per_req)
+                old_b2_sessions = dict(self._b2_sessions)
+                old_b2_prefix_len = dict(self._b2_chat_prefix_len)
                 for i1, i2, directionality in batch_update.moved:
                     if directionality == MoveDirectionality.UNIDIRECTIONAL:
                         self._output_ids[i2] = old_out.get(i1, [])
@@ -1305,6 +1381,10 @@ def make_sia_processor(
                             self._chat_suffix_per_req[i2] = old_chat_suffix.get(i1)
                         if i1 in old_manual_prefix:
                             self._manual_prefix_ids_per_req[i2] = old_manual_prefix[i1]
+                        # b2 session: move i1 → i2
+                        if i1 in old_b2_sessions:
+                            self._b2_sessions[i2] = old_b2_sessions[i1]
+                            self._b2_chat_prefix_len[i2] = old_b2_prefix_len.get(i1, 0)
                     else:  # SWAP
                         self._output_ids[i1] = old_out.get(i2, [])
                         self._output_ids[i2] = old_out.get(i1, [])
@@ -1373,6 +1453,19 @@ def make_sia_processor(
                             self._manual_prefix_ids_per_req[i2] = old_manual_prefix[i1]
                         else:
                             self._manual_prefix_ids_per_req.pop(i2, None)
+                        # b2 sessions: SWAP
+                        if i2 in old_b2_sessions:
+                            self._b2_sessions[i1] = old_b2_sessions[i2]
+                            self._b2_chat_prefix_len[i1] = old_b2_prefix_len.get(i2, 0)
+                        else:
+                            self._b2_sessions.pop(i1, None)
+                            self._b2_chat_prefix_len.pop(i1, None)
+                        if i1 in old_b2_sessions:
+                            self._b2_sessions[i2] = old_b2_sessions[i1]
+                            self._b2_chat_prefix_len[i2] = old_b2_prefix_len.get(i1, 0)
+                        else:
+                            self._b2_sessions.pop(i2, None)
+                            self._b2_chat_prefix_len.pop(i2, None)
 
             for idx, params, prompt_ids, output_ids in batch_update.added:
                 self._output_ids[idx] = output_ids

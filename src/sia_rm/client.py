@@ -394,6 +394,96 @@ class RMClient:
             )
         return rewards
 
+    def score_candidates_batch(
+        self,
+        requests: list,
+    ) -> list:
+        """Score candidates for multiple sessions in a single llm.generate() call.
+
+        Args:
+            requests: list of (sid, candidate_token_ids) pairs.
+                      fix_a_token must already have been called for all new
+                      output tokens before this call (same contract as
+                      score_candidates).
+
+        Returns:
+            list of Tensor, one per request, each shape (K_i,).
+            Order matches the input list.  Same device/dtype contract as
+            score_candidates() — GPU tensor in inproc mode, CPU in multiprocess.
+        """
+        if not requests:
+            return []
+        # Single-request fast-path: delegate to the existing method so all
+        # its error-handling and edge cases remain in one place.
+        if len(requests) == 1:
+            sid, cands = requests[0]
+            return [self.score_candidates(sid, cands)]
+
+        TP = self._TokensPrompt
+        all_prompts: list = []
+        offsets: list = []   # (start, end) index into all_prompts per request
+
+        for sid, candidate_token_ids in requests:
+            if sid not in self._sessions:
+                raise ValueError(f"Unknown session id {sid}")
+            prefix = self._sessions[sid]
+            start = len(all_prompts)
+            n = len(candidate_token_ids)
+
+            if self._cross_tokenizer:
+                # Same stable-prefix encoding as score_candidates (P-2): encode
+                # the prefix text once so all K candidates share identical RM ids
+                # → APC hits for K-1 candidates within each request's group.
+                prefix_text = self._llm_tok.decode(prefix, skip_special_tokens=False)
+                stable_rm_prefix_ids = self._rm_tok.encode(
+                    prefix_text, add_special_tokens=False
+                )
+                for c in candidate_token_ids:
+                    cand_text = self._llm_tok.decode([c], skip_special_tokens=False)
+                    cand_rm_ids = self._rm_tok.encode(
+                        cand_text, add_special_tokens=False
+                    )
+                    all_prompts.append(
+                        TP(prompt_token_ids=stable_rm_prefix_ids + cand_rm_ids)
+                    )
+            else:
+                for c in candidate_token_ids:
+                    all_prompts.append(TP(prompt_token_ids=prefix + [c]))
+
+            offsets.append((start, start + n))
+
+        n_total = len(all_prompts)
+
+        if self._multiprocessing:
+            truncate_rewards()
+        else:
+            clear_inproc_rewards(self._fid)
+
+        _ = self.llm.generate(all_prompts, self._sp, use_tqdm=False)
+
+        if self._multiprocessing:
+            all_rewards = read_rewards()
+        else:
+            all_rewards = take_inproc_rewards(self._fid)
+
+        if all_rewards is None or all_rewards.numel() != n_total:
+            n_got = 0 if all_rewards is None else int(all_rewards.numel())
+            channel = "/dev/shm" if self._multiprocessing else "inproc buffer"
+            if self._multiprocessing:
+                records = read_all_rewards()
+                shapes = [tuple(r.shape) for r in records]
+                detail = f"records seen: {shapes}"
+            else:
+                detail = ""
+            raise RuntimeError(
+                f"reward channel ({channel}) returned {n_got} values, "
+                f"expected {n_total} (batch of {len(requests)} sessions). "
+                f"{detail}"
+                f"Likely SIA_REWARD_FILE_ID mismatch or vLLM reordered prompts."
+            )
+
+        return [all_rewards[start:end] for (start, end) in offsets]
+
     # ---- bench / introspection ----
 
     def time_score_candidates(
