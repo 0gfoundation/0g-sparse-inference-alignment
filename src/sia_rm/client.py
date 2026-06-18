@@ -185,6 +185,12 @@ class RMClient:
         self._sessions: dict[int, list[int]] = {}
         self._next_id = 0
 
+        # Cross-tokenizer incremental prefix cache (P-3).
+        # Maps sid → (prefix_len_at_last_encode, stable_rm_prefix_ids).
+        # Updated every time _get_stable_rm_prefix() is called; invalidated
+        # in end_session().  Only used when _cross_tokenizer is True.
+        self._rm_prefix_cache: dict[int, tuple[int, list[int]]] = {}
+
         # Cross-tokenizer bridge: when LLM tokenizer != RM tokenizer (e.g.
         # 0GM-35B uses 248K-vocab Qwen3.5 tokenizer, RM uses 151K-vocab
         # Qwen3 tokenizer; only 0.2% of overlapping ids match), score_candidates
@@ -293,9 +299,43 @@ class RMClient:
 
     def end_session(self, sid: int) -> None:
         self._sessions.pop(sid, None)
+        self._rm_prefix_cache.pop(sid, None)
 
     def session_length(self, sid: int) -> int:
         return len(self._sessions[sid])
+
+    def _get_stable_rm_prefix(self, sid: int, prefix: list[int]) -> list[int]:
+        """Return stable RM prefix IDs for cross-tokenizer sessions (P-3).
+
+        Encodes only the single new LLM token and appends it to the cached
+        RM prefix, instead of re-encoding the full prefix text from scratch.
+        This keeps every complete APC block's hash unchanged between steps,
+        maximising cross-step KV-cache reuse in the VM.
+
+        Falls back to full re-encode on first call or unexpected delta.
+        """
+        cached = self._rm_prefix_cache.get(sid)
+        cur_len = len(prefix)
+        if cached is not None:
+            cached_len, cached_ids = cached
+            delta = cur_len - cached_len
+            if delta == 1:
+                new_text = self._llm_tok.decode(
+                    [prefix[-1]], skip_special_tokens=False
+                )
+                new_rm_ids = self._rm_tok.encode(
+                    new_text, add_special_tokens=False
+                )
+                stable = cached_ids + new_rm_ids
+                self._rm_prefix_cache[sid] = (cur_len, stable)
+                return stable
+            if delta == 0:
+                return cached_ids
+        # First call for this session, or unexpected jump — full re-encode.
+        prefix_text = self._llm_tok.decode(prefix, skip_special_tokens=False)
+        stable = self._rm_tok.encode(prefix_text, add_special_tokens=False)
+        self._rm_prefix_cache[sid] = (cur_len, stable)
+        return stable
 
     # ---- scoring ----
 
@@ -329,21 +369,14 @@ class RMClient:
             # + VM-Qwen3-4B). Decode the LLM-side prefix + each candidate to
             # text, then re-encode with the RM tokenizer.
             #
-            # P-2: 稳定前缀优化 — 对前缀文本只编码一次，让 10 个候选共享完全
-            # 相同的 rm_ids 前缀。好处：
-            #   同一步内：所有候选的 prompt_token_ids 前缀完全相同 → vllm APC
-            #     在第一个候选 forward 时缓存 KV，其余 9 个直接命中，每个候选
-            #     实际只 forward 1-3 个 suffix token（候选本身）。
-            #   跨步之间：前缀每步增长 ~1-2 个 RM token，98%+ 的 block 不变
-            #     → APC 跨步几乎全命中，增量 forward 极少。
-            # 近似误差：split 编码与整体编码在 BPE 边界处差 1-2 个 token，
-            # 但 SIA 只看相对排名，边界噪声可忽略。
-            prefix_text = self._llm_tok.decode(
-                prefix, skip_special_tokens=False
-            )
-            stable_rm_prefix_ids = self._rm_tok.encode(
-                prefix_text, add_special_tokens=False
-            )
+            # P-2: 稳定前缀 — prefix 编码一次，K 个候选共享，同步内 APC 全命中。
+            # P-3: 增量缓存 — 每步只编码新增的 1 个 LLM token，append 到缓存前缀。
+            #   效果：跨步的完整 block 哈希完全不变 → APC 跨步 100% 命中，
+            #   每个 prompt 仅需 forward tail (P mod 16) + candidate ≈ 8 tokens，
+            #   而不是全量重编后 last-block-miss 的 ~25 tokens。
+            # 近似误差：增量拼接在 BPE 边界处差 1-2 token，但 SIA 只看相对排名，
+            # 边界噪声可忽略（与 P-2 的 split 编码误差同性质）。
+            stable_rm_prefix_ids = self._get_stable_rm_prefix(sid, prefix)
             prompts = []
             for c in candidate_token_ids:
                 cand_text = self._llm_tok.decode([c], skip_special_tokens=False)
@@ -431,13 +464,9 @@ class RMClient:
             n = len(candidate_token_ids)
 
             if self._cross_tokenizer:
-                # Same stable-prefix encoding as score_candidates (P-2): encode
-                # the prefix text once so all K candidates share identical RM ids
-                # → APC hits for K-1 candidates within each request's group.
-                prefix_text = self._llm_tok.decode(prefix, skip_special_tokens=False)
-                stable_rm_prefix_ids = self._rm_tok.encode(
-                    prefix_text, add_special_tokens=False
-                )
+                # P-2 + P-3: stable prefix (same encoding for all K candidates)
+                # with incremental cross-step caching — see score_candidates().
+                stable_rm_prefix_ids = self._get_stable_rm_prefix(sid, prefix)
                 for c in candidate_token_ids:
                     cand_text = self._llm_tok.decode([c], skip_special_tokens=False)
                     cand_rm_ids = self._rm_tok.encode(
