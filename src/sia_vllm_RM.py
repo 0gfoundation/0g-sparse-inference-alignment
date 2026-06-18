@@ -1388,6 +1388,10 @@ def make_sia_processor(
                         if i1 in old_b2_sessions:
                             self._b2_sessions[i2] = old_b2_sessions[i1]
                             self._b2_chat_prefix_len[i2] = old_b2_prefix_len.get(i1, 0)
+                        # Always clear source slot — a new request arriving at i1
+                        # must start a fresh session, not inherit the moved one.
+                        self._b2_sessions.pop(i1, None)
+                        self._b2_chat_prefix_len.pop(i1, None)
                     else:  # SWAP
                         self._output_ids[i1] = old_out.get(i2, [])
                         self._output_ids[i2] = old_out.get(i1, [])
