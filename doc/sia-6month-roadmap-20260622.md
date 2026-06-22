@@ -237,10 +237,13 @@ Month 6  ████████ 多模态 VM 上线 ████████  
 
 同步评估是否有合适的小 MoE base 可选（VRAM 允许时 MoE per-call 读带宽更低）。
 
-**补充训练技巧（来自综合调研）**：
-- **From r to Q\***（[arxiv 2404.12358](https://arxiv.org/abs/2404.12358)，COLM 2024）：LLM 的 log-prob 差值可近似 Q-function，可用于在标注数据不足时从主 LLM 自身引导 VM 训练初始化，降低冷启动门槛。
-- **低秩 Reward Head**（[arxiv 2407.04615](https://arxiv.org/abs/2407.04615)，TMLR 2025）：将 VM 的 scoring head 参数化为低秩矩阵（O(V×d) → O(V×r)），在同等精度下减少 VM scoring 的计算量，适合在 vocabulary-wide reward head 设计时一并引入。
-- **RED 蒸馏**（[arxiv 2411.08302](https://arxiv.org/abs/2411.08302)，EMNLP 2025）：从 holistic feedback 蒸馏 token 级奖励，可作为无 token 级标注数据时的 VM 训练路径（已在 References 中）。
+**🎯 架构设计目标——Vocabulary-wide Scoring Head**（来自 [arxiv 2502.04517](https://arxiv.org/abs/2502.04517)，ICML 2025）：  
+训练新 VM 时，**不要沿用旧的"输入一条候选序列 → 输出一个标量"接口**，而是将 reward head 设计为"输入当前 prefix → 输出整个 vocabulary 的 reward 向量"。这样 SIA 对 top-K 候选的评分从 **K 次 forward → 1 次 forward**，P2 理论改善 topK 倍（topK=10 时最多 10×）。实现上：RM head 从 `[hidden → scalar]` 改为 `[hidden → vocab_size]`，标签仍是偏好对。这是本轮 VM 训练**最高优先级的架构决策**，不单独占工作量，在训练开始前确认接口设计即可。
+
+**补充训练技巧**：
+- **低秩 Reward Head**（[arxiv 2407.04615](https://arxiv.org/abs/2407.04615)，TMLR 2025）：vocabulary-wide head 的矩阵从 `[d × V]` 分解为 `[d × r] × [r × V]`（r ≪ V），在 vocab=248K 的 Qwen3.5 词表下效果尤为明显，与上述架构目标天然兼容。
+- **From r to Q\* 训练初始化**（[arxiv 2404.12358](https://arxiv.org/abs/2404.12358)，COLM 2024）：标注数据不足时，用主模型 0GM-35B 的 log-prob 差值作为伪标签初始化 VM，降低冷启动门槛。
+- **RED 蒸馏**（[arxiv 2411.08302](https://arxiv.org/abs/2411.08302)，EMNLP 2025）：从 holistic feedback 蒸馏 token 级奖励，可作为无 token 级标注时的备用路径。
 
 - **工作量**：约 2-3 周（训练 + 初步 offline 验证）
 
@@ -254,6 +257,16 @@ Month 6  ████████ 多模态 VM 上线 ████████  
 - **风险**：精度可能不足以指导 token 选择（VM 信号比 speculative decoding 的接受/拒绝更细）
 - **成功标准**：极小 judge vs 4B VM 的 AlpacaEval win-rate 差距 ≤ 3%
 - **失败处理**：如精度不足，实验结论也有价值（证明该方向的边界）
+
+### 任务 2.4：LLM-as-Q-Function PoC（与 2.2 并行，1 周，低优先级探索）
+
+**来源**：From r to Q\*（[arxiv 2404.12358](https://arxiv.org/abs/2404.12358)，COLM 2024）证明 LLM 的 token log-prob 差值 `log P(y|x, prefix) - log P(y|x)` 在理论上近似 Q-function。"Reward Models Are Secretly Value Functions"（[arxiv 2604.22981](https://arxiv.org/abs/2604.22981)，2026）进一步验证了这一等价关系。
+
+**SIA 含义**：若主模型 0GM-35B 自身的 logit 分布差值已携带足够的 reward 信号，则**可以不需要任何外部 VM**——P2 和 P3 从根本消失。与 Task 2.3 极小 judge 的区别：2.3 仍需额外参数，2.4 完全零参数、零额外开销。
+
+- **实验方式**：在现有 SIA 框架中新增 `--rm_backend self` 模式，用主模型两次 forward 的 log-prob 差作为 reward；AlpacaEval 50 题对比 `self` vs `4B VM`
+- **工作量**：约 1 周（接口简单，主要是实验设计）
+- **优先级**：低于 2.3，有余量时做；若 2.3 成功则 2.4 意义降低
 
 ### Month 2 交付标准
 
