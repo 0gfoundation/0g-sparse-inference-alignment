@@ -163,6 +163,8 @@ Month 6  ████████ 多模态 VM 上线 ████████  
 - **工作量**：约 1 周（代码改动集中在 `apply()` 方法，需调整 token buffer 逻辑）
 - **风险**：效果可能略降，需 A/B 对比，找最优 B 值
 
+**补充备选——Vocabulary-wide Reward Head**（[arxiv 2502.04517](https://arxiv.org/abs/2502.04517)，ICML 2025）：当前 SIA 对 top-K 候选分别做 forward，即使 batch 合并仍是 K 条序列。该论文将 RM head 改为单次 forward 输出**整个 vocab 的 reward 分数**，从 K 次 → 1 次 forward，理论 P2 改善 topK 倍。工作量：需修改 VM 推理接口，适合在 Month 2 训练同词表 VM 时一并实现，而非 Month 1 改动现有模型。本月只需了解架构方案。
+
 ### 任务 1.2：双熵门控替换单熵门控
 
 现有门控：主模型熵 > θ 才干预（单熵）。  
@@ -170,6 +172,7 @@ Month 6  ████████ 多模态 VM 上线 ████████  
 减少低质量的无效干预，同时减少 VM 调用次数约 20-30%。
 
 - **理论依据**：EASD（arxiv 2512.23765）验证分层熵门控在 speculative decoding 中比单阈值减少约 25% 无效干预；TARo（arxiv 2603.18411）进一步表明基于当前步不确定性的自适应路由优于固定比例干预。
+- **补充文献**：Learning Adaptive Decoding（[arxiv 2603.09065](https://arxiv.org/abs/2603.09065)，2026 preprint）表明仅用熵判断不够，建议引入 learned routing policy（小分类头，基于 token 上下文特征决定是否干预）——可与双熵门控串联作为 Month 1 进阶探索。"To Intervene or Not"（[arxiv 2606.11201](https://arxiv.org/abs/2606.11201)，ACL 2026）提供概率性干预框架，可在固定熵阈值之上叠加不确定性置信度，预期再减少 ~30% 无效调用。
 - **工作量**：约 1 周（`apply()` 中增加一个状态缓存）
 
 ### 任务 1.3：建立评估基准
@@ -177,6 +180,8 @@ Month 6  ████████ 多模态 VM 上线 ████████  
 选定 200 题 AlpacaEval 作为固定测试集，建立可复现的评估 pipeline。这是后续所有优化的衡量标准，不建基准则无法证明改进。
 
 - **评估框架**：AlpacaEval 2.0（arxiv 2404.04475）以 GPT-4 为 judge 计算 win-rate，200 题固定集保证跨实验可比性，相比人工评估成本降低约 100×。
+- **VM 质量基准**：同时使用 RMB（[arxiv 2410.09893](https://arxiv.org/abs/2410.09893)，ICLR 2025）和 RewardBench 2（[arxiv 2506.01937](https://arxiv.org/abs/2506.01937)，2026）评估 VM-Qwen3-4B 的原始评分质量，建立"VM 能力 → SIA 效果"的映射关系，指导 Month 2 VM 训练目标。
+- **⚠️ Reward Hacking 风险**：Inference-Time Reward Hacking（[arxiv 2506.19248](https://arxiv.org/abs/2506.19248)，NeurIPS 2025 Spotlight）表明推理时 RM 干预会导致分布外样本触发奖励黑客，尤其在 --weight 较大时。Task 1.3 的评估 pipeline 应同步设计奖励异常检测指标（如输出长度分布、重复率、困惑度），避免 SIA 在某些问题上"刷高分实为退化"。
 - **工作量**：约 1 周
 
 ### 任务 1.4：两阶段粗过滤 PoC——0.6B VM 作为 4B VM 的守门员（P2，1–2 周）
@@ -231,6 +236,11 @@ Month 6  ████████ 多模态 VM 上线 ████████  
 理由来自 GenARM（ICLR 2025，arxiv 2410.08193）：ARM 参数化**在理论上可将 frozen LLM 引导至 KL 正则 RL 框架内任意传统 RM 可实现的分布**，而 ORM 只对最终输出打分，逐 token 干预时信号粗糙、位置错位。同等 4B 规模下，ARM 目标比 ORM 目标理论信号质量更高，先验证这一点，再决定是否需要扩大模型规模。
 
 同步评估是否有合适的小 MoE base 可选（VRAM 允许时 MoE per-call 读带宽更低）。
+
+**补充训练技巧（来自综合调研）**：
+- **From r to Q\***（[arxiv 2404.12358](https://arxiv.org/abs/2404.12358)，COLM 2024）：LLM 的 log-prob 差值可近似 Q-function，可用于在标注数据不足时从主 LLM 自身引导 VM 训练初始化，降低冷启动门槛。
+- **低秩 Reward Head**（[arxiv 2407.04615](https://arxiv.org/abs/2407.04615)，TMLR 2025）：将 VM 的 scoring head 参数化为低秩矩阵（O(V×d) → O(V×r)），在同等精度下减少 VM scoring 的计算量，适合在 vocabulary-wide reward head 设计时一并引入。
+- **RED 蒸馏**（[arxiv 2411.08302](https://arxiv.org/abs/2411.08302)，EMNLP 2025）：从 holistic feedback 蒸馏 token 级奖励，可作为无 token 级标注数据时的 VM 训练路径（已在 References 中）。
 
 - **工作量**：约 2-3 周（训练 + 初步 offline 验证）
 
@@ -293,6 +303,8 @@ Month 6  ████████ 多模态 VM 上线 ████████  
 2. 新 ARM VM + 加法式
 3. 新 ARM VM + 乘积式
 
+**⚡ 提前快速验证**：如 Month 1 有余量（block-wise 和双熵门控提前完成），可在 Month 1 末用现有旧 VM 先跑一次"乘积式 vs 加法式"快速对比（1-2 天，AlpacaEval 50 题），提前获得信号，不必等到 Month 3。
+
 **优先级依据**：成本极低（1-2 天），证据强（3-0 验证），且结果直接决定 Month 4 accept/reject 实验的必要性——若乘积式融合已带来显著效果提升，则 accept/reject 实验优先级可降低。
 
 - **工作量**：1-2 天代码 + 约 1 周 A/B 验证
@@ -307,6 +319,16 @@ Month 6  ████████ 多模态 VM 上线 ████████  
 | b2_score_call p50 | **≤ 15ms**（同词表消除跨分词器开销，非 CUDA graph）| ~30ms |
 | AlpacaEval win-rate vs noSIA | **可量化，有正提升** | 难以量化 |
 | 乘积式 vs 加法式融合对比 | **有结论：乘积式是否更优** | — |
+
+### Month 3 系统备选方向（如有余量，1-2 周探索）
+
+以下方向有文献依据但尚未纳入主线，Month 3 可作为探索性实验并行启动：
+
+1. **Hydragen 共享前缀 Attention**（[arxiv 2402.05099](https://arxiv.org/abs/2402.05099)，ICLR 2025）  
+   SIA 的 VM scoring 中，topK 个候选共享完全相同的前缀（prompt + 已生成 token）。Hydragen 将这部分 attention 抽取出来做一次 forward，理论上将 VM 候选评分从 K 次独立计算 → 1 次共享前缀 + K 次极短 suffix attention，P3 改善显著。需修改 VM serving kernel，工作量约 2 周。
+
+2. **AsyncSpade 异步 VM 调用**（[arxiv 2510.07486](https://arxiv.org/abs/2510.07486)，arXiv 2025）  
+   将 `SIALogitsProcessor` 的同步 VM 调用改为异步（VM 调用与主 LLM decoding 并行），实测 20-50% TPOT 减少。改造 `apply()` 的 blocking call 为 prefetch/overlap 模式，约 2 周工作量。
 
 ---
 
@@ -358,6 +380,10 @@ Month 6  ████████ 多模态 VM 上线 ████████  
 **补充文献**：PRM as Unified Control Signal（[arxiv 2602.01070](https://arxiv.org/abs/2602.01070)，2026 preprint）将推理过程形式化为"迭代轨迹生成与选择"，用 step-level PRM 在生成中途剪枝低 reward 候选（支持 beam search 和 lookahead search），机制描述 3-0 验证通过。与 SIA 粒度互补：SIA 做 token 级局部干预，PRM 做 step 级轨迹选择，两者可叠加。
 
 - **数据需求**：构建 step-level preference 数据集（数学/推理类，每步打好/坏标签）
+- **补充文献**（来自综合调研）：
+  - **SP-PRM**（[arxiv 2506.12446](https://arxiv.org/abs/2506.12446)，2025）：从 ORM 推导过程奖励，**大幅降低 PRM 训练数据收集门槛**——无需 step 级人工标注，利用已有 outcome 偏好数据自动生成 step 奖励信号，直接适合 SIA 资源约束。
+  - **ThinkPRM**（[arxiv 2504.16828](https://arxiv.org/abs/2504.16828)，2025）：在 thinking token 级别应用 PRM，对应 Qwen3 的 `/think` 模式；为推理过程中的每个思维步骤打分，与 SIA 在 thinking 模式下的应用高度匹配。
+  - **DG-PRM**（[arxiv 2507.17849](https://arxiv.org/abs/2507.17849)，ACL 2025）：动态 PRM，跨任务泛化性强，减少 SIA 对特定任务标注数据的依赖；适合从数学推理扩展到代码生成。
 - **预期效果**：推理类任务 VM 调用次数降低 3-5×，推理类 benchmark 效果进一步提升
 - **工作量**：4 周（数据准备 2 周 + 训练 + 验证 2 周）
 
@@ -368,7 +394,11 @@ Month 6  ████████ 多模态 VM 上线 ████████  
 **解法**：以多模态 VLM（如 Qwen3-VL-4B）为 base，训练 reward head，使 VM 能够同时理解图文 context。
 
 - **适用范围**：仅对 VLM 主推理 LLM 有意义（纯文字 0GM-35B 无需此功能）
-- **参考说明**：本任务由工程必要性驱动（SIA 局限性 L3：text-only VM 对图文输入盲猜），当前学术界尚无专门针对"VLM reward head for token-level alignment"的顶会工作；训练流程参考 SIA 原论文（arxiv 2602.21215）的 reward head 训练方案，数据构建参考 ArmoRM（arxiv 2406.12845）的多维偏好标注框架。
+- **参考说明**：本任务由工程必要性驱动（SIA 局限性 L3：text-only VM 对图文输入盲猜），训练流程参考 SIA 原论文（arxiv 2602.21215）的 reward head 训练方案，数据构建参考 ArmoRM（arxiv 2406.12845）的多维偏好标注框架。
+- **补充文献（来自综合调研）**：
+  - **Skywork-VL Reward**（[arxiv 2505.07263](https://arxiv.org/abs/2505.07263)，2025）：当前最强开源视觉语言 RM 之一，可直接作为多模态 VM 的 backbone 选型参考或微调起点。
+  - **MSRL**（[arxiv 2603.25108](https://arxiv.org/abs/2603.25108)，CVPR 2026）：多阶段多模态 reward modeling，提供完整的 VLM RM 训练框架，月 5-6 多模态 VM 的训练方案参考。
+  - **BaseReward**（[arxiv 2509.16127](https://arxiv.org/abs/2509.16127)，2025）：强 baseline 多模态 RM，用于评估多模态 VM 训练质量的对照基准。
 - **工作量**：4 周（多模态偏好数据构建 + 训练），Month 5 启动，Month 6 交付
 
 ### Month 5 交付标准
@@ -555,9 +585,25 @@ CMU 的 DSPA（arxiv 2603.21461，3-0 机制验证）用稀疏自编码器在 LL
 | HybridFlow: ResourcePool LLM+RM Co-deployment ([arxiv 2409.19256](https://arxiv.org/abs/2409.19256)) | 附录 B4 独立 GPU VM | **EuroSys 2025** ✅ |
 | NEO: Asymmetric CPU-GPU Pipeline ([arxiv 2411.01142](https://arxiv.org/abs/2411.01142)) | 工程优化参考 | 2024 preprint |
 | STEP: Memory-triggered Search Tree Pruning ([arxiv 2601.09093](https://arxiv.org/abs/2601.09093)) | 工程优化参考（压力感知降级）| 2026 preprint |
-| RM Knowledge Distillation ([arxiv 2411.08302](https://arxiv.org/abs/2411.08302)) | 附录 B1 VM 蒸馏依据 | 2024 preprint |
+| RM Knowledge Distillation ([arxiv 2411.08302](https://arxiv.org/abs/2411.08302)) | 附录 B1 VM 蒸馏依据 / 任务 2.2 训练技巧 | 2024 preprint |
 | RM Distillation: Reward Model Compression ([arxiv 2405.19316](https://arxiv.org/abs/2405.19316)) | 附录 B1 VM 蒸馏依据 | 2024 preprint |
 | RM Ensemble / NeurIPS 2024 consensus | 附录 B3 reward hacking 防护 | NeurIPS 2024 ✅ |
+| Cost-Effective RGTG: Vocabulary-wide Reward Head ([arxiv 2502.04517](https://arxiv.org/abs/2502.04517)) | 任务 1.1 备选 / 任务 2.2 VM 架构 | **ICML 2025** ✅ |
+| Low-Rank RM Parametrization ([arxiv 2407.04615](https://arxiv.org/abs/2407.04615)) | 任务 2.2 VM scoring 加速 | **TMLR 2025** ✅ |
+| From r to Q*: LLM as Q-Function ([arxiv 2404.12358](https://arxiv.org/abs/2404.12358)) | 任务 2.2 VM 训练初始化 | **COLM 2024** ✅ |
+| Hydragen: High-Throughput Shared-Prefix Inference ([arxiv 2402.05099](https://arxiv.org/abs/2402.05099)) | 任务 Month 3 备选 / P3 系统优化 | **ICLR 2025** ✅ |
+| AsyncSpade: Asynchronous Sparse Decoding ([arxiv 2510.07486](https://arxiv.org/abs/2510.07486)) | 任务 Month 3 备选 / 异步 VM 调用 | 2025 preprint |
+| To Intervene or Not: Probabilistic Gating ([arxiv 2606.11201](https://arxiv.org/abs/2606.11201)) | 任务 1.2 双熵门控进阶 | **ACL 2026** ✅ |
+| Learning Adaptive LLM Decoding ([arxiv 2603.09065](https://arxiv.org/abs/2603.09065)) | 任务 1.2 learned routing | 2026 preprint |
+| Inference-Time Reward Hacking ([arxiv 2506.19248](https://arxiv.org/abs/2506.19248)) | 任务 1.3 评估 pipeline 安全设计 | **NeurIPS 2025** ✅ |
+| RMB: Reward Model Benchmark ([arxiv 2410.09893](https://arxiv.org/abs/2410.09893)) | 任务 1.3 VM 质量评估 | **ICLR 2025** ✅ |
+| RewardBench 2 ([arxiv 2506.01937](https://arxiv.org/abs/2506.01937)) | 任务 1.3 VM 质量评估 | 2026 preprint |
+| SP-PRM: ORM-derived Process Reward ([arxiv 2506.12446](https://arxiv.org/abs/2506.12446)) | 任务 5.1 PRM 数据收集 | 2025 preprint |
+| ThinkPRM: Thinking Token Process Reward ([arxiv 2504.16828](https://arxiv.org/abs/2504.16828)) | 任务 5.1 thinking 模式 PRM | 2025 preprint |
+| DG-PRM: Dynamic Generalizable PRM ([arxiv 2507.17849](https://arxiv.org/abs/2507.17849)) | 任务 5.1 跨任务 PRM | **ACL 2025** ✅ |
+| Skywork-VL Reward ([arxiv 2505.07263](https://arxiv.org/abs/2505.07263)) | 任务 5.2 多模态 VM 选型 | 2025 preprint |
+| MSRL: Multi-Stage Multimodal RM ([arxiv 2603.25108](https://arxiv.org/abs/2603.25108)) | 任务 5.2 多模态 VM 训练框架 | **CVPR 2026** ✅ |
+| BaseReward: Multimodal RM Baseline ([arxiv 2509.16127](https://arxiv.org/abs/2509.16127)) | 任务 5.2 多模态 VM 评估对照 | 2025 preprint |
 
 ---
 
