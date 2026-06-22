@@ -225,6 +225,86 @@ def _get_stable_rm_prefix(self, sid, prefix):
 
 ---
 
+## 五、后续 PoC 探索（2026-06-22）
+
+§四 中的瓶颈分析指出，VM 的 vllm overhead（~26.7ms，占 VM 总延迟 93%）是进一步提升的关键目标。在此背景下尝试了两个 PoC 替代方案，均在 branch `poc-classify-runner` / `poc-transformers-rm` 上进行。
+
+---
+
+### 5.1 Classify Runner PoC ❌ 失败
+
+**Branch**：`poc-classify-runner`  
+**脚本**：`scripts/poc_classify_runner.py`
+
+**思路**：用 vllm 内置的 pooling runner（`runner='pooling', convert='classify'`）替代 b2 inproc 的 `vm_llm.generate()`，期望利用 vllm 调度和 APC 加速候选打分。
+
+**结论：三个独立问题，全部阻断，不可复用**
+
+| 问题 | 发现 | 影响 |
+|------|------|------|
+| APC 在 pooling runner 下不工作 | vllm 0.18.0 bug：每次 encode 强制完整 prefill，APC speedup 仅 0.99× | latency ~69ms（vs b2 inproc ~9ms），**7-8× 更慢** |
+| 评分位置错误 | classify runner 打分位置是第一个 token（CLS position），不是候选 token 所在的序列末尾 | 分数无意义，逻辑错误 |
+| 参数 API 变化 | vllm 0.18.0 无 `task='token_classify'` 参数，需改为 `runner='pooling', convert='classify'`，且 encode 调用要加 `pooling_task='token_classify'` | 非阻断，但增加适配成本 |
+
+**根因**：vllm 0.18.0 的 pooling runner 不支持 APC（KV prefix caching 仅对 generate runner 生效）。每次 encode 都要完整 prefill 整条序列，无法利用前缀缓存，与 b2 inproc 的核心优势（APC 命中后每步只算 1–2 个新 token）相比差距巨大。
+
+**结论**：Classify runner 路径在 vllm 0.18.0 下对 VM 并发吞吐无帮助。
+
+---
+
+### 5.2 Transformers + DynamicCache PoC 🔄 修复完成，等待 benchmark
+
+**Branch**：`poc-transformers-rm`  
+**脚本**：`scripts/poc_transformers_rm.py`
+
+**思路**：用 `transformers AutoModelForSequenceClassification + DynamicCache` 直接替代 b2 inproc 内的嵌套 `vllm.LLM()`，完全绕过 vllm scheduler，消除 93% 的 vllm overhead（~26.7ms）。
+
+#### 原始测试结果（有 bug）
+
+初版 PoC 结果：**440ms / session**（基线 b2 inproc ~9ms，47× 更慢）。
+
+#### 根因分析（逐层拆解）
+
+```
+440ms ÷ 10 sessions ÷ 10 candidates = 4.4ms / forward
+理论值：8GB (4B model, bf16) ÷ 2TB/s (A100 HBM) = 4ms ✓
+```
+
+每次 `model.forward()` 本身耗时是正确的（~4ms = memory-bandwidth bound）。问题出在调用方式：
+
+| Bug | 描述 | 影响 |
+|-----|------|------|
+| **Bug 1：顺序 forward** | `score_candidates_with_kv` 对 K=10 个候选做 10 次顺序 `model.forward()`，每次读一遍 8GB 权重 | 10 × 4ms = **40ms/session**，非 1×4ms |
+| **Bug 2：DynamicCache 污染** | 同一 `prefix_kv` 被 10 次 forward 传入，`use_cache=False` 未完全阻止内部状态被修改，导致分数不确定 | 正确性问题，同 prompt 两次调用结果不同 |
+| **Bug 3：API 兼容** | transformers 4.57.6 中 `DynamicCache.key_cache` / `value_cache` 公开属性已不存在 | `AttributeError`，脚本崩溃 |
+
+#### 修复内容（commits `61bc985`, `c8b9248`）
+
+| 修复 | 实现 |
+|------|------|
+| Bug 1：顺序 → 批量 | 新增 `score_candidates_batch()`：把 prefix_kv 展开到 batch=K，一次 `model([K, 1])` forward 替代 K 次顺序调用 |
+| Bug 2：DynamicCache 隔离 | 新增 `_expand_kv_for_batch()`：每次创建临时 `expanded_kv`，原 `prefix_kv` 永远不传入 `model.forward()` |
+| Bug 3：API 兼容 | `_expand_kv_for_batch` 读端：优先 `to_legacy_cache()` → 降级 `key_cache` → 降级 `__getitem__`；写端：优先 `update()` → 降级 `key_cache.append()` |
+
+#### 修复后预期延迟
+
+```
+n_sess=1：1 次 batched forward → ~4.5ms（vs 44ms 修复前，vs b2 inproc ~9ms）
+n_sess=3.2（conc=16 期望值）：3.2 × 4.5ms ≈ 14ms（vs b2 inproc ~28.5ms）
+```
+
+| 场景 | 当前（b2 inproc）| 预期（transformers 修复后）| 改善 |
+|------|:---:|:---:|:---:|
+| VM call latency (n_sess=3.2) | ~28.5ms | ~14ms | ~2× |
+| ITL conc=16 | 41.3ms | ~27ms | -35% |
+| tok/s conc=16 | 370 | ~550 | +48% |
+
+> **为何不是 6× 加速**（去掉 93% vllm overhead）：vllm b2 inproc 用 TP=4（4卡并行），每张 A100 只读 2GB 权重（~1ms）；transformers 只用单卡，读全部 8GB（~4ms）。节省了 vllm overhead（26.7ms）但增加了额外 GPU 时间（~12ms）。净改善：28.5ms → ~14ms ≈ 2×，而不是理论最大 16×。
+
+**当前状态**：三处 bug 全部修复，等待在无 SIA server 干扰的环境下运行 benchmark 验证实际延迟。
+
+---
+
 ## 参考文档
 
 - [`sia-high-concurrency-throughput-analysis-20260618.md`](sia-high-concurrency-throughput-analysis-20260618.md) — 并发问题分析与批量打分方案设计
