@@ -13,6 +13,10 @@
 
 通俗地说：大模型每生成一个词，SIA 在旁边同步评估候选词的"好坏"，把概率偏向质量更高的选项。全程不修改模型权重，仅在推理阶段介入——类似于给模型加了一个实时的"质检员"，每次出词前先过一遍。
 
+### 本次调研补充（2026-06-22）
+
+基于综合文献调研（`doc/sia-literature-survey-20260622.md`，103–108 个并行验证智能体，覆盖 2022–2026H1），对本 roadmap 做小幅更新：新增 SeLaR / AdaDec 的 References 条目（与 GGRO 一起构成稀疏干预三方独立验证）、PRM 推理时统一控制信号论文（Month 5 支撑）、Seesaw TP↔PP 动态并行切换（工程参考）；在 Month 1 Task 1.4 补充 cross-request 前缀 pin 的 BatchLLM 依据。
+
 ### 当前成果（截至 2026-06-22）
 
 两个月内完成核心系统，0GM-35B 和 VL-30B 两个主力模型均已上线：
@@ -185,6 +189,7 @@ Month 6  ████████ 多模态 VM 上线 ████████  
 
 - **工作量**：1–2 周（加载 0.6B VM + 修改 apply() 逻辑 + A/B 对比验证）
 - **架构前置验证（PoC 第一步）**：同进程内同时运行两个 `LLM()` 实例（0.6B + 4B）并配合 `VLLM_ENABLE_V1_MULTIPROCESSING=0` 是**尚未验证的架构**。vllm v1 的 EngineCore 以 spawn 模式启动，两个 InprocClient 共进程的行为未经实验确认，有潜在冲突风险。**PoC 第一天应先只验证两个 LLM() 实例能否在同进程内稳定并存**，再进行效果实验，避免 3-5 天白费。
+- **补充优化——cross-request 前缀 pin**（与 PoC 并行，约 3-5 天）：BatchLLM（[arxiv 2412.03594](https://arxiv.org/abs/2412.03594)）发现 vLLM APC 在高并发长前缀场景下因 LRU 驱逐导致命中率仅 6.3%（vs 显式 pin 的 92.6%）。SIA VM 的每条输入以 `system_prompt + partial_response` 为前缀，在 conc=16 时多请求共享同一 system_prompt 前缀块，当前 stable-prefix 优化已解决 per-request 内 KV 复用，但 **cross-request 维度**的前缀块仍可能被 LRU 驱逐。通过向 vLLM b2 后端注入前缀 pin 标记，可在 P2+P3 维度获得额外收益，预期 conc=16 VM per-call 延迟再降 10–20%。
 - **风险**：① 双 LLM 实例架构冲突（优先验证）；② 0.6B 预筛准确率不足，导致部分高价值干预被错误跳过；需 A/B 对比效果损失 vs 速度收益
 - **成功标准**：双 LLM 实例架构稳定运行（前提）+ 4B VM 调用减少 ≥ 30% + AlpacaEval win-rate 损失 ≤ 1%
 
@@ -348,7 +353,9 @@ Month 6  ████████ 多模态 VM 上线 ████████  
 
 当前 VM 是 token 级 outcome reward model，信号粒度极细，噪声大。PRM 改为**推理步骤级**打分（在自然推理分隔点评估），调用频率从 O(token) 降至 O(step)，信号质量更高。
 
-**适用范围说明**（基于文献）：ICLR 2024 对 ORM vs PRM 的系统对比（Lightman et al.，arxiv 2305.20050）实验全部在 MATH 数学数据集上进行。PRM 优于 ORM 的结论在**推理/数学/代码**类任务上有顶会支撑，在通用问答/对话类任务上缺乏直接验证。**本任务优先针对推理类任务，不宜对通用指令跟随场景过度承诺。**
+**适用范围说明**（基于文献）：ICLR 2024 对 ORM vs PRM 的系统对比（Lightman et al.，[arxiv 2305.20050](https://arxiv.org/abs/2305.20050)）实验全部在 MATH 数学数据集上进行。PRM 优于 ORM 的结论在**推理/数学/代码**类任务上有顶会支撑，在通用问答/对话类任务上缺乏直接验证。**本任务优先针对推理类任务，不宜对通用指令跟随场景过度承诺。**
+
+**补充文献**：PRM as Unified Control Signal（[arxiv 2602.01070](https://arxiv.org/abs/2602.01070)，2026 preprint）将推理过程形式化为"迭代轨迹生成与选择"，用 step-level PRM 在生成中途剪枝低 reward 候选（支持 beam search 和 lookahead search），机制描述 3-0 验证通过。与 SIA 粒度互补：SIA 做 token 级局部干预，PRM 做 step 级轨迹选择，两者可叠加。
 
 - **数据需求**：构建 step-level preference 数据集（数学/推理类，每步打好/坏标签）
 - **预期效果**：推理类任务 VM 调用次数降低 3-5×，推理类 benchmark 效果进一步提升
@@ -536,6 +543,10 @@ CMU 的 DSPA（arxiv 2603.21461，3-0 机制验证）用稀疏自编码器在 LL
 | LLMdoctor: Product-of-Distributions Fusion ([arxiv 2601.10416](https://arxiv.org/abs/2601.10416)) | 任务 3.3 乘积式融合 A/B | 2026 preprint |
 | TITA: Token-level Inference-Time Alignment ([arxiv 2510.21794](https://arxiv.org/abs/2510.21794)) | 任务 6.2 DPO 蒸馏参考 | 2025 preprint |
 | GGRO: Gradient-Guided Reward Optimization ([arxiv 2606.09635](https://arxiv.org/abs/2606.09635)) | 发现四：稀疏干预范式验证 / 附录 A2 | **UAI 2026** ✅ |
+| SeLaR: Soft Embedding Alignment at Low-Confidence ([arxiv 2604.08299](https://arxiv.org/abs/2604.08299)) | 发现四：稀疏干预三方独立验证之二 | 2026 preprint |
+| AdaDec: Pause-and-Rerank at High Uncertainty ([arxiv 2506.08980](https://arxiv.org/abs/2506.08980)) | 发现四：稀疏干预三方独立验证之三 | **FSE 2026** ✅ |
+| PRM as Unified Control Signal for Reasoning ([arxiv 2602.01070](https://arxiv.org/abs/2602.01070)) | 任务 5.1 PRM 粒度互补支撑 | 2026 preprint |
+| Seesaw: PP↔TP Dynamic Parallelism Switching ([arxiv 2503.06433](https://arxiv.org/abs/2503.06433)) | 工程优化参考（TP/PP 动态调度）| 2025 preprint |
 | DSPA: SAE-based Activation Steering ([arxiv 2603.21461](https://arxiv.org/abs/2603.21461)) | 发现四 / 附录 A1 | 2026 preprint（CMU）|
 | ArmoRM: Multi-Objective Reward Model ([arxiv 2406.12845](https://arxiv.org/abs/2406.12845)) | 任务 5.2 / 附录 C1 多目标 VM | 2024 preprint |
 | Token-level MDP Formalization ([arxiv 2602.02572](https://arxiv.org/abs/2602.02572)) | 附录 D2 学术发表基础 | **ICML 2026** ✅ |
