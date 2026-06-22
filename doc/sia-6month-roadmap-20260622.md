@@ -25,8 +25,8 @@
 ```
 Month 1  ██ block-wise scoring ██ 双熵门控 ██ 评估基准
 Month 2  ████████ 同词表 VM 训练（数据收集 + 训练 + 初步验证）████████
-Month 3  ████████ 同词表 VM 上线（dense 4B，含 MoE 选型）████████
-Month 4  ████ 更强 VM（8B）████  ████ accept/reject 干预模式 ████
+Month 3  ████████ 同词表 VM 上线（dense 4B，含 MoE 选型）████████  ▶ 乘积式融合A/B
+Month 4  ████ 更强 VM（8B，视Month3结果）████  ██ accept/reject 实验 ██
 Month 5  ████ PRM 训练 ████              ▶ 多模态VM训练启动
 Month 6  ████████ 多模态 VM 上线 ████████  ██ DPO 蒸馏实验 ██
 ```
@@ -142,6 +142,24 @@ Month 6  ████████ 多模态 VM 上线 ████████  
 
 替换生产 VM，重新跑 AlpacaEval，验证效果提升。
 
+### 任务 3.3：乘积式分布融合 A/B 实验（1-2 天，来自 LLMdoctor）
+
+**来源**：LLMdoctor（arxiv 2601.10416，2026 年 1 月）将加法式 logit biasing 改为乘积式分布融合，在 AlpacaEval 类对比中 62.10% win vs. GenARM（ICLR 2025），76.00% win vs. ARGS。核心公式：
+
+> 当前 SIA：`logits[token] += weight * RM_score`  
+> 乘积式改法：`α * log_prob_base[token] + β * log_prob_rm[token]`（对数空间加权平均）
+
+**这一改动不需要重新训练 VM**，只修改 `SIALogitsProcessor.apply()` 的 score 融合逻辑，工程成本极低。结合 Month 3 部署的新同词表 VM，可同步验证三组 A/B 配置：
+1. 旧 VM + 加法式（当前生产，对照组）
+2. 新 ARM VM + 加法式
+3. 新 ARM VM + 乘积式
+
+**优先级依据**：成本极低（1-2 天），证据强（3-0 验证），且结果直接决定 Month 4 accept/reject 实验的必要性——若乘积式融合已带来显著效果提升，则 accept/reject 实验优先级可降低。
+
+- **工作量**：1-2 天代码 + 约 1 周 A/B 验证
+- **风险**：极低（改动可随时回滚）
+- **成功标准**：乘积式 win-rate 高于加法式 ≥ 1%（统计显著）
+
 ### Month 3 交付标准
 
 | 指标 | Month 3 目标 | Month 2 基线 |
@@ -149,6 +167,7 @@ Month 6  ████████ 多模态 VM 上线 ████████  
 | conc=16 SIA tok/s | **≥ 750** | ≥ 550 |
 | b2_score_call p50 | **≤ 20ms**（同词表 + 可能恢复 CUDA graph）| ~30ms |
 | AlpacaEval win-rate vs noSIA | **可量化，有正提升** | 难以量化 |
+| 乘积式 vs 加法式融合对比 | **有结论：乘积式是否更优** | — |
 
 ---
 
@@ -172,8 +191,10 @@ Month 6  ████████ 多模态 VM 上线 ████████  
 
 **注意**：RSD（ICML 2025，arxiv 2501.19324）的 accept/reject 工作在**推理步骤/序列级别**，而非 token 级别，且使用的是两个独立大小模型的架构，与 SIA 的单模型 + 外挂 VM 不同。**token 级 accept/reject 在顶会文献中缺乏直接验证**，本任务作为探索性实验，结果不确定，需 A/B 实测。
 
-- **工作量**：1-2 周实验
-- **成功标准**：accept/reject 模式的 AlpacaEval win-rate 高于 logit biasing 模式
+**前置条件（来自 2026 调研）**：Month 3 的 Task 3.3 乘积式融合实验成本极低（1-2 天）且有 3-0 证据支持，应先于 accept/reject 完成验证。若 Month 3 的乘积式融合结果已带来 ≥ +3% win-rate 提升，本任务优先级可降低，不必在 Month 4 强行执行；若 Month 3 乘积式融合效果不显著，则在 Month 4 推进 accept/reject。
+
+- **工作量**：1-2 周实验（视 Month 3 乘积式融合结论决定是否执行）
+- **成功标准**：accept/reject 模式的 AlpacaEval win-rate 高于当前最优融合模式
 
 ### Month 4 交付标准
 
@@ -316,6 +337,24 @@ ICLR 2025 发表的 Judge Decoding（arxiv 2501.19309）提出了一个反直觉
 
 ---
 
+### 发现四：2026年补充调研的三项新信号
+
+*（2026 年 6 月补充调研，针对 2026 年 1–6 月 arxiv，103 个验证智能体，15 条通过验证）*
+
+**（1）稀疏干预范式获三方独立验证**
+
+GGRO（UAI 2026，arxiv 2606.09635）、SeLaR（2604.08299）、AdaDec（FSE 2026，2506.08980）三篇互不知情的工作均独立提出"只在高熵/低置信度位置干预"策略，与 SIA 的 `--entropy_threshold` 设计完全一致。这是 2026 年对 SIA 核心设计直觉的**外部学术背书**，同时也意味着该方向在学术界已不是新颖方向，SIA 的差异化价值要靠工程上高并发吞吐的系统性研究来体现（见发现一）。
+
+**（2）乘积式分布融合有望低成本提升 P1——已加入 Month 3**
+
+LLMdoctor（arxiv 2601.10416，62.10% win vs. GenARM，3-0 验证）将加法式 logit biasing 改为乘积式分布融合，无需重新训练 VM，工程成本 1-2 天。**已加入 roadmap Month 3 Task 3.3**。该实验结果也决定 Month 4 accept/reject 实验的必要性。
+
+**（3）SAE Steering（DSPA）是 6 个月 roadmap 以外的中期侦察方向**
+
+CMU 的 DSPA（arxiv 2603.21461，3-0 机制验证）用稀疏自编码器在 LLM 激活空间直接施加对齐引导，**完全绕开外部 VM/RM 前向传播**（99.8% 激活值为零）。若效果可与 4B VM 相当，可从根本上解决 P2（VM 延迟）和 P3（并发吞吐），因为 VM 从关键路径彻底移除。代价：SAE 需离线训练，效果能否匹敌 4B VM 尚未验证。**建议 2027 年作为独立研究方向评估**，不放入当前 6 个月执行计划。
+
+---
+
 ## SIA 技术局限性
 
 在推进 roadmap 的同时，需要明确 SIA 当前及可预见未来的技术边界，以便合理设定预期。
@@ -357,3 +396,6 @@ ICLR 2025 发表的 Judge Decoding（arxiv 2501.19309）提出了一个反直觉
 | Iterative Value Function Optimization (arxiv 2503.02368) | 任务 1.1 block-wise scoring | 2025 preprint |
 | EASD: Entropy-Aware Speculative Decoding (arxiv 2512.23765) | 任务 1.2 双熵门控 | 2025 preprint |
 | TARo: Token-level Adaptive Routing (arxiv 2603.18411) | 任务 1.2 自适应路由参考 | 2026 preprint |
+| LLMdoctor: Product-of-Distributions Fusion (arxiv 2601.10416) | 任务 3.3 乘积式融合 A/B | 2026 preprint |
+| GGRO: Gradient-Guided Reward Optimization (arxiv 2606.09635) | 发现四：稀疏干预范式验证 | **UAI 2026** ✅ |
+| DSPA: Decoding with Sparse Program Alignment (arxiv 2603.21461) | 发现四：中期侦察方向（CMU）| 2026 preprint |
