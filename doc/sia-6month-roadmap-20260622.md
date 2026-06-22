@@ -1,4 +1,4 @@
-# SIA 六个月 Roadmap（2026-07 ~ 2026-12）
+# SIA Roadmap（2026-05 回顾 + 2026-07 ~ 2026-12 计划）
 
 **撰写日期**：2026-06-22  
 **执笔**：工程侧  
@@ -6,23 +6,96 @@
 
 ---
 
-## 当前基线（2026-06 末）
+## Month -2（2026-05-09 ~ 2026-05-21）：项目冷启动
 
-| 指标 | SIA（当前）| noSIA | 差距 |
-|------|-----------|-------|------|
-| conc=16 吞吐（tok/s）| 369 | 1040 | **−64%** |
-| conc=16 ITL（ms）| 41.3 | 13.6 | **3.0×** |
-| VM per-batch latency | ~30ms | — | 瓶颈所在 |
-| 干预效果（AlpacaEval）| 难以量化 | — | 无评估基准 |
-| 多模态支持 | ❌ 文字盲打 | — | VLM 场景缺失 |
+> 项目于 2026-05-09 立项，两周内完成基础框架搭建和首次效果验证。
 
-**三个核心痛点**：P1 效果不显著 / P2 VM 延迟高 / P3 高并发吞吐下降严重
+**主要完成事项：**
+
+- **SIA 核心实现**：基于 vLLM `LogitsProcessor` 的 token 级干预框架，OpenAI 兼容 HTTP API，支持 per-request `sia_weight` 动态调整
+- **首次效果评估**：0GM-35B AlpacaEval + MMLU 初跑，确认 SIA 对齐信号存在；发现 SIA 干预下主要在高熵位置（intervention rate ~20%）
+- **VM 性能摸底**：SIA 单请求 ~40 tok/s vs noSIA ~114 tok/s，确认 VM 串行调用（每候选一次 GPU forward）是主要瓶颈
+- **批量前向优化**：K 候选从 K 次串行 GPU forward 合并为 1 次 batch forward，VM 计算量降低约 60%
+- **KV 前缀缓存探索**：实验 PyTorch DynamicCache 前缀复用，受 PyTorch 无 APC 机制限制，效果不理想
+- **vLLM RM 后端建立**：实现 `--rm_backend vllm`，通过 HTTP 调用 vLLM classify 接口打分（为后续 b2 inproc 做铺垫）
+
+**月末状态**：SIA 可运行，有初步效果验证，单请求 SIA/noSIA 比值约 35%，性能提升空间明确。
+
+---
+
+## Month -1（2026-05-22 ~ 2026-06-22）：架构突破 + 上线生产
+
+> 完成核心架构升级，修复重大效果回归 bug，两个模型全部上线 marketplace。
+
+**主要完成事项：**
+
+**1. b2 inproc VM 架构落地**（5 月下旬）  
+将 VM 从独立 HTTP 进程改为嵌入式 nested vLLM 实例（进程内函数调用），彻底消除网络往返开销（~20–30ms/次）。结合 VM CUDA Graph（VL-30B）和主 LLM CUDA Graph 修复（去除 PIECEWISE-only 限制）：
+- VL-30B：HTTP ~36 tok/s → b2 inproc **78.3 tok/s**（**+117%**）
+- 0GM-35B：HTTP ~32 tok/s → b2 inproc **66–68 tok/s**（**+106%**）
+
+**2. repetition_penalty 关键 Bug 修复**（6 月 4 日）  
+发现 `repetition_penalty` 默认值 1.3 与 SIA logit 干预叠加，导致评估数据显示 SIA Δ = −13% 至 −75%（错误结论）。修复为 1.0 后，SIA 效果全面恢复正向：
+- 0GM-35B MMLU thinking 模式对照实验：SIA vs noSIA **+12 pp 准确率**
+
+**3. 0GM-35B 跨分词器优化**（6 月初）  
+Stable prefix 方案消除跨 tokenizer BPE 边界合并导致的 APC 失效：VM 调用延迟从随序列长度线性增长（34ms→55ms）降至**固定 ~30ms**，端到端吞吐 +22%。
+
+**4. 双模型上线 marketplace**（6 月中旬）  
+0GM-35B 和 VL-30B 均完成 Docker 部署、OpenAI 兼容 API、全套集成测试（run_all.sh）、max_model_len 扩展至 32768 tokens、多模态图片输入支持（图片请求 bypass SIA）。
+
+**5. 高并发批量打分优化**（6 月 18 日）  
+N 个并发请求的 VM 调用从串行 N 次合并为 1 次 GPU batch forward，叠加增量跨分词器前缀缓存（P-3）：
+- conc=16 吞吐：239 → **369 tok/s**（**+54%**）
+- conc=16 ITL 倍数：4.8× → **3.0×**
+
+**6. 探索失败的路径（已排除）**（6 月 22 日）  
+vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + DynamicCache（5–8× 更慢，TP=4 优势无法复制）两条路线均已实测排除，避免后续重复探索。
+
+---
+
+## 当前状态（2026-06-22 末）
+
+### 性能数据
+
+| 场景 | 模型 | SIA | noSIA | 比值 |
+|------|------|-----|-------|------|
+| 单请求吞吐 | 0GM-35B | 66–68 tok/s | ~112 tok/s | **59–61%** |
+| 单请求吞吐 | VL-30B | 78.3 tok/s | ~122.8 tok/s | **64%** |
+| conc=16 吞吐 | 0GM-35B | 369 tok/s | 1040 tok/s | **35%** |
+| 单请求 ITL | 0GM-35B | ~34ms | ~9ms | **3.8×** |
+| conc=16 ITL | 0GM-35B | 41.3ms | 13.6ms | **3.0×** |
+
+| 组件 | 数据 |
+|------|------|
+| VM per-call latency p50 | 0GM-35B ~30ms，VL-30B ~17ms |
+| VM 干预率（entropy_threshold=1.0）| ~20%（0GM-35B），~25%（VL-30B）|
+| 多模态支持 | ❌ text-only VM；图片请求 bypass SIA |
+
+### 对齐效果
+
+| 评估 | 结果 | 备注 |
+|------|------|------|
+| MMLU thinking 模式（0GM-35B，150Q 对照）| SIA **+12 pp** vs noSIA | 已排除 rep_penalty bug |
+| AlpacaEval win-rate（0GM-35B）| 暂无可量化结论 | 缺少 annotator 评估基准，Month 1 建立 |
+| VL-30B AlpacaEval | 暂无可量化结论 | 同上 |
+
+### 三个核心痛点（当前状态）
+
+| 痛点 | 当前状态 | 根因 |
+|------|---------|------|
+| **P1 效果不显著** | MMLU 有信号，AlpacaEval 无基准 | VM 与 LLM 跨分词器噪声；无量化对比数据 |
+| **P2 VM 延迟高** | 0GM-35B ~30ms/call | dense 4B VM，memory-bound，无 CUDA graph |
+| **P3 高并发吞吐损失** | conc=16 仅 35% of noSIA | VM 调用仍占关键路径；每 token 都可能调用 |
 
 ---
 
 ## 执行顺序总览
 
 ```
+Month -2 ██ 项目启动 ██ 批量前向 ██ 首次效果评估                    [已完成]
+Month -1 ██ b2 inproc ██ Bug修复 ██ 上线生产 ██ 高并发优化           [已完成]
+─────────────────────────── 当前（2026-06-22）──────────────────────
 Month 1  ██ block-wise scoring ██ 双熵门控 ██ 评估基准
 Month 2  ████████ 同词表 VM 训练（数据收集 + 训练 + 初步验证）████████
 Month 3  ████████ 同词表 VM 上线（dense 4B，含 MoE 选型）████████  ▶ 乘积式融合A/B
@@ -31,7 +104,7 @@ Month 5  ████ PRM 训练 ████              ▶ 多模态VM训练
 Month 6  ████████ 多模态 VM 上线 ████████  ██ DPO 蒸馏实验 ██
 ```
 
-每个阶段严格依赖前一阶段：前期降低 VM 调用频率 → 中期换更强模型 → 后期做根本性改造。
+已完成阶段为前两个月真实产出；执行计划阶段严格依赖前一阶段：前期降低 VM 调用频率 → 中期换更强模型 → 后期做根本性改造。
 
 ---
 
