@@ -85,20 +85,58 @@ def _ids_tensor(ids, device):
 
 def _expand_kv_for_batch(prefix_kv, K):
     """
-    batch=1 的 DynamicCache 扩展为 batch=K（expand+contiguous）。
+    batch=1 KV cache 扩展为 batch=K，兼容多版本 transformers DynamicCache API。
 
-    用于 score_candidates_batch：创建临时的 expanded_kv，
-    原 prefix_kv 不会被 model.forward() 修改。
+    transformers 不同版本内部存储不一致：
+    - 4.36-4.49: key_cache / value_cache 列表
+    - 4.50+:     to_legacy_cache() + update() 是更稳定的公开 API
     """
     from transformers import DynamicCache
+
+    # ── 读取各层 (k, v) ─────────────────────────────────────────────
+    pairs = []
+
+    # 优先：to_legacy_cache（官方 read API，适用多版本）
+    if hasattr(prefix_kv, 'to_legacy_cache'):
+        try:
+            pairs = list(prefix_kv.to_legacy_cache())
+        except Exception:
+            pass
+
+    # 次选：key_cache / value_cache（4.36-4.49 典型 API）
+    if not pairs and hasattr(prefix_kv, 'key_cache'):
+        pairs = list(zip(prefix_kv.key_cache, prefix_kv.value_cache))
+
+    # 次选：__getitem__ + __len__（Cache 基类接口）
+    if not pairs and hasattr(prefix_kv, '__len__') and hasattr(prefix_kv, '__getitem__'):
+        pairs = [prefix_kv[i] for i in range(len(prefix_kv))]
+
+    # fallback：已经是 tuple/list
+    if not pairs and isinstance(prefix_kv, (tuple, list)):
+        pairs = list(prefix_kv)
+
+    if not pairs:
+        attrs = [a for a in dir(prefix_kv) if not a.startswith('_')]
+        raise TypeError(
+            f"无法读取 KV cache，类型={type(prefix_kv).__name__}，"
+            f"可用属性: {attrs}"
+        )
+
+    # ── 构建 batch=K 的新 DynamicCache ──────────────────────────────
     expanded = DynamicCache()
-    for layer_idx in range(len(prefix_kv)):
-        k = prefix_kv.key_cache[layer_idx].expand(K, -1, -1, -1).contiguous()
-        v = prefix_kv.value_cache[layer_idx].expand(K, -1, -1, -1).contiguous()
-        expanded.key_cache.append(k)
-        expanded.value_cache.append(v)
-    if hasattr(prefix_kv, "_seen_tokens"):
+    for layer_idx, layer_kv in enumerate(pairs):
+        k, v = layer_kv[0], layer_kv[1]
+        k_exp = k.expand(K, -1, -1, -1).contiguous()
+        v_exp = v.expand(K, -1, -1, -1).contiguous()
+        if hasattr(expanded, 'update'):
+            expanded.update(k_exp, v_exp, layer_idx)
+        else:
+            expanded.key_cache.append(k_exp)
+            expanded.value_cache.append(v_exp)
+
+    if hasattr(prefix_kv, '_seen_tokens') and hasattr(expanded, '_seen_tokens'):
         expanded._seen_tokens = prefix_kv._seen_tokens
+
     return expanded
 
 
