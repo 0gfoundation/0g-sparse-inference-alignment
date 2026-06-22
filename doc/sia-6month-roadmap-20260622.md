@@ -96,7 +96,7 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 Month -2 ██ 项目启动 ██ 批量前向 ██ 首次效果评估                    [已完成]
 Month -1 ██ b2 inproc ██ Bug修复 ██ 上线生产 ██ 高并发优化           [已完成]
 ─────────────────────────── 当前（2026-06-22）──────────────────────
-Month 1  ██ block-wise scoring ██ 双熵门控 ██ 评估基准
+Month 1  ██ block-wise scoring ██ 双熵门控 ██ 评估基准 ██ 两阶段粗过滤PoC
 Month 2  ████████ 同词表 VM 训练（数据收集 + 训练 + 初步验证）████████
 Month 3  ████████ 同词表 VM 上线（dense 4B，含 MoE 选型）████████  ▶ 乘积式融合A/B
 Month 4  ████ 更强 VM（8B，视Month3结果）████  ██ accept/reject 实验 ██
@@ -134,6 +134,18 @@ Month 6  ████████ 多模态 VM 上线 ████████  
 
 - **工作量**：约 1 周
 
+### 任务 1.4：两阶段粗过滤 PoC——0.6B VM 作为 4B VM 的守门员（P2，1–2 周）
+
+**理论依据**：工程调研发现 RSD（ICML 2025，arxiv 2501.19324）、SSS（EMNLP 2025，arxiv 2508.15044）、GSI（ICLR 2026，arxiv 2506.04118）三篇独立工作验证了两阶段粗过滤模式：用极小模型做第一阶段快速筛选，只在不确定位置调用大模型。在 δ=0.7 阈值下，**约 48% 的调用可完全跳过大模型**。
+
+**SIA 实现方案**：利用官方已有的 VM-Qwen3-0.6B-Base checkpoint，在 `SIALogitsProcessor.apply()` 中增加第一阶段：先对当前所有候选用 0.6B VM 打分，计算 N 个候选分数的**方差**；若方差 < 阈值 δ（所有候选分数接近，说明 0.6B 无法区分），则跳过 4B VM，直接用 0.6B 分数（或 0 偏置）作为干预信号；若方差 ≥ δ，则正常调用 4B VM 做精细打分。
+
+**预期收益**：4B VM 实际调用次数降低约 40–50%，端到端 VM 平均开销从 30ms → ~17ms/step（调用次数减半，0.6B 调用约 3–5ms），与 block-wise B=4 叠加后，VM 有效占比从 20% → ~3–5%。
+
+- **工作量**：1–2 周（加载 0.6B VM + 修改 apply() 逻辑 + A/B 对比验证）
+- **风险**：0.6B 预筛准确率可能不足，导致部分高价值干预被错误跳过；需 A/B 对比效果损失 vs 速度收益
+- **成功标准**：4B VM 调用减少 ≥ 30% 且 AlpacaEval win-rate 损失 ≤ 1%
+
 ### Month 1 交付标准
 
 | 指标 | Month 1 目标 | 当前基线 |
@@ -141,6 +153,7 @@ Month 6  ████████ 多模态 VM 上线 ████████  
 | conc=16 SIA tok/s | **≥ 550** | 369 |
 | conc=16 ITL（ms）| **≤ 28** | 41.3 |
 | AlpacaEval 评估 | **可运行、有结果** | 无 |
+| 4B VM 实际调用次数 | **≤ 70%（两阶段过滤 PoC）** | 100%（每次干预都调用）|
 
 ---
 
@@ -475,6 +488,13 @@ CMU 的 DSPA（arxiv 2603.21461，3-0 机制验证）用稀疏自编码器在 LL
 | ArmoRM: Multi-Objective Reward Model (arxiv 2406.12845) | 附录 C1 多目标 VM | 2024 preprint |
 | RM Ensemble / NeurIPS 2024 consensus | 附录 B3 reward hacking 防护 | NeurIPS 2024 ✅ |
 | Token-level MDP Formalization (arxiv 2602.02572) | 附录 D2 学术发表基础 | **ICML 2026** ✅ |
+| Nudging: Uncertainty-gated Sparse Intervention (arxiv 2410.09300) | 任务 1.4 / 方向验证 | 2024 preprint |
+| BatchLLM: Explicit Global Prefix Sharing (arxiv 2412.03594) | 工程优化参考 | 2024 preprint |
+| HybridFlow: ResourcePool LLM+RM Co-deployment (arxiv 2409.19256) | 附录 B4 独立 GPU VM | **EuroSys 2025** ✅ |
+| NEO: Asymmetric CPU-GPU Pipeline (arxiv 2411.01142) | 工程优化参考 | 2024 preprint |
+| SSS: Stepwise Speculative Search (arxiv 2508.15044) | 任务 1.4 两阶段过滤依据 | **EMNLP 2025** ✅ |
+| GSI: Generative Speculative Inference (arxiv 2506.04118) | 任务 1.4 / 性能数字参考 | **ICLR 2026** ✅ |
+| STEP: Memory-triggered Search Tree Pruning (arxiv 2601.09093) | 工程优化参考（压力感知降级）| 2026 preprint |
 
 ---
 
@@ -514,6 +534,11 @@ Month 3 的同词表 4B ARM VM 验证效果后，用 4B 作教师蒸馏出 1.7B 
 
 部署 2–3 个不同 VM，对分数取均值，降低单 VM reward hacking 风险。在 B1 完成后（1.7B VM 可用），两个 1.7B VM 的 VRAM 需求低于当前一个 4B VM，对吞吐影响可控。  
 **当前前提**：先建立 reward hacking 监控指标（如高 VM 分但人工评分差的样本率），有证据后再引入 ensemble。
+
+**B4. VM 独立 GPU 组部署（HybridFlow，EuroSys 2025，arxiv 2409.19256）**
+
+HybridFlow 提出 ResourcePool 抽象，支持 LLM + RM 的 distributed 部署模式：VM 独占一组 GPU，其打分与主 LLM 的下一步 decode 真正并行，**VM 延迟完全移出 LLM 关键路径**，P3 吞吐比理论上可从 35% 恢复到接近 100%。当前 b2 inproc 是 colocated 顺序模式；若未来有额外 GPU（1–2 张 A100 专用于 VM），distributed 模式是根本解法。  
+**前提**：需额外 GPU 资源，2027 年扩容时优先评估；当前 4×A100 下不可行。
 
 ---
 

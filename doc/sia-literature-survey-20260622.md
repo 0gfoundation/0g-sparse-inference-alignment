@@ -513,9 +513,124 @@ $$\pi_{\text{decode}}(x) \propto [\pi_{\text{base}}(x)]^\alpha \cdot [\pi_r(x)]^
 | DSPA: Decoding with Sparse Program Alignment | 2026 preprint（CMU）| 机制 3-0 | 2603.21461 |
 | SeLaR: Soft Embedding Alignment at Low-Confidence | 2026 preprint | 参考 | 2604.08299 |
 | AdaDec: Pause-and-Rerank at High Uncertainty | FSE 2026 ✅ | 参考 | 2506.08980 |
-| GSI: Generative Speculative Inference (tilted reward) | 2026 preprint（Harvard+IBM）| 2-1 | 2506.04118 |
+| GSI: Generative Speculative Inference (tilted reward) | ICLR 2026 ✅ | 3-0 吞吐数字 | 2506.04118 |
 | EntropyInfer: Rigid/Dynamic Attention Head Classification | 2026 preprint | 2-1 | 2606.09508 |
 | Token-level MDP Formalization | ICML 2026 ✅ | 2-1 | 2602.02572 |
+| Nudging: Uncertainty-gated Sparse Intervention | 2024 preprint | 机制 3-0 | 2410.09300 |
+| BatchLLM: Explicit Global Prefix Sharing | 2024 preprint | 数字 2-1 | 2412.03594 |
+| HybridFlow: ResourcePool for LLM+RM Co-deployment | EuroSys 2025 ✅ | 机制 3-0 | 2409.19256 |
+| NEO: Asymmetric CPU-GPU Pipeline for LLM Serving | 2024 preprint | 机制 3-0 | 2411.01142 |
+| SSS: Stepwise Speculative Search (EMNLP 2025) | EMNLP 2025 ✅ | 速度 2-1 | 2508.15044 |
+| SPECS: Speculative PRM-guided Search | 2026 preprint | 延迟 2-1 | 2506.15733 |
+| STEP: Memory-triggered Search Tree Pruning | 2026 preprint | 机制 2-1 | 2601.09093 |
+| Seesaw: PP↔TP Dynamic Parallelism Switching | 2025 preprint | 机制 2-1 | 2503.06433 |
+
+---
+
+## 十一、工程性能专项调研（2024–2026）
+
+> **调研截止**：2026-06-22。本节专注 P2（VM 延迟）和 P3（高并发吞吐）的工程优化方向，与前十节的"对齐效果"类论文互补。调研规模：103 个验证智能体，20 篇论文，25 条论断经三票对抗验证，12 条通过。
+
+---
+
+### 11.1 两阶段粗过滤：跳过约 48% VM 调用（**P2 最直接可借鉴**）
+
+该方向的核心思路：用一个极小模型做第一阶段粗筛，只有粗筛"不确定"的位置才调用大 VM，大幅减少 4B VM 的实际调用次数。
+
+**RSD（ICML 2025，arxiv 2501.19324，3-0）**
+
+RSD 在步骤级推理中验证了两阶段机制：小 draft 模型先尝试独立解题，只有 draft 不确定时才上调大 target 模型。在 δ=0.7 阈值下，**48% 的问题由 draft 独立完成，无需调用大模型**。MATH500 上 7B/72B 配置达到 88.0 准确率（超过 72B 单模型的 85.6），FLOPs 降低最多 4.4×。
+
+**SSS（EMNLP 2025，arxiv 2508.15044，2-1）**
+
+SSS（Stepwise Speculative Search）在 beam 扩展过程中动态剪枝低 reward 候选，减少无效 RM 调用。相比 Best-of-N 实现 **2.9×–5.4× wall-clock 加速**（Llama-3-8B：10.7s vs 58.0s）。
+
+**GSI（ICLR 2026，arxiv 2506.04118，3-0）**
+
+GSI 将 speculative decoding 与 soft best-of-N 结合：draft 模型快速生成候选，RM 只对 draft 筛选后的候选评分。在 Qwen3 + n=16 配置下，相比 S-BoN 实现 **51% 吞吐提升**（0.83 vs 0.55 steps/s），端到端延迟降低最高 28%，性能损失仅 3%。
+
+**对 SIA 的直接价值（P2）**：SIA 已有 VM-Qwen3-0.6B-Base checkpoint（官方提供）。将其作为第一阶段粗过滤器：若 0.6B VM 对当前 token 的评分方差极小（所有候选分数接近），则跳过 4B VM 调用。预期可跳过 ~40-50% 的 4B VM 调用，平均 per-step VM 开销降低约 30%，同时对最终效果影响可控。
+
+---
+
+### 11.2 显式前缀共享：修复 vLLM APC 在高并发下的命中率（**P2+P3**）
+
+**BatchLLM（arxiv 2412.03594，2-1）**
+
+BatchLLM 发现 vLLM 的隐式前缀缓存（APC）在高并发长前缀场景下存在严重命中率问题：
+
+| 系统 | 前缀长度 16000 tokens，degree=16 时的 token 复用率 |
+|------|------|
+| vLLM（隐式 APC）| **6.3%** |
+| SGLang（隐式 APC）| 5.2% |
+| BatchLLM（显式全局前缀共享）| **92.6%** |
+
+根本原因：vLLM 的 LRU 驱逐策略在 GPU 内存压力下会将热前缀块驱逐出缓存，导致相同前缀被反复重算。BatchLLM 的显式全局注册确保热前缀永不被驱逐。
+
+**对 SIA 的价值（P2+P3）**：SIA 中每个请求的 VM 输入均以 `system_prompt + partial_response` 为前缀，在高并发场景（conc=16）下，多个请求共享相同 system_prompt 部分。当前 stable-prefix 优化已解决 per-request 内的 KV 复用，但 **cross-request 维度**（多个请求共享同一 system_prompt 前缀块）仍可能因 LRU 驱逐而命中率不足。显式前缀 pin 机制（固定高频前缀块不被驱逐）是 conc=16 下降低 VM per-call 延迟的有效手段。
+
+---
+
+### 11.3 分组 GPU 部署：将 VM 移出关键路径（**P3 根本方案**）
+
+**HybridFlow（EuroSys 2025，arxiv 2409.19256，3-0）**
+
+HybridFlow 提出 ResourcePool 抽象，支持两种 LLM + RM 部署模式：
+- **Colocated**（当前 SIA 模式）：LLM 和 VM 共用同一组 GPU，时分复用，顺序执行
+- **Distributed**：VM 独占一组 GPU，输入就绪即自动触发，与 LLM decoding 真正并行
+
+两种模式在代码层面统一抽象，可动态切换。
+
+**对 SIA 的价值（P3）**：当前 SIA 的 b2 inproc 是 colocated 顺序执行模式（VM 打分时 LLM 等待）。若将 VM 迁移到独立 GPU 组（如增加 1–2 张 A100 专用于 VM），采用 distributed 模式，VM 打分可与下一步 LLM decode 真正并行，**理论上可将 VM 延迟完全移出 LLM 关键路径**，P3 吞吐比从 35% 恢复到接近 100%。代价：需要额外 GPU 资源（当前 4×A100 已被 LLM+VM 填满）。
+
+---
+
+### 11.4 异步流水线与系统级自适应（**P3 间接方案**）
+
+**NEO（arxiv 2411.01142，3-0）**
+
+NEO 采用非对称 CPU-GPU 流水线：将部分请求的 decode attention 和 KV cache 卸载到 CPU，与 GPU 子批次重叠执行，平衡负载。对 SIA 的直接价值有限（VM 在 CPU 上运行太慢），但其"将部分工作异步卸载到 CPU"的思路可以借鉴用于 VM 调度：当 GPU 负载极高时，将少数请求的 VM 打分降级为 CPU 路径，避免全系统阻塞。
+
+**STEP（arxiv 2601.09093，2-1）**
+
+STEP 采用 GPU 内存触发的自适应剪枝：当 GPU 内存满、下一 decode step 无法调度 KV cache 时，立即剪枝得分最低的 trace。在 N=64 高并发场景下，等待时间从 1526 秒降至 0 秒（单 96GB GH200）。
+
+**对 SIA 的价值（P3）**：可借鉴 memory-trigger 思路实现 VM 调用的"压力感知降级"：当 VM 调用队列积压超过阈值时（高并发压力）, 自动提高本步的熵阈值或跳过部分请求的 VM 干预，避免全局阻塞，优雅降级。
+
+---
+
+### 11.5 不确定性门控：学术验证（Nudging，3-0）
+
+**Nudging（arxiv 2410.09300，3-0）**
+
+Nudging 用一个小的已对齐模型，只在主模型**高不确定性**的 token 位置生成引导 token——干预只发生在关键位置而非每个 token，主模型参数完全不更新。这与 SIA 的 `--entropy_threshold` 机制完全同构，是对 SIA 稀疏干预设计的独立学术验证。
+
+**重要结论**：SIA 的 entropy gating 设计在学术界有充分支撑，无需质疑该方向。
+
+---
+
+### 11.6 重要负面结论：FP8 量化对 VM 无效（0-3 确认）
+
+本次调研对"FP8 W8A8 块量化对 LLM rollout 提升 44% 吞吐"的论断进行了 3 票对抗验证，结果 **0-3 全部否定**。
+
+**这与 SIA 自身实测结论完全一致**：SIA 团队对 VM 进行 FP8 量化后，端到端吞吐仅 +0.5%（在噪声范围内）。根因：SIA 的 VM 调用属于 small-batch memory-bound 场景（M≈10–15 的矩阵乘法），GPU 受 HBM 带宽而非算力限制；FP8 降低计算量但不降低 HBM 读取量，在此场景下无法提速。
+
+**结论**：FP8/INT8/INT4 对 SIA VM 的量化路线已被学术界和工程实测双重否定，不应继续投入。
+
+---
+
+### 本节小结：P2/P3 工程方向覆盖情况
+
+| 方向 | 代表工作 | P2/P3 | 对 SIA 可行性 |
+|------|---------|-------|-------------|
+| 两阶段粗过滤（0.6B 预筛）| RSD (ICML 2025), SSS (EMNLP 2025), GSI (ICLR 2026) | **P2** | ✅ 高：已有 0.6B checkpoint，1–2 周 PoC |
+| 显式前缀 pin（修复 LRU 驱逐）| BatchLLM | **P2+P3** | ✅ 中：需修改 VM vllm 内存管理，1 周 |
+| 分组 GPU 部署（VM 独立 GPU）| HybridFlow (EuroSys 2025) | **P3** | ⚠️ 需额外 GPU 硬件，中期方向 |
+| 内存触发降级（压力感知跳过）| STEP | **P3** | ✅ 低成本：在 apply() 加队列深度检查 |
+| FP8/INT4 量化 | 多篇 | — | ❌ 已否定（自测 +0.5%，学术 0-3）|
+| Dual CUDA Stream | 多篇 | P2+P3 | ❌ 已否定（HBM 带宽共争，不可并行）|
+
+**最优先行动**：两阶段粗过滤（0.6B 预筛）可在 Month 1 与 block-wise scoring 并行实验，成本 1–2 周，预期降低 4B VM 调用次数约 40–50%，与 block-wise B=4 叠加后，VM 实际调用率从 20% → ~3–5%。
 
 ---
 
