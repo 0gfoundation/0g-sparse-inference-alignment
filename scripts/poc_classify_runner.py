@@ -149,12 +149,6 @@ def test_smoke(llm, topk, mode_tag):
     """验证 classify runner 能正常评分（不报错，分数合理）。"""
     from vllm import TokensPrompt
 
-    try:
-        from vllm import PoolingParams
-    except ImportError:
-        from vllm.pooling_params import PoolingParams
-
-    pp = PoolingParams()
 
     # 3 条不同的短 prompt
     test_prompts = [
@@ -164,7 +158,7 @@ def test_smoke(llm, topk, mode_tag):
     ]
 
     try:
-        out1 = llm.encode(test_prompts, pp, use_tqdm=False)
+        out1 = llm.encode(test_prompts, pooling_task="token_classify", use_tqdm=False)
         scores1 = _extract_scores(out1)
         print(f"  [{mode_tag}] 冒烟测试分数: {[f'{s:.4f}' for s in scores1]}")
     except Exception as e:
@@ -178,7 +172,7 @@ def test_smoke(llm, topk, mode_tag):
             return False
 
     # 确定性检查：同一 prompt 跑两次结果相同
-    out2 = llm.encode(test_prompts[:1], pp, use_tqdm=False)
+    out2 = llm.encode(test_prompts[:1], pooling_task="token_classify", use_tqdm=False)
     scores2 = _extract_scores(out2)
     diff = abs(scores1[0] - scores2[0])
     if diff > 1e-3:
@@ -201,12 +195,6 @@ def test_smoke(llm, topk, mode_tag):
 
 def test_apc(llm, prefix_len, topk):
     """通过 cold/warm 延迟对比验证 APC 是否对 classify 路径有效。"""
-    try:
-        from vllm import PoolingParams
-    except ImportError:
-        from vllm.pooling_params import PoolingParams
-
-    pp = PoolingParams()
 
     # 同一批 prompt（APC warm = 前缀已缓存）
     warm_prompts = _make_session_prompts(prefix_len, topk, seed=7777)
@@ -216,21 +204,21 @@ def test_apc(llm, prefix_len, topk):
         return _make_session_prompts(prefix_len, topk, seed=trial_seed * 9999)
 
     # Warm：先跑一次把前缀推入 APC
-    llm.encode(warm_prompts, pp, use_tqdm=False)
+    llm.encode(warm_prompts, pooling_task="token_classify", use_tqdm=False)
 
     # Cold 测量（每次新前缀）
     cold_times = []
     for i in range(10):
         prompts = make_cold_prompts(i)
         t0 = time.perf_counter()
-        llm.encode(prompts, pp, use_tqdm=False)
+        llm.encode(prompts, pooling_task="token_classify", use_tqdm=False)
         cold_times.append((time.perf_counter() - t0) * 1000)
 
     # Warm 测量（同一前缀，APC 命中）
     warm_times = []
     for _ in range(10):
         t0 = time.perf_counter()
-        llm.encode(warm_prompts, pp, use_tqdm=False)
+        llm.encode(warm_prompts, pooling_task="token_classify", use_tqdm=False)
         warm_times.append((time.perf_counter() - t0) * 1000)
 
     cold_p50 = float(np.percentile(cold_times, 50))
@@ -254,12 +242,6 @@ def test_apc(llm, prefix_len, topk):
 
 def benchmark_latency(llm, prefix_len, topk, n_warmup, n_trials, mode_tag):
     """测量不同 session 数下的 classify 延迟，与已知 b2 inproc 数字对比。"""
-    try:
-        from vllm import PoolingParams
-    except ImportError:
-        from vllm.pooling_params import PoolingParams
-
-    pp = PoolingParams()
 
     print(f"\n  [{mode_tag}] 延迟 benchmark (prefix_len={prefix_len}, topk={topk})")
     print(f"  {'n_sess':>6}  {'batch':>5}  {'p50':>8}  {'p90':>8}  {'amort':>8}  {'vs b2 eager':>12}")
@@ -273,13 +255,13 @@ def benchmark_latency(llm, prefix_len, topk, n_warmup, n_trials, mode_tag):
 
         # 预热（第一次 cold prefill，之后 APC warm）
         for _ in range(n_warmup):
-            llm.encode(prompts, pp, use_tqdm=False)
+            llm.encode(prompts, pooling_task="token_classify", use_tqdm=False)
 
         # 计时（APC warm 状态，同前缀反复调用）
         times = []
         for _ in range(n_trials):
             t0 = time.perf_counter()
-            llm.encode(prompts, pp, use_tqdm=False)
+            llm.encode(prompts, pooling_task="token_classify", use_tqdm=False)
             times.append((time.perf_counter() - t0) * 1000)
 
         p50 = float(np.percentile(times, 50))
@@ -305,12 +287,6 @@ def test_piecewise_stress(llm, prefix_len, topk, n_stress=100):
 
     如果 0 错误 → classify 路径的 piecewise CUDA graph 可用 → 大幅加速机会！
     """
-    try:
-        from vllm import PoolingParams
-    except ImportError:
-        from vllm.pooling_params import PoolingParams
-
-    pp = PoolingParams()
     from vllm import TokensPrompt
 
     print(f"\n  Piecewise 压力测试：{n_stress} 次变长前缀调用")
@@ -330,7 +306,7 @@ def test_piecewise_stress(llm, prefix_len, topk, n_stress=100):
 
         try:
             t0 = time.perf_counter()
-            llm.encode(prompts, pp, use_tqdm=False)
+            llm.encode(prompts, pooling_task="token_classify", use_tqdm=False)
             times.append((time.perf_counter() - t0) * 1000)
         except RuntimeError as e:
             if "CUDA graph capturing" in str(e) or "batch_descriptor" in str(e).lower():
