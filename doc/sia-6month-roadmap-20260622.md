@@ -398,4 +398,80 @@ CMU 的 DSPA（arxiv 2603.21461，3-0 机制验证）用稀疏自编码器在 LL
 | TARo: Token-level Adaptive Routing (arxiv 2603.18411) | 任务 1.2 自适应路由参考 | 2026 preprint |
 | LLMdoctor: Product-of-Distributions Fusion (arxiv 2601.10416) | 任务 3.3 乘积式融合 A/B | 2026 preprint |
 | GGRO: Gradient-Guided Reward Optimization (arxiv 2606.09635) | 发现四：稀疏干预范式验证 | **UAI 2026** ✅ |
-| DSPA: Decoding with Sparse Program Alignment (arxiv 2603.21461) | 发现四：中期侦察方向（CMU）| 2026 preprint |
+| DSPA: Decoding with Sparse Program Alignment (arxiv 2603.21461) | 发现四 / 附录 A1 | 2026 preprint（CMU）|
+| ArmoRM: Multi-Objective Reward Model (arxiv 2406.12845) | 附录 C1 多目标 VM | 2024 preprint |
+| RM Ensemble / NeurIPS 2024 consensus | 附录 B3 reward hacking 防护 | NeurIPS 2024 ✅ |
+| Token-level MDP Formalization (arxiv 2602.02572) | 附录 D2 学术发表基础 | **ICML 2026** ✅ |
+
+---
+
+## 附录：远期研究方向展望（6 个月计划以外）
+
+> 以下方向均有调研依据，但因工程成本较高、效果尚不确定、或依赖前期工作完成，未纳入 2026-07 至 2026-12 执行计划。供 2027 年立项参考。
+
+---
+
+### A. VM 根本性替代——绕开 RM 前向传播（2027 年研究方向）
+
+这类方向的共同目标是：**让主 LLM 不再依赖外部 VM 做 per-token 打分**，从而从根本上消除 P2（VM 延迟）和 P3（并发吞吐损失）。
+
+**A1. SAE 激活空间 Steering（DSPA，CMU，arxiv 2603.21461）**
+
+用稀疏自编码器（SAE）在 LLM 内部激活空间直接施加对齐引导，完全不调用外部 VM（99.8% 激活值为零）。若效果可接近 4B VM，P2/P3 从根本解决。当前挑战：SAE 需离线训练，效果能否匹敌 4B VM 尚未验证。  
+**建议**：先用 1-2 周做 paper-reading + 小规模可行性实验，再决定是否立项。
+
+**A2. RM 梯度引导（GGRO 思路，UAI 2026，arxiv 2606.09635）**
+
+在高熵位置用 RM 的**梯度信息**（而非分数）指导 token 选择，理论上可避免 RM 全量前向传播。当前挑战：标准推理不维护梯度图，需探索 gradient checkpointing 或近似梯度方案，工程可行性待研究。可与 A1 并行探索，代码实验成本低。
+
+---
+
+### B. VM 渐进效率优化（6 个月计划的自然延伸，2027 Q1）
+
+**B1. VM 蒸馏：4B → 1.7B（NeurIPS 2024 研究背景）**
+
+Month 3 的同词表 4B ARM VM 验证效果后，用 4B 作教师蒸馏出 1.7B 学生 VM。文献（2411.08302、2405.19316）表明大 RM 蒸馏小 RM 可保留约 80–90% 偏好判断能力，latency 降低约 2×，VRAM 占用减半。  
+**建议时机**：2027 Q1，前提是 Month 3 的 4B ARM VM 效果经评估已达标。
+
+**B2. VM 内部注意力头裁剪（EntropyInfer 思路，arxiv 2606.09508）**
+
+将 VM 内部注意力头分为"结构性（Rigid）"和"语义决策型（Dynamic）"两类，Rigid 头可跳过或降精度计算，预期降低 VM per-call latency 20–40%。前提：需先对当前 VM（Qwen3.5-4B）的注意力激活模式做离线分析，确认 Rigid 头比例是否足够大，否则收益有限。
+
+**B3. RM Ensemble（NeurIPS 2024 共识）**
+
+部署 2–3 个不同 VM，对分数取均值，降低单 VM reward hacking 风险。在 B1 完成后（1.7B VM 可用），两个 1.7B VM 的 VRAM 需求低于当前一个 4B VM，对吞吐影响可控。  
+**当前前提**：先建立 reward hacking 监控指标（如高 VM 分但人工评分差的样本率），有证据后再引入 ensemble。
+
+---
+
+### C. 对齐效果深化（覆盖更多任务类型）
+
+**C1. 多目标 VM（ArmoRM，arxiv 2406.12845，2024）**
+
+训练多维度 reward head（helpfulness / correctness / safety 等），由 gating 网络按 prompt 类型动态加权：coding 任务偏 correctness，对话任务偏 helpfulness。当前 VM 是单目标 ORM，在跨任务场景下对齐效果覆盖不均匀。  
+**主要障碍**：需要多维度偏好标注数据集；可在 Month 2 数据收集时同步打多维标签，为后续做准备。
+
+**C2. PRM 与 token 级 VM 的融合**
+
+Month 5 的 PRM 给出步骤级分数，如何将其降维分摊到 token 级（如一步内均匀分摊），在不额外构建 token 级偏好数据的情况下提升 token 级干预信号质量，是一个开放问题。目前无顶会直接验证，建议 Month 5 PRM 上线后顺带做消融实验。
+
+---
+
+### D. 原创学术发表机会
+
+**D1. 高并发场景下 token 级对齐的吞吐-效果 Pareto（学术空白）**
+
+所有现有顶会工作（包括 ICLR 2025 的 GenARM、ICML 2025 的 RSD）均在单请求或 conc ≤ 4 场景下评估，**无一研究高并发连续批处理场景**。SIA 若系统性对比 block-wise / PRM / 乘积式融合在 conc = 4/8/16/32 下的吞吐-效果 Pareto 并发表，有望成为该方向的首批顶会工作。  
+**目标会议**：MLSys 2027 / ICML 2027 Systems Track；数据积累可从 Month 1 评估基准起步。
+
+**D2. 基于 ICML 2026 MDP 框架形式化 SIA → 投稿 ICLR 2027**
+
+Token-level 对齐已被 ICML 2026（arxiv 2602.02572）形式化为标准 MDP 框架，SIA 是该框架的一个具体实例（VM 估计 $Q(s_t, a_t)$，logit 空间加权）。以此框架重新表述 SIA 的理论保证——结合 ARM 训练目标 + 熵稀疏干预 + 乘积式融合的理论组合——加上 6 个月的工程实测数据，ICLR 2027（截稿约 2026-10）是可行的投稿窗口。
+
+**D3. 极小 judge 作为独立学术贡献（条件触发：Month 2 PoC 结果积极）**
+
+若 Month 2 Task 2.3（<10M 参数线性评分头替代 4B VM）的效果达标，效果-延迟权衡本身是原创贡献。可与 D1 合并：以极小 judge 作为效率方案、以高并发场景作为评估框架，合写一篇"SIA 高并发吞吐系统工作"，比分别发表更完整。
+
+---
+
+> **远期方向优先级参考**（前期工作完成后）：B1 VM 蒸馏（低风险，效果可期）> C1 多目标 VM（效果覆盖）> A1 DSPA（高潜力，需验证）≥ A2 GGRO 梯度（高潜力，工程挑战大）> D1/D2/D3（学术发表，需 6 个月数据积累）> B2/B3（依赖具体指标）。
