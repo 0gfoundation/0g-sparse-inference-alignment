@@ -77,8 +77,9 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 | 评估 | 结果 | 备注 |
 |------|------|------|
 | MMLU thinking 模式（0GM-35B，150Q 对照）| SIA **+12 pp** vs noSIA | 已排除 rep_penalty bug |
-| AlpacaEval win-rate（0GM-35B）| 暂无可量化结论 | 缺少 annotator 评估基准，Month 1 建立 |
-| VL-30B AlpacaEval | 暂无可量化结论 | 同上 |
+| AlpacaEval win-rate（0GM-35B）| **65.4%**（Skywork judge，200Q）| Skywork 作 judge 已有数字；GPT-4 judge 尚未跑，Month 1 建立标准评估基准 |
+| AlpacaEval Skywork Δ（0GM-35B）| **+5.45 reward（+22.7%）** | SIA mean 29.36 vs noSIA 24.01（191 对，实验 stable-prefix-20260610）|
+| VL-30B AlpacaEval | 暂无结论（Skywork / GPT-4 均未正式跑）| Month 1 建立统一评估基准后补齐 |
 
 ### 三个核心痛点（当前状态）
 
@@ -145,8 +146,9 @@ Month 6  ████████ 多模态 VM 上线 ████████  
 **预期收益**：4B VM 实际调用次数降低约 40–50%，端到端 VM 平均开销从 30ms → ~17ms/step（调用次数减半，0.6B 调用约 3–5ms），与 block-wise B=4 叠加后，VM 有效占比从 20% → ~3–5%。
 
 - **工作量**：1–2 周（加载 0.6B VM + 修改 apply() 逻辑 + A/B 对比验证）
-- **风险**：0.6B 预筛准确率可能不足，导致部分高价值干预被错误跳过；需 A/B 对比效果损失 vs 速度收益
-- **成功标准**：4B VM 调用减少 ≥ 30% 且 AlpacaEval win-rate 损失 ≤ 1%
+- **架构前置验证（PoC 第一步）**：同进程内同时运行两个 `LLM()` 实例（0.6B + 4B）并配合 `VLLM_ENABLE_V1_MULTIPROCESSING=0` 是**尚未验证的架构**。vllm v1 的 EngineCore 以 spawn 模式启动，两个 InprocClient 共进程的行为未经实验确认，有潜在冲突风险。**PoC 第一天应先只验证两个 LLM() 实例能否在同进程内稳定并存**，再进行效果实验，避免 3-5 天白费。
+- **风险**：① 双 LLM 实例架构冲突（优先验证）；② 0.6B 预筛准确率不足，导致部分高价值干预被错误跳过；需 A/B 对比效果损失 vs 速度收益
+- **成功标准**：双 LLM 实例架构稳定运行（前提）+ 4B VM 调用减少 ≥ 30% + AlpacaEval win-rate 损失 ≤ 1%
 
 ### Month 1 交付标准
 
@@ -166,8 +168,10 @@ Month 6  ████████ 多模态 VM 上线 ████████  
 **为什么同词表是最高优先级**：当前 VM（Qwen3-4B）和主 LLM（0GM-35B）使用不同 tokenizer（Qwen3 32K 词表 vs Qwen3.5 248K 词表）。这意味着 VM 看到的 prefix token ID 与主 LLM 生成的 token 不是一一对应的，评分信号存在系统性噪声。同词表训练一次性解决：
 
 - 跨分词器噪声消除 → 评分精度提升（P1）
-- CUDA graph 可能恢复 → per-call latency 30ms → ~17ms（P2）
+- stable prefix 替代方案可退役 → 消除跨分词器 CPU 编码开销（~2ms）和 BPE 边界 APC miss（~5ms），b2_score_call 从 ~30ms 降至 ~13ms（P2）
 - 每次调用读取的 HBM 数据量不变，但质量更好（P3 间接改善）
+
+> **注意（来自已有实验）**：RM CUDA graph（piecewise）在 0GM-35B 上已完整试验并彻底失败——三层修复后 piecewise 比 eager 慢 2-3×（115-140ms vs 30ms）。根本原因：RM 是 prefill-heavy workload（每步 topk=10 条完整序列），vllm PIECEWISE 只优化 decode 步骤（固定 batch=1），对 prefill 无效。同词表 VM 的 P2 改善**不依赖 CUDA graph**，而是靠消除跨分词器开销（实验 `alpaca-0gm35b-piecewise-fix3-20260610` 已确认 CUDA graph 死路，见 `doc/0gm-35b-sia-perf-breakdown-20260609.md` §7）。
 
 ### 任务 2.1：偏好数据收集
 
@@ -216,15 +220,19 @@ Month 6  ████████ 多模态 VM 上线 ████████  
 ### 任务 3.1：同词表 VM 训练与选型
 
 **Dense 4B**（默认选项）：与当前 VM 规模相当，同词表后消除噪声，可恢复 CUDA graph。  
-**MoE 选型评估**（如有合适的 pretrained MoE base）：MoE 在 memory-bandwidth-bound 场景下，每次 forward 只读激活参数（约 3B），理论上比同质量 dense 更快。以 30B-A3B 为例：
+**MoE 选型评估**（如有合适的 pretrained MoE base）：MoE 在 memory-bandwidth-bound 场景下，每次 forward 只读激活参数（约 3B），理论上比同质量 dense 更快。但**需注意 vllm 加载全量专家权重**（不只加载激活部分）。以 30B-A3B 为例：
 
 | 对比 | 当前 VM（Qwen3-4B dense）| MoE 30B-A3B |
 |------|--------------------------|-------------|
 | 每 GPU forward 读带宽 | ~0.5 GB | ~0.375 GB（激活参数 ÷TP=4）|
 | 模型能力 | 4B | 接近 30B 水平 |
-| VRAM 占用（TP=4）| ~2 GB/GPU | ~7.5 GB/GPU（需确认可放下）|
+| VRAM 占用（TP=4）| ~2 GB/GPU | **~15 GB/GPU**（30B × 2 bytes ÷ 4 GPUs，全量专家权重）|
 
-如果 VRAM 允许，MoE base 是更优选择：更快、更强，一举两得。否则使用 dense 4B。
+> **⚠️ VRAM 不可行**：当前 4×A100 80GB 配置下，主 LLM 占 75%（60 GB/GPU），4B VM 占 13%（10.4 GB/GPU），剩余约 10 GB/GPU。30B-A3B MoE VM 需要 **~15 GB/GPU** 仅用于权重（超出可用空间）。**30B-A3B MoE 在现有硬件上无法作为 VM**，除非降低主 LLM 的 gpu_mem_utilization（会缩短最大 context length 和并发数）。
+>
+> **可行的 MoE 选项**：若有 Qwen3.5 系列的小型 MoE（如 7B-A3B，VRAM ~3.5 GB/GPU），可以考虑。但目前无公开可用的 Qwen3.5-7B-A3B checkpoint 用于 VM 训练，此选项需等待合适基座模型发布。
+
+**默认选择 dense 4B**（Qwen3.5-4B）：与当前 VM 规模相当，同词表后消除噪声，VRAM 确认可放。
 
 ### 任务 3.2：同词表 VM 部署与验证
 
@@ -253,7 +261,7 @@ Month 6  ████████ 多模态 VM 上线 ████████  
 | 指标 | Month 3 目标 | Month 2 基线 |
 |------|-------------|------------|
 | conc=16 SIA tok/s | **≥ 750** | ≥ 550 |
-| b2_score_call p50 | **≤ 20ms**（同词表 + 可能恢复 CUDA graph）| ~30ms |
+| b2_score_call p50 | **≤ 15ms**（同词表消除跨分词器开销，非 CUDA graph）| ~30ms |
 | AlpacaEval win-rate vs noSIA | **可量化，有正提升** | 难以量化 |
 | 乘积式 vs 加法式融合对比 | **有结论：乘积式是否更优** | — |
 
