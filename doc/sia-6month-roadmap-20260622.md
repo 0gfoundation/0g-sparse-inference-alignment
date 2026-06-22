@@ -126,12 +126,14 @@ Month 6  ████████ 多模态 VM 上线 ████████  
 改为：主模型熵 > θ₁ **且** VM 上一步评分也显示高不确定性时才干预（双熵）。  
 减少低质量的无效干预，同时减少 VM 调用次数约 20-30%。
 
+- **理论依据**：EASD（arxiv 2512.23765）验证分层熵门控在 speculative decoding 中比单阈值减少约 25% 无效干预；TARo（arxiv 2603.18411）进一步表明基于当前步不确定性的自适应路由优于固定比例干预。
 - **工作量**：约 1 周（`apply()` 中增加一个状态缓存）
 
 ### 任务 1.3：建立评估基准
 
 选定 200 题 AlpacaEval 作为固定测试集，建立可复现的评估 pipeline。这是后续所有优化的衡量标准，不建基准则无法证明改进。
 
+- **评估框架**：AlpacaEval 2.0（arxiv 2404.04475）以 GPT-4 为 judge 计算 win-rate，200 题固定集保证跨实验可比性，相比人工评估成本降低约 100×。
 - **工作量**：约 1 周
 
 ### 任务 1.4：两阶段粗过滤 PoC——0.6B VM 作为 4B VM 的守门员（P2，1–2 周）
@@ -263,7 +265,7 @@ Month 6  ████████ 多模态 VM 上线 ████████  
 
 ### 任务 4.1：规模决策——ARM 4B 效果若不足，训练 ARM 8B
 
-**决策逻辑**（来自文献调研）：文献（GenARM，ICLR 2025）表明 VM 的关键在于**训练目标**而非模型规模——ARM（Autoregressive RM）4B 理论上优于 ORM 8B。Month 3 完成 ARM 4B 上线后，先用 AlpacaEval 验证效果。
+**决策逻辑**（来自文献调研）：文献（GenARM，ICLR 2025，arxiv 2410.08193）表明 VM 的关键在于**训练目标**而非模型规模——ARM（Autoregressive RM）4B 理论上优于 ORM 8B。Month 3 完成 ARM 4B 上线后，先用 AlpacaEval 验证效果。
 
 - 若 ARM 4B 的 win-rate 已达 ≥ +5%：**跳过 8B 训练**，把资源投入 Month 5 的 PRM 或多模态
 - 若 ARM 4B 效果仍不足：在 ARM 训练目标下扩大到 8B（此时 block-wise 已降低调用频率，8B 的更高 per-call latency 可承受）
@@ -313,6 +315,7 @@ Month 6  ████████ 多模态 VM 上线 ████████  
 **解法**：以多模态 VLM（如 Qwen3-VL-4B）为 base，训练 reward head，使 VM 能够同时理解图文 context。
 
 - **适用范围**：仅对 VLM 主推理 LLM 有意义（纯文字 0GM-35B 无需此功能）
+- **参考说明**：本任务由工程必要性驱动（SIA 局限性 L3：text-only VM 对图文输入盲猜），当前学术界尚无专门针对"VLM reward head for token-level alignment"的顶会工作；训练流程参考 SIA 原论文（arxiv 2602.21215）的 reward head 训练方案，数据构建参考 ArmoRM（arxiv 2406.12845）的多维偏好标注框架。
 - **工作量**：4 周（多模态偏好数据构建 + 训练），Month 5 启动，Month 6 交付
 
 ### Month 5 交付标准
@@ -334,7 +337,7 @@ Month 6  ████████ 多模态 VM 上线 ████████  
 
 方向：收集 SIA 系统中 VM 偏好的生成轨迹，用 DPO 蒸馏进 0GM-35B 主模型，让主模型内化对齐信号。
 
-**注意（来自文献调研）**：TITA（2025）展示了推理时 log-ratio 方法（DPO 等价形式）有效，但那是推理时校正，不是训练时蒸馏。训练时 DPO 蒸馏在本次调研中**没有直接顶会证据支撑**，效果不确定。
+**注意（来自文献调研）**：TITA（2025，arxiv 2510.21794）展示了推理时 log-ratio 方法（DPO 等价形式）有效，但那是推理时校正，不是训练时蒸馏。训练时 DPO 蒸馏在本次调研中**没有直接顶会证据支撑**，效果不确定。
 
 - **这是纯探索性方向**，不作为 Month 6 的主要交付
 - 如果 Month 2 的**极小 judge PoC** 结果积极，Month 6 的精力优先转向把极小 judge 打磨到可生产的质量
@@ -472,29 +475,32 @@ CMU 的 DSPA（arxiv 2603.21461，3-0 机制验证）用稀疏自编码器在 LL
 
 | 论文 | 对应任务 | 会议/状态 |
 |------|---------|---------|
-| SIA 原论文 (arxiv 2602.21215) | 整体框架基础 | 2026 preprint |
-| GenARM: Autoregressive Reward Model (arxiv 2410.08193) | 任务 2.2 ARM 训练目标 | **ICLR 2025** ✅ |
-| Judge Decoding (arxiv 2501.19309) | 任务 2.3 极小 judge PoC | **ICLR 2025** ✅ |
-| Let's Verify Step by Step / ORM vs PRM (arxiv 2305.20050) | 任务 5.1 PRM 适用范围 | **ICLR 2024** ✅ |
-| Scaling LLM Test-Time Compute (arxiv 2408.03314) | 整体方向验证 | NeurIPS 2024 Workshop ✅ |
-| RSD: Reward-guided Speculative Decoding (arxiv 2501.19324) | 任务 4.2 accept/reject 参考 | **ICML 2025** ✅ |
-| TITA: Token-level Inference-Time Alignment (arxiv 2510.21794) | 任务 6.2 DPO 蒸馏参考 | 2025 preprint |
-| Iterative Value Function Optimization (arxiv 2503.02368) | 任务 1.1 block-wise scoring | 2025 preprint |
-| EASD: Entropy-Aware Speculative Decoding (arxiv 2512.23765) | 任务 1.2 双熵门控 | 2025 preprint |
-| TARo: Token-level Adaptive Routing (arxiv 2603.18411) | 任务 1.2 自适应路由参考 | 2026 preprint |
-| LLMdoctor: Product-of-Distributions Fusion (arxiv 2601.10416) | 任务 3.3 乘积式融合 A/B | 2026 preprint |
-| GGRO: Gradient-Guided Reward Optimization (arxiv 2606.09635) | 发现四：稀疏干预范式验证 | **UAI 2026** ✅ |
-| DSPA: Decoding with Sparse Program Alignment (arxiv 2603.21461) | 发现四 / 附录 A1 | 2026 preprint（CMU）|
-| ArmoRM: Multi-Objective Reward Model (arxiv 2406.12845) | 附录 C1 多目标 VM | 2024 preprint |
+| SIA 原论文 ([arxiv 2602.21215](https://arxiv.org/abs/2602.21215)) | 整体框架基础 / 任务 5.2 | 2026 preprint |
+| AlpacaEval 2.0 ([arxiv 2404.04475](https://arxiv.org/abs/2404.04475)) | 任务 1.3 评估基准 | 2024 preprint |
+| GenARM: Autoregressive Reward Model ([arxiv 2410.08193](https://arxiv.org/abs/2410.08193)) | 任务 2.2 ARM 训练目标 / 任务 4.1 | **ICLR 2025** ✅ |
+| Judge Decoding ([arxiv 2501.19309](https://arxiv.org/abs/2501.19309)) | 任务 2.3 极小 judge PoC | **ICLR 2025** ✅ |
+| Let's Verify Step by Step / ORM vs PRM ([arxiv 2305.20050](https://arxiv.org/abs/2305.20050)) | 任务 5.1 PRM 适用范围 | **ICLR 2024** ✅ |
+| Scaling LLM Test-Time Compute ([arxiv 2408.03314](https://arxiv.org/abs/2408.03314)) | 整体方向验证 | NeurIPS 2024 Workshop ✅ |
+| RSD: Reward-guided Speculative Decoding ([arxiv 2501.19324](https://arxiv.org/abs/2501.19324)) | 任务 1.4 两阶段过滤 / 任务 4.2 | **ICML 2025** ✅ |
+| SSS: Stepwise Speculative Search ([arxiv 2508.15044](https://arxiv.org/abs/2508.15044)) | 任务 1.4 两阶段过滤依据 | **EMNLP 2025** ✅ |
+| GSI: Generative Speculative Inference ([arxiv 2506.04118](https://arxiv.org/abs/2506.04118)) | 任务 1.4 两阶段过滤依据 | **ICLR 2026** ✅ |
+| Iterative Value Function Optimization ([arxiv 2503.02368](https://arxiv.org/abs/2503.02368)) | 任务 1.1 block-wise scoring | 2025 preprint |
+| EASD: Entropy-Aware Speculative Decoding ([arxiv 2512.23765](https://arxiv.org/abs/2512.23765)) | 任务 1.2 双熵门控 | 2025 preprint |
+| TARo: Token-level Adaptive Routing ([arxiv 2603.18411](https://arxiv.org/abs/2603.18411)) | 任务 1.2 自适应路由参考 | 2026 preprint |
+| LLMdoctor: Product-of-Distributions Fusion ([arxiv 2601.10416](https://arxiv.org/abs/2601.10416)) | 任务 3.3 乘积式融合 A/B | 2026 preprint |
+| TITA: Token-level Inference-Time Alignment ([arxiv 2510.21794](https://arxiv.org/abs/2510.21794)) | 任务 6.2 DPO 蒸馏参考 | 2025 preprint |
+| GGRO: Gradient-Guided Reward Optimization ([arxiv 2606.09635](https://arxiv.org/abs/2606.09635)) | 发现四：稀疏干预范式验证 / 附录 A2 | **UAI 2026** ✅ |
+| DSPA: SAE-based Activation Steering ([arxiv 2603.21461](https://arxiv.org/abs/2603.21461)) | 发现四 / 附录 A1 | 2026 preprint（CMU）|
+| ArmoRM: Multi-Objective Reward Model ([arxiv 2406.12845](https://arxiv.org/abs/2406.12845)) | 任务 5.2 / 附录 C1 多目标 VM | 2024 preprint |
+| Token-level MDP Formalization ([arxiv 2602.02572](https://arxiv.org/abs/2602.02572)) | 附录 D2 学术发表基础 | **ICML 2026** ✅ |
+| Nudging: Uncertainty-gated Sparse Intervention ([arxiv 2410.09300](https://arxiv.org/abs/2410.09300)) | 任务 1.4 / 方向验证 | 2024 preprint |
+| BatchLLM: Explicit Global Prefix Sharing ([arxiv 2412.03594](https://arxiv.org/abs/2412.03594)) | 工程优化参考 | 2024 preprint |
+| HybridFlow: ResourcePool LLM+RM Co-deployment ([arxiv 2409.19256](https://arxiv.org/abs/2409.19256)) | 附录 B4 独立 GPU VM | **EuroSys 2025** ✅ |
+| NEO: Asymmetric CPU-GPU Pipeline ([arxiv 2411.01142](https://arxiv.org/abs/2411.01142)) | 工程优化参考 | 2024 preprint |
+| STEP: Memory-triggered Search Tree Pruning ([arxiv 2601.09093](https://arxiv.org/abs/2601.09093)) | 工程优化参考（压力感知降级）| 2026 preprint |
+| RM Knowledge Distillation ([arxiv 2411.08302](https://arxiv.org/abs/2411.08302)) | 附录 B1 VM 蒸馏依据 | 2024 preprint |
+| RM Distillation: Reward Model Compression ([arxiv 2405.19316](https://arxiv.org/abs/2405.19316)) | 附录 B1 VM 蒸馏依据 | 2024 preprint |
 | RM Ensemble / NeurIPS 2024 consensus | 附录 B3 reward hacking 防护 | NeurIPS 2024 ✅ |
-| Token-level MDP Formalization (arxiv 2602.02572) | 附录 D2 学术发表基础 | **ICML 2026** ✅ |
-| Nudging: Uncertainty-gated Sparse Intervention (arxiv 2410.09300) | 任务 1.4 / 方向验证 | 2024 preprint |
-| BatchLLM: Explicit Global Prefix Sharing (arxiv 2412.03594) | 工程优化参考 | 2024 preprint |
-| HybridFlow: ResourcePool LLM+RM Co-deployment (arxiv 2409.19256) | 附录 B4 独立 GPU VM | **EuroSys 2025** ✅ |
-| NEO: Asymmetric CPU-GPU Pipeline (arxiv 2411.01142) | 工程优化参考 | 2024 preprint |
-| SSS: Stepwise Speculative Search (arxiv 2508.15044) | 任务 1.4 两阶段过滤依据 | **EMNLP 2025** ✅ |
-| GSI: Generative Speculative Inference (arxiv 2506.04118) | 任务 1.4 / 性能数字参考 | **ICLR 2026** ✅ |
-| STEP: Memory-triggered Search Tree Pruning (arxiv 2601.09093) | 工程优化参考（压力感知降级）| 2026 preprint |
 
 ---
 
@@ -523,7 +529,7 @@ CMU 的 DSPA（arxiv 2603.21461，3-0 机制验证）用稀疏自编码器在 LL
 
 **B1. VM 蒸馏：4B → 1.7B（NeurIPS 2024 研究背景）**
 
-Month 3 的同词表 4B ARM VM 验证效果后，用 4B 作教师蒸馏出 1.7B 学生 VM。文献（2411.08302、2405.19316）表明大 RM 蒸馏小 RM 可保留约 80–90% 偏好判断能力，latency 降低约 2×，VRAM 占用减半。  
+Month 3 的同词表 4B ARM VM 验证效果后，用 4B 作教师蒸馏出 1.7B 学生 VM。文献（[arxiv 2411.08302](https://arxiv.org/abs/2411.08302)、[arxiv 2405.19316](https://arxiv.org/abs/2405.19316)）表明大 RM 蒸馏小 RM 可保留约 80–90% 偏好判断能力，latency 降低约 2×，VRAM 占用减半。  
 **建议时机**：2027 Q1，前提是 Month 3 的 4B ARM VM 效果经评估已达标。
 
 **B2. VM 内部注意力头裁剪（EntropyInfer 思路，arxiv 2606.09508）**
