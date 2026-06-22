@@ -11,9 +11,16 @@ P2 PoC: transformers + DynamicCache 替代 nested vllm.LLM() 的 VM scoring 路�
     transformers Qwen3ForSequenceClassification + DynamicCache
     直接调用 model.forward()，完全绕过 vllm scheduler
 
-预期延迟（prefix 已缓存）：
-    prefix KV 缓存命中 → 每次只算 K 个 1-token forward
-    K=10 × 1-token forward ≈ 1-3ms GPU + <1ms Python = ~2-4ms
+已修复的 Bug（v2）：
+    Bug 1: score_candidates_with_kv 做 K 次顺序 forward（K×4ms≈40ms）→
+           score_candidates_batch 一次 [K,1] batched forward（~4ms）
+    Bug 2: DynamicCache 被顺序 forward 污染（_seen_tokens 漂移）→
+           每次展开临时 expanded_kv，prefix_kv 始终不变
+
+预期延迟（prefix 已缓存，bugs 修复后）：
+    prefix KV 缓存命中 → 一次 [K, 1] batched forward
+    K=10 并行 → ~4ms GPU + <1ms Python = ~4-5ms / session
+    3.2 sessions × ~5ms = ~16ms（vs b2 inproc ~28.5ms）
 
 为什么 vllm 0.18.0 不会有 CUDA graph 冲突：
     vllm 0.18.0 使用 AOT piecewise graphs（启动时一次性捕获，推理时只 replay）。
@@ -76,6 +83,25 @@ def _ids_tensor(ids, device):
     return torch.tensor(ids, dtype=torch.long, device=device)
 
 
+def _expand_kv_for_batch(prefix_kv, K):
+    """
+    batch=1 的 DynamicCache 扩展为 batch=K（expand+contiguous）。
+
+    用于 score_candidates_batch：创建临时的 expanded_kv，
+    原 prefix_kv 不会被 model.forward() 修改。
+    """
+    from transformers import DynamicCache
+    expanded = DynamicCache()
+    for layer_idx in range(len(prefix_kv)):
+        k = prefix_kv.key_cache[layer_idx].expand(K, -1, -1, -1).contiguous()
+        v = prefix_kv.value_cache[layer_idx].expand(K, -1, -1, -1).contiguous()
+        expanded.key_cache.append(k)
+        expanded.value_cache.append(v)
+    if hasattr(prefix_kv, "_seen_tokens"):
+        expanded._seen_tokens = prefix_kv._seen_tokens
+    return expanded
+
+
 # ---------------------------------------------------------------------------
 # 模型加载
 # ---------------------------------------------------------------------------
@@ -114,12 +140,33 @@ def compute_prefix_kv(model, prefix_ids_tensor):
     return out.past_key_values
 
 
-def score_candidates_with_kv(model, prefix_kv, candidate_ids, device):
+def score_candidates_batch(model, prefix_kv, candidate_ids, device):
     """
-    用缓存的 prefix KV 对 K 个候选 token 评分。
-    每个候选做 1-token forward，共 K 次（sequential）。
+    K 个候选 token 一次 batched forward（Bug 1 + Bug 2 修复版）。
 
-    past_key_values 被当作只读来源，use_cache=False 确保不追加新 token。
+    原 score_candidates_with_kv 做 K 次顺序 forward（K×4ms≈40ms）。
+    本函数把 prefix_kv 扩展到 batch=K，一次 forward 得到所有 K 个分数（~4ms）。
+
+    DynamicCache 不污染：expanded_kv 为临时对象，prefix_kv 始终不变。
+    """
+    K = len(candidate_ids)
+    cand_input = torch.tensor(
+        [[c] for c in candidate_ids], dtype=torch.long, device=device
+    )  # [K, 1]
+    expanded_kv = _expand_kv_for_batch(prefix_kv, K)
+    with torch.inference_mode():
+        out = model(
+            input_ids=cand_input,
+            past_key_values=expanded_kv,
+            use_cache=False,
+        )
+    return out.logits.squeeze(-1).cpu().tolist()  # [K]
+
+
+def _score_candidates_sequential(model, prefix_kv, candidate_ids, device):
+    """
+    原始顺序评分（仅用于 test_smoke 交叉验证，不用于 benchmark）。
+    Bug: K 次顺序 forward + DynamicCache 污染。
     """
     scores = []
     with torch.inference_mode():
@@ -134,25 +181,10 @@ def score_candidates_with_kv(model, prefix_kv, candidate_ids, device):
     return scores
 
 
-def score_candidates_naive(model, prefix_ids_tensor, candidate_ids, device):
-    """
-    对照组：全量 forward（每次重新计算整个 prefix + candidate）。
-    """
-    scores = []
-    prefix = prefix_ids_tensor.to(device)
-    with torch.inference_mode():
-        for cand_id in candidate_ids:
-            full_ids = torch.cat(
-                [prefix, torch.tensor([cand_id], device=device)]
-            ).unsqueeze(0)
-            out = model(input_ids=full_ids)
-            scores.append(out.logits.item())
-    return scores
-
-
 def score_candidates_naive_batch(model, prefix_ids_tensor, candidate_ids, device):
     """
     批量全量 forward（所有 [prefix + cand_i] 一次 batched forward）。
+    不用 KV cache，适合短 prefix 或 n_sess 较多的场景。
     """
     prefix = prefix_ids_tensor.to(device)
     K = len(candidate_ids)
@@ -172,32 +204,42 @@ def score_candidates_naive_batch(model, prefix_ids_tensor, candidate_ids, device
 def test_smoke(model, device):
     print("\n[1] 冒烟测试")
 
-    # 两个 prompt 只有最后 1 个 token 不同 → 分数应不同
     prefix = _ids_tensor(_rand_ids(20, seed=0), device)
-    cands_a = [500, 501]  # 相邻 token ID
+    cands_a = [500, 501]
 
     kv = compute_prefix_kv(model, prefix)
-    scores = score_candidates_with_kv(model, kv, cands_a, device)
-    print(f"  候选 {cands_a}: scores = {[f'{s:.4f}' for s in scores]}")
 
-    # 完全不同前缀 → 分数应不同
+    # 批量评分（新实现）
+    scores_batch = score_candidates_batch(model, kv, cands_a, device)
+    print(f"  batch 候选 {cands_a}: scores = {[f'{s:.4f}' for s in scores_batch]}")
+
+    # 交叉验证：batch vs sequential（应基本一致，允许 bfloat16 误差）
+    scores_seq = _score_candidates_sequential(model, kv, cands_a, device)
+    diffs = [abs(b - s) for b, s in zip(scores_batch, scores_seq)]
+    if max(diffs) < 5e-2:
+        print(f"  ✅ batch vs sequential 一致（max_diff={max(diffs):.2e}）")
+    else:
+        print(f"  ⚠️  batch vs sequential 差异: {diffs}")
+
+    # 确定性检查（两次 batch 调用，prefix_kv 不变）
+    s1 = score_candidates_batch(model, kv, [500], device)[0]
+    s2 = score_candidates_batch(model, kv, [500], device)[0]
+    diff = abs(s1 - s2)
+    if diff < 1e-5:
+        print(f"  ✅ 确定性 OK（同 prompt 两次 batch 差值 {diff:.2e}）")
+    else:
+        print(f"  ⚠️  非确定性: 差值 {diff:.6f}（DynamicCache 污染未修复？）")
+
+    # 不同前缀 → 分数应不同
     prefix2 = _ids_tensor(_rand_ids(20, seed=999), device)
     kv2 = compute_prefix_kv(model, prefix2)
-    s1 = score_candidates_with_kv(model, kv, [500], device)[0]
-    s2 = score_candidates_with_kv(model, kv2, [500], device)[0]
-    print(f"  同候选 500，不同前缀: {s1:.4f} vs {s2:.4f}")
-
-    # 确定性检查
-    s1b = score_candidates_with_kv(model, kv, [500], device)[0]
-    diff = abs(s1 - s1b)
-    if diff < 1e-5:
-        print(f"  ✅ 确定性 OK（同 prompt 差值 {diff:.2e}）")
-    else:
-        print(f"  ⚠️  非确定性: 差值 {diff:.6f}")
+    sa = score_candidates_batch(model, kv, [500], device)[0]
+    sb = score_candidates_batch(model, kv2, [500], device)[0]
+    print(f"  同候选 500，不同前缀: {sa:.4f} vs {sb:.4f}")
 
     # score head 区分度
-    if abs(scores[0] - scores[1]) > 1e-4:
-        print(f"  ✅ score head 有区分度（diff={abs(scores[0]-scores[1]):.4f}）")
+    if abs(scores_batch[0] - scores_batch[1]) > 1e-4:
+        print(f"  ✅ score head 有区分度（diff={abs(scores_batch[0]-scores_batch[1]):.4f}）")
     else:
         print(f"  ⚠️  两个候选分数完全相同，score head 可能未生效")
 
@@ -219,16 +261,16 @@ def test_prefix_cache(model, prefix_len, topk, device):
         prefix = _ids_tensor(_rand_ids(prefix_len, seed=i * 7777), device)
         t0 = time.perf_counter()
         kv = compute_prefix_kv(model, prefix)
-        score_candidates_with_kv(model, kv, cands, device)
+        score_candidates_batch(model, kv, cands, device)
         cold_times.append((time.perf_counter() - t0) * 1000)
 
     # Warm: 同一前缀（prefix KV 复用，不重新计算）
     prefix_warm = _ids_tensor(_rand_ids(prefix_len, seed=8888), device)
-    kv_warm = compute_prefix_kv(model, prefix_warm)  # 提前计算好
+    kv_warm = compute_prefix_kv(model, prefix_warm)
     warm_times = []
     for _ in range(15):
         t0 = time.perf_counter()
-        score_candidates_with_kv(model, kv_warm, cands, device)
+        score_candidates_batch(model, kv_warm, cands, device)
         warm_times.append((time.perf_counter() - t0) * 1000)
 
     cold_p50 = float(np.percentile(cold_times, 50))
@@ -280,17 +322,17 @@ def benchmark_latency(model, prefix_len, topk, n_warmup, n_trials, device):
         # 预热
         for _ in range(n_warmup):
             for s in range(n_sess):
-                score_candidates_with_kv(model, prefix_kvs[s], cands_per_sess[s], device)
+                score_candidates_batch(model, prefix_kvs[s], cands_per_sess[s], device)
 
         # 计时
+        torch.cuda.synchronize(device)
         times = []
         for _ in range(n_trials):
             t0 = time.perf_counter()
             for s in range(n_sess):
-                score_candidates_with_kv(model, prefix_kvs[s], cands_per_sess[s], device)
+                score_candidates_batch(model, prefix_kvs[s], cands_per_sess[s], device)
+            torch.cuda.synchronize(device)
             times.append((time.perf_counter() - t0) * 1000)
-
-        torch.cuda.synchronize()
 
         p50 = float(np.percentile(times, 50))
         p90 = float(np.percentile(times, 90))
@@ -313,12 +355,13 @@ def test_incremental_prefix(model, prefix_len, topk, n_steps, device):
     每步生成 1 个 token → prefix 增长 1 → 重新对 K 个候选评分。
 
     使用 DynamicCache 增量追加（无需重新计算整个 prefix）。
+    评分步骤用 _expand_kv_for_batch 隔离，避免 DynamicCache 污染。
     """
     from transformers import DynamicCache
 
     print(f"\n[4] 增量前缀更新模拟（{n_steps} 步, topk={topk}）")
 
-    # 初始前缀
+    K = topk
     initial_prefix = _ids_tensor(_rand_ids(prefix_len, seed=1234), device)
 
     # 构建初始 DynamicCache
@@ -336,7 +379,7 @@ def test_incremental_prefix(model, prefix_len, topk, n_steps, device):
 
     for step in range(n_steps):
         new_token_id = random.randint(1, vocab_size - 1)
-        cands = _rand_ids(topk, seed=step * 333)
+        cands = _rand_ids(K, seed=step * 333)
 
         t0 = time.perf_counter()
 
@@ -349,21 +392,24 @@ def test_incremental_prefix(model, prefix_len, topk, n_steps, device):
                 return_dict=True,
             )
 
-        # 2. 对 K 个候选评分（只算 1 token each，KV 来自 cache）
+        # 2. 对 K 个候选评分（批量 forward，不污染 cache）
+        expanded_kv = _expand_kv_for_batch(cache, K)
+        cand_input = torch.tensor(
+            [[c] for c in cands], dtype=torch.long, device=device
+        )
         with torch.inference_mode():
-            for cand_id in cands:
-                cand = torch.tensor([[cand_id]], device=device)
-                model(
-                    input_ids=cand,
-                    past_key_values=cache,
-                    use_cache=False,
-                )
+            model(
+                input_ids=cand_input,
+                past_key_values=expanded_kv,
+                use_cache=False,
+            )
 
+        torch.cuda.synchronize(device)
         step_times.append((time.perf_counter() - t0) * 1000)
 
     p50 = float(np.percentile(step_times, 50))
     p90 = float(np.percentile(step_times, 90))
-    print(f"  每步（prefix+1 + K 候选评分）p50={p50:.1f}ms  p90={p90:.1f}ms")
+    print(f"  每步（prefix+1 + K 候选批量评分）p50={p50:.1f}ms  p90={p90:.1f}ms")
     print(f"  vs b2 inproc (~9ms @ n_sess=1): {p50/9:.2f}×")
     print(f"  cache 长度增长: {prefix_len} → {prefix_len + n_steps} tokens")
 
@@ -376,7 +422,7 @@ def main():
     args = parse_args()
 
     print("=" * 65)
-    print("P2 PoC: transformers + DynamicCache VM scoring")
+    print("P2 PoC: transformers + DynamicCache VM scoring (v2 batched)")
     print("=" * 65)
     print(f"  vm_model:   {args.vm_model}")
     print(f"  device:     {args.device}")
@@ -414,12 +460,13 @@ def main():
         )
 
     print(f"\n{'='*65}")
-    print("结论参考")
+    print("结论参考（修复 batch forward 后）")
     print(f"{'='*65}")
-    print(f"  当前 b2 inproc (n_sess=3.2, K=10): ~18ms")
-    print(f"  transformers warm scoring (预期):   ~2-5ms")
+    print(f"  当前 b2 inproc (n_sess=3.2, K=10): ~28.5ms")
+    print(f"  transformers batch warm p50 (n_sess=1): {warm_p50:.1f}ms")
+    print(f"  预期 n_sess=3.2: {warm_p50*3.2:.1f}ms")
     print()
-    print("  p50 < 5ms  → 强烈推荐迁移（3-5× 提升）")
+    print("  p50 < 5ms  → 强烈推荐迁移（>3× 提升）")
     print("  p50 < 10ms → 有改善，可以迁移（~2× 提升）")
     print("  p50 > 20ms → transformers 路径无优势，维持现状")
 
