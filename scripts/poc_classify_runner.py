@@ -113,7 +113,11 @@ def _extract_scores(outputs):
 # ---------------------------------------------------------------------------
 
 def load_classify_llm(vm_model, gpu_mem, max_model_len, enforce_eager=True):
-    """以 task='token_classify' 加载 VM（inproc 模式）。"""
+    """以 runner='pooling' + convert='classify' 加载 VM（inproc 模式）。
+
+    vllm 0.18.0 用 runner/convert 而非 task 参数（task= 是更新版本加的）。
+    对应 CLI: vllm serve ... --runner pooling --convert classify
+    """
     # inproc 模式：关闭多进程，所有计算在当前进程内
     os.environ["VLLM_ENABLE_V1_MULTIPROCESSING"] = "0"
 
@@ -121,7 +125,8 @@ def load_classify_llm(vm_model, gpu_mem, max_model_len, enforce_eager=True):
 
     kwargs = dict(
         model=vm_model,
-        task="token_classify",
+        runner="pooling",
+        convert="classify",
         dtype="bfloat16",
         enable_prefix_caching=True,
         gpu_memory_utilization=gpu_mem,
@@ -384,8 +389,9 @@ def main():
     except Exception as e:
         print(f"❌ 加载失败: {e}")
         print("  可能原因：")
-        print("  - vllm 版本不支持 task='token_classify'（需 0.17+）")
+        print("  - vllm 0.18.0 需要 runner='pooling' + convert='classify'（已修正）")
         print("  - 模型不是 Qwen3ForSequenceClassification 格式")
+        print("  - 显存不足（先确认 nvidia-smi 显存已释放）")
         sys.exit(1)
 
     print(f"✅ 加载成功 ({time.perf_counter()-t_load:.1f}s)")
