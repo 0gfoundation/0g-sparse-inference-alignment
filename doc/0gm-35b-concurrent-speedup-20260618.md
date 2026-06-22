@@ -286,22 +286,36 @@ def _get_stable_rm_prefix(self, sid, prefix):
 | Bug 2：DynamicCache 隔离 | 新增 `_expand_kv_for_batch()`：每次创建临时 `expanded_kv`，原 `prefix_kv` 永远不传入 `model.forward()` |
 | Bug 3：API 兼容 | `_expand_kv_for_batch` 读端：优先 `to_legacy_cache()` → 降级 `key_cache` → 降级 `__getitem__`；写端：优先 `update()` → 降级 `key_cache.append()` |
 
-#### 修复后预期延迟
+#### 实测结果（2026-06-22，bug 修复后）
 
 ```
-n_sess=1：1 次 batched forward → ~4.5ms（vs 44ms 修复前，vs b2 inproc ~9ms）
-n_sess=3.2（conc=16 期望值）：3.2 × 4.5ms ≈ 14ms（vs b2 inproc ~28.5ms）
+cold (prefix 未缓存): p50 = 89.5ms
+warm (prefix 已缓存): p50 = 46.5ms
+KV cache speedup:   1.9×  （预期 5-10×）
+
+n_sess=1,  batch=10:   46.8ms  → vs b2_inproc(~9ms)  = 5.2× 更慢
+n_sess=3,  batch=30:  140.5ms  → vs b2_inproc(~18ms) = 7.8× 更慢
+n_sess=3.2（conc=16期望值）: ~149ms vs b2_inproc ~28.5ms
 ```
 
-| 场景 | 当前（b2 inproc）| 预期（transformers 修复后）| 改善 |
-|------|:---:|:---:|:---:|
-| VM call latency (n_sess=3.2) | ~28.5ms | ~14ms | ~2× |
-| ITL conc=16 | 41.3ms | ~27ms | -35% |
-| tok/s conc=16 | 370 | ~550 | +48% |
+**冒烟测试通过**：确定性、batch vs sequential 一致、score head 有区分度，正确性 OK。
 
-> **为何不是 6× 加速**（去掉 93% vllm overhead）：vllm b2 inproc 用 TP=4（4卡并行），每张 A100 只读 2GB 权重（~1ms）；transformers 只用单卡，读全部 8GB（~4ms）。节省了 vllm overhead（26.7ms）但增加了额外 GPU 时间（~12ms）。净改善：28.5ms → ~14ms ≈ 2×，而不是理论最大 16×。
+**性能结论：❌ transformers 路径不可行（比 b2 inproc 慢 5-8×）**
 
-**当前状态**：三处 bug 全部修复，等待在无 SIA server 干扰的环境下运行 benchmark 验证实际延迟。
+根因一：**KV cache 未正确生效**
+
+warm vs cold 只差 1.9×（43ms），预期应差 5-10×。cold - warm = 43ms ≈ 480 token prefill 时间，说明 warm path 仍在做接近完整序列的计算（~46ms）。最可能的原因是 `AutoModelForSequenceClassification.forward()` 没有将 `past_key_values` 正确透传给各层 attention，导致每次 score 调用实质上是 full recompute。
+
+根因二：**单 GPU 的固有劣势**
+
+即使 KV cache 修复，transformers 单 GPU（cuda:0）需要读取全部 8GB 权重 → ~4ms。而 b2 inproc VM 使用 TP=4（4 张 A100 并行），每张 GPU 只读 2GB → 等效 1ms 权重读取。我们分析中认为 b2 inproc 的 "vllm overhead ~26.7ms" 是纯浪费，实际上这段时间包含了 TP=4 并行执行有效计算。
+
+| 路径 | VM TP | 每步权重读 | KV cache | 单 session | 3.2 sessions |
+|------|:---:|:---:|:---:|:---:|:---:|
+| b2 inproc | 4 GPU | 2GB × 4 = 8GB 并行 | ✅ | ~9ms | **~28.5ms** |
+| transformers | 1 GPU | 8GB | ❌（未正确生效）| ~46ms | ~149ms |
+
+**结论**：transformers 路径放弃。b2 inproc 继续作为 VM backend。进一步提升需走§四中的其他路径（训练同词表 VM 或 Dual CUDA Stream）。
 
 ---
 
