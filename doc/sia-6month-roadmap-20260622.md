@@ -88,18 +88,35 @@ Month 6  ████████ 多模态 VM 上线 ████████  
 - **工作量**：约 1-2 周
 - **风险**：数据量不足时用 synthetic 补充
 
-### 任务 2.2：VM-Qwen3.5-4B reward head 训练
+### 任务 2.2：VM-Qwen3.5-4B 训练——使用 ARM 训练目标
 
-以 Qwen3.5-4B（248K 词表，与 0GM-35B 相同）为 base，训练 reward head。同步评估是否有合适的小 MoE base 可选（若 VRAM 允许，MoE 在 memory-bandwidth-bound 场景下 per-call 读带宽更低，同等质量更快）。
+以 Qwen3.5-4B（248K 词表，与 0GM-35B 相同）为 base 训练 reward head。
+
+**关键：训练目标选 ARM（Autoregressive Reward Model），而非传统 ORM（Outcome Reward Model）。**  
+理由来自 GenARM（ICLR 2025，arxiv 2410.08193）：ARM 参数化**在理论上可将 frozen LLM 引导至 KL 正则 RL 框架内任意传统 RM 可实现的分布**，而 ORM 只对最终输出打分，逐 token 干预时信号粗糙、位置错位。同等 4B 规模下，ARM 目标比 ORM 目标理论信号质量更高，先验证这一点，再决定是否需要扩大模型规模。
+
+同步评估是否有合适的小 MoE base 可选（VRAM 允许时 MoE per-call 读带宽更低）。
 
 - **工作量**：约 2-3 周（训练 + 初步 offline 验证）
+
+### 任务 2.3：极小 judge PoC（与 2.2 并行，1-2 周）
+
+**来源**：Judge Decoding（ICLR 2025，arxiv 2501.19309）用 16.4k 参数线性层替换 speculative decoding 的接受准则，500 条偏好对、1.5 小时训练，实现 3.9–9.7× 加速。
+
+**SIA 类比**：在主 LLM（0GM-35B）的 LogitsProcessor 内部，基于 top-K logit 分布训练一个**极小线性评分头**（<10M 参数），替代外部 4B VM。如果可行，per-call latency 从 ~30ms 降至 <0.1ms，P2/P3 根本解决。
+
+- **工作量**：约 1 周代码 + 1 周效果对比
+- **风险**：精度可能不足以指导 token 选择（VM 信号比 speculative decoding 的接受/拒绝更细）
+- **成功标准**：极小 judge vs 4B VM 的 AlpacaEval win-rate 差距 ≤ 3%
+- **失败处理**：如精度不足，实验结论也有价值（证明该方向的边界）
 
 ### Month 2 交付标准
 
 | 指标 | Month 2 目标 | Month 1 基线 |
 |------|-------------|------------|
-| 同词表 VM 训练 | **训练完成，offline 验证通过** | — |
+| 同词表 ARM VM 训练 | **训练完成，offline 验证通过** | — |
 | MoE 选型结论 | **dense 4B 或 MoE 选型确定** | — |
+| 极小 judge PoC | **完成实验，有效果对比数据** | — |
 | conc=16 SIA tok/s | **维持 ≥ 550**（本月无新工程优化）| ≥ 550 |
 
 ---
@@ -135,32 +152,36 @@ Month 6  ████████ 多模态 VM 上线 ████████  
 
 ---
 
-## Month 4（2026-10）：更强 VM + 干预策略升级
+## Month 4（2026-10）：VM 能力升级 + 干预策略实验
 
-**主线任务**：利用 Month 1 建立的 block-wise 调用频率降低（4× 少调用），换入更强的 8B VM；同时实验 accept/reject 干预模式。
+**主线任务**：基于 Month 3 的 ARM 4B 验证结论，决定是否扩大模型规模；同步实验 accept/reject 干预模式（作为探索性实验，不作强承诺）。
 
-### 任务 4.1：训练同词表 VM-8B
+### 任务 4.1：规模决策——ARM 4B 效果若不足，训练 ARM 8B
 
-**为什么 Month 4 才做**：8B VM 的 per-call latency 约是 4B 的 2×（~40ms）。在没有 block-wise scoring 的情况下，直接换 8B 会让 conc=16 ITL 倍增。有了 block-wise(4)，VM 调用频率已降至 ~5%，8B 的单次延迟更高，但调用次数少，整体开销仍在可控范围内。
+**决策逻辑**（来自文献调研）：文献（GenARM，ICLR 2025）表明 VM 的关键在于**训练目标**而非模型规模——ARM（Autoregressive RM）4B 理论上优于 ORM 8B。Month 3 完成 ARM 4B 上线后，先用 AlpacaEval 验证效果。
 
-- **预期效果**：干预效果提升，AlpacaEval win-rate +3-5%（模型更强，信号更可靠）
-- **工作量**：2-3 周训练（与 4B 同框架，仅换 base model）
+- 若 ARM 4B 的 win-rate 已达 ≥ +5%：**跳过 8B 训练**，把资源投入 Month 5 的 PRM 或多模态
+- 若 ARM 4B 效果仍不足：在 ARM 训练目标下扩大到 8B（此时 block-wise 已降低调用频率，8B 的更高 per-call latency 可承受）
 
-### 任务 4.2：accept/reject 干预模式实验
+- **工作量**：2-3 周（视 Month 3 结果决定是否执行）
+
+### 任务 4.2：accept/reject 干预模式实验（探索性）
 
 当前模式：VM 分数加到 logit 上（logit biasing）。  
-新模式：VM 分高 → 接受 top-1 token；VM 分低 → 强制从 top-K 重采样。  
-参考 RSD（arxiv 2501.19324，ICML 2025）的思路，reject 模式可能在效果上比 logit biasing 更强（有明确的接受/拒绝语义，而非模糊的权重叠加）。
+新模式：VM 分高 → 接受 top-1；VM 分低 → 强制从 top-K 重采样。
 
-- **工作量**：1-2 周实验（A/B 对比两种模式的 win-rate）
+**注意**：RSD（ICML 2025，arxiv 2501.19324）的 accept/reject 工作在**推理步骤/序列级别**，而非 token 级别，且使用的是两个独立大小模型的架构，与 SIA 的单模型 + 外挂 VM 不同。**token 级 accept/reject 在顶会文献中缺乏直接验证**，本任务作为探索性实验，结果不确定，需 A/B 实测。
+
+- **工作量**：1-2 周实验
+- **成功标准**：accept/reject 模式的 AlpacaEval win-rate 高于 logit biasing 模式
 
 ### Month 4 交付标准
 
 | 指标 | Month 4 目标 | Month 3 基线 |
 |------|-------------|------------|
-| AlpacaEval win-rate vs noSIA | **≥ +5%** | 有正提升 |
-| 最优干预模式确定 | **logit bias vs accept/reject 选型完成** | — |
-| conc=16 SIA tok/s | **维持 ≥ 750**（换 8B VM 后调用频率仍低）| ≥ 800 |
+| AlpacaEval win-rate vs noSIA | **≥ +5%（ARM 4B 或 ARM 8B）** | 有正提升 |
+| 干预模式对比 | **logit bias vs accept/reject 有实测数据** | — |
+| conc=16 SIA tok/s | **维持 ≥ 750** | ≥ 750 |
 
 ---
 
@@ -168,13 +189,14 @@ Month 6  ████████ 多模态 VM 上线 ████████  
 
 **两条并行主线**，面向不同场景。
 
-### 任务 5.1：Process Reward Model（PRM）训练
+### 任务 5.1：Process Reward Model（PRM）训练——聚焦推理/数学/代码任务
 
-当前 VM 是 token 级 outcome reward model，信号粒度极细（每个 token 打一分），噪声大。  
-PRM 改为**推理步骤级**打分（每句话/短语结束时评估），调用频率从 O(token) 降至 O(step)，同时信号质量更高（一整句话的质量比一个 token 更可判断）。
+当前 VM 是 token 级 outcome reward model，信号粒度极细，噪声大。PRM 改为**推理步骤级**打分（在自然推理分隔点评估），调用频率从 O(token) 降至 O(step)，信号质量更高。
 
-- **数据需求**：需要构建 step-level preference 标注数据集（每步给出好/坏标签）
-- **预期效果**：VM 调用次数再降 3-5×，对推理类任务（数学、代码）AlpacaEval 进一步提升
+**适用范围说明**（基于文献）：ICLR 2024 对 ORM vs PRM 的系统对比（Lightman et al.，arxiv 2305.20050）实验全部在 MATH 数学数据集上进行。PRM 优于 ORM 的结论在**推理/数学/代码**类任务上有顶会支撑，在通用问答/对话类任务上缺乏直接验证。**本任务优先针对推理类任务，不宜对通用指令跟随场景过度承诺。**
+
+- **数据需求**：构建 step-level preference 数据集（数学/推理类，每步打好/坏标签）
+- **预期效果**：推理类任务 VM 调用次数降低 3-5×，推理类 benchmark 效果进一步提升
 - **工作量**：4 周（数据准备 2 周 + 训练 + 验证 2 周）
 
 ### 任务 5.2：多模态 VM 训练启动（针对 Qwen3-VL-30B 场景）
@@ -201,12 +223,17 @@ PRM 改为**推理步骤级**打分（每句话/短语结束时评估），调�
 
 部署多模态 VM，Qwen3-VL-30B 场景下 SIA 对图文输入的干预质量从"盲猜"升级为"真正理解图片"。
 
-### 任务 6.2：DPO 蒸馏实验（长期根本解的探路）
+### 任务 6.2：DPO 蒸馏实验（纯探索性，低优先级）
 
-收集 SIA 系统中 VM 偏好的生成轨迹，用 DPO 将这些偏好直接蒸馏进 0GM-35B 主模型。  
-目标：让主模型逐步内化对齐信号，未来可以在不启用 VM 的情况下达到类似效果。
+方向：收集 SIA 系统中 VM 偏好的生成轨迹，用 DPO 蒸馏进 0GM-35B 主模型，让主模型内化对齐信号。
 
-- **这是 6 个月内的探路实验**，不作为承诺交付，视月初进展决定资源投入。
+**注意（来自文献调研）**：TITA（2025）展示了推理时 log-ratio 方法（DPO 等价形式）有效，但那是推理时校正，不是训练时蒸馏。训练时 DPO 蒸馏在本次调研中**没有直接顶会证据支撑**，效果不确定。
+
+- **这是纯探索性方向**，不作为 Month 6 的主要交付
+- 如果 Month 2 的**极小 judge PoC** 结果积极，Month 6 的精力优先转向把极小 judge 打磨到可生产的质量
+- 如果极小 judge 结果为负，再转向 DPO 蒸馏方向
+
+**Month 6 实际优先级**：多模态 VM 上线（主线）> 极小 judge 生产化（视 Month 2 结果）> DPO 蒸馏探路
 
 ### Month 6 交付标准
 
@@ -318,10 +345,15 @@ ICLR 2025 发表的 Judge Decoding（arxiv 2501.19309）提出了一个反直觉
 
 ## 参考文献
 
-| 论文 | 对应任务 |
-|------|---------|
-| RSD: Reward-guided Speculative Decoding (arxiv 2501.19324, ICML 2025) | 任务 4.2 accept/reject 模式，任务 5.1 PRM |
-| Iterative Value Function Optimization (arxiv 2503.02368) | 任务 1.1 block-wise scoring |
-| EASD: Entropy-Aware Speculative Decoding (arxiv 2512.23765) | 任务 1.2 双熵门控 |
-| AdaSearch (arxiv 2510.23334, preprint) | 任务 4.2 自适应干预预算 |
-| SIA 原论文 (arxiv 2602.21215) | 整体框架基础 |
+| 论文 | 对应任务 | 会议/状态 |
+|------|---------|---------|
+| SIA 原论文 (arxiv 2602.21215) | 整体框架基础 | 2026 preprint |
+| GenARM: Autoregressive Reward Model (arxiv 2410.08193) | 任务 2.2 ARM 训练目标 | **ICLR 2025** ✅ |
+| Judge Decoding (arxiv 2501.19309) | 任务 2.3 极小 judge PoC | **ICLR 2025** ✅ |
+| Let's Verify Step by Step / ORM vs PRM (arxiv 2305.20050) | 任务 5.1 PRM 适用范围 | **ICLR 2024** ✅ |
+| Scaling LLM Test-Time Compute (arxiv 2408.03314) | 整体方向验证 | NeurIPS 2024 Workshop ✅ |
+| RSD: Reward-guided Speculative Decoding (arxiv 2501.19324) | 任务 4.2 accept/reject 参考 | **ICML 2025** ✅ |
+| TITA: Token-level Inference-Time Alignment (arxiv 2510.21794) | 任务 6.2 DPO 蒸馏参考 | 2025 preprint |
+| Iterative Value Function Optimization (arxiv 2503.02368) | 任务 1.1 block-wise scoring | 2025 preprint |
+| EASD: Entropy-Aware Speculative Decoding (arxiv 2512.23765) | 任务 1.2 双熵门控 | 2025 preprint |
+| TARo: Token-level Adaptive Routing (arxiv 2603.18411) | 任务 1.2 自适应路由参考 | 2026 preprint |

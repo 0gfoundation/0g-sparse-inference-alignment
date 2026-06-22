@@ -365,6 +365,131 @@ RM 效率方向的顶会工作集中在：（1）多目标 RM 提升覆盖面，
 
 ---
 
+## 十、2026年上半年最新进展
+
+> **调研截止**：2026-06-22。以下论文来自 2026 年 1–6 月 arxiv，优先收录顶会接收及资质好的学校/机构（CMU、Harvard、IBM Research 等）工作。验证方法与前文一致（3 票对抗验证，需 2/3 否决才放弃）。
+
+---
+
+### 10.1 核心范式确认：高熵稀疏干预成为 2026 年主流共识
+
+**验证状态：3-0（高置信度）**
+
+2026 年上半年出现三篇相互独立的工作，均在互不知情的情况下提出"只在高熵/低置信度位置进行干预"的稀疏策略：
+
+| 论文 | 策略 | 状态 |
+|------|------|------|
+| GGRO（UAI 2026，2606.09635）| 梯度引导，在高熵 token 位置使用 RM 梯度 | UAI 2026 接收 |
+| SeLaR（arxiv 2604.08299，Apr 2026）| soft embedding 引导，低置信度位置插入软向量 | 预印本 |
+| AdaDec（FSE 2026，arxiv 2506.08980）| 高不确定性位置执行 pause-and-rerank | FSE 2026 接收 |
+
+**与 SIA 的关系**：三篇独立工作共同验证了 SIA 原论文（arxiv 2602.21215）的核心设计直觉——高熵位置是对齐干预的最高价值节点，稀疏干预可以在保持效果的同时大幅降低开销。这是对 SIA `--entropy_threshold` 参数设计的**外部学术背书**。
+
+---
+
+### 10.2 GGRO：梯度引导奖励优化（UAI 2026）
+
+**发表**：UAI 2026（同行评审）  
+**arxiv**：https://arxiv.org/abs/2606.09635  
+**验证状态：3-0（机制描述与对比结论）**
+
+**核心贡献**：GGRO（Gradient-Guided Reward Optimization）在每个高熵 token 位置使用 RM 的**梯度信息**（而非 RM 前向传播的输出分数）来偏置 token 分布。
+
+- 在 HEx-PHI（有害性基准）上：GGRO 26.2% 有害率 vs. Best-of-N 34.3%（3-0 验证）
+- 比 Best-of-N 具有更低的 reward hacking 倾向
+
+**与 SIA 的关系**：GGRO 提供了绕开 per-token RM 全量前向传播的思路——用梯度信号替代 RM 分数。这直接对应 SIA 的 P2（VM 延迟 28.5ms）。但梯度获取在标准推理模式下需要反向传播，工程可行性是挑战，是一个中期技术侦察方向而非近期优先项。
+
+---
+
+### 10.3 LLMdoctor：乘积式分布融合（2026 年 1 月）
+
+**arxiv**：https://arxiv.org/abs/2601.10416  
+**发表**：2026 年 1 月预印本  
+**验证状态：3-0（机制与对比结论）**
+
+**核心贡献**：LLMdoctor 提出用**乘积式分布融合**（product of distributions）替代加法式 logit 偏置：
+
+$$\pi_{\text{decode}}(x) \propto [\pi_{\text{base}}(x)]^\alpha \cdot [\pi_r(x)]^\beta$$
+
+在对数空间等价于 `α·log(π_base) + β·log(π_r)`，即对两个分布的对数概率做加权平均，而非简单的 score 加法。
+
+**性能**（3-0 验证）：
+- 62.10% win vs. GenARM（ICLR 2025 ARM baseline）
+- 76.00% win vs. ARGS（logit biasing baseline）
+
+**与 SIA 的关系**：SIA 当前实现是加法式（`logits[token] += weight * score`），LLMdoctor 的实验暗示乘积式融合效果更优。这是**1–2 天工程实验**即可验证的低成本改进候选项，不需要重新训练 VM，只改推理时的融合逻辑。
+
+---
+
+### 10.4 DSPA：稀疏自编码器 Steering（CMU，2026 年 3 月）
+
+**arxiv**：https://arxiv.org/abs/2603.21461  
+**机构**：Carnegie Mellon University (CMU)  
+**发表**：2026 年 3 月预印本  
+**验证状态：3-0（机制描述）**
+
+**核心贡献**：DSPA（Decoding with Sparse Program Alignment）使用**稀疏自编码器（SAE）**进行推理时对齐，**完全绕开外部 Reward Model 的前向传播**：
+
+1. 离线预训练 SAE，学习 LLM 激活空间中与"对齐特征"相关的稀疏方向
+2. 推理时直接修改 LLM 中间层激活向量（激活空间，而非 logit 空间）
+3. 稀疏化后：**99.8% 的激活值为零**，只修改极少数关键特征维度
+
+**与 SIA 的关系**：DSPA 代表与 SIA 根本不同的技术路径。若激活空间 steering 可达到类似效果：
+- **彻底解决 P2（VM 延迟）**：VM forward pass 开销归零
+- **彻底解决 P3（并发吞吐）**：VM 从关键路径移除
+
+代价是：SAE 训练复杂度高，且当前效果能否匹敌 4B VM 未知。**建议作为 6 个月 roadmap 以外的中期技术侦察方向**，投入 1–2 周做 paper reading + 小规模实验。
+
+---
+
+### 10.5 GSI：倾斜奖励推测推断（Harvard + IBM，2026 年 6 月）
+
+**arxiv**：https://arxiv.org/abs/2506.04118  
+**机构**：Harvard SEAS + IBM Research  
+**发表**：2026 年 6 月预印本  
+**验证状态：2-1（中等置信度）**
+
+**核心贡献**：GSI（Generative Speculative Inference）在投机解码框架中引入"倾斜奖励"（tilted reward），调整接受准则使生成序列偏向高奖励方向，声称最高 28% 延迟降低（该数字 2-1，存在争议）。
+
+**与 SIA 的关系**：方向类似 RSD（ICML 2025），用 RM 信号改造投机解码接受率。SIA 不依赖投机解码，直接关联度较低，参考价值中等。
+
+---
+
+### 10.6 EntropyInfer：Rigid/Dynamic 注意力头分类（2026 年 6 月）
+
+**arxiv**：https://arxiv.org/abs/2606.09508  
+**发表**：2026 年 6 月预印本  
+**验证状态：2-1（中等置信度）**
+
+**核心贡献**：EntropyInfer 将 LLM 注意力头分为两类：**Rigid heads**（一致低熵，结构性信息）和 **Dynamic heads**（位置相关高变化，语义决策）。只有 Dynamic heads 需要在高熵位置完整计算，声称在 100k+ token 场景下实现 **2.39× prefill 加速**。
+
+**与 SIA 的关系**：优化对象是 prefill 阶段，而 SIA 的主要开销在 decode 阶段的 VM 评分，直接关联度低。但 Rigid/Dynamic 头分类思路可参考用于 VM 内部注意力头的裁剪（探索方向，非近期优先级）。
+
+---
+
+### 10.7 Token-level MDP 理论框架（ICML 2026）
+
+**arxiv**：https://arxiv.org/abs/2602.02572  
+**发表**：ICML 2026 accepted（同行评审）  
+**验证状态：2-1（中等置信度）**
+
+**核心贡献**：将 token-level 推理时对齐形式化为马尔可夫决策过程：状态 $s_t = [\text{prompt}, y_{<t}]$，动作 $a_t = y_t$。该框架被 ICML 2026 接收，成为该领域的标准理论基础。
+
+**与 SIA 的关系**：SIA 在技术上是此框架的一个实例（VM 估计 $Q(s_t, a_t)$，logit 空间加权）。ICML 2026 接收意味着 token-level 推理时对齐**已被主流 ML 顶会认可为正式研究方向**，有利于 SIA 相关学术发表。
+
+---
+
+### 本节小结：2026 年对 SIA 的三条启示
+
+| 启示 | 来源 | 行动建议 |
+|------|------|---------|
+| 稀疏干预设计已被多方独立验证 | GGRO, SeLaR, AdaDec | 现有 `--entropy_threshold` 方向正确，继续深化 |
+| 乘积式融合优于加法式 biasing | LLMdoctor | 1–2 天工程实验，推理时改 `α·log_base + β·log_rm` |
+| SAE 激活空间 steering 可彻底绕开 VM | DSPA（CMU）| 中期技术侦察，roadmap 之外单独立项 |
+
+---
+
 ## 论文索引
 
 | 论文 | 发表 | 验证状态 | arxiv |
@@ -383,7 +508,15 @@ RM 效率方向的顶会工作集中在：（1）多目标 RM 提升覆盖面，
 | InstructGPT / RLHF (Ouyang et al.) | NeurIPS 2022 ✅ | 基础工作 | 2203.02155 |
 | Constitutional AI (Anthropic) | 2022 | 基础工作 | 2212.08073 |
 | Self-Refine | NeurIPS 2023 ✅ | 顶会收录 | 2303.17651 |
+| GGRO: Gradient-Guided Reward Optimization | UAI 2026 ✅ | 机制 3-0 | 2606.09635 |
+| LLMdoctor: Product-of-Distributions Fusion | 2026 preprint | 机制 3-0 | 2601.10416 |
+| DSPA: Decoding with Sparse Program Alignment | 2026 preprint（CMU）| 机制 3-0 | 2603.21461 |
+| SeLaR: Soft Embedding Alignment at Low-Confidence | 2026 preprint | 参考 | 2604.08299 |
+| AdaDec: Pause-and-Rerank at High Uncertainty | FSE 2026 ✅ | 参考 | 2506.08980 |
+| GSI: Generative Speculative Inference (tilted reward) | 2026 preprint（Harvard+IBM）| 2-1 | 2506.04118 |
+| EntropyInfer: Rigid/Dynamic Attention Head Classification | 2026 preprint | 2-1 | 2606.09508 |
+| Token-level MDP Formalization | ICML 2026 ✅ | 2-1 | 2602.02572 |
 
 ---
 
-*本文档基于 2026-06-22 调研结果撰写。"验证状态"列中：✅ 表示已有顶会收录或通过 3-0 对抗验证；数字如 "3-0" 表示三票投票结果；"未通过验证" 表示具体数字在验证中被否定，内容描述来自摘要，谨慎参考。*
+*本文档基于 2026-06-22 调研结果撰写，涵盖 2022–2026 年上半年的论文。"验证状态"列中：✅ 表示已有顶会收录或通过 3-0 对抗验证；数字如 "3-0" 表示三票投票结果；"2-1" 为中等置信度；"未通过验证" 表示具体数字在验证中被否定，内容描述来自摘要，谨慎参考。*
