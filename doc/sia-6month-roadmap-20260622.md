@@ -17,7 +17,7 @@
 
 两个月内完成核心系统，0GM-VL-35B 和 Qwen3-VL-30B 两个主力模型均已接近上线标准：
 
-- **效果已验证**：0GM-VL-35B 开启 SIA 后，综合对话质量 AlpacaEval 胜率 **65.4%**（200 道题中，SIA 版本有 65.4% 被评为更优）；MMLU 准确率无明显下降
+- **效果已验证**：0GM-VL-35B 开启 SIA 后，综合对话质量 AlpacaEval 胜率 **65.4%**（191 配对中 SIA 版本有 65.4% 被评为更优，125/191 对）；MMLU thinking 模式 **+12pp**（77.8% vs 66%，150Q）
 - **性能有代价**：高并发场景（16 路并发）吞吐量约为不开 SIA 的 **35%**，即同等硬件可服务的请求量减少约 65%
 
 ### 接下来 6 个月的计划
@@ -28,7 +28,7 @@
 通过智能跳过"不重要的 token"，将评分模型（Value Model）的调用次数减少 50% 以上，在几乎不损失对齐效果的前提下大幅降低开销；同时建立 GPT-4 标准评估基准，为后续所有改进提供可比较的量化依据。
 
 **阶段二（Month 2–3）：换一个更快的评分模型**  
-当前评分模型与主模型使用不同词表，每次打分都需要额外的"词表翻译"（约损耗 17ms）。训练一个词表完全一致的评分模型，预计将单次打分延迟从 ~30ms 降至 ~13ms；同时验证"乘积式融合"（比当前加法干预更精准的介入方式）能否进一步提升对齐效果。
+当前评分模型与主模型使用不同词表，每次打分都需要额外的"词表翻译"（约损耗 17ms）。训练一个词表完全一致的评分模型，预计将单次打分延迟从 ~30ms 降至 ~11ms；同时验证"乘积式融合"（比当前加法干预更精准的介入方式）能否进一步提升对齐效果。
 
 **阶段三（Month 4–6）：更强的评分能力 + 多模态扩展**  
 引入能理解"推理过程"的过程奖励模型（PRM），在关键决策点精准干预而非盲目打分；同时将 SIA 扩展至多模态，支持图片输入，覆盖更广的业务场景。
@@ -93,10 +93,10 @@ Month 6  ██ 多模态VM训练 ██ 多模态VM上线
 
 **2. repetition_penalty 关键 Bug 修复**（6 月 4 日）  
 发现 `repetition_penalty` 默认值 1.3 与 SIA logit 干预叠加，导致评估数据显示 SIA Δ = −13% 至 −75%（错误结论）。修复为 1.0 后，SIA 效果全面恢复正向：
-- 0GM-VL-35B MMLU thinking 模式对照实验：SIA vs noSIA 准确率无明显下降
+- 0GM-VL-35B MMLU thinking 模式对照实验：SIA **77.8%**（117/150）vs noSIA **66.0%**（99/150），**Δ = +12pp**（已排除 rep_penalty bug，见 doc/0gm-1.0-35b-sia-eval-20260605.md §1.3）
 
 **3. 0GM-VL-35B 跨分词器优化**（6 月初）  
-Stable prefix 方案消除跨 tokenizer BPE 边界合并导致的 APC 失效：VM 调用延迟从随序列长度线性增长（34ms→55ms）降至**固定 ~30ms**，端到端吞吐 +22%。
+Stable prefix 方案消除跨 tokenizer BPE 边界合并导致的 APC 失效：VM 调用延迟从随序列长度线性增长（34ms→~50ms）降至**固定 ~30ms**，端到端吞吐 +22%。
 
 **4. 双模型上线 marketplace 准备完成**（6 月中旬）  
 0GM-VL-35B 和 Qwen3-VL-30B 均完成 Docker 部署、OpenAI 兼容 API、全套集成测试（run_all.sh）、max_model_len 扩展至 32768 tokens、多模态图片输入支持（图片请求 bypass SIA）。
@@ -120,7 +120,7 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 | 单请求吞吐 | 0GM-VL-35B | 66–68 tok/s | ~112 tok/s | **59–61%** |
 | 单请求吞吐 | Qwen3-VL-30B | 78.3 tok/s | ~122.8 tok/s | **64%** |
 | conc=16 吞吐 | 0GM-VL-35B | 369 tok/s | 1040 tok/s | **35%** |
-| 单请求 ITL | 0GM-VL-35B | ~34ms | ~9ms | **3.8×** |
+| 单请求 ITL | 0GM-VL-35B | ~11ms（~480 token）/ 34ms（32K token）| ~9ms | **~1.2–1.4×**（典型场景）|
 | conc=16 ITL | 0GM-VL-35B | 41.3ms | 13.6ms | **3.0×** |
 
 | 组件 | 数据 |
@@ -133,16 +133,16 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 
 | 评估 | 结果 | 备注 |
 |------|------|------|
-| MMLU thinking 模式（0GM-VL-35B，150Q 对照）| SIA vs noSIA 无明显下降 | 已排除 rep_penalty bug |
-| AlpacaEval win-rate（0GM-VL-35B）| **65.4%**（Skywork judge，200Q）| Skywork 作 judge 已有数字；GPT-4 judge 尚未跑，Month 1 建立标准评估基准 |
-| AlpacaEval Skywork Δ（0GM-VL-35B）| **+5.45 reward（+22.7%）** | SIA mean 29.36 vs noSIA 24.01（191 对，实验 stable-prefix-20260610）|
+| MMLU thinking 模式（0GM-VL-35B，150Q 对照）| SIA **77.8%** vs noSIA **66.0%**，**Δ = +12pp** | 已排除 rep_penalty bug（doc/0gm-1.0-35b-sia-eval-20260605.md §1.3）|
+| AlpacaEval win-rate（0GM-VL-35B）| **65.4%**（Skywork judge，**191 配对**）| Skywork 作 judge 已有数字（200Q 中 9 题因超 RM 上限排除）；GPT-4 judge 尚未跑，Month 1 建立标准评估基准 |
+| AlpacaEval Skywork Δ（0GM-VL-35B）| **+5.45 reward（+22.7%）** | SIA mean 29.46 vs noSIA 24.01（191 对口径，实验 stable-prefix-20260610）|
 | Qwen3-VL-30B AlpacaEval（b2 inproc，200Q）| SIA Skywork mean **+1.22~+2.38（+4.2%~+8.3%）**，两轮均显著 | GPT-4 judge 尚未跑；两轮 Δ 有波动，统计噪声正常（见 doc/alpaca-eval-vl30b-b2-docker-20260608.md）|
 
 ### 三个核心痛点（当前状态）
 
 | 痛点 | 当前状态 | 根因 |
 |------|---------|------|
-| **E 效果不显著** | AlpacaEval 65.4%（Skywork judge，200Q）；MMLU 无明显下降 | 跨分词器噪声可能影响 VM 打分精度；GPT-4 judge 独立验证尚未完成 |
+| **E 效果不显著** | AlpacaEval 65.4%（Skywork judge，191 配对）；MMLU thinking +12pp | 跨分词器噪声可能影响 VM 打分精度；GPT-4 judge 独立验证尚未完成 |
 | **L VM 延迟高** | 0GM-VL-35B ~30ms/call | dense 4B VM，memory-bound，无 CUDA graph |
 | **T 高并发吞吐损失** | conc=16 仅 35% of noSIA | VM 调用仍占关键路径；每 token 都可能调用 |
 
@@ -156,9 +156,9 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 
 修改 `SIALogitsProcessor`：每生成 4 个 token 才触发一次 VM 打分，而非每个 token 都触发。
 
-> **完成后收益**：L/T VM 实际调用次数降至 ~25%（每 4 token 打分一次），b2_score_call 平均耗时降低 ~75%，conc=16 吞吐从 369 tok/s 预计升至 ~500+ tok/s。
+> **完成后收益**：L/T VM 实际调用次数降至 ~25%（每 4 token 打分一次），每 token 摊销的 VM 调用开销降低 ~75%（per-call p50 延迟 ~30ms 不变，调用次数降至 25%），conc=16 吞吐从 369 tok/s 预计升至 ~500+ tok/s。
 
-- **理论依据**：arxiv 2503.02368 实测 per-token RM 比 block-wise(4) 慢 2.7-4.4×
+- **理论依据**：arxiv 2503.02368 实测 per-token RM 比 block-wise(4) 慢 2.7-4.4×（来源：论文数据，未经内部独立实验核实，实际收益以 SIA A/B 实测为准）
 - **工作量**：约 1 周（代码改动集中在 `apply()` 方法，需调整 token buffer 逻辑）
 - **风险**：效果可能略降，需 A/B 对比，找最优 B 值
 
@@ -172,7 +172,7 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 
 > **完成后收益**：L/T 在 block-wise 基础上叠加，VM 有效调用率再降 ~20-30%，端到端吞吐额外提升 ~10-15%；无效干预减少同时轻微改善 E（降低噪声干预比例）。
 
-- **理论依据**：EASD（arxiv 2512.23765）验证分层熵门控在 speculative decoding 中比单阈值减少约 25% 无效干预；TARo（arxiv 2603.18411）进一步表明基于当前步不确定性的自适应路由优于固定比例干预。
+- **理论依据**：EASD（arxiv 2512.23765）提出分层熵门控方案，在 speculative decoding 中引入两级熵阈值（注：EASD "减少 25% 无效干预"的具体数值在三票对抗验证中未通过，实际收益以 SIA A/B 实测为准）；TARo（arxiv 2603.18411）进一步表明基于当前步不确定性的自适应路由优于固定比例干预。
 - **补充文献**：Learning Adaptive Decoding（[arxiv 2603.09065](https://arxiv.org/abs/2603.09065)，2026 preprint）表明仅用熵判断不够，建议引入 learned routing policy（小分类头，基于 token 上下文特征决定是否干预）——可与双熵门控串联作为 Month 1 进阶探索。"To Intervene or Not"（[arxiv 2606.11201](https://arxiv.org/abs/2606.11201)，ACL 2026）提供概率性干预框架，可在固定熵阈值之上叠加不确定性置信度，预期再减少 ~30% 无效调用。
 - **工作量**：约 1 周（`apply()` 中增加一个状态缓存）
 
@@ -204,10 +204,10 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 **为什么同词表是最高优先级**：当前 VM（Qwen3-4B）和主 LLM（0GM-VL-35B）使用不同 tokenizer（Qwen3 32K 词表 vs Qwen3.5 248K 词表）。这意味着 VM 看到的 prefix token ID 与主 LLM 生成的 token 不是一一对应的，评分信号存在系统性噪声。同词表训练一次性解决：
 
 - 跨分词器噪声消除 → 评分精度提升（E）
-- stable prefix 替代方案可退役 → 消除跨分词器 CPU 编码开销（~2ms）和 BPE 边界 APC miss（~5ms），b2_score_call 从 ~30ms 降至 ~13ms（L）
+- stable prefix 替代方案可退役 → 消除跨分词器 CPU 编码开销（~2ms）和 eager mode 内核调度开销（~5ms，源于无 CUDA graph），b2_score_call 从 ~30ms 降至 **~11ms**（L）
 - 每次调用读取的 HBM 数据量不变，但质量更好（T 间接改善）
 
-> **注意（来自已有实验）**：RM CUDA graph（piecewise）在 0GM-VL-35B 上已完整试验并彻底失败——三层修复后 piecewise 比 eager 慢 2-3×（115-140ms vs 30ms）。根本原因：RM 是 prefill-heavy workload（每步 topk=10 条完整序列），vllm PIECEWISE 只优化 decode 步骤（固定 batch=1），对 prefill 无效。同词表 VM 的 L 改善**不依赖 CUDA graph**，而是靠消除跨分词器开销（实验 `alpaca-0gm35b-piecewise-fix3-20260610` 已确认 CUDA graph 死路，见 `doc/0gm-35b-sia-perf-breakdown-20260609.md` §7）。
+> **注意（来自已有实验）**：RM CUDA graph（piecewise）在 0GM-VL-35B 上已完整试验并彻底失败——三层修复后 piecewise 比 eager 慢 2.7–3.5×（稳态 @500 步以上：piecewise 130–140ms vs eager 40–50ms）。根本原因：RM 是 prefill-heavy workload（每步 topk=10 条完整序列），vllm PIECEWISE 只优化 decode 步骤（固定 batch=1），对 prefill 无效。同词表 VM 的 L 改善**不依赖 CUDA graph**，而是靠消除跨分词器开销（实验 `alpaca-0gm35b-piecewise-fix3-20260610` 已确认 CUDA graph 死路，见 `doc/0gm-35b-sia-perf-breakdown-20260609.md` §7）。
 
 ### 任务 2.1：偏好数据收集
 
@@ -222,7 +222,7 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 
 以 Qwen3.5-4B（248K 词表，与 0GM-VL-35B 相同）为 base 训练 reward head。
 
-> **完成后收益**（Month 3 上线后生效）：E 跨分词器噪声消除，VM 评分质量显著提升；L b2_score_call 从 ~30ms → ~13ms（消除跨分词器编码开销 ~7ms）；若 vocabulary-wide head 实现，L 额外改善最多 topK 倍（topK=10 时理论最高 10×）。
+> **完成后收益**（Month 3 上线后生效）：E 跨分词器噪声消除，VM 评分质量显著提升；L b2_score_call 从 ~30ms → ~11ms（消除跨分词器编码开销 ~2ms + eager mode 调度开销 ~5ms）；若 vocabulary-wide head 实现，L 额外改善最多 topK 倍（topK=10 时理论最高 10×）。
 
 **关键：训练目标选 ARM（Autoregressive Reward Model），而非传统 ORM（Outcome Reward Model）。**  
 理由来自 GenARM（ICLR 2025，arxiv 2410.08193）：ARM 参数化**在理论上可将 frozen LLM 引导至 KL 正则 RL 框架内任意传统 RM 可实现的分布**，而 ORM 只对最终输出打分，逐 token 干预时信号粗糙、位置错位。同等 4B 规模下，ARM 目标比 ORM 目标理论信号质量更高，先验证这一点，再决定是否需要扩大模型规模。
@@ -294,7 +294,7 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 
 替换生产 VM，重新跑 AlpacaEval，验证效果提升。
 
-> **完成后收益**：E 跨分词器噪声彻底消除，AlpacaEval win-rate 首次可量化对比；L b2_score_call 从 ~30ms → ~13ms（−57%）；T conc=16 吞吐从 ≥550 升至 ≥750 tok/s。
+> **完成后收益**：E 跨分词器噪声彻底消除，AlpacaEval win-rate 首次可量化对比；L b2_score_call 从 ~30ms → ~11ms（−63%）；T conc=16 吞吐从 ≥550 升至 ≥750 tok/s。
 
 ### 任务 3.3：乘积式分布融合 A/B 实验（1-2 天，来自 LLMdoctor）
 
@@ -549,7 +549,7 @@ ICLR 2025 发表的 Judge Decoding（arxiv 2501.19309）提出了一个反直觉
 
 ### 发现四：2026年补充调研的三项新信号
 
-*（2026 年 6 月补充调研，针对 2026 年 1–6 月 arxiv，103 个验证智能体，15 条通过验证）*
+*（2026 年 6 月补充调研，针对 2026 年 1–6 月 arxiv，103 个验证智能体，12 条通过验证）*
 
 **（1）稀疏干预范式获三方独立验证**
 
