@@ -187,7 +187,7 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 
 - **理论依据**：**"To Intervene or Not"**（[arxiv 2606.11201](https://arxiv.org/abs/2606.11201)，ACL 2026）直接研究"何时干预"的决策问题，提出当基础模型置信度低时（最大 token 概率 < 0.4）用两模型置信度比计算**软混合权重**取代二元干预，实验表明非均匀干预优于始终干预；方向支持本任务的双门控思路，但该论文的机制是软混合而非硬阈值。**TARo**（arxiv 2603.18411）提出 end-to-end **学习得到**的 token 级路由器，自动决定每个位置的干预力度，实验提升最高 +22.4%；结论支持"自适应策略优于固定策略"，但 TARo 的路由器需要训练，与本任务的规则型 score 差值门控不同。
 - **注意**：EASD（arxiv 2512.23765）的"双熵"针对两个生成模型（draft + target），两者均有 token 概率分布可算 entropy，与 SIA 的 reward model 场景**不直接适用**，不作为本任务的理论依据。
-- **补充文献**：Learning Adaptive Decoding（[arxiv 2603.09065](https://arxiv.org/abs/2603.09065)，2026 preprint）建议引入 learned routing policy（小分类头，基于上下文特征决定是否干预）——可与双门控串联作为 Month 1 进阶探索。
+- **补充文献**：Learning Adaptive LLM Decoding（[arxiv 2603.09065](https://arxiv.org/abs/2603.09065)，2026 preprint）建议引入 learned routing policy（小分类头，基于上下文特征决定是否干预）——可与双门控串联作为 Month 1 进阶探索。
 - **工作量**：约 1 周（`apply()` 中增加一个 per-request 状态缓存，记录上一次 VM 调用的 score 差值和距上次调用的步数）
 
 ### 任务 1.3：补建 GPT-4 标准评估基准
@@ -204,7 +204,7 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 
 - **评估框架**：AlpacaEval 2.0（arxiv 2404.04475）以 GPT-4 为 judge 计算 win-rate，200 题固定集保证跨实验可比性，相比人工评估成本降低约 100×。
 - **VM 质量基准**：同时使用 RMB（[arxiv 2410.09893](https://arxiv.org/abs/2410.09893)，ICLR 2025）和 RewardBench 2（[arxiv 2506.01937](https://arxiv.org/abs/2506.01937)，2026）评估 VM-Qwen3-4B 的原始评分质量，建立"VM 能力 → SIA 效果"的映射关系，指导 Month 2 VM 训练目标。
-- **⚠️ Reward Hacking 风险**：Inference-Time Reward Hacking（[arxiv 2506.19248](https://arxiv.org/abs/2506.19248)，NeurIPS 2025 Spotlight）表明推理时 RM 干预会导致分布外样本触发奖励黑客，尤其在 --weight 较大时。Task 1.3 的评估 pipeline 应同步设计奖励异常检测指标（如输出长度分布、重复率、困惑度），避免 SIA 在某些问题上"刷高分实为退化"。
+- **⚠️ Reward Hacking 风险**：Inference-Time Reward Hacking（[arxiv 2506.19248](https://arxiv.org/abs/2506.19248)，NeurIPS 2025 Spotlight）表明推理时 RM 干预对 true reward 呈**先升后降的倒 U 形曲线**——代理奖励随干预强度单调上升，但 true reward 在超过最优点后开始下降；这是普遍规律而非仅在 --weight 较大时才触发。Task 1.3 的评估 pipeline 应同步设计奖励异常检测指标（如输出长度分布、重复率、困惑度），避免 SIA 在某些问题上"刷高分实为退化"。
 - **工作量**：约 1 周
 
 ### Month 1 交付标准
@@ -224,7 +224,7 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 **为什么同词表是最高优先级**：当前 VM（Qwen3-4B）和主 LLM（0GM-VL-35B）使用不同 tokenizer（Qwen3 151K 词表 vs Qwen3.5 248K 词表）。这意味着 VM 看到的 prefix token ID 与主 LLM 生成的 token 不是一一对应的，评分信号存在系统性噪声。同词表训练一次性解决：
 
 - 跨分词器噪声消除 → 评分精度提升（对齐效果提升）
-- stable prefix 替代方案可退役 → 消除跨分词器 CPU 编码开销（~2ms）和 eager mode 内核调度开销（~5ms，源于无 CUDA graph），b2_score_call 从 ~30ms 降至 **~11ms**（VM 延迟降低）
+- stable prefix 替代方案可退役 → 消除跨分词器 CPU 编码开销（~2ms）和跨分词器引起的 eager mode 内核调度开销（~5ms），b2_score_call 从 ~30ms 降至 **~23ms**（VM 延迟降低；CUDA graph 仍不可用，故无法降至 ~11ms）
 - 每次调用读取的 HBM 数据量不变，但质量更好（并发吞吐间接改善）
 
 > **注意（来自已有实验）**：RM CUDA graph 在 0GM-35B 上经三轮修复均失败，已完全排除。根本原因是 RM 为 prefill-heavy workload，与 vllm PIECEWISE 的优化目标不兼容，同词表 VM 无法改变这一本质。同词表带来的延迟改善**仅来自消除跨分词器开销（~7ms）**，而非 CUDA graph——详见[附录：0GM-35B CUDA Graph 调试过程](#appendix-cuda-graph)。
@@ -246,7 +246,7 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 
 以 Qwen3.5-4B（248K 词表，与 0GM-VL-35B 相同）为 base 训练 reward head。
 
-> **完成后收益**（Month 3 上线后生效）：对齐效果：跨分词器噪声消除，VM 评分质量显著提升；VM 延迟：b2_score_call 从 ~30ms → ~11ms（消除跨分词器编码开销 ~2ms + eager mode 调度开销 ~5ms）；若 vocabulary-wide head 实现，VM 延迟额外改善最多 topK 倍（topK=10 时理论最高 10×）。
+> **完成后收益**（Month 3 上线后生效）：对齐效果：跨分词器噪声消除，VM 评分质量显著提升；VM 延迟：b2_score_call 从 ~30ms → ~23ms（消除跨分词器开销共 ~7ms：CPU 编码 ~2ms + eager mode 调度 ~5ms；CUDA graph 仍不可用，~23ms 为实际下限）；若 vocabulary-wide head 实现，VM 延迟额外改善最多 topK 倍（topK=10 时理论最高 10×）。
 
 **训练目标**：沿用原 SIA VM 的 ARM（Autoregressive Reward Model）训练方式——VM 输出每个 token 位置的 reward，推理时取前缀末尾位置的值作为干预分数。这是 SIA token 级干预的必要条件（ORM 只对完整回答末尾有意义，无法在 decoding 中途打分）。理论依据见 GenARM（ICLR 2025，arxiv 2410.08193）。本轮的核心变化是 **base 换为 Qwen3.5-4B（与 0GM-VL-35B 同词表）**，训练目标本身不变。
 
@@ -258,7 +258,7 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 **补充训练技巧**：
 - **低秩 Reward Head**（[arxiv 2407.04615](https://arxiv.org/abs/2407.04615)，TMLR 2025）：vocabulary-wide head 的矩阵从 `[d × V]` 分解为 `[d × r] × [r × V]`（r ≪ V），在 vocab=248K 的 Qwen3.5 词表下效果尤为明显，与上述架构目标天然兼容。
 - **From r to Q\* 理论启发**（[arxiv 2404.12358](https://arxiv.org/abs/2404.12358)，COLM 2024）：该论文证明 DPO 等价于 token 级隐式 Q-learning，LLM 的 log-prob 差值 β(log π_θ − log π_ref) 本身编码隐含奖励值。**SIA 工程推导**：标注数据不足时，可将 0GM-VL-35B 与参考模型的 log-prob 差值作为弱监督伪标签辅助 VM 冷启动——此应用为 SIA 对该理论的延伸推导，非论文原著直接贡献。
-- **RED 蒸馏**（[arxiv 2411.08302](https://arxiv.org/abs/2411.08302)，EMNLP 2025）：从 holistic feedback 蒸馏 token 级奖励，可作为无 token 级标注时的备用路径。
+- **RED**（reward redistribution，[arxiv 2411.08302](https://arxiv.org/abs/2411.08302)，venue 待确认）：利用现有 RM 对序列前缀的差分分值还原 token 级奖励——r̃ᵗ = R(x,y≤t) − R(x,y≤t−1)，无需训练，与蒸馏不同。可作为无 token 级标注时的备用路径。
 
 - **工作量**：约 2-3 周（训练 + 初步 offline 验证）
 
@@ -289,7 +289,7 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 | 两阶段粗过滤 PoC | **架构稳定性验证通过，有初步效果数据** | — |
 | conc=16 SIA tok/s | **维持 ≥ 550** | ≥ 550 |
 
-> 📌 本月为训练月，性能数字维持不变。同词表 VM 的延迟和吞吐收益（b2_score_call ~30ms → ~11ms，conc=16 吞吐 ≥ 750）在 Month 3 部署上线后兑现。
+> 📌 本月为训练月，性能数字维持不变。同词表 VM 的延迟和吞吐收益（b2_score_call ~30ms → ~23ms，conc=16 吞吐 ≥ 550（保守））在 Month 3 部署上线后兑现。
 
 ---
 
