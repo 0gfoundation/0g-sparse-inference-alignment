@@ -52,7 +52,7 @@
 
 - **论文研读与原理理解**：阅读 SIA 论文（arxiv 2602.21215），理解稀疏干预在关键决策点介入的核心思路；参照原始实验代码（github.com/hurunyi/SIA）试跑论文自带的推理干预流程，确认方法可行性
 - **SIA 核心实现**：基于 vLLM `LogitsProcessor` 的 token 级干预框架，OpenAI 兼容 HTTP API，支持 per-request `sia_weight` 动态调整
-- **首次效果评估**：0GM-VL-35B AlpacaEval + MMLU 初跑，确认 SIA 对齐信号存在；发现 SIA 干预下主要在高熵位置（intervention rate ~20%）
+- **首次效果评估**：0GM-VL-35B AlpacaEval + MMLU 初跑，确认 SIA 对齐信号存在；实测 intervention rate ~20%（约 80% 的 token 因熵值低于阈值直接跳过 VM 调用）
 - **VM 性能摸底**：SIA 单请求 ~40 tok/s vs noSIA ~114 tok/s，确认 VM 串行调用（每候选一次 GPU forward）是主要瓶颈
 - **批量前向优化**：K 候选从 K 次串行 GPU forward 合并为 1 次 batch forward，VM 计算量降低约 60%
 - **KV 前缀缓存探索**：实验 PyTorch DynamicCache 前缀复用，受 PyTorch 无 APC 机制限制，效果不理想
