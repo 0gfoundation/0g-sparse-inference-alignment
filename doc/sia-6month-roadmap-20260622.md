@@ -30,8 +30,8 @@
 
 计划分三个阶段，核心目标是将 SIA 的性能代价从"显著"降低到"可忽略"，同时持续提升对齐效果。
 
-**阶段一（Month 1）：减少打分频率，建立评估基准**  
-通过智能跳过"不重要的 token"，将评分模型（Value Model）的调用次数减少 50% 以上，在几乎不损失对齐效果的前提下大幅降低开销；同时建立 GPT-4 标准评估基准，为后续所有改进提供可比较的量化依据。
+**阶段一（Month 1）：减少打分频率，补建 GPT-4 评估基准**  
+通过智能跳过"不重要的 token"，将评分模型（Value Model）的调用次数减少 50% 以上，在几乎不损失对齐效果的前提下大幅降低开销；同时在现有 Skywork judge 基准的基础上补建 GPT-4 标准评估基准，为后续所有改进提供与业界可比的量化依据。
 
 **阶段二（Month 2–3）：换一个更快的评分模型**  
 当前评分模型与主模型使用不同词表，每次打分都需要额外的词表重编码（CPU 编码 ~2ms + eager 调度 ~5ms，合计约 7ms 额外开销）。训练一个词表完全一致的评分模型，预计将单次打分延迟从 ~30ms 降至 ~11ms；同时验证"乘积式融合"（比当前加法干预更精准的介入方式）能否进一步提升对齐效果。
@@ -46,7 +46,7 @@
 | 高并发吞吐（SIA vs 无 SIA） | **35%** | **≥ 55%** | **≥ 72%** |
 | 单次打分延迟 | ~30ms | ~23ms（消除跨分词器 ~7ms）| ~11ms（追加 CUDA graph）|
 | 多模态支持 | 仅文本 | 文本 + 图片 | 文本 + 图片 |
-| 标准评估基准 | 尚未建立（GPT-4 judge）| Month 1 建立，持续追踪 | Month 1 建立，持续追踪 |
+| 标准评估基准 | Skywork judge 已有基准；GPT-4 judge 待建立 | Month 1 补建 GPT-4 judge，持续追踪 | Month 1 补建 GPT-4 judge，持续追踪 |
 
 ---
 
@@ -56,7 +56,7 @@
 Month -2 ██ 项目启动 ██ 批量前向 ██ 首次效果评估          [已完成]
 Month -1 ██ b2 inproc ██ Bug修复 ██ 上线生产 ██ 高并发优化 [已完成]
 ─────────────────────── 当前（2026-06-22）──────────────────
-Month 1  ██ block-wise scoring ██ 双熵门控 ██ 评估基准
+Month 1  ██ block-wise scoring ██ 双熵门控 ██ GPT-4 评估基准
 Month 2  ██ 两阶段粗过滤PoC ██ 数据收集 ██ ARM VM 训练
 Month 3  ██ 同词表 VM 上线（含 MoE 选型） ▶ 乘积式融合A/B
 Month 4  ██ 更强VM ██ accept/reject ▶ 极小judge PoC ▶ 多模态数据准备
@@ -142,7 +142,7 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 | MMLU thinking 模式（0GM-VL-35B，150Q 对照）| SIA vs noSIA 无明显变化 | 已排除 rep_penalty bug |
 
 <sub>多次实验（VL-30B ±1–3pp、14B ±1pp）均统计不显著；0GM-35B thinking 模式有 +12pp 例外，主要源于 SIA 减少了 thinking 截断（noSIA cap-hit 25.3% → SIA 8.0%），非通识知识本身提升，待多次重复后再下结论。</sub>
-| AlpacaEval win-rate（0GM-VL-35B）| **65.4%**（Skywork judge，**191 配对**）| Skywork 作 judge 已有数字（200Q 中 9 题因超 RM 上限排除）；GPT-4 judge 尚未跑，Month 1 建立标准评估基准 |
+| AlpacaEval win-rate（0GM-VL-35B）| **65.4%**（Skywork judge，**191 配对**）| Skywork judge 基准已建立（200Q 中 9 题因超 RM 上限排除）；GPT-4 judge 尚未跑，Month 1 补建 |
 | AlpacaEval Skywork Δ（0GM-VL-35B）| **+5.45 reward（+22.7%）** | SIA mean 29.46 vs noSIA 24.01（191 对口径，实验 stable-prefix-20260610）|
 | Qwen3-VL-30B AlpacaEval（b2 inproc，200Q）| SIA Skywork mean **+1.22~+2.38（+4.2%~+8.3%）**，两轮均显著 | GPT-4 judge 尚未跑；两轮 Δ 有波动，统计噪声正常（见 doc/alpaca-eval-vl30b-b2-docker-20260608.md）|
 
@@ -187,9 +187,9 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 - **补充文献**：Learning Adaptive Decoding（[arxiv 2603.09065](https://arxiv.org/abs/2603.09065)，2026 preprint）表明仅用熵判断不够，建议引入 learned routing policy（小分类头，基于 token 上下文特征决定是否干预）——可与双熵门控串联作为 Month 1 进阶探索。"To Intervene or Not"（[arxiv 2606.11201](https://arxiv.org/abs/2606.11201)，ACL 2026）提供概率性干预框架，可在固定熵阈值之上叠加不确定性置信度，预期再减少 ~30% 无效调用。
 - **工作量**：约 1 周（`apply()` 中增加一个状态缓存）
 
-### 任务 1.3：建立评估基准
+### 任务 1.3：补建 GPT-4 标准评估基准
 
-选定 200 题 AlpacaEval 作为固定测试集，建立可复现的评估 pipeline。这是后续所有优化的衡量标准，不建基准则无法证明改进。
+现有 Skywork judge 已给出 65.4% 的 AlpacaEval 基准，是有效的快速迭代参考，但存在评估循环性和口径不可比两个局限（见下）。本任务以同一 200 题 AlpacaEval 固定测试集，切换为 GPT-4 judge，建立与业界标准对齐的可复现评估 pipeline。
 
 **为什么已有的 Skywork judge 结果不够用：**
 
@@ -513,7 +513,7 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 ## 里程碑时间线
 
 ```
-2026-07 末  conc=16 tok/s ≥ 550，评估基准建立
+2026-07 末  conc=16 tok/s ≥ 550，GPT-4 评估基准建立
 2026-08 末  同词表 VM 训练完成，两阶段粗过滤 PoC 有结论
 2026-09 末  conc=16 tok/s ≥500（保守）/ ≥750（乐观，CUDA graph 恢复），同词表 VM 上线，效果首次可量化
 2026-10 末  AlpacaEval win-rate ≥ +5%，最优干预模式确定，极小 judge PoC 有结论
