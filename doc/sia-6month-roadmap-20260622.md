@@ -527,7 +527,7 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 
 本 roadmap 在制定前进行了系统性文献调研（覆盖 NeurIPS、ICML、ICLR、ACL 等顶会，100+ 篇论文，多轮交叉核实）。以下三项发现值得重点关注：
 
-### 发现一：高并发吞吐是学术空白，SIA 有机会贡献原创研究
+### 发现一：高并发吞吐是 token 级对齐论文的研究空白
 
 当前所有 token 级对齐论文（包括 ICLR 2025 的 GenARM、ICML 2025 的 RSD 等顶会工作）**均只在单请求或小并发（≤4）场景下评估效果**，没有任何顶会论文系统研究"高并发连续批处理下 token 级干预的吞吐-效果权衡"。
 
@@ -537,7 +537,7 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 - 验证 block-wise scoring / PRM 等方案在高并发下的实际效果
 - 发表相关结果
 
-**有可能成为该方向的第一批顶会投稿**，填补当前学术空白。
+这一方向目前在学术界尚无系统性研究，是潜在的工程贡献点。
 
 ---
 
