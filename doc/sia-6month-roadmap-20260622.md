@@ -150,9 +150,9 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 
 | 痛点 | 当前状态 | 根因 |
 |------|---------|------|
-| **E 效果不显著** | AlpacaEval 65.4%（Skywork judge，191 配对）；MMLU 无明显下降 | 跨分词器噪声可能影响 VM 打分精度；GPT-4 judge 独立验证尚未完成 |
+| **E 效果不显著** | AlpacaEval 65.4%（Skywork judge，191 配对）；MMLU 无明显下降 | 跨分词器噪声导致 VM 打分信号有系统性偏差；VM 训练数据量/质量未充分验证；当前 VM 为跨分词器 4B 模型，模型能力和训练对齐程度有限；GPT-4 judge 独立验证尚未完成 |
 | **L VM 延迟高** | 0GM-VL-35B ~30ms/call | dense 4B VM，memory-bound，无 CUDA graph |
-| **T 高并发吞吐损失** | conc=16 仅 35% of noSIA | VM 调用仍占关键路径；每 token 都可能调用 |
+| **T 高并发吞吐损失** | conc=16 仅 35% of noSIA | VM 在 token 级关键路径上：per-token 触发率 ~20%（熵门控），但 conc=16 时几乎每个 batch decode step 都有至少一个请求触发（概率 ≈97%），VM 事实上阻塞了每一步 |
 
 ---
 
@@ -351,16 +351,16 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 
 | 指标 | Month 3 保守目标（CUDA graph 仍不可用）| Month 3 乐观目标（CUDA graph 恢复）| Month 2 基线 |
 |------|--------------------------------------|-------------------------------------|------------|
-| conc=16 SIA tok/s | **≥ 500** | **≥ 750** | ≥ 550 |
+| conc=16 SIA tok/s | **≥ 550** | **≥ 750** | ≥ 550 |
 | b2_score_call p50 | **~23ms**（消除跨分词器 ~7ms，eager mode）| **~11ms**（追加 CUDA graph）| ~30ms |
-| AlpacaEval win-rate vs noSIA | **可量化，有正提升** | 65.4%（Skywork judge）|
-| 乘积式 vs 加法式融合对比 | **有结论：乘积式是否更优** | — |
+| AlpacaEval win-rate vs noSIA | **可量化，有正提升** | — | 65.4%（Skywork judge）|
+| 乘积式 vs 加法式融合对比 | **有结论：乘积式是否更优** | — | — |
 
 ### Month 3 系统备选方向（如有余量，1-2 周探索）
 
 以下方向有文献依据但尚未纳入主线，Month 3 可作为探索性实验并行启动：
 
-1. **Hydragen 共享前缀 Attention**（[arxiv 2402.05099](https://arxiv.org/abs/2402.05099)，ICLR 2025）  
+1. **Hydragen 共享前缀 Attention**（[arxiv 2402.05099](https://arxiv.org/abs/2402.05099)，arxiv preprint（ICLR 2025 未能核实））  
    SIA 的 VM scoring 中，topK 个候选共享完全相同的前缀（prompt + 已生成 token）。Hydragen 将这部分 attention 抽取出来做一次 forward，理论上将 VM 候选评分从 K 次独立计算 → 1 次共享前缀 + K 次极短 suffix attention，并发吞吐改善显著。需修改 VM serving kernel，工作量约 2 周。
 
 2. **异步 VM 调用（SIA 工程探索，无直接论文支撑）**  
