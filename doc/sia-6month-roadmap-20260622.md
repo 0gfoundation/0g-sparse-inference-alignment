@@ -166,7 +166,7 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 
 > **完成后收益**：VM 实际调用率从当前 ~20%（熵门控）降至 ~5%（block-wise 叠加），每 token 摊销的 VM 调用开销降低约 75%（per-call p50 延迟 ~30ms 不变，调用次数降至原来 1/4），conc=16 吞吐从 369 tok/s 预计升至 ~500+ tok/s。
 
-- **理论依据**：arxiv 2503.02368 实测 per-token RM 比 block-wise(4) 慢 2.7-4.4×（来源：论文数据，未经内部独立实验核实，实际收益以 SIA A/B 实测为准）
+- **理论依据**：减少 VM 调用次数至 1/B 直接降低 VM 累计开销，是工程上的显然推论，无需单独引用。具体加速比以 SIA A/B 实测为准；**注意**：参考文献表中 2503.02368 与本任务的挂钩有误（该论文实际内容是 value function 导引解码的分布差距问题，不涉及 block-wise RM scoring），该引用已从本任务移除
 - **实现方案选择**：
   - **固定 block（简单）**：只在位置 4/8/12/… 检查熵，实现简单，但关键 token 若落在 block 前三位会被机械跳过。
   - **cooldown window（推荐）**：每次干预触发后，抑制接下来 N 个 token 的检查（`cooldown_remaining` 计数器递减）；无干预时恢复正常熵检查。优势：刚校正过的位置附近风险低，可跳过；关键 junction 不会因固定步长错过。实现同样简单（在 `apply()` 中加一个 per-request 计数器），效果损失预期优于固定 block。两种方案均纳入 Month 1 A/B 对比。
@@ -175,17 +175,20 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 
 **补充备选——Vocabulary-wide Reward Head**（[arxiv 2502.04517](https://arxiv.org/abs/2502.04517)，ICML 2025）：当前 SIA 对 top-K 候选分别做 forward，即使 batch 合并仍是 K 条序列。该论文将 RM head 改为单次 forward 输出**整个 vocab 的 reward 分数**，从 K 次 → 1 次 forward，理论 VM 延迟改善 topK 倍。工作量：需修改 VM 推理接口，适合在 Month 2 训练同词表 VM 时一并实现，而非 Month 1 改动现有模型。本月只需了解架构方案。
 
-### 任务 1.2：双熵门控替换单熵门控
+### 任务 1.2：双门控替换单熵门控
 
 现有门控：主模型熵 > θ 才干预（单熵）。  
-改为：主模型熵 > θ₁ **且** VM 上一步评分也显示高不确定性时才干预（双熵）。  
+改为：主模型熵 > θ₁ **且** VM 上一步打分显示候选之间分歧较大时才干预（双门控）。  
 减少低质量的无效干预，同时减少 VM 调用次数约 20-30%。
+
+**"VM 分歧"的具体定义**：VM 上一次调用时，最高分候选与次高分候选的 reward score 差值 < δ（差距小 = VM 对哪个更好没把握 = 当前位置语义敏感，值得继续干预）；差距大（VM 强烈偏好某候选）= 当前区域 VM 信号稳定，短期内干预价值低，可跳过。与 block-wise 组合时的边界处理：若上一次 VM 调用已超过 B 步（即 block-wise 跳过期间），缺少近期分歧数据，**默认触发干预**（保守策略，避免因缺少历史数据而误跳过关键位置）。
 
 > **完成后收益**：VM 有效调用率（延迟/吞吐）在 block-wise 基础上再降 ~20-30%，端到端吞吐额外提升 ~10-15%；无效干预减少同时轻微改善对齐效果（降低噪声干预比例）。
 
-- **理论依据**：EASD（arxiv 2512.23765）提出分层熵门控方案，在 speculative decoding 中引入两级熵阈值（注：EASD "减少 25% 无效干预"的具体数值未经内部独立核实，实际收益以 SIA A/B 实测为准）；TARo（arxiv 2603.18411）进一步表明基于当前步不确定性的自适应路由优于固定比例干预。
-- **补充文献**：Learning Adaptive Decoding（[arxiv 2603.09065](https://arxiv.org/abs/2603.09065)，2026 preprint）表明仅用熵判断不够，建议引入 learned routing policy（小分类头，基于 token 上下文特征决定是否干预）——可与双熵门控串联作为 Month 1 进阶探索。"To Intervene or Not"（[arxiv 2606.11201](https://arxiv.org/abs/2606.11201)，ACL 2026）提供概率性干预框架，可在固定熵阈值之上叠加不确定性置信度，预期再减少 ~30% 无效调用。
-- **工作量**：约 1 周（`apply()` 中增加一个状态缓存）
+- **理论依据**：**"To Intervene or Not"**（[arxiv 2606.11201](https://arxiv.org/abs/2606.11201)，ACL 2026）直接研究"何时干预"的决策问题，提出当基础模型置信度低时（最大 token 概率 < 0.4）用两模型置信度比计算**软混合权重**取代二元干预，实验表明非均匀干预优于始终干预；方向支持本任务的双门控思路，但该论文的机制是软混合而非硬阈值。**TARo**（arxiv 2603.18411）提出 end-to-end **学习得到**的 token 级路由器，自动决定每个位置的干预力度，实验提升最高 +22.4%；结论支持"自适应策略优于固定策略"，但 TARo 的路由器需要训练，与本任务的规则型 score 差值门控不同。
+- **注意**：EASD（arxiv 2512.23765）的"双熵"针对两个生成模型（draft + target），两者均有 token 概率分布可算 entropy，与 SIA 的 reward model 场景**不直接适用**，不作为本任务的理论依据。
+- **补充文献**：Learning Adaptive Decoding（[arxiv 2603.09065](https://arxiv.org/abs/2603.09065)，2026 preprint）建议引入 learned routing policy（小分类头，基于上下文特征决定是否干预）——可与双门控串联作为 Month 1 进阶探索。
+- **工作量**：约 1 周（`apply()` 中增加一个 per-request 状态缓存，记录上一次 VM 调用的 score 差值和距上次调用的步数）
 
 ### 任务 1.3：补建 GPT-4 标准评估基准
 
@@ -679,8 +682,8 @@ CMU 的 DSPA（arxiv 2603.21461）用稀疏自编码器在 LLM 激活空间直�
 | RSD: Reward-guided Speculative Decoding ([arxiv 2501.19324](https://arxiv.org/abs/2501.19324)) | 任务 2.3 两阶段过滤 / 任务 4.2 | **ICML 2025** ✅ |
 | SSS: Stepwise Speculative Search ([arxiv 2508.15044](https://arxiv.org/abs/2508.15044)) | 任务 2.3 两阶段过滤依据 | **EMNLP 2025** ✅ |
 | GSI: Generative Speculative Inference ([arxiv 2506.04118](https://arxiv.org/abs/2506.04118)) | 任务 2.3 两阶段过滤依据 | **ICLR 2026** ✅ |
-| Iterative Value Function Optimization ([arxiv 2503.02368](https://arxiv.org/abs/2503.02368)) | 任务 1.1 block-wise scoring | 2025 preprint |
-| EASD: Entropy-Aware Speculative Decoding ([arxiv 2512.23765](https://arxiv.org/abs/2512.23765)) | 任务 1.2 双熵门控 | 2025 preprint |
+| Iterative Value Function Optimization ([arxiv 2503.02368](https://arxiv.org/abs/2503.02368)) | ~~任务 1.1 block-wise scoring~~（**引用有误**：该论文内容为 value function 导引解码的分布差距，不涉及 block-wise RM scoring）| 2025 preprint |
+| EASD: Entropy-Aware Speculative Decoding ([arxiv 2512.23765](https://arxiv.org/abs/2512.23765)) | 背景参考（speculative decoding 双熵机制；**不适用**于 SIA 的 reward model 场景，已从任务 1.2 移除）| 2025 preprint |
 | TARo: Token-level Adaptive Routing ([arxiv 2603.18411](https://arxiv.org/abs/2603.18411)) | 任务 1.2 自适应路由参考 | 2026 preprint |
 | LLMdoctor: Product-of-Distributions Fusion ([arxiv 2601.10416](https://arxiv.org/abs/2601.10416)) | 任务 3.3 乘积式融合 A/B | 2026 preprint |
 | TITA: Token-level Inference-Time Alignment ([arxiv 2510.21794](https://arxiv.org/abs/2510.21794)) | 任务 6.2 DPO 蒸馏参考 | 2025 preprint |
