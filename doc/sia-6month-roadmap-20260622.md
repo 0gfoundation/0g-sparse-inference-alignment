@@ -80,7 +80,7 @@
 **3. 0GM-VL-35B 跨分词器优化**（6 月初）  
 Stable prefix 方案消除跨 tokenizer BPE 边界合并导致的 APC 失效：VM 调用延迟从随序列长度线性增长（34ms→55ms）降至**固定 ~30ms**，端到端吞吐 +22%。
 
-**4. 双模型上线 marketplace**（6 月中旬）  
+**4. 双模型上线 marketplace 准备完成**（6 月中旬）  
 0GM-VL-35B 和 Qwen3-VL-30B 均完成 Docker 部署、OpenAI 兼容 API、全套集成测试（run_all.sh）、max_model_len 扩展至 32768 tokens、多模态图片输入支持（图片请求 bypass SIA）。
 
 **5. 高并发批量打分优化**（6 月 18 日）  
