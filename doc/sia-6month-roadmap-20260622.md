@@ -60,7 +60,7 @@ Month 1  ██ block-wise scoring ██ 双熵门控 ██ GPT-4 评估基准
 Month 2  ██ 两阶段粗过滤PoC ██ 数据收集 ██ ARM VM 训练
 Month 3  ██ 同词表 VM 上线（含 MoE 选型） ▶ 乘积式融合A/B
 Month 4  ██ 更强VM ██ accept/reject ▶ 极小judge PoC ▶ 多模态数据准备
-Month 5  ██ PRM 训练（全月主线）
+Month 5  ██ PRM 可行性评估（全月主线）
 Month 6  ██ 多模态VM训练 ██ 多模态VM上线
 ```
 
@@ -369,9 +369,9 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 
 **决策逻辑**（来自文献调研）：文献（GenARM，ICLR 2025，arxiv 2410.08193）表明 VM 的关键在于**训练目标**而非模型规模——ARM（Autoregressive RM）4B 理论上优于 ORM 8B。Month 3 完成 ARM 4B 上线后，先用 AlpacaEval 验证效果。
 
-> **完成后收益**：AlpacaEval win-rate（对齐效果）≥ +5% vs noSIA；若 ARM 4B 已足够则节省训练资源，将预算提前投入 Month 5 PRM 或多模态；若需扩至 8B，block-wise 已降低调用频率，8B 更高的 per-call latency 可被 b2 承受。
+> **完成后收益**：AlpacaEval win-rate（对齐效果）≥ +5% vs noSIA；若 ARM 4B 已足够则节省训练资源，将预算提前投入 Month 5 PRM 可行性评估或多模态；若需扩至 8B，block-wise 已降低调用频率，8B 更高的 per-call latency 可被 b2 承受。
 
-- 若 ARM 4B 的 win-rate 已达 ≥ +5%：**跳过 8B 训练**，把资源投入 Month 5 的 PRM 或多模态
+- 若 ARM 4B 的 win-rate 已达 ≥ +5%：**跳过 8B 训练**，把资源投入 Month 5 的 PRM 可行性评估或多模态
 - 若 ARM 4B 效果仍不足：在 ARM 训练目标下扩大到 8B（此时 block-wise 已降低调用频率，8B 的更高 per-call latency 可承受）
 
 - **工作量**：2-3 周（视 Month 3 结果决定是否执行）
@@ -425,38 +425,91 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 
 ---
 
-## Month 5（2026-11）：PRM——推理任务专项优化
+## Month 5（2026-11）：PRM 可行性评估
 
-**主线任务**：全力完成 Process Reward Model 的数据准备、训练和上线，将 VM 在推理/数学/代码类任务中的调用频率从 O(token) 降至 O(step)。多模态 VM 数据收集在 Month 4 已并行准备，训练和上线集中在 Month 6。
+**主线任务**：评估 Process Reward Model 在 SIA 推理场景中的可行性——明确 PRM 相比 ARM VM 的增量效果上限，以及 step 级干预在 vLLM streaming serving 中的工程实现路径。本月**不承诺训练和上线 PRM**，以"A/B 有结论"为交付标准。多模态 VM 数据收集在 Month 4 已并行准备，训练和上线集中在 Month 6。
 
-### 任务 5.1：训练推理专用 VM（PRM，Process Reward Model）——聚焦推理/数学/代码任务
+### 任务 5.1：PRM 可行性评估——推理任务的步骤级干预
 
-**PRM 本质上是一种新的 VM**，专为推理/数学/代码任务设计。与 Month 3 上线的通用 ARM VM 的区别：
+#### 现有 ARM VM 的局限
 
-- **训练数据**：step 级偏好标注——对推理链的每一步（如数学解题每步、思维链每段）打好/坏标签，而非 token 级偏好对
-- **调用时机**：只在推理步骤边界处调用（如 `\n\n`、Qwen3 `/think` 段落分隔），而非每个高熵 token
-- **效果**：调用频率从 O(token) 降至 O(step)（一道数学题约十几步 vs 数百 token），信号更精准、调用更少
+SIA 目前的干预方式是**逐 token 打分**：在每个高熵位置，用 Value Model 评估候选 token 的质量，偏置 logit 分布。这在通用对话场景下工作良好。
 
-对于通用问答场景，仍使用 Month 3 的 ARM VM；PRM 仅在识别到推理类任务时接管。
+但在数学/推理类任务的 think 模式下，模型会生成一段完整的推理过程，每一"步"（如"第一步：化简左边"）往往包含几十到上百个 token。**逐 token 干预的盲区在于：它能纠正单个 token 的措辞，却无法判断"这整步推理的方向是否正确"**——等到步骤末尾发现方向走偏时，前面的 token 已经生成完了。
 
-> **完成后收益**：对齐效果：推理/数学/代码类任务效果显著提升（step 级奖励信号比 token 级更精准）；VM 延迟/并发吞吐：VM 调用频率从 O(token) → O(step)，降低 3-5×，吞吐损失大幅减少。
+PRM（Process Reward Model，过程奖励模型）的思路是：**在每个推理步骤结束时，评估"这步走对了吗"，如果走偏，在进入下一步之前及时纠正**。相比逐 token 干预，信号粒度从字级别上升到步骤级别。
 
-**适用范围说明**（基于文献）：ICLR 2024 对 ORM vs PRM 的系统对比（Lightman et al.，[arxiv 2305.20050](https://arxiv.org/abs/2305.20050)）实验全部在 MATH 数学数据集上进行。PRM 优于 ORM 的结论在**推理/数学/代码**类任务上有顶会支撑，在通用问答/对话类任务上缺乏直接验证。**本任务优先针对推理类任务，不宜对通用指令跟随场景过度承诺。**
+#### ARM VM 与步骤级干预的分工
 
-**补充文献**：PRM as Unified Control Signal（[arxiv 2602.01070](https://arxiv.org/abs/2602.01070)，2026 preprint）将推理过程形式化为"迭代轨迹生成与选择"，用 step-level PRM 在生成中途剪枝低 reward 候选（支持 beam search 和 lookahead search），机制描述经文献核实。与 SIA 粒度互补：SIA 做 token 级局部干预，PRM 做 step 级轨迹选择，两者可叠加。
+两者不互斥，而是粒度互补：
 
-- **数据需求**：构建 step-level preference 数据集（数学/推理类，每步打好/坏标签）
-- **补充文献**（来自综合调研）：
-  - **SP-PRM**（[arxiv 2506.12446](https://arxiv.org/abs/2506.12446)，2025）：从 ORM 推导过程奖励，**大幅降低 PRM 训练数据收集门槛**——无需 step 级人工标注，利用已有 outcome 偏好数据自动生成 step 奖励信号，直接适合 SIA 资源约束。
-  - **ThinkPRM**（[arxiv 2504.16828](https://arxiv.org/abs/2504.16828)，2025）：在 thinking token 级别应用 PRM，对应 Qwen3 的 `/think` 模式；为推理过程中的每个思维步骤打分，与 SIA 在 thinking 模式下的应用高度匹配。
-  - **DG-PRM**（[arxiv 2507.17849](https://arxiv.org/abs/2507.17849)，ACL 2025）：动态 PRM，跨任务泛化性强，减少 SIA 对特定任务标注数据的依赖；适合从数学推理扩展到代码生成。
-- **工作量**：4 周（数据准备 2 周 + 训练 + 验证 2 周）
+| 场景 | 干预方式 | 触发时机 |
+|------|---------|---------|
+| 通用问答 / 指令跟随 | ARM VM（逐 token） | 高熵 token 位置 |
+| 数学 / 推理 / 代码（think 模式）| ARM VM + 步骤级干预叠加 | ARM VM：高熵 token；步骤干预：每步结束时 |
+
+步骤级干预只在 `<think>` 块内生效（通用对话无推理步骤结构，不触发）。
+
+#### 步骤边界怎么识别
+
+Qwen3 在 think 模式下，每完成一个推理步骤，会自然输出**双换行 `\n\n`** 作为分隔。这是步骤边界的天然信号，无需额外训练分类器。
+
+RSD（ICML 2025）、ThinkPRM、PRM as Unified Control Signal 三篇独立论文均使用 `\n\n` 作为步骤分隔符，做法一致。
+
+#### 步骤结束后具体怎么干预
+
+**核心思路：不回滚，而是"抢跑三条路，选最好的那条"。**
+
+直觉上，"这步走偏了"→ 回滚重新生成这一步，听起来合理，但在 vLLM streaming 中，已生成内容的 KV cache 无法廉价地回滚到步骤起点（代价等同于重新 prefill 整步）。实际可行的做法是：不修改已生成的内容，而是**在进入下一步的瞬间，让模型同时试探三条不同的起始方向，选最好的那条继续**。
+
+具体流程（基于 AdaDec，FSE 2026）：
+
+```
+模型输出 \n\n（当前步骤结束）
+  ↓
+暂停，让模型从当前位置独立生成 3 条候选续写
+  每条只生成 5 个 token（greedy，不随机采样）
+  ↓
+比较 3 条候选的"流畅度分"
+  分数 = 这 5 个 token 的平均对数概率（模型自己有多大把握写出这几个字）
+  ↓
+选得分最高的那条，丢掉另外两条，从这条继续正常生成
+```
+
+**为什么只看 5 个 token 就够了？** 因为下一步的"方向"往往在前几个字就定了——"第三步：两边除以 2"和"第三步：两边乘以 2"在第四、五个 token 就已经分叉。AdaDec 论文在 HumanEval+ 上验证了 L=5 是效果与开销的最优平衡点。
+
+**这条路线的关键优势：不需要训练任何新模型**。打分信号来自 LLM 自身的概率输出，直接复用现有 vLLM forward pass，今天就能在现有环境实现。
+
+#### 如果 AdaDec baseline 效果不够，再上外部 PRM
+
+AdaDec 用"模型自身的流畅度"打分，判断的是"这个方向模型写得顺不顺"。如果需要更强的语义质量判断（"这个推理步骤逻辑上对不对"），则需要引入外部训练好的 PRM 模型来打分。
+
+两条路线对比：
+
+| 路线 | 触发 | 候选长度 | 打分信号 | 是否需要训练 |
+|------|------|---------|---------|------------|
+| **路线一：AdaDec baseline**（先做）| `\n\n` | 5 tokens greedy | LLM 自身 avg log-prob | **不需要** |
+| **路线二：外部 PRM**（视结论）| `\n\n` | 完整一步到下一个 `\n\n` | 外部 PRM 模型打分 | 需要训练 PRM |
+
+路线二的文献支撑：RSD（ICML 2025）以 δ=0.7 为阈值，ThinkPRM 以 M=4 候选进行 beam search，均在数学推理任务上验证了有效性。但训练外部 PRM 需要 step 级偏好标注数据，成本较高（SP-PRM 方案可从已有 outcome 数据自动生成 step 标签，降低数据门槛）。
+
+**适用范围说明**：PRM 优于 ORM 的顶会结论（Lightman et al.，ICLR 2024，[arxiv 2305.20050](https://arxiv.org/abs/2305.20050)）基于 MATH 数学数据集，在推理/代码任务上有支撑，通用对话场景无直接验证。步骤级干预仅对 think 模式下的推理类任务承诺效果。
+
+#### 本月实际工作内容
+
+1. **实现 AdaDec baseline**：在 `SIALogitsProcessor` 中，检测 `<think>` 块内的 `\n\n`，触发 B=3、L=5 greedy fork，用 LLM avg log-prob 打分选最优，完成端到端集成
+2. **A/B 效果评估**：MATH500 / AIME think 模式下，AdaDec baseline vs 纯 ARM VM vs noSIA 三路对比，量化步骤级干预的增量收益
+3. **吞吐影响测量**：conc=16 下，每个 `\n\n` 多跑 2 条 5-token greedy rollout 的实际开销
+4. **go/no-go 外部 PRM**：若 AdaDec baseline 效果满足需求，外部 PRM 训练推迟至 6 个月外；若效果不足，输出训练 PRM 的数据需求和工作量估算
 
 ### Month 5 交付标准
 
 | 指标 | Month 5 目标 |
 |------|-------------|
-| PRM 上线（推理类任务）| 推理任务 VM 调用次数 ≤ 20% of token 数 |
+| AdaDec baseline 实现 | `SIALogitsProcessor` 内 `\n\n` 触发、B=3、L=5 greedy fork 端到端跑通 |
+| A/B 效果结论 | MATH500 AdaDec baseline vs 纯 ARM VM vs noSIA 三路对比完成 |
+| overhead 测量 | conc=16 下 AdaDec baseline 吞吐影响有数据 |
+| go/no-go 外部 PRM | 是否需要训练外部 PRM 有明确结论 |
 | 多模态 VM 数据 | **收集完成** |
 
 ---
@@ -506,7 +559,7 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 | SIA/noSIA ITL 倍数 | 3.0× | **≤ 2.0×** | **≤ 1.5×** |
 | AlpacaEval win-rate vs noSIA | 65.4%（Skywork judge，待 GPT-4 验证）| **≥ +5%（GPT-4 judge 独立验证）** |
 | 多模态 VLM 场景支持 | ❌ | **✅** |
-| VM 是否需要每 token 调用 | 是（~20% token）| **否（block-wise + PRM，~5% 以下）**|
+| VM 是否需要每 token 调用 | 是（~20% token）| **否（block-wise，~5% 以下；PRM 待 Month 5 评估后定）**|
 
 ---
 
@@ -517,7 +570,7 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 2026-08 末  同词表 VM 训练完成，两阶段粗过滤 PoC 有结论
 2026-09 末  conc=16 tok/s ≥500（保守）/ ≥750（乐观，CUDA graph 恢复），同词表 VM 上线，效果首次可量化
 2026-10 末  AlpacaEval win-rate ≥ +5%，最优干预模式确定，极小 judge PoC 有结论
-2026-11 末  PRM 上线，推理任务 VM 调用进一步降低
+2026-11 末  PRM 可行性评估完成，go/no-go 决策有结论（ARM VM 盲区量化 + 工程 overhead 评估）
 2026-12 末  多模态 VM 训练完成并上线
 ```
 
@@ -740,7 +793,7 @@ TITA（2025，arxiv 2510.21794）展示了推理时 log-ratio 方法（DPO 等�
 
 **C2. PRM 与 token 级 VM 的融合**
 
-Month 5 的 PRM 给出步骤级分数，如何将其降维分摊到 token 级（如一步内均匀分摊），在不额外构建 token 级偏好数据的情况下提升 token 级干预信号质量，是一个开放问题。目前无顶会直接验证，建议 Month 5 PRM 上线后顺带做消融实验。
+若 Month 5 可行性评估结论为 go，PRM 给出步骤级分数后，如何将其降维分摊到 token 级（如一步内均匀分摊），在不额外构建 token 级偏好数据的情况下提升 token 级干预信号质量，是一个开放问题。目前无顶会直接验证，建议 PRM 实际上线后顺带做消融实验。
 
 ---
 
