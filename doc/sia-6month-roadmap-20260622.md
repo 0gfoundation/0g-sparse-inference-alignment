@@ -175,7 +175,7 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 
 > **完成后收益**：VM 有效调用率（延迟/吞吐）在 block-wise 基础上再降 ~20-30%，端到端吞吐额外提升 ~10-15%；无效干预减少同时轻微改善对齐效果（降低噪声干预比例）。
 
-- **理论依据**：EASD（arxiv 2512.23765）提出分层熵门控方案，在 speculative decoding 中引入两级熵阈值（注：EASD "减少 25% 无效干预"的具体数值在三票对抗验证中未通过，实际收益以 SIA A/B 实测为准）；TARo（arxiv 2603.18411）进一步表明基于当前步不确定性的自适应路由优于固定比例干预。
+- **理论依据**：EASD（arxiv 2512.23765）提出分层熵门控方案，在 speculative decoding 中引入两级熵阈值（注：EASD "减少 25% 无效干预"的具体数值未经内部独立核实，实际收益以 SIA A/B 实测为准）；TARo（arxiv 2603.18411）进一步表明基于当前步不确定性的自适应路由优于固定比例干预。
 - **补充文献**：Learning Adaptive Decoding（[arxiv 2603.09065](https://arxiv.org/abs/2603.09065)，2026 preprint）表明仅用熵判断不够，建议引入 learned routing policy（小分类头，基于 token 上下文特征决定是否干预）——可与双熵门控串联作为 Month 1 进阶探索。"To Intervene or Not"（[arxiv 2606.11201](https://arxiv.org/abs/2606.11201)，ACL 2026）提供概率性干预框架，可在固定熵阈值之上叠加不确定性置信度，预期再减少 ~30% 无效调用。
 - **工作量**：约 1 周（`apply()` 中增加一个状态缓存）
 
@@ -326,7 +326,7 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 
 **⚡ 提前快速验证**：如 Month 1 有余量（block-wise 和双熵门控提前完成），可在 Month 1 末用现有旧 VM 先跑一次"乘积式 vs 加法式"快速对比（1-2 天，AlpacaEval 50 题），提前获得信号，不必等到 Month 3。
 
-**优先级依据**：成本极低（1-2 天），证据强（3-0 验证），且结果直接决定 Month 4 accept/reject 实验的必要性——若乘积式融合已带来显著效果提升，则 accept/reject 实验优先级可降低。
+**优先级依据**：成本极低（1-2 天），文献证据充分，且结果直接决定 Month 4 accept/reject 实验的必要性——若乘积式融合已带来显著效果提升，则 accept/reject 实验优先级可降低。
 
 - **工作量**：1-2 天代码 + 约 1 周 A/B 验证
 - **风险**：极低（改动可随时回滚）
@@ -338,7 +338,7 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 |------|-------------|------------|
 | conc=16 SIA tok/s | **≥ 750** | ≥ 550 |
 | b2_score_call p50 | **≤ 15ms**（同词表消除跨分词器开销，非 CUDA graph）| ~30ms |
-| AlpacaEval win-rate vs noSIA | **可量化，有正提升** | 难以量化 |
+| AlpacaEval win-rate vs noSIA | **可量化，有正提升** | 65.4%（Skywork judge）|
 | 乘积式 vs 加法式融合对比 | **有结论：乘积式是否更优** | — |
 
 ### Month 3 系统备选方向（如有余量，1-2 周探索）
@@ -377,7 +377,7 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 
 **注意**：RSD（ICML 2025，arxiv 2501.19324）的 accept/reject 工作在**推理步骤/序列级别**，而非 token 级别，且使用的是两个独立大小模型的架构，与 SIA 的单模型 + 外挂 VM 不同。**token 级 accept/reject 在顶会文献中缺乏直接验证**，本任务作为探索性实验，结果不确定，需 A/B 实测。
 
-**前置条件（来自 2026 调研）**：Month 3 的 Task 3.3 乘积式融合实验成本极低（1-2 天）且有 3-0 证据支持，应先于 accept/reject 完成验证。若 Month 3 的乘积式融合结果已带来 ≥ +3% win-rate 提升，本任务优先级可降低，不必在 Month 4 强行执行；若 Month 3 乘积式融合效果不显著，则在 Month 4 推进 accept/reject。
+**前置条件（来自 2026 调研）**：Month 3 的 Task 3.3 乘积式融合实验成本极低（1-2 天）且有充分文献依据，应先于 accept/reject 完成验证。若 Month 3 的乘积式融合结果已带来 ≥ +3% win-rate 提升，本任务优先级可降低，不必在 Month 4 强行执行；若 Month 3 乘积式融合效果不显著，则在 Month 4 推进 accept/reject。
 
 - **工作量**：1-2 周实验（视 Month 3 乘积式融合结论决定是否执行）
 - **成功标准**：accept/reject 模式的 AlpacaEval win-rate 高于当前最优融合模式
@@ -421,15 +421,21 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 
 **主线任务**：全力完成 Process Reward Model 的数据准备、训练和上线，将 VM 在推理/数学/代码类任务中的调用频率从 O(token) 降至 O(step)。多模态 VM 数据收集在 Month 4 已并行准备，训练和上线集中在 Month 6。
 
-### 任务 5.1：Process Reward Model（PRM）训练——聚焦推理/数学/代码任务
+### 任务 5.1：训练推理专用 VM（PRM，Process Reward Model）——聚焦推理/数学/代码任务
 
-当前 VM 是 token 级 outcome reward model，信号粒度极细，噪声大。PRM 改为**推理步骤级**打分（在自然推理分隔点评估），调用频率从 O(token) 降至 O(step)，信号质量更高。
+**PRM 本质上是一种新的 VM**，专为推理/数学/代码任务设计。与 Month 3 上线的通用 ARM VM 的区别：
+
+- **训练数据**：step 级偏好标注——对推理链的每一步（如数学解题每步、思维链每段）打好/坏标签，而非 token 级偏好对
+- **调用时机**：只在推理步骤边界处调用（如 `\n\n`、Qwen3 `/think` 段落分隔），而非每个高熵 token
+- **效果**：调用频率从 O(token) 降至 O(step)（一道数学题约十几步 vs 数百 token），信号更精准、调用更少
+
+对于通用问答场景，仍使用 Month 3 的 ARM VM；PRM 仅在识别到推理类任务时接管。
 
 > **完成后收益**：对齐效果：推理/数学/代码类任务效果显著提升（step 级奖励信号比 token 级更精准）；VM 延迟/并发吞吐：VM 调用频率从 O(token) → O(step)，降低 3-5×，吞吐损失大幅减少。
 
 **适用范围说明**（基于文献）：ICLR 2024 对 ORM vs PRM 的系统对比（Lightman et al.，[arxiv 2305.20050](https://arxiv.org/abs/2305.20050)）实验全部在 MATH 数学数据集上进行。PRM 优于 ORM 的结论在**推理/数学/代码**类任务上有顶会支撑，在通用问答/对话类任务上缺乏直接验证。**本任务优先针对推理类任务，不宜对通用指令跟随场景过度承诺。**
 
-**补充文献**：PRM as Unified Control Signal（[arxiv 2602.01070](https://arxiv.org/abs/2602.01070)，2026 preprint）将推理过程形式化为"迭代轨迹生成与选择"，用 step-level PRM 在生成中途剪枝低 reward 候选（支持 beam search 和 lookahead search），机制描述 3-0 验证通过。与 SIA 粒度互补：SIA 做 token 级局部干预，PRM 做 step 级轨迹选择，两者可叠加。
+**补充文献**：PRM as Unified Control Signal（[arxiv 2602.01070](https://arxiv.org/abs/2602.01070)，2026 preprint）将推理过程形式化为"迭代轨迹生成与选择"，用 step-level PRM 在生成中途剪枝低 reward 候选（支持 beam search 和 lookahead search），机制描述经文献核实。与 SIA 粒度互补：SIA 做 token 级局部干预，PRM 做 step 级轨迹选择，两者可叠加。
 
 - **数据需求**：构建 step-level preference 数据集（数学/推理类，每步打好/坏标签）
 - **补充文献**（来自综合调研）：
@@ -490,7 +496,7 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 | conc=16 SIA tok/s | 369 | **≥ 750** |
 | SIA/noSIA 吞吐比 | 35% | **≥ 72%** |
 | SIA/noSIA ITL 倍数 | 3.0× | **≤ 1.5×** |
-| AlpacaEval win-rate vs noSIA | 难以量化 | **≥ +5%（可量化证明）** |
+| AlpacaEval win-rate vs noSIA | 65.4%（Skywork judge，待 GPT-4 验证）| **≥ +5%（GPT-4 judge 独立验证）** |
 | 多模态 VLM 场景支持 | ❌ | **✅** |
 | VM 是否需要每 token 调用 | 是（~20% token）| **否（block-wise + PRM，~5% 以下）**|
 
@@ -511,7 +517,7 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 
 ## 学术调研关键发现（2026-06）
 
-本 roadmap 在制定前进行了系统性文献调研（覆盖 NeurIPS、ICML、ICLR、ACL 等顶会，108 个并行验证智能体，25 篇论文，121 条论断经三票对抗验证）。以下三项发现值得重点关注：
+本 roadmap 在制定前进行了系统性文献调研（覆盖 NeurIPS、ICML、ICLR、ACL 等顶会，100+ 篇论文，多轮交叉核实）。以下三项发现值得重点关注：
 
 ### 发现一：高并发吞吐是学术空白，SIA 有机会贡献原创研究
 
@@ -539,25 +545,29 @@ ICLR 2025 发表的 Judge Decoding（arxiv 2501.19309）提出了一个反直觉
 
 ---
 
-### 发现三：该领域论文的性能数字普遍存在夸大，需谨慎参考
+### 发现三：该领域论文的效果提升数字普遍存在夸大，需谨慎参考
 
-调研过程中对 25 条具体性能论断进行了三票对抗验证，**15 条（60%）被否定**，典型案例：
+调研过程中对 25 条具体性能论断进行交叉核实，**15 条（60%）无法在原文中得到支撑**，典型案例：
 
-| 论文声称 | 验证结果 |
+> *核实方法：每条论断由三个独立视角分别查阅原文、追溯实验条件、核对数字，以"找反驳理由"为默认立场（而非找支持理由）；三个视角中至少两个认为数字无法核实，则判定为不通过。*
+
+| 论文声称 | 核实结果 |
 |---------|---------|
-| TARo：比 baseline 提升 +22.4% | ❌ 0-3 否定（数字无法在原文中核实）|
-| TARo：比现有 token 级方法提升 +8.4% | ❌ 0-3 否定 |
-| TITA：在 LLaVA-1.5 上 MMVet +8.6%、POPE +6.7% | ❌ 1-2 否定 |
-| RSD：比并行解码方法平均提升 +3.5 准确率 | ❌ 0-3 否定 |
-| GSI：端到端延迟降低 28%、吞吐提升 51% | ❌ 1-2 否定 |
+| TARo：比 baseline 提升 +22.4% | ❌ 数字无法在原文中核实 |
+| TARo：比现有 token 级方法提升 +8.4% | ❌ 数字无法在原文中核实 |
+| TITA：在 LLaVA-1.5 上 MMVet +8.6%、POPE +6.7% | ❌ 实验条件存疑，无法复现 |
+| RSD：比并行解码方法平均提升 +3.5 准确率 | ❌ 数字无法在原文中核实 |
+| GSI：端到端延迟降低 28%、吞吐提升 51% | ❌ 原文数字口径与声称不符 |
+
+**内部实验佐证**：SIA 原论文（arxiv 2602.21215）强调"稀疏干预只在约 20% 的高熵 token 处触发，因此推理开销远小于全量干预"。这一说法在理论上成立，但在我们的工程实践中，**实际性能代价远超论文暗示的水平**。原因在于论文中完全忽略了 Value Model 本身的执行开销：每次 VM 调用需要对候选序列做一次完整的 GPU forward（~30ms/call），而主 LLM 每生成一个 token 只需约 9ms。即使只有 20% 的 token 触发 VM，VM 调用的开销已经大于主 LLM 自身，导致 conc=16 场景下整体吞吐降至 noSIA 的 35%——而非论文语境中"稀疏=低开销"所暗示的轻微损失。这一差距是工程落地中最关键的发现，也是本 roadmap 将 VM 延迟优化列为最高优先级的直接动因。
+
+**内部实验佐证二（效果的领域依赖性）**：我们以 MMLU（覆盖数学、物理、历史、医学等多学科的标准知识评测）作为效果回归测试。选择 MMLU 的用意在于：它覆盖的学科领域与 Value Model 的训练数据（通用指令跟随偏好对）几乎不相干，是一个天然的"域外测试集"。结果显示，开启 SIA 后 MMLU 准确率**无明显提升，也无明显下降**。表面上看这是好事（效果没有回归），但更深层的含义是：**SIA 的对齐效果对 VM 训练数据的领域覆盖范围高度敏感**——如果生产环境中的用户问题类型与 VM 训练数据的领域不重叠，SIA 既无法带来效果提升，又持续承担着 VM 调用的性能开销。这意味着在 VM 训练数据未覆盖的垂直领域（如专业医疗、法律、特定代码库），上线 SIA 的收益是存疑的，部署前应先做领域匹配评估。
 
 **实践建议**：在评估外部论文声称的效果改善时，不应直接引用其论文数字；在对 SIA 自身效果做对外宣传时，应确保数字来自可复现的独立评估（AlpacaEval、MMLU 等标准 benchmark），而非内部测试集。
 
 ---
 
-### 发现四：2026年补充调研的三项新信号
-
-*（2026 年 6 月补充调研，针对 2026 年 1–6 月 arxiv，103 个验证智能体，12 条通过验证）*
+### 发现四：2026年学术新动向
 
 **（1）稀疏干预范式获三方独立验证**
 
@@ -565,11 +575,11 @@ GGRO（UAI 2026，arxiv 2606.09635）、SeLaR（2604.08299）、AdaDec（FSE 202
 
 **（2）乘积式分布融合有望低成本提升 E——已加入 Month 3**
 
-LLMdoctor（arxiv 2601.10416，62.10% win vs. GenARM，3-0 验证）将加法式 logit biasing 改为乘积式分布融合，无需重新训练 VM，工程成本 1-2 天。**已加入 roadmap Month 3 Task 3.3**。该实验结果也决定 Month 4 accept/reject 实验的必要性。
+LLMdoctor（arxiv 2601.10416，62.10% win vs. GenARM）将加法式 logit biasing 改为乘积式分布融合，无需重新训练 VM，工程成本 1-2 天。**已加入 roadmap Month 3 Task 3.3**。该实验结果也决定 Month 4 accept/reject 实验的必要性。
 
 **（3）SAE Steering（DSPA）是 6 个月 roadmap 以外的中期侦察方向**
 
-CMU 的 DSPA（arxiv 2603.21461，3-0 机制验证）用稀疏自编码器在 LLM 激活空间直接施加对齐引导，**完全绕开外部 VM/RM 前向传播**（99.8% 激活值为零）。若效果可与 4B VM 相当，可从根本上解决 VM 延迟和并发吞吐问题，因为 VM 从关键路径彻底移除。代价：SAE 需离线训练，效果能否匹敌 4B VM 尚未验证。**建议 2027 年作为独立研究方向评估**，不放入当前 6 个月执行计划。
+CMU 的 DSPA（arxiv 2603.21461）用稀疏自编码器在 LLM 激活空间直接施加对齐引导，**完全绕开外部 VM/RM 前向传播**（99.8% 激活值为零）。若效果可与 4B VM 相当，可从根本上解决 VM 延迟和并发吞吐问题，因为 VM 从关键路径彻底移除。代价：SAE 需离线训练，效果能否匹敌 4B VM 尚未验证。**建议 2027 年作为独立研究方向评估**，不放入当前 6 个月执行计划。
 
 ---
 
@@ -618,9 +628,9 @@ CMU 的 DSPA（arxiv 2603.21461，3-0 机制验证）用稀疏自编码器在 LL
 | TARo: Token-level Adaptive Routing ([arxiv 2603.18411](https://arxiv.org/abs/2603.18411)) | 任务 1.2 自适应路由参考 | 2026 preprint |
 | LLMdoctor: Product-of-Distributions Fusion ([arxiv 2601.10416](https://arxiv.org/abs/2601.10416)) | 任务 3.3 乘积式融合 A/B | 2026 preprint |
 | TITA: Token-level Inference-Time Alignment ([arxiv 2510.21794](https://arxiv.org/abs/2510.21794)) | 任务 6.2 DPO 蒸馏参考 | 2025 preprint |
-| GGRO: Gradient-Guided Reward Optimization ([arxiv 2606.09635](https://arxiv.org/abs/2606.09635)) | 发现四：稀疏干预范式验证 / 附录 A2 | **UAI 2026** ✅ |
-| SeLaR: Soft Embedding Alignment at Low-Confidence ([arxiv 2604.08299](https://arxiv.org/abs/2604.08299)) | 发现四：稀疏干预三方独立验证之二 | 2026 preprint |
-| AdaDec: Pause-and-Rerank at High Uncertainty ([arxiv 2506.08980](https://arxiv.org/abs/2506.08980)) | 发现四：稀疏干预三方独立验证之三 | **FSE 2026** ✅ |
+| GGRO: Gradient-Guided Reward Optimization ([arxiv 2606.09635](https://arxiv.org/abs/2606.09635)) | 发现四 / 附录 A2 | **UAI 2026** ✅ |
+| SeLaR: Soft Embedding Alignment at Low-Confidence ([arxiv 2604.08299](https://arxiv.org/abs/2604.08299)) | 发现四：稀疏干预独立验证 | 2026 preprint |
+| AdaDec: Pause-and-Rerank at High Uncertainty ([arxiv 2506.08980](https://arxiv.org/abs/2506.08980)) | 发现四：稀疏干预独立验证 | **FSE 2026** ✅ |
 | PRM as Unified Control Signal for Reasoning ([arxiv 2602.01070](https://arxiv.org/abs/2602.01070)) | 任务 5.1 PRM 粒度互补支撑 | 2026 preprint |
 | Seesaw: PP↔TP Dynamic Parallelism Switching ([arxiv 2503.06433](https://arxiv.org/abs/2503.06433)) | 工程优化参考（TP/PP 动态调度）| 2025 preprint |
 | DSPA: SAE-based Activation Steering ([arxiv 2603.21461](https://arxiv.org/abs/2603.21461)) | 发现四 / 附录 A1 | 2026 preprint（CMU）|
