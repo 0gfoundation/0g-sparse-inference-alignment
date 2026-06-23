@@ -374,7 +374,7 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 
 ### 任务 4.1：规模决策——ARM 4B 效果若不足，训练 ARM 8B
 
-**决策逻辑**（来自文献调研）：文献（GenARM，ICLR 2025，arxiv 2410.08193）表明 VM 的关键在于**训练目标**而非模型规模——ARM（Autoregressive RM）4B 理论上优于 ORM 8B。Month 3 完成 ARM 4B 上线后，先用 AlpacaEval 验证效果。
+**决策逻辑**（来自文献调研）：文献（GenARM，ICLR 2025，arxiv 2410.08193）表明 VM 的关键在于**训练目标**而非模型规模——ARM 的 token 级训练目标在实验中优于 ORM。据此推论（非论文直接对比数据）：在训练充分的前提下，ARM 4B 理论上优于 ORM 8B。Month 3 完成 ARM 4B 上线后，先用 AlpacaEval 验证效果。
 
 > **完成后收益**：AlpacaEval win-rate（对齐效果）≥ +5% vs noSIA；若 ARM 4B 已足够则节省训练资源，将预算提前投入 Month 5 PRM 可行性评估或多模态；若需扩至 8B，block-wise 已降低调用频率，8B 更高的 per-call latency 可被 b2 承受。
 
