@@ -253,7 +253,7 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 同步评估是否有合适的小 MoE base 可选（VRAM 允许时 MoE per-call 读带宽更低）。
 
 **🎯 架构设计目标——Vocabulary-wide Scoring Head**（来自 [arxiv 2502.04517](https://arxiv.org/abs/2502.04517)，ICML 2025）：  
-训练新 VM 时，**不要沿用旧的"输入一条候选序列 → 输出一个标量"接口**，而是将 reward head 设计为"输入当前 prefix → 输出整个 vocabulary 的 reward 向量"。这样 SIA 对 top-K 候选的评分从 **K 次 forward → 1 次 forward**，L 理论改善 topK 倍（topK=10 时最多 10×）。实现上：RM head 从 `[hidden → scalar]` 改为 `[hidden → vocab_size]`，标签仍是偏好对。这是本轮 VM 训练**最高优先级的架构决策**，不单独占工作量，在训练开始前确认接口设计即可。
+训练新 VM 时，**不要沿用旧的"输入一条候选序列 → 输出一个标量"接口**，而是将 reward head 设计为"输入当前 prefix → 输出整个 vocabulary 的 reward 向量"。这样 SIA 对 top-K 候选的评分从 **K 次 forward → 1 次 forward**，理论上界为 topK 倍加速（topK=10 时理论最高 10×）；该论文（FaRMA）实测加速约 **6–6.5×**，不到理论上界，因为 RM head 输出规模增大部分抵消了调用次数减少的收益，实际收益以 SIA A/B 实测为准。实现上：RM head 从 `[hidden → scalar]` 改为 `[hidden → vocab_size]`，标签仍是偏好对。这是本轮 VM 训练**最高优先级的架构决策**，不单独占工作量，在训练开始前确认接口设计即可。
 
 **补充训练技巧**：
 - **低秩 Reward Head**（[arxiv 2407.04615](https://arxiv.org/abs/2407.04615)，TMLR 2025）：vocabulary-wide head 的矩阵从 `[d × V]` 分解为 `[d × r] × [r × V]`（r ≪ V），在 vocab=248K 的 Qwen3.5 词表下效果尤为明显，与上述架构目标天然兼容。
@@ -264,9 +264,13 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 
 ### 任务 2.3：两阶段粗过滤 PoC——0.6B VM 作为 4B VM 的守门员（VM 延迟优化，1–2 周）
 
-**理论依据**：RSD（ICML 2025，arxiv 2501.19324）、SSS（EMNLP 2025，arxiv 2508.15044）、GSI（ICLR 2026，arxiv 2506.04118）三篇独立工作验证了两阶段粗过滤模式：用极小模型做第一阶段快速筛选，只在不确定位置调用大模型。在 δ=0.7 阈值下，**约 48% 的调用可完全跳过大模型**。
+**理论依据**：RSD（ICML 2025，arxiv 2501.19324）、SSS（EMNLP 2025，arxiv 2508.15044）、GSI（ICLR 2026，arxiv 2506.04118）三篇独立工作验证了两阶段架构的有效性：用小模型快速初筛，只在必要时调用大模型。其中 RSD 在 δ=0.7 阈值下，**约 48% 的问题可完全由 draft model 独立完成**（per-question 指标，非 per-call 跳过率）。
 
-**SIA 实现方案**：利用官方已有的 VM-Qwen3-0.6B-Base checkpoint，在 `SIALogitsProcessor.apply()` 中增加第一阶段：先对当前所有候选用 0.6B VM 打分，计算 N 个候选分数的**方差**；若方差 < 阈值 δ（所有候选分数接近，说明 0.6B 无法区分），则跳过 4B VM，直接用 0.6B 分数（或 0 偏置）作为干预信号；若方差 ≥ δ，则正常调用 4B VM 做精细打分。
+需要注意：上述三篇论文的架构均为**小生成模型（LLM）门控大生成模型**，而非"小 RM 门控大 RM"。Task 2.3 将此思路迁移到 VM 场景（0.6B reward model 门控 4B reward model），是 SIA 的工程探索，原理相通但尚无顶会直接验证。
+
+**SIA 实现方案**：利用官方已有的 VM-Qwen3-0.6B-Base checkpoint，在 `SIALogitsProcessor.apply()` 中增加第一阶段：先对当前所有候选用 0.6B VM 打分，计算 K 个候选分数的**方差**；若方差 < 阈值 δ（所有候选分数接近），则认为质量差异不显著、干预价值低，跳过 4B VM 直接用 0.6B 分数（或 0 偏置）；若方差 ≥ δ（候选间有明显质量分歧），则调用 4B VM 做更精确的排序。
+
+> **设计说明**：此方差门控逻辑与 RSD 的"draft 模型打分高→接受、打分低→调用大模型"在方向上不同——RSD 用绝对分数判断质量，本方案用候选间方差判断干预必要性。哪种逻辑在 SIA 场景更优是 PoC 要回答的实验问题。
 
 > **完成后收益**：VM 延迟：4B VM 调用减少约 40–50%，VM 平均开销从 30ms → ~17ms/step（0.6B 预筛约 3–5ms）；与 block-wise B=4 叠加后，VM 有效调用占比从 ~20% → ~3–5%；并发吞吐：conc=16 吞吐在 Month 1 基础上再提升。
 
