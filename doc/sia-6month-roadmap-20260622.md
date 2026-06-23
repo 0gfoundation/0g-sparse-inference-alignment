@@ -643,7 +643,7 @@ CMU 的 DSPA（arxiv 2603.21461）用稀疏自编码器在 LLM 激活空间直�
 | Seesaw: PP↔TP Dynamic Parallelism Switching ([arxiv 2503.06433](https://arxiv.org/abs/2503.06433)) | 工程优化参考（TP/PP 动态调度）| 2025 preprint |
 | DSPA: SAE-based Activation Steering ([arxiv 2603.21461](https://arxiv.org/abs/2603.21461)) | 发现四 / 附录 A1 | 2026 preprint（CMU）|
 | ArmoRM: Multi-Objective Reward Model ([arxiv 2406.12845](https://arxiv.org/abs/2406.12845)) | 任务 6.1 / 附录 C1 多目标 VM | 2024 preprint |
-| Token-level MDP Formalization ([arxiv 2602.02572](https://arxiv.org/abs/2602.02572)) | 附录 D2 学术发表基础 | **ICML 2026** ✅ |
+| Token-level MDP Formalization ([arxiv 2602.02572](https://arxiv.org/abs/2602.02572)) | 理论背景参考 | **ICML 2026** ✅ |
 | Nudging: Uncertainty-gated Sparse Intervention ([arxiv 2410.09300](https://arxiv.org/abs/2410.09300)) | 任务 2.3 / 方向验证 | 2024 preprint |
 | BatchLLM: Explicit Global Prefix Sharing ([arxiv 2412.03594](https://arxiv.org/abs/2412.03594)) | 工程优化参考 | 2024 preprint |
 | HybridFlow: ResourcePool LLM+RM Co-deployment ([arxiv 2409.19256](https://arxiv.org/abs/2409.19256)) | 附录 B4 独立 GPU VM | **EuroSys 2025** ✅ |
@@ -651,7 +651,7 @@ CMU 的 DSPA（arxiv 2603.21461）用稀疏自编码器在 LLM 激活空间直�
 | STEP: Memory-triggered Search Tree Pruning ([arxiv 2601.09093](https://arxiv.org/abs/2601.09093)) | 工程优化参考（压力感知降级）| 2026 preprint |
 | RM Knowledge Distillation ([arxiv 2411.08302](https://arxiv.org/abs/2411.08302)) | 附录 B1 VM 蒸馏依据 / 任务 2.2 训练技巧 | 2024 preprint |
 | RM Distillation: Reward Model Compression ([arxiv 2405.19316](https://arxiv.org/abs/2405.19316)) | 附录 B1 VM 蒸馏依据 | 2024 preprint |
-| RM Ensemble / NeurIPS 2024 consensus | 附录 B3 reward hacking 防护 | NeurIPS 2024 ✅ |
+| RM Ensemble（通行工程实践） | 附录 B3 reward hacking 防护 | 通行实践，无单一出处 |
 | Cost-Effective RGTG: Vocabulary-wide Reward Head ([arxiv 2502.04517](https://arxiv.org/abs/2502.04517)) | 任务 1.1 备选 / 任务 2.2 VM 架构 | **ICML 2025** ✅ |
 | Low-Rank RM Parametrization ([arxiv 2407.04615](https://arxiv.org/abs/2407.04615)) | 任务 2.2 VM scoring 加速 | **TMLR 2025** ✅ |
 | From r to Q*: LLM as Q-Function ([arxiv 2404.12358](https://arxiv.org/abs/2404.12358)) | 任务 2.2 VM 训练初始化 | **COLM 2024** ✅ |
@@ -688,9 +688,9 @@ CMU 的 DSPA（arxiv 2603.21461）用稀疏自编码器在 LLM 激活空间直�
 用稀疏自编码器（SAE）在 LLM 内部激活空间直接施加对齐引导，完全不调用外部 VM（99.8% 激活值为零）。若效果可接近 4B VM，L/T 从根本解决。当前挑战：SAE 需离线训练，效果能否匹敌 4B VM 尚未验证。  
 **建议**：先用 1-2 周做 paper-reading + 小规模可行性实验，再决定是否立项。
 
-**A2. RM 梯度引导（GGRO 思路，UAI 2026，arxiv 2606.09635）**
+**A2. RM 梯度引导（探索性方向，无直接文献支撑）**
 
-在高熵位置用 RM 的**梯度信息**（而非分数）指导 token 选择，理论上可避免 RM 全量前向传播。当前挑战：标准推理不维护梯度图，需探索 gradient checkpointing 或近似梯度方案，工程可行性待研究。可与 A1 并行探索，代码实验成本低。
+思路：在高熵位置用 RM 的**梯度信息**（而非分数）指导 token 选择，理论上可避免完整前向传播。注意：此方向**目前无顶会直接验证**——GGRO（UAI 2026，arxiv 2606.09635）常被援引，但该论文的实际贡献是验证"只在高熵位置干预"的 entropy-adaptive 策略（与 SIA 的 `--entropy_threshold` 一致），并不涉及梯度引导。此外，标准推理不维护梯度图，实现时需 gradient checkpointing 或近似方案，工程成本远高于直接前向传播，可行性有待独立实验验证再决定是否立项。
 
 ---
 
@@ -698,14 +698,14 @@ CMU 的 DSPA（arxiv 2603.21461）用稀疏自编码器在 LLM 激活空间直�
 
 **B1. VM 蒸馏：4B → 1.7B（NeurIPS 2024 研究背景）**
 
-Month 3 的同词表 4B ARM VM 验证效果后，用 4B 作教师蒸馏出 1.7B 学生 VM。文献（[arxiv 2411.08302](https://arxiv.org/abs/2411.08302)、[arxiv 2405.19316](https://arxiv.org/abs/2405.19316)）表明大 RM 蒸馏小 RM 可保留约 80–90% 偏好判断能力，latency 降低约 2×，VRAM 占用减半。  
+Month 3 的同词表 4B ARM VM 验证效果后，用 4B 作教师蒸馏出 1.7B 学生 VM。相关文献（[arxiv 2411.08302](https://arxiv.org/abs/2411.08302)、[arxiv 2405.19316](https://arxiv.org/abs/2405.19316)）初步显示大 RM 蒸馏小 RM 可保留约 80–90% 偏好判断能力，latency 降低约 2×，VRAM 占用减半——但上述具体数字**未经内部独立验证**，应视为量级参考而非确定结论。  
 **建议时机**：2027 Q1，前提是 Month 3 的 4B ARM VM 效果经评估已达标。
 
 **B2. VM 内部注意力头裁剪（EntropyInfer 思路，arxiv 2606.09508）**
 
-将 VM 内部注意力头分为"结构性（Rigid）"和"语义决策型（Dynamic）"两类，Rigid 头可跳过或降精度计算，预期降低 VM per-call latency 20–40%。前提：需先对当前 VM（Qwen3.5-4B）的注意力激活模式做离线分析，确认 Rigid 头比例是否足够大，否则收益有限。
+将 VM 内部注意力头分为"结构性（Rigid）"和"语义决策型（Dynamic）"两类，Rigid 头可跳过或降精度计算。注意：EntropyInfer 原论文的 2.39× 加速是在 **LLM prefill、100k+ token** 场景下测得，而 SIA 的 VM 开销集中在 **decode 阶段的短序列打分**，场景差异大，"20–40% latency 降低"是外推估计，**无直接实验支撑**，实际收益需在 VM 上独立实测。前提：需先对当前 VM（Qwen3.5-4B）的注意力激活模式做离线分析，确认 Rigid 头比例是否足够大，否则收益更为有限。
 
-**B3. RM Ensemble（NeurIPS 2024 共识）**
+**B3. RM Ensemble（通行工程实践）**
 
 部署 2–3 个不同 VM，对分数取均值，降低单 VM reward hacking 风险。在 B1 完成后（1.7B VM 可用），两个 1.7B VM 的 VRAM 需求低于当前一个 4B VM，对吞吐影响可控。  
 **当前前提**：先建立 reward hacking 监控指标（如高 VM 分但人工评分差的样本率），有证据后再引入 ensemble。
@@ -744,24 +744,7 @@ Month 5 的 PRM 给出步骤级分数，如何将其降维分摊到 token 级（
 
 ---
 
-### F. 原创学术发表机会
-
-**F1. 高并发场景下 token 级对齐的吞吐-效果 Pareto（学术空白）**
-
-所有现有顶会工作（包括 ICLR 2025 的 GenARM、ICML 2025 的 RSD）均在单请求或 conc ≤ 4 场景下评估，**无一研究高并发连续批处理场景**。SIA 若系统性对比 block-wise / PRM / 乘积式融合在 conc = 4/8/16/32 下的吞吐-效果 Pareto 并发表，有望成为该方向的首批顶会工作。  
-**目标会议**：MLSys 2027 / ICML 2027 Systems Track；数据积累可从 Month 1 评估基准起步。
-
-**F2. 基于 ICML 2026 MDP 框架形式化 SIA → 投稿 ICLR 2027**
-
-Token-level 对齐已被 ICML 2026（arxiv 2602.02572）形式化为标准 MDP 框架，SIA 是该框架的一个具体实例（VM 估计 $Q(s_t, a_t)$，logit 空间加权）。以此框架重新表述 SIA 的理论保证——结合 ARM 训练目标 + 熵稀疏干预 + 乘积式融合的理论组合——加上 6 个月的工程实测数据，ICLR 2027（截稿约 2026-10）是可行的投稿窗口。
-
-**F3. 极小 judge 作为独立学术贡献（条件触发：Month 4 PoC 结果积极）**
-
-若 Month 4 任务 4.3（<10M 参数线性评分头替代 4B VM）的效果达标，效果-延迟权衡本身是原创贡献。可与 F1 合并：以极小 judge 作为效率方案、以高并发场景作为评估框架，合写一篇"SIA 高并发吞吐系统工作"，比分别发表更完整。
-
----
-
-> **远期方向优先级参考**（前期工作完成后）：C0a/C0b（延后轻量探索，随时可启动）> B1 VM 蒸馏（低风险，效果可期）> E1 多目标 VM（效果覆盖）> A1 DSPA（高潜力，需验证）≥ A2 GGRO 梯度（高潜力，工程挑战大）> F1/F2/F3（学术发表，需 6 个月数据积累）> B2/B3（依赖具体指标）。
+> **远期方向优先级参考**（前期工作完成后）：C0a/C0b（延后轻量探索，随时可启动）> B1 VM 蒸馏（低风险，效果可期）> E1 多目标 VM（效果覆盖）> A1 DSPA（高潜力，需验证）≥ A2 GGRO 梯度（高潜力，工程挑战大）> B2/B3（依赖具体指标）。
 
 ---
 
