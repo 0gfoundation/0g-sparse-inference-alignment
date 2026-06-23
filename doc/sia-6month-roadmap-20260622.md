@@ -17,7 +17,7 @@
 
 两个月内完成核心系统，0GM-VL-35B 和 Qwen3-VL-30B 两个主力模型均已接近上线标准：
 
-- **效果已验证**：0GM-VL-35B 开启 SIA 后，综合对话质量 AlpacaEval 胜率 **65.4%**（191 配对中 SIA 版本有 65.4% 被评为更优，125/191 对）；MMLU thinking 模式 **+12pp**（77.8% vs 66%，150Q）
+- **效果已验证**：0GM-VL-35B 开启 SIA 后，综合对话质量 AlpacaEval 胜率 **65.4%**（191 配对中 SIA 版本有 65.4% 被评为更优，125/191 对）；MMLU 准确率无明显下降
 - **性能有代价**：高并发场景（16 路并发）吞吐量约为不开 SIA 的 **35%**，即同等硬件可服务的请求量减少约 65%
 
 ### 接下来 6 个月的计划
@@ -93,7 +93,7 @@ Month 6  ██ 多模态VM训练 ██ 多模态VM上线
 
 **2. repetition_penalty 关键 Bug 修复**（6 月 4 日）  
 发现 `repetition_penalty` 默认值 1.3 与 SIA logit 干预叠加，导致评估数据显示 SIA Δ = −13% 至 −75%（错误结论）。修复为 1.0 后，SIA 效果全面恢复正向：
-- 0GM-VL-35B MMLU thinking 模式对照实验：SIA **77.8%**（117/150）vs noSIA **66.0%**（99/150），**Δ = +12pp**（已排除 rep_penalty bug，见 doc/0gm-1.0-35b-sia-eval-20260605.md §1.3）
+- 0GM-VL-35B MMLU thinking 模式对照实验：SIA vs noSIA 准确率无明显下降
 
 **3. 0GM-VL-35B 跨分词器优化**（6 月初）  
 Stable prefix 方案消除跨 tokenizer BPE 边界合并导致的 APC 失效：VM 调用延迟从随序列长度线性增长（34ms→~50ms）降至**固定 ~30ms**，端到端吞吐 +22%。
@@ -133,7 +133,7 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 
 | 评估 | 结果 | 备注 |
 |------|------|------|
-| MMLU thinking 模式（0GM-VL-35B，150Q 对照）| SIA **77.8%** vs noSIA **66.0%**，**Δ = +12pp** | 已排除 rep_penalty bug（doc/0gm-1.0-35b-sia-eval-20260605.md §1.3）|
+| MMLU thinking 模式（0GM-VL-35B，150Q 对照）| SIA vs noSIA 无明显下降 | 已排除 rep_penalty bug |
 | AlpacaEval win-rate（0GM-VL-35B）| **65.4%**（Skywork judge，**191 配对**）| Skywork 作 judge 已有数字（200Q 中 9 题因超 RM 上限排除）；GPT-4 judge 尚未跑，Month 1 建立标准评估基准 |
 | AlpacaEval Skywork Δ（0GM-VL-35B）| **+5.45 reward（+22.7%）** | SIA mean 29.46 vs noSIA 24.01（191 对口径，实验 stable-prefix-20260610）|
 | Qwen3-VL-30B AlpacaEval（b2 inproc，200Q）| SIA Skywork mean **+1.22~+2.38（+4.2%~+8.3%）**，两轮均显著 | GPT-4 judge 尚未跑；两轮 Δ 有波动，统计噪声正常（见 doc/alpaca-eval-vl30b-b2-docker-20260608.md）|
@@ -142,7 +142,7 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 
 | 痛点 | 当前状态 | 根因 |
 |------|---------|------|
-| **E 效果不显著** | AlpacaEval 65.4%（Skywork judge，191 配对）；MMLU thinking +12pp | 跨分词器噪声可能影响 VM 打分精度；GPT-4 judge 独立验证尚未完成 |
+| **E 效果不显著** | AlpacaEval 65.4%（Skywork judge，191 配对）；MMLU 无明显下降 | 跨分词器噪声可能影响 VM 打分精度；GPT-4 judge 独立验证尚未完成 |
 | **L VM 延迟高** | 0GM-VL-35B ~30ms/call | dense 4B VM，memory-bound，无 CUDA graph |
 | **T 高并发吞吐损失** | conc=16 仅 35% of noSIA | VM 调用仍占关键路径；每 token 都可能调用 |
 
