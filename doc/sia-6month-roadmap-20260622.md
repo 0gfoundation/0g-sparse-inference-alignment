@@ -136,7 +136,7 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 | MMLU thinking 模式（0GM-VL-35B，150Q 对照）| SIA vs noSIA 无明显下降 | 已排除 rep_penalty bug |
 | AlpacaEval win-rate（0GM-VL-35B）| **65.4%**（Skywork judge，200Q）| Skywork 作 judge 已有数字；GPT-4 judge 尚未跑，Month 1 建立标准评估基准 |
 | AlpacaEval Skywork Δ（0GM-VL-35B）| **+5.45 reward（+22.7%）** | SIA mean 29.36 vs noSIA 24.01（191 对，实验 stable-prefix-20260610）|
-| Qwen3-VL-30B AlpacaEval | 暂无结论（Skywork / GPT-4 均未正式跑）| Month 1 建立统一评估基准后补齐 |
+| Qwen3-VL-30B AlpacaEval（b2 inproc，200Q）| SIA Skywork mean **+1.22~+2.38（+4.2%~+8.3%）**，两轮均显著 | GPT-4 judge 尚未跑；两轮 Δ 有波动，统计噪声正常（见 doc/alpaca-eval-vl30b-b2-docker-20260608.md）|
 
 ### 三个核心痛点（当前状态）
 
