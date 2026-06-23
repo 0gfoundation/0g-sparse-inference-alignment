@@ -124,7 +124,7 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 
 | 痛点 | 当前状态 | 根因 |
 |------|---------|------|
-| **E 效果不显著** | MMLU 有信号，AlpacaEval 无基准 | VM 与 LLM 跨分词器噪声；无量化对比数据 |
+| **E 效果不显著** | AlpacaEval 65.4%（Skywork judge，200Q）；MMLU 无明显下降 | 跨分词器噪声可能影响 VM 打分精度；GPT-4 judge 独立验证尚未完成 |
 | **L VM 延迟高** | 0GM-VL-35B ~30ms/call | dense 4B VM，memory-bound，无 CUDA graph |
 | **T 高并发吞吐损失** | conc=16 仅 35% of noSIA | VM 调用仍占关键路径；每 token 都可能调用 |
 
