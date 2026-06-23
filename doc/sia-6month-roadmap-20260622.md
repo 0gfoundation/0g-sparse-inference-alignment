@@ -15,9 +15,9 @@
 
 ### 当前成果（截至 2026-06-22）
 
-两个月内完成核心系统，0GM-35B 和 VL-30B 两个主力模型均已接近上线标准：
+两个月内完成核心系统，0GM-VL-35B 和 Qwen3-VL-30B 两个主力模型均已接近上线标准：
 
-- **效果已验证**：0GM-35B 开启 SIA 后，MMLU 准确率 **+12 个百分点**；综合对话质量 AlpacaEval 胜率 **65.4%**（200 道题中，SIA 版本有 65.4% 被评为更优）
+- **效果已验证**：0GM-VL-35B 开启 SIA 后，MMLU 准确率 **+12 个百分点**；综合对话质量 AlpacaEval 胜率 **65.4%**（200 道题中，SIA 版本有 65.4% 被评为更优）
 - **性能有代价**：高并发场景（16 路并发）吞吐量约为不开 SIA 的 **35%**，即同等硬件可服务的请求量减少约 65%
 
 ### 接下来 6 个月的计划
@@ -51,7 +51,7 @@
 **主要完成事项：**
 
 - **SIA 核心实现**：基于 vLLM `LogitsProcessor` 的 token 级干预框架，OpenAI 兼容 HTTP API，支持 per-request `sia_weight` 动态调整
-- **首次效果评估**：0GM-35B AlpacaEval + MMLU 初跑，确认 SIA 对齐信号存在；发现 SIA 干预下主要在高熵位置（intervention rate ~20%）
+- **首次效果评估**：0GM-VL-35B AlpacaEval + MMLU 初跑，确认 SIA 对齐信号存在；发现 SIA 干预下主要在高熵位置（intervention rate ~20%）
 - **VM 性能摸底**：SIA 单请求 ~40 tok/s vs noSIA ~114 tok/s，确认 VM 串行调用（每候选一次 GPU forward）是主要瓶颈
 - **批量前向优化**：K 候选从 K 次串行 GPU forward 合并为 1 次 batch forward，VM 计算量降低约 60%
 - **KV 前缀缓存探索**：实验 PyTorch DynamicCache 前缀复用，受 PyTorch 无 APC 机制限制，效果不理想
@@ -68,19 +68,19 @@
 **主要完成事项：**
 
 **1. b2 inproc VM 架构落地**（5 月下旬）  
-将 VM 从独立 HTTP 进程改为嵌入式 nested vLLM 实例（进程内函数调用），彻底消除网络往返开销（~20–30ms/次）。结合 VM CUDA Graph（VL-30B）和主 LLM CUDA Graph 修复（去除 PIECEWISE-only 限制）：
-- VL-30B：HTTP ~36 tok/s → b2 inproc **78.3 tok/s**（**+117%**）
-- 0GM-35B：HTTP ~32 tok/s → b2 inproc **66–68 tok/s**（**+106%**）
+将 VM 从独立 HTTP 进程改为嵌入式 nested vLLM 实例（进程内函数调用），彻底消除网络往返开销（~20–30ms/次）。结合 VM CUDA Graph（Qwen3-VL-30B）和主 LLM CUDA Graph 修复（去除 PIECEWISE-only 限制）：
+- Qwen3-VL-30B：HTTP ~36 tok/s → b2 inproc **78.3 tok/s**（**+117%**）
+- 0GM-VL-35B：HTTP ~32 tok/s → b2 inproc **66–68 tok/s**（**+106%**）
 
 **2. repetition_penalty 关键 Bug 修复**（6 月 4 日）  
 发现 `repetition_penalty` 默认值 1.3 与 SIA logit 干预叠加，导致评估数据显示 SIA Δ = −13% 至 −75%（错误结论）。修复为 1.0 后，SIA 效果全面恢复正向：
-- 0GM-35B MMLU thinking 模式对照实验：SIA vs noSIA **+12 pp 准确率**
+- 0GM-VL-35B MMLU thinking 模式对照实验：SIA vs noSIA **+12 pp 准确率**
 
-**3. 0GM-35B 跨分词器优化**（6 月初）  
+**3. 0GM-VL-35B 跨分词器优化**（6 月初）  
 Stable prefix 方案消除跨 tokenizer BPE 边界合并导致的 APC 失效：VM 调用延迟从随序列长度线性增长（34ms→55ms）降至**固定 ~30ms**，端到端吞吐 +22%。
 
 **4. 双模型上线 marketplace**（6 月中旬）  
-0GM-35B 和 VL-30B 均完成 Docker 部署、OpenAI 兼容 API、全套集成测试（run_all.sh）、max_model_len 扩展至 32768 tokens、多模态图片输入支持（图片请求 bypass SIA）。
+0GM-VL-35B 和 Qwen3-VL-30B 均完成 Docker 部署、OpenAI 兼容 API、全套集成测试（run_all.sh）、max_model_len 扩展至 32768 tokens、多模态图片输入支持（图片请求 bypass SIA）。
 
 **5. 高并发批量打分优化**（6 月 18 日）  
 N 个并发请求的 VM 调用从串行 N 次合并为 1 次 GPU batch forward，叠加增量跨分词器前缀缓存（P-3）：
@@ -98,33 +98,33 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 
 | 场景 | 模型 | SIA | noSIA | 比值 |
 |------|------|-----|-------|------|
-| 单请求吞吐 | 0GM-35B | 66–68 tok/s | ~112 tok/s | **59–61%** |
-| 单请求吞吐 | VL-30B | 78.3 tok/s | ~122.8 tok/s | **64%** |
-| conc=16 吞吐 | 0GM-35B | 369 tok/s | 1040 tok/s | **35%** |
-| 单请求 ITL | 0GM-35B | ~34ms | ~9ms | **3.8×** |
-| conc=16 ITL | 0GM-35B | 41.3ms | 13.6ms | **3.0×** |
+| 单请求吞吐 | 0GM-VL-35B | 66–68 tok/s | ~112 tok/s | **59–61%** |
+| 单请求吞吐 | Qwen3-VL-30B | 78.3 tok/s | ~122.8 tok/s | **64%** |
+| conc=16 吞吐 | 0GM-VL-35B | 369 tok/s | 1040 tok/s | **35%** |
+| 单请求 ITL | 0GM-VL-35B | ~34ms | ~9ms | **3.8×** |
+| conc=16 ITL | 0GM-VL-35B | 41.3ms | 13.6ms | **3.0×** |
 
 | 组件 | 数据 |
 |------|------|
-| VM per-call latency p50 | 0GM-35B ~30ms，VL-30B ~17ms |
-| VM 干预率（entropy_threshold=1.0）| ~20%（0GM-35B），~25%（VL-30B）|
+| VM per-call latency p50 | 0GM-VL-35B ~30ms，Qwen3-VL-30B ~17ms |
+| VM 干预率（entropy_threshold=1.0）| ~20%（0GM-VL-35B），~25%（Qwen3-VL-30B）|
 | 多模态支持 | ❌ text-only VM；图片请求 bypass SIA |
 
 ### 对齐效果
 
 | 评估 | 结果 | 备注 |
 |------|------|------|
-| MMLU thinking 模式（0GM-35B，150Q 对照）| SIA **+12 pp** vs noSIA | 已排除 rep_penalty bug |
-| AlpacaEval win-rate（0GM-35B）| **65.4%**（Skywork judge，200Q）| Skywork 作 judge 已有数字；GPT-4 judge 尚未跑，Month 1 建立标准评估基准 |
-| AlpacaEval Skywork Δ（0GM-35B）| **+5.45 reward（+22.7%）** | SIA mean 29.36 vs noSIA 24.01（191 对，实验 stable-prefix-20260610）|
-| VL-30B AlpacaEval | 暂无结论（Skywork / GPT-4 均未正式跑）| Month 1 建立统一评估基准后补齐 |
+| MMLU thinking 模式（0GM-VL-35B，150Q 对照）| SIA **+12 pp** vs noSIA | 已排除 rep_penalty bug |
+| AlpacaEval win-rate（0GM-VL-35B）| **65.4%**（Skywork judge，200Q）| Skywork 作 judge 已有数字；GPT-4 judge 尚未跑，Month 1 建立标准评估基准 |
+| AlpacaEval Skywork Δ（0GM-VL-35B）| **+5.45 reward（+22.7%）** | SIA mean 29.36 vs noSIA 24.01（191 对，实验 stable-prefix-20260610）|
+| Qwen3-VL-30B AlpacaEval | 暂无结论（Skywork / GPT-4 均未正式跑）| Month 1 建立统一评估基准后补齐 |
 
 ### 三个核心痛点（当前状态）
 
 | 痛点 | 当前状态 | 根因 |
 |------|---------|------|
 | **E 效果不显著** | MMLU 有信号，AlpacaEval 无基准 | VM 与 LLM 跨分词器噪声；无量化对比数据 |
-| **L VM 延迟高** | 0GM-35B ~30ms/call | dense 4B VM，memory-bound，无 CUDA graph |
+| **L VM 延迟高** | 0GM-VL-35B ~30ms/call | dense 4B VM，memory-bound，无 CUDA graph |
 | **T 高并发吞吐损失** | conc=16 仅 35% of noSIA | VM 调用仍占关键路径；每 token 都可能调用 |
 
 ---
@@ -200,13 +200,13 @@ Month 6  ████ 多模态VM训练 ████  ████████ �
 
 **主线任务**：全力投入同词表 VM 的数据收集与训练，为 Month 3 部署做好准备。本月无新的吞吐量提升，Month 1 的工程收益（block-wise + 双熵门控）持续生效。
 
-**为什么同词表是最高优先级**：当前 VM（Qwen3-4B）和主 LLM（0GM-35B）使用不同 tokenizer（Qwen3 32K 词表 vs Qwen3.5 248K 词表）。这意味着 VM 看到的 prefix token ID 与主 LLM 生成的 token 不是一一对应的，评分信号存在系统性噪声。同词表训练一次性解决：
+**为什么同词表是最高优先级**：当前 VM（Qwen3-4B）和主 LLM（0GM-VL-35B）使用不同 tokenizer（Qwen3 32K 词表 vs Qwen3.5 248K 词表）。这意味着 VM 看到的 prefix token ID 与主 LLM 生成的 token 不是一一对应的，评分信号存在系统性噪声。同词表训练一次性解决：
 
 - 跨分词器噪声消除 → 评分精度提升（E）
 - stable prefix 替代方案可退役 → 消除跨分词器 CPU 编码开销（~2ms）和 BPE 边界 APC miss（~5ms），b2_score_call 从 ~30ms 降至 ~13ms（L）
 - 每次调用读取的 HBM 数据量不变，但质量更好（T 间接改善）
 
-> **注意（来自已有实验）**：RM CUDA graph（piecewise）在 0GM-35B 上已完整试验并彻底失败——三层修复后 piecewise 比 eager 慢 2-3×（115-140ms vs 30ms）。根本原因：RM 是 prefill-heavy workload（每步 topk=10 条完整序列），vllm PIECEWISE 只优化 decode 步骤（固定 batch=1），对 prefill 无效。同词表 VM 的 L 改善**不依赖 CUDA graph**，而是靠消除跨分词器开销（实验 `alpaca-0gm35b-piecewise-fix3-20260610` 已确认 CUDA graph 死路，见 `doc/0gm-35b-sia-perf-breakdown-20260609.md` §7）。
+> **注意（来自已有实验）**：RM CUDA graph（piecewise）在 0GM-VL-35B 上已完整试验并彻底失败——三层修复后 piecewise 比 eager 慢 2-3×（115-140ms vs 30ms）。根本原因：RM 是 prefill-heavy workload（每步 topk=10 条完整序列），vllm PIECEWISE 只优化 decode 步骤（固定 batch=1），对 prefill 无效。同词表 VM 的 L 改善**不依赖 CUDA graph**，而是靠消除跨分词器开销（实验 `alpaca-0gm35b-piecewise-fix3-20260610` 已确认 CUDA graph 死路，见 `doc/0gm-35b-sia-perf-breakdown-20260609.md` §7）。
 
 ### 任务 2.1：偏好数据收集
 
@@ -219,7 +219,7 @@ Month 6  ████ 多模态VM训练 ████  ████████ �
 
 ### 任务 2.2：VM-Qwen3.5-4B 训练——使用 ARM 训练目标
 
-以 Qwen3.5-4B（248K 词表，与 0GM-35B 相同）为 base 训练 reward head。
+以 Qwen3.5-4B（248K 词表，与 0GM-VL-35B 相同）为 base 训练 reward head。
 
 > **完成后收益**（Month 3 上线后生效）：E 跨分词器噪声消除，VM 评分质量显著提升；L b2_score_call 从 ~30ms → ~13ms（消除跨分词器编码开销 ~7ms）；若 vocabulary-wide head 实现，L 额外改善最多 topK 倍（topK=10 时理论最高 10×）。
 
@@ -233,7 +233,7 @@ Month 6  ████ 多模态VM训练 ████  ████████ �
 
 **补充训练技巧**：
 - **低秩 Reward Head**（[arxiv 2407.04615](https://arxiv.org/abs/2407.04615)，TMLR 2025）：vocabulary-wide head 的矩阵从 `[d × V]` 分解为 `[d × r] × [r × V]`（r ≪ V），在 vocab=248K 的 Qwen3.5 词表下效果尤为明显，与上述架构目标天然兼容。
-- **From r to Q\* 训练初始化**（[arxiv 2404.12358](https://arxiv.org/abs/2404.12358)，COLM 2024）：标注数据不足时，用主模型 0GM-35B 的 log-prob 差值作为伪标签初始化 VM，降低冷启动门槛。
+- **From r to Q\* 训练初始化**（[arxiv 2404.12358](https://arxiv.org/abs/2404.12358)，COLM 2024）：标注数据不足时，用主模型 0GM-VL-35B 的 log-prob 差值作为伪标签初始化 VM，降低冷启动门槛。
 - **RED 蒸馏**（[arxiv 2411.08302](https://arxiv.org/abs/2411.08302)，EMNLP 2025）：从 holistic feedback 蒸馏 token 级奖励，可作为无 token 级标注时的备用路径。
 
 - **工作量**：约 2-3 周（训练 + 初步 offline 验证）
@@ -375,7 +375,7 @@ Month 6  ████ 多模态VM训练 ████  ████████ �
 
 **来源**：Judge Decoding（ICLR 2025，arxiv 2501.19309）用 16.4k 参数线性层替换 speculative decoding 的接受准则，500 条偏好对、1.5 小时训练，实现 3.9–9.7× 加速。
 
-**SIA 类比**：在主 LLM（0GM-35B）的 LogitsProcessor 内部，基于 top-K logit 分布训练一个**极小线性评分头**（<10M 参数），替代外部 4B VM。如果可行，per-call latency 从 ~30ms 降至 <0.1ms，L/T 根本解决。
+**SIA 类比**：在主 LLM（0GM-VL-35B）的 LogitsProcessor 内部，基于 top-K logit 分布训练一个**极小线性评分头**（<10M 参数），替代外部 4B VM。如果可行，per-call latency 从 ~30ms 降至 <0.1ms，L/T 根本解决。
 
 > **完成后收益（如成功）**：L VM per-call latency 从 ~30ms → <0.1ms（300×）；T VM 完全移出关键路径，吞吐接近 noSIA 水平；即使部分成功，也能大幅降低 VM 调用频率。
 
@@ -448,7 +448,7 @@ Month 6  ████ 多模态VM训练 ████  ████████ �
 
 **解法**：以多模态 VLM（如 Qwen3-VL-4B）为 base，训练 reward head，使 VM 能够同时理解图文 context。
 
-- **适用范围**：仅对 VLM 主推理 LLM 有意义（纯文字 0GM-35B 无需此功能）
+- **适用范围**：仅对 VLM 主推理 LLM 有意义（纯文字 0GM-VL-35B 无需此功能）
 - **参考说明**：训练流程参考 SIA 原论文（arxiv 2602.21215）的 reward head 训练方案，数据构建参考 ArmoRM（arxiv 2406.12845）的多维偏好标注框架。
 - **补充文献**：
   - **Skywork-VL Reward**（[arxiv 2505.07263](https://arxiv.org/abs/2505.07263)，2025）：当前最强开源视觉语言 RM 之一，可直接作为 backbone 选型参考或微调起点。
@@ -460,7 +460,7 @@ Month 6  ████ 多模态VM训练 ████  ████████ �
 
 部署多模态 VM，Qwen3-VL-30B 场景下 SIA 对图文输入的干预质量从"盲猜"升级为"真正理解图片"。
 
-> **完成后收益**：多模态支持正式可用，图文混合请求不再 bypass SIA；产品差异化优势扩展至视觉理解领域，Qwen3-VL-30B 场景与 0GM-35B 场景 SIA 能力对齐。
+> **完成后收益**：多模态支持正式可用，图文混合请求不再 bypass SIA；产品差异化优势扩展至视觉理解领域，Qwen3-VL-30B 场景与 0GM-VL-35B 场景 SIA 能力对齐。
 
 **Month 6 补充事项**：若 Month 4 的极小 judge PoC 结果积极，本月可额外启动极小 judge 的生产化打磨（1-2 周，与多模态 VM 训练并行）。
 
@@ -575,7 +575,7 @@ CMU 的 DSPA（arxiv 2603.21461，3-0 机制验证）用稀疏自编码器在 LL
 | L3 | **多模态输入需单独训练 VM** | 原始 SIA 论文及当前实现仅支持纯文本输入。当主 LLM 为视觉语言模型（VLM，如 Qwen3-VL-30B）且用户输入包含图片时，text-only VM 完全看不到图片内容，评分退化为盲猜。多模态场景需单独训练支持图文输入的 VM 并重新评测效果（roadmap Month 6 目标）。 |
 | L4 | **效果是统计平均，单条请求不保证** | SIA 的对齐改善是在大量请求上的统计提升，对具体某条请求无法保证方向。VM 在 VM 训练数据未覆盖的领域或罕见 prompt 类型上，单次干预可能使输出变差。效果评估必须依赖批量统计指标（如 AlpacaEval win-rate），不能用单条结果下判断。 |
 | L5 | **VM 与主 LLM 共享显存，互相制约** | b2 inproc 方案要求 VM 和主 LLM 运行在同一组 GPU 上并共享显存。VM 越大，主 LLM 可用的显存越少，反之亦然。这限制了：（a）主 LLM 可支持的最大 context length；（b）主 LLM 可承载的最大并发数；（c）VM 的最大模型规模。 |
-| L6 | **与推理框架版本强绑定，升级有风险** | SIA 的 b2 inproc 实现深度依赖 vLLM 内部 API，已验证 vLLM 0.19+ 上对 0GM-35B 的 b2 inproc 全面失效。每次升级主 LLM 推理框架（vLLM 版本），SIA 层都需要重新适配和回归验证，升级成本不可忽视。 |
+| L6 | **与推理框架版本强绑定，升级有风险** | SIA 的 b2 inproc 实现深度依赖 vLLM 内部 API，已验证 vLLM 0.19+ 上对 0GM-VL-35B 的 b2 inproc 全面失效。每次升级主 LLM 推理框架（vLLM 版本），SIA 层都需要重新适配和回归验证，升级成本不可忽视。 |
 
 ---
 
@@ -641,6 +641,8 @@ CMU 的 DSPA（arxiv 2603.21461，3-0 机制验证）用稀疏自编码器在 LL
 | Skywork-VL Reward ([arxiv 2505.07263](https://arxiv.org/abs/2505.07263)) | 任务 5.2 多模态 VM 选型 | 2025 preprint |
 | MSRL: Multi-Stage Multimodal RM ([arxiv 2603.25108](https://arxiv.org/abs/2603.25108)) | 任务 5.2 多模态 VM 训练框架 | **CVPR 2026** ✅ |
 | BaseReward: Multimodal RM Baseline ([arxiv 2509.16127](https://arxiv.org/abs/2509.16127)) | 任务 5.2 多模态 VM 评估对照 | 2025 preprint |
+| Reward Models Are Secretly Value Functions ([arxiv 2604.22981](https://arxiv.org/abs/2604.22981)) | 远景规划 C0a LLM-as-Q-Function | 2026 preprint |
+| EntropyInfer: Rigid/Dynamic Attention Head Pruning ([arxiv 2606.09508](https://arxiv.org/abs/2606.09508)) | 远景规划 B2 VM 注意力头裁剪 | 2026 preprint |
 
 ---
 
@@ -692,11 +694,11 @@ HybridFlow 提出 ResourcePool 抽象，支持 LLM + RM 的 distributed 部署�
 
 **C0a. LLM-as-Q-Function PoC（原 Task 2.4，约 1 周）**
 
-From r to Q\*（COLM 2024，arxiv 2404.12358）和 "Reward Models Are Secretly Value Functions"（arxiv 2604.22981，2026）均提出：LLM 的 token log-prob 差值 `log P(y|x, prefix) - log P(y|x)` 理论上近似 Q-function，意味着主模型 0GM-35B 自身已携带足够 reward 信号，**可以完全不需要外部 VM**——L 和 T 从根本消失。实验成本极低（新增 `--rm_backend self` 模式，AlpacaEval 50 题对比即可），但优先级低于极小 judge（2.3）——若 2.3 成功则 2.4 意义降低，若 2.3 失败则 2.4 可作为替代方向快速验证。建议在 Month 4 极小 judge PoC 结论出来后，根据结果决定是否跟进。
+From r to Q\*（COLM 2024，arxiv 2404.12358）和 "Reward Models Are Secretly Value Functions"（arxiv 2604.22981，2026）均提出：LLM 的 token log-prob 差值 `log P(y|x, prefix) - log P(y|x)` 理论上近似 Q-function，意味着主模型 0GM-VL-35B 自身已携带足够 reward 信号，**可以完全不需要外部 VM**——L 和 T 从根本消失。实验成本极低（新增 `--rm_backend self` 模式，AlpacaEval 50 题对比即可），但优先级低于极小 judge（2.3）——若 2.3 成功则 2.4 意义降低，若 2.3 失败则 2.4 可作为替代方向快速验证。建议在 Month 4 极小 judge PoC 结论出来后，根据结果决定是否跟进。
 
 **C0b. DPO 蒸馏探索（原 Task 6.2，探索性，2-4 周）**
 
-方向：收集 SIA 系统中 VM 偏好的生成轨迹，用 DPO 蒸馏进 0GM-35B 主模型，让主模型内化对齐信号，无需推理时外挂 VM 也能保持对齐效果。
+方向：收集 SIA 系统中 VM 偏好的生成轨迹，用 DPO 蒸馏进 0GM-VL-35B 主模型，让主模型内化对齐信号，无需推理时外挂 VM 也能保持对齐效果。
 
 TITA（2025，arxiv 2510.21794）展示了推理时 log-ratio 方法（DPO 等价形式）有效，但那是推理时校正，不是训练时蒸馏。训练时 DPO 蒸馏在本次调研中**没有直接顶会证据支撑**，效果不确定。建议在 6 个月 roadmap 完成、有充足 VM 偏好数据后，作为独立探索性项目评估。
 
