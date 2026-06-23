@@ -140,11 +140,11 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 | 评估 | 结果 | 备注 |
 |------|------|------|
 | MMLU thinking 模式（0GM-VL-35B，150Q 对照）| SIA vs noSIA 无明显变化 | 已排除 rep_penalty bug |
-
-<sub>多次实验（VL-30B ±1–3pp、14B ±1pp）均统计不显著；0GM-35B thinking 模式有 +12pp 例外，主要源于 SIA 减少了 thinking 截断（noSIA cap-hit 25.3% → SIA 8.0%），非通识知识本身提升，待多次重复后再下结论。</sub>
 | AlpacaEval win-rate（0GM-VL-35B）| **65.4%**（Skywork judge，**191 配对**）| Skywork judge 基准已建立（200Q 中 9 题因超 RM 上限排除）；GPT-4 judge 尚未跑，Month 1 补建 |
 | AlpacaEval Skywork Δ（0GM-VL-35B）| **+5.45 reward（+22.7%）** | SIA mean 29.46 vs noSIA 24.01（191 对口径，实验 stable-prefix-20260610）|
 | Qwen3-VL-30B AlpacaEval（b2 inproc，200Q）| SIA Skywork mean **+1.22~+2.38（+4.2%~+8.3%）**，两轮均显著 | GPT-4 judge 尚未跑；两轮 Δ 有波动，统计噪声正常（见 doc/alpaca-eval-vl30b-b2-docker-20260608.md）|
+
+<sub>MMLU 注：多次实验（VL-30B ±1–3pp、14B ±1pp）均统计不显著；0GM-35B thinking 模式有 +12pp 例外，主要源于 SIA 减少了 thinking 截断（noSIA cap-hit 25.3% → SIA 8.0%），非通识知识本身提升，待多次重复后再下结论。</sub>
 
 ### 三个核心痛点（当前状态）
 
