@@ -531,7 +531,7 @@ RSD（ICML 2025）、ThinkPRM、PRM as Unified Control Signal 三篇独立论文
 - **补充文献**：
   - **Skywork-VL Reward**（[arxiv 2505.07263](https://arxiv.org/abs/2505.07263)，2025）：当前最强开源视觉语言 RM 之一，可直接作为 backbone 选型参考或微调起点。
   - **MSRL**（[arxiv 2603.25108](https://arxiv.org/abs/2603.25108)，CVPR 2026）：多阶段多模态 reward modeling，提供完整的 VLM RM 训练框架。
-  - **BaseReward**（[arxiv 2509.16127](https://arxiv.org/abs/2509.16127)，2025）：强 baseline 多模态 RM，用于评估训练质量的对照基准。
+  - **BaseReward**（[arxiv 2509.16127](https://arxiv.org/abs/2509.16127)，2025）：系统分析多模态 RM 关键组件（建模范式、奖励头、训练策略、数据筛选）的 baseline 研究，在 MM-RLHF-Reward Bench 等多项 benchmark 上达到 SOTA，可作为 VLM RM 建设的系统参考。
 - **工作量**：2-3 周训练（数据已备）
 
 ### 任务 6.2：多模态 VM 上线（Qwen3-VL 场景完整支持）
@@ -557,8 +557,8 @@ RSD（ICML 2025）、ThinkPRM、PRM as Unified Control Signal 三篇独立论文
 | 指标 | 当前（2026-06）| 保守目标（CUDA graph 仍不可用）| 乐观目标（CUDA graph 恢复）|
 |------|----------------|-------------------------------|---------------------------|
 | conc=16 SIA tok/s | 369 | **≥ 500** | **≥ 750** |
-| SIA/noSIA 吞吐比 | 35% | **≥ 55%** | **≥ 72%** |
-| SIA/noSIA ITL 倍数 | 3.0× | **≤ 2.0×** | **≤ 1.5×** |
+| SIA/noSIA 吞吐比 | 35% | **≥ 47%**（500÷1054）| **≥ 72%**（750÷1054）|
+| SIA/noSIA ITL 倍数 | 3.0× | **≤ 2.1×** | **≤ 1.5×** |
 | AlpacaEval win-rate vs noSIA | 65.4%（Skywork judge，待 GPT-4 验证）| **≥ +5%（GPT-4 judge 独立验证）** |
 | 多模态 VLM 场景支持 | ❌ | **✅** |
 | VM 是否需要每 token 调用 | 是（~20% token）| **否（block-wise，~5% 以下；PRM 待 Month 5 评估后定）**|
