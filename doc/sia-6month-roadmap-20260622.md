@@ -461,7 +461,7 @@ PRM（Process Reward Model，过程奖励模型）的思路是：**在每个推�
 
 Qwen3 在 think 模式下，每完成一个推理步骤，会自然输出**双换行 `\n\n`** 作为分隔。这是步骤边界的天然信号，无需额外训练分类器。
 
-RSD（ICML 2025）、ThinkPRM、PRM as Unified Control Signal 三篇独立论文均使用 `\n\n` 作为步骤分隔符，做法一致。
+RSD（ICML 2025）、ThinkPRM（TMLR，[arxiv 2504.16828](https://arxiv.org/abs/2504.16828)）均使用 `\n\n` 作为步骤分隔符，做法一致。
 
 #### 步骤结束后具体怎么干预
 
@@ -482,7 +482,7 @@ RSD（ICML 2025）、ThinkPRM、PRM as Unified Control Signal 三篇独立论文
 选得分最高的那条，丢掉另外两条，继续正常生成
 ```
 
-**优势**：不需要训练任何新模型，直接复用现有 vLLM forward pass，今天就能实现。`\n\n` 触发借鉴自 RSD/ThinkPRM；B=3 候选和 log-prob 打分借鉴自 AdaDec（FSE 2026，代码生成场景）。**这个组合本身没有论文端到端验证**，是 SIA 的探索。
+**优势**：不需要训练任何新模型，直接复用现有 vLLM forward pass，今天就能实现。`\n\n` 触发借鉴自 RSD/ThinkPRM；B=3 候选和 log-prob 打分借鉴自 AdaDec（FSE 2026，[arxiv 2506.08980](https://arxiv.org/abs/2506.08980)，代码生成场景）。**这个组合本身没有论文端到端验证**，是 SIA 的探索。
 
 **理论局限**：log-prob 衡量的是"这个方向模型写得自不自然"，而不是"这个推理步骤逻辑上对不对"。模型完全可以对一个听起来合理但逻辑错误的步骤赋予高概率（即"自信地错"）；若模型在这个位置本来就倾向于走错方向，fork 出的三条路可能都是不同版本的错误，log-prob 最高的那条仍然错。**预期：路线一能过滤明显离谱的方向，但对"听起来合理但逻辑错误"的步骤无能为力，效果上限有限。**
 
