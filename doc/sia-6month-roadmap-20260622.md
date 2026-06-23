@@ -556,9 +556,9 @@ RSD（ICML 2025）、ThinkPRM（TMLR，[arxiv 2504.16828](https://arxiv.org/abs/
 
 | 指标 | 当前（2026-06）| 保守目标（CUDA graph 仍不可用）| 乐观目标（CUDA graph 恢复）|
 |------|----------------|-------------------------------|---------------------------|
-| conc=16 SIA tok/s | 369 | **≥ 500** | **≥ 750** |
-| SIA/noSIA 吞吐比 | 35% | **≥ 47%**（500÷1054）| **≥ 72%**（750÷1054）|
-| SIA/noSIA ITL 倍数 | 3.0× | **≤ 2.1×** | **≤ 1.5×** |
+| conc=16 SIA tok/s | 369 | **≥ 550** | **≥ 750** |
+| SIA/noSIA 吞吐比 | 35% | **≥ 53%**（550÷1040）| **≥ 72%**（750÷1040）|
+| SIA/noSIA ITL 倍数 | 3.0× | **≤ 1.9×** | **≤ 1.5×** |
 | AlpacaEval win-rate vs noSIA | 65.4%（Skywork judge，待 GPT-4 验证）| **≥ +5%（GPT-4 judge 独立验证）** |
 | 多模态 VLM 场景支持 | ❌ | **✅** |
 | VM 是否需要每 token 调用 | 是（~20% token）| **否（block-wise，~5% 以下；PRM 待 Month 5 评估后定）**|
@@ -570,7 +570,7 @@ RSD（ICML 2025）、ThinkPRM（TMLR，[arxiv 2504.16828](https://arxiv.org/abs/
 ```
 2026-07 末  conc=16 tok/s ≥ 550，GPT-4 评估基准建立
 2026-08 末  同词表 VM 训练完成，两阶段粗过滤 PoC 有结论
-2026-09 末  conc=16 tok/s ≥500（保守）/ ≥750（乐观，CUDA graph 恢复），同词表 VM 上线，效果首次可量化
+2026-09 末  conc=16 tok/s ≥550（保守）/ ≥750（乐观，CUDA graph 恢复），同词表 VM 上线，效果首次可量化
 2026-10 末  AlpacaEval win-rate ≥ +5%，最优干预模式确定，极小 judge PoC 有结论
 2026-11 末  PRM 可行性评估完成，go/no-go 决策有结论（ARM VM 盲区量化 + 工程 overhead 评估）
 2026-12 末  多模态 VM 训练完成并上线
