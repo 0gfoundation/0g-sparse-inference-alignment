@@ -44,6 +44,24 @@
 
 ---
 
+## 执行顺序总览
+
+```
+Month -2 ██ 项目启动 ██ 批量前向 ██ 首次效果评估          [已完成]
+Month -1 ██ b2 inproc ██ Bug修复 ██ 上线生产 ██ 高并发优化 [已完成]
+─────────────────────── 当前（2026-06-22）──────────────────
+Month 1  ██ block-wise scoring ██ 双熵门控 ██ 评估基准
+Month 2  ██ 两阶段粗过滤PoC ██ 数据收集 ██ ARM VM 训练
+Month 3  ██ 同词表 VM 上线（含 MoE 选型） ▶ 乘积式融合A/B
+Month 4  ██ 更强VM ██ accept/reject ▶ 极小judge PoC ▶ 多模态数据准备
+Month 5  ██ PRM 训练（全月主线）
+Month 6  ██ 多模态VM训练 ██ 多模态VM上线
+```
+
+已完成阶段为前两个月真实产出；执行计划阶段严格依赖前一阶段：前期降低 VM 调用频率 → 中期换更强模型 → 后期做根本性改造。
+
+---
+
 ## Month -2（2026-04-21 ~ 2026-05-21）：项目冷启动
 
 > 项目于 2026-04-21 启动，一个月内完成前期调研、基础框架搭建和首次效果验证。
@@ -127,24 +145,6 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 | **E 效果不显著** | AlpacaEval 65.4%（Skywork judge，200Q）；MMLU 无明显下降 | 跨分词器噪声可能影响 VM 打分精度；GPT-4 judge 独立验证尚未完成 |
 | **L VM 延迟高** | 0GM-VL-35B ~30ms/call | dense 4B VM，memory-bound，无 CUDA graph |
 | **T 高并发吞吐损失** | conc=16 仅 35% of noSIA | VM 调用仍占关键路径；每 token 都可能调用 |
-
----
-
-## 执行顺序总览
-
-```
-Month -2 ██ 项目启动 ██ 批量前向 ██ 首次效果评估          [已完成]
-Month -1 ██ b2 inproc ██ Bug修复 ██ 上线生产 ██ 高并发优化 [已完成]
-─────────────────────── 当前（2026-06-22）──────────────────
-Month 1  ██ block-wise scoring ██ 双熵门控 ██ 评估基准
-Month 2  ██ 两阶段粗过滤PoC ██ 数据收集 ██ ARM VM 训练
-Month 3  ██ 同词表 VM 上线（含 MoE 选型） ▶ 乘积式融合A/B
-Month 4  ██ 更强VM ██ accept/reject ▶ 极小judge PoC ▶ 多模态数据准备
-Month 5  ██ PRM 训练（全月主线）
-Month 6  ██ 多模态VM训练 ██ 多模态VM上线
-```
-
-已完成阶段为前两个月真实产出；执行计划阶段严格依赖前一阶段：前期降低 VM 调用频率 → 中期换更强模型 → 后期做根本性改造。
 
 ---
 
