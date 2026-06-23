@@ -37,7 +37,7 @@
 当前评分模型与主模型使用不同词表，每次打分都需要额外的词表重编码（CPU 编码 ~2ms + eager 调度 ~5ms，合计约 7ms 额外开销）。训练一个词表完全一致的评分模型，预计将单次打分延迟从 ~30ms 降至 ~11ms；同时验证"乘积式融合"（比当前加法干预更精准的介入方式）能否进一步提升对齐效果。
 
 **阶段三（Month 4–6）：更强的评分能力 + 多模态扩展**  
-引入能理解"推理过程"的过程奖励模型（PRM），在关键决策点精准干预而非盲目打分；同时将 SIA 扩展至多模态，支持图片输入，覆盖更广的业务场景。
+评估步骤级干预（PRM）的可行性——先以无需训练的 AdaDec baseline（在每个推理步骤结束时让模型试探 3 条方向、选最优继续）验证增量效果，再视结论决定是否训练外部 PRM；同时将 SIA 扩展至多模态，支持图片输入，覆盖更广的业务场景。
 
 ### 6 个月目标
 
@@ -587,7 +587,7 @@ AdaDec 用"模型自身的流畅度"打分，判断的是"这个方向模型写�
 这意味着我们在生产环境中观察到的吞吐问题（conc=16 吞吐下降 64%）是一个**尚未有学术解答的真实工程难题**。如果 SIA 项目系统性地：
 
 - 建立高并发场景下的评估基准（吞吐 vs 对齐效果 Pareto）
-- 验证 block-wise scoring / PRM 等方案在高并发下的实际效果
+- 验证 block-wise scoring 及 AdaDec 步骤级干预（如 Month 5 go/no-go 通过，则包含外部 PRM）在高并发下的实际效果
 - 发表相关结果
 
 这一方向目前在学术界尚无系统性研究，是潜在的工程贡献点。
@@ -691,7 +691,7 @@ CMU 的 DSPA（arxiv 2603.21461）用稀疏自编码器在 LLM 激活空间直�
 | TITA: Token-level Inference-Time Alignment ([arxiv 2510.21794](https://arxiv.org/abs/2510.21794)) | 任务 6.2 DPO 蒸馏参考 | 2025 preprint |
 | GGRO: Gradient-Guided Reward Optimization ([arxiv 2606.09635](https://arxiv.org/abs/2606.09635)) | 发现四 / 附录 A2 | **UAI 2026** ✅ |
 | SeLaR: Soft Embedding Alignment at Low-Confidence ([arxiv 2604.08299](https://arxiv.org/abs/2604.08299)) | 发现四：稀疏干预独立验证 | 2026 preprint |
-| AdaDec: Pause-and-Rerank at High Uncertainty ([arxiv 2506.08980](https://arxiv.org/abs/2506.08980)) | 发现四：稀疏干预独立验证 | **FSE 2026** ✅ |
+| AdaDec: Pause-and-Rerank at High Uncertainty ([arxiv 2506.08980](https://arxiv.org/abs/2506.08980)) | 发现四：稀疏干预独立验证；**任务 5.1 AdaDec baseline 实现参考**（L=5 greedy fork + LLM log-prob）| **FSE 2026** ✅ |
 | PRM as Unified Control Signal for Reasoning ([arxiv 2602.01070](https://arxiv.org/abs/2602.01070)) | 任务 5.1 PRM 粒度互补支撑 | 2026 preprint |
 | Seesaw: PP↔TP Dynamic Parallelism Switching ([arxiv 2503.06433](https://arxiv.org/abs/2503.06433)) | 工程优化参考（TP/PP 动态调度）| 2025 preprint |
 | DSPA: SAE-based Activation Steering ([arxiv 2603.21461](https://arxiv.org/abs/2603.21461)) | 发现四 / 附录 A1 | 2026 preprint（CMU）|
