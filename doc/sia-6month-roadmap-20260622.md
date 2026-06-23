@@ -257,7 +257,7 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 
 **补充训练技巧**：
 - **低秩 Reward Head**（[arxiv 2407.04615](https://arxiv.org/abs/2407.04615)，TMLR 2025）：vocabulary-wide head 的矩阵从 `[d × V]` 分解为 `[d × r] × [r × V]`（r ≪ V），在 vocab=248K 的 Qwen3.5 词表下效果尤为明显，与上述架构目标天然兼容。
-- **From r to Q\* 训练初始化**（[arxiv 2404.12358](https://arxiv.org/abs/2404.12358)，COLM 2024）：标注数据不足时，用主模型 0GM-VL-35B 的 log-prob 差值作为伪标签初始化 VM，降低冷启动门槛。
+- **From r to Q\* 理论启发**（[arxiv 2404.12358](https://arxiv.org/abs/2404.12358)，COLM 2024）：该论文证明 DPO 等价于 token 级隐式 Q-learning，LLM 的 log-prob 差值 β(log π_θ − log π_ref) 本身编码隐含奖励值。**SIA 工程推导**：标注数据不足时，可将 0GM-VL-35B 与参考模型的 log-prob 差值作为弱监督伪标签辅助 VM 冷启动——此应用为 SIA 对该理论的延伸推导，非论文原著直接贡献。
 - **RED 蒸馏**（[arxiv 2411.08302](https://arxiv.org/abs/2411.08302)，EMNLP 2025）：从 holistic feedback 蒸馏 token 级奖励，可作为无 token 级标注时的备用路径。
 
 - **工作量**：约 2-3 周（训练 + 初步 offline 验证）
@@ -321,11 +321,11 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 
 替换生产 VM，重新跑 AlpacaEval，验证效果提升。
 
-> **完成后收益**：对齐效果：跨分词器噪声彻底消除，AlpacaEval win-rate 首次可量化对比；VM 延迟：b2_score_call 从 ~30ms → ~11ms（−63%）；并发吞吐：conc=16 吞吐从 ≥550 升至 ≥750 tok/s。
+> **完成后收益**：对齐效果：跨分词器噪声彻底消除，AlpacaEval win-rate 首次可量化对比；VM 延迟：b2_score_call 从 ~30ms → **~23ms**（消除跨分词器编码 ~7ms；CUDA graph 仍不可用于 0GM-35B，保守收益如此；若后续 CUDA graph 修复则可进一步降至 ~11ms）；并发吞吐：conc=16 吞吐保守预期 **≥550（维持基线）**，消除跨分词器开销后有改善空间；若 CUDA graph 后续修复则可升至 ≥750 tok/s（见下方交付标准表）。
 
 ### 任务 3.3：乘积式分布融合 A/B 实验（1-2 天，来自 LLMdoctor）
 
-**来源**：LLMdoctor（arxiv 2601.10416，2026 年 1 月）将加法式 logit biasing 改为乘积式分布融合，在 AlpacaEval 类对比中 62.10% win vs. GenARM（ICLR 2025），76.00% win vs. ARGS。
+**来源**：LLMdoctor（arxiv 2601.10416，2026 年 1 月）将加法式 logit biasing 改为乘积式分布融合（π_decode ∝ π_base^α · π_r^β），在 GPT-4o 裁判头对头评测中 62.10% win vs. GenARM（ICLR 2025），76.00% win vs. ARGS。
 
 > **完成后收益（如成功）**：AlpacaEval win-rate 额外 +3-5%（对齐效果提升）；改动仅修改 `SIALogitsProcessor.apply()` 融合逻辑，工程成本极低可随时回滚；结果直接决定 Month 4 accept/reject 实验的优先级。
 
@@ -363,8 +363,8 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 1. **Hydragen 共享前缀 Attention**（[arxiv 2402.05099](https://arxiv.org/abs/2402.05099)，ICLR 2025）  
    SIA 的 VM scoring 中，topK 个候选共享完全相同的前缀（prompt + 已生成 token）。Hydragen 将这部分 attention 抽取出来做一次 forward，理论上将 VM 候选评分从 K 次独立计算 → 1 次共享前缀 + K 次极短 suffix attention，并发吞吐改善显著。需修改 VM serving kernel，工作量约 2 周。
 
-2. **AsyncSpade 异步 VM 调用**（[arxiv 2510.07486](https://arxiv.org/abs/2510.07486)，arXiv 2025）  
-   将 `SIALogitsProcessor` 的同步 VM 调用改为异步（VM 调用与主 LLM decoding 并行），实测每 token 输出时间（TPOT）减少 20-50%。改造 `apply()` 的 blocking call 为 prefetch/overlap 模式，约 2 周工作量。
+2. **异步 VM 调用（SIA 工程探索，无直接论文支撑）**  
+   将 `SIALogitsProcessor` 的同步 VM 调用改为异步——当主 LLM 计算第 t+1 步 logits 时，第 t 步的 VM 打分已在后台线程并行完成。改造 `apply()` 的 blocking call 为 prefetch/overlap 模式，预期 TPOT 可减少 20-50%。**注意**：AsyncSpade（arxiv 2510.07486）原论文核心是异步稀疏 KV cache 筛选，与 VM 异步调用无关，不能作为本方向的参考；实现方案需自行设计验证，约 2 周工作量。
 
 ---
 
@@ -709,9 +709,9 @@ CMU 的 DSPA（arxiv 2603.21461）用稀疏自编码器在 LLM 激活空间直�
 | RM Ensemble（通行工程实践） | 附录 B3 reward hacking 防护 | 通行实践，无单一出处 |
 | Cost-Effective RGTG: Vocabulary-wide Reward Head ([arxiv 2502.04517](https://arxiv.org/abs/2502.04517)) | 任务 1.1 备选 / 任务 2.2 VM 架构 | **ICML 2025** ✅ |
 | Low-Rank RM Parametrization ([arxiv 2407.04615](https://arxiv.org/abs/2407.04615)) | 任务 2.2 VM scoring 加速 | **TMLR 2025** ✅ |
-| From r to Q*: LLM as Q-Function ([arxiv 2404.12358](https://arxiv.org/abs/2404.12358)) | 任务 2.2 VM 训练初始化 | **COLM 2024** ✅ |
+| From r to Q*: LLM as Q-Function ([arxiv 2404.12358](https://arxiv.org/abs/2404.12358)) | 任务 2.2 VM 冷启动理论支撑（DPO ≡ Q-learning，log-prob 差值编码隐含奖励，SIA 推导延伸） | **COLM 2024** ✅ |
 | Hydragen: High-Throughput Shared-Prefix Inference ([arxiv 2402.05099](https://arxiv.org/abs/2402.05099)) | 任务 Month 3 备选 / T 系统优化 | **ICLR 2025** ✅ |
-| AsyncSpade: Asynchronous Sparse Decoding ([arxiv 2510.07486](https://arxiv.org/abs/2510.07486)) | 任务 Month 3 备选 / 异步 VM 调用 | 2025 preprint |
+| AsyncSpade: Asynchronous Sparse Decoding ([arxiv 2510.07486](https://arxiv.org/abs/2510.07486)) | ~~任务 Month 3 备选 / 异步 VM 调用~~ **引用有误**：论文核心是异步稀疏 KV cache，与 VM 异步调用无关 | 2025 preprint ❌ |
 | To Intervene or Not: Probabilistic Gating ([arxiv 2606.11201](https://arxiv.org/abs/2606.11201)) | 任务 1.2 双熵门控进阶 | **ACL 2026** ✅ |
 | Learning Adaptive LLM Decoding ([arxiv 2603.09065](https://arxiv.org/abs/2603.09065)) | 任务 1.2 learned routing | 2026 preprint |
 | Inference-Time Reward Hacking ([arxiv 2506.19248](https://arxiv.org/abs/2506.19248)) | 任务 1.3 评估 pipeline 安全设计 | **NeurIPS 2025** ✅ |
