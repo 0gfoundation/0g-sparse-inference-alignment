@@ -399,7 +399,7 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 
 ### 任务 4.3：极小 judge PoC（视余量执行）
 
-**来源**：Judge Decoding（ICLR 2025，arxiv 2501.19309）用 16.4k 参数线性层替换 speculative decoding 的接受准则，500 条偏好对、1.5 小时训练，实现 3.9–9.7× 加速。
+**来源**：Judge Decoding（arXiv 2025 preprint，arxiv 2501.19309）用 16.4k 参数线性层替换 speculative decoding 的接受准则，500 条三元组（问题 + 正确答案 + 错误答案）、1.5 小时训练，实现 3.9–9.7× 加速。
 
 **SIA 类比**：在主 LLM（0GM-VL-35B）的 LogitsProcessor 内部，基于 top-K logit 分布训练一个**极小线性评分头**（<10M 参数），替代外部 4B VM。如果可行，per-call latency 从 ~30ms 降至 <0.1ms，L/T 根本解决。
 
@@ -428,7 +428,7 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 | 干预模式对比 | **logit bias vs accept/reject 有实测数据** | — |
 | 极小 judge PoC | **完成实验，有效果对比数据**（视余量）| — |
 | 多模态 VM 数据 | **已启动收集**（视余量）| — |
-| conc=16 SIA tok/s | **维持 ≥ 750** | ≥ 750 |
+| conc=16 SIA tok/s | **维持 ≥ 550**（保守）；若 Month 3 CUDA graph 已修复则维持 ≥ 750 | ≥ 550 |
 
 ---
 
@@ -598,7 +598,7 @@ RSD（ICML 2025）、ThinkPRM、PRM as Unified Control Signal 三篇独立论文
 
 ### 发现二：Judge Decoding 的"极小 judge"思路对 SIA 有重大潜力，尚无人探索
 
-ICLR 2025 发表的 Judge Decoding（arxiv 2501.19309）提出了一个反直觉的结论：用**仅 16,384 个参数（16.4k）的线性投影层**替换大模型的 token 接受准则，以 500 条标注数据、不到 1.5 小时训练，实现 Llama-405B 推理 **3.9–9.7× 加速**。
+Judge Decoding（arXiv 2025 preprint，arxiv 2501.19309）提出了一个反直觉的结论：用**仅 16,384 个参数（16.4k）的线性投影层**替换大模型的 token 接受准则，以 500 条三元组数据、不到 1.5 小时训练，实现 Llama-405B 推理 **3.9–9.7× 加速**。
 
 当前 SIA 使用 4B 参数的 VM 打分，每次调用延迟 ~30ms。
 
@@ -680,7 +680,7 @@ CMU 的 DSPA（arxiv 2603.21461）用稀疏自编码器在 LLM 激活空间直�
 | SIA 原论文 ([arxiv 2602.21215](https://arxiv.org/abs/2602.21215)) | 整体框架基础 / 任务 6.1 | 2026 preprint |
 | AlpacaEval 2.0 ([arxiv 2404.04475](https://arxiv.org/abs/2404.04475)) | 任务 1.3 评估基准 | 2024 preprint |
 | GenARM: Autoregressive Reward Model ([arxiv 2410.08193](https://arxiv.org/abs/2410.08193)) | 任务 2.2 ARM 训练目标 / 任务 4.1 | **ICLR 2025** ✅ |
-| Judge Decoding ([arxiv 2501.19309](https://arxiv.org/abs/2501.19309)) | 任务 4.3 极小 judge PoC | **ICLR 2025** ✅ |
+| Judge Decoding ([arxiv 2501.19309](https://arxiv.org/abs/2501.19309)) | 任务 4.3 极小 judge PoC | 2025 preprint（ICLR 2025 未能核实）|
 | Let's Verify Step by Step / ORM vs PRM ([arxiv 2305.20050](https://arxiv.org/abs/2305.20050)) | 任务 5.1 PRM 适用范围 | **ICLR 2024** ✅ |
 | Scaling LLM Test-Time Compute ([arxiv 2408.03314](https://arxiv.org/abs/2408.03314)) | 整体方向验证 | NeurIPS 2024 Workshop ✅ |
 | RSD: Reward-guided Speculative Decoding ([arxiv 2501.19324](https://arxiv.org/abs/2501.19324)) | 任务 2.3 两阶段过滤 / 任务 4.2 | **ICML 2025** ✅ |
