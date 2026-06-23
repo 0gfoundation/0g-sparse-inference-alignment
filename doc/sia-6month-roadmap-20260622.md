@@ -35,12 +35,12 @@
 
 ### 6 个月目标
 
-| 维度 | 当前（2026-06） | 目标（2026-12） |
-|------|--------------|--------------|
-| 高并发吞吐（SIA vs 无 SIA） | **35%** | **≥ 72%** |
-| 单次打分延迟 | ~30ms | ≤ 15ms |
-| 多模态支持 | 仅文本 | 文本 + 图片 |
-| 标准评估基准 | 尚未建立（GPT-4 judge）| Month 1 建立，持续追踪 |
+| 维度 | 当前（2026-06） | 保守目标（CUDA graph 仍不可用）| 乐观目标（CUDA graph 恢复后）|
+|------|--------------|-------------------------------|-------------------------------|
+| 高并发吞吐（SIA vs 无 SIA） | **35%** | **≥ 55%** | **≥ 72%** |
+| 单次打分延迟 | ~30ms | ~23ms（消除跨分词器 ~7ms）| ~11ms（追加 CUDA graph）|
+| 多模态支持 | 仅文本 | 文本 + 图片 | 文本 + 图片 |
+| 标准评估基准 | 尚未建立（GPT-4 judge）| Month 1 建立，持续追踪 | Month 1 建立，持续追踪 |
 
 ---
 
@@ -107,7 +107,7 @@ N 个并发请求的 VM 调用从串行 N 次合并为 1 次 GPU batch forward�
 - conc=16 ITL 倍数：4.8× → **3.0×**
 
 **6. 探索失败的路径（已排除）**（6 月 22 日）  
-vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + DynamicCache（5–8× 更慢，TP=4 优势无法复制）两条路线均已实测排除，避免后续重复探索。
+vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + DynamicCache（5–8× 更慢，TP=4 优势无法复制）两条路线均已实测排除，避免后续重复探索。此外，RM CUDA graph（piecewise 模式）经三轮系统性修复后仍比 eager 慢 2.7–3.5×，根本原因是 RM 属于 prefill-heavy workload，与 PIECEWISE 的优化目标不兼容，已完全排除——详见[附录：0GM-35B CUDA Graph 调试过程](#appendix-cuda-graph)。
 
 ---
 
@@ -133,7 +133,9 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 
 | 评估 | 结果 | 备注 |
 |------|------|------|
-| MMLU thinking 模式（0GM-VL-35B，150Q 对照）| SIA vs noSIA 无明显下降 | 已排除 rep_penalty bug |
+| MMLU thinking 模式（0GM-VL-35B，150Q 对照）| SIA vs noSIA 无明显变化 | 已排除 rep_penalty bug |
+
+<sub>多次实验（VL-30B ±1–3pp、14B ±1pp）均统计不显著；0GM-35B thinking 模式有 +12pp 例外，主要源于 SIA 减少了 thinking 截断（noSIA cap-hit 25.3% → SIA 8.0%），非通识知识本身提升，待多次重复后再下结论。</sub>
 | AlpacaEval win-rate（0GM-VL-35B）| **65.4%**（Skywork judge，**191 配对**）| Skywork 作 judge 已有数字（200Q 中 9 题因超 RM 上限排除）；GPT-4 judge 尚未跑，Month 1 建立标准评估基准 |
 | AlpacaEval Skywork Δ（0GM-VL-35B）| **+5.45 reward（+22.7%）** | SIA mean 29.46 vs noSIA 24.01（191 对口径，实验 stable-prefix-20260610）|
 | Qwen3-VL-30B AlpacaEval（b2 inproc，200Q）| SIA Skywork mean **+1.22~+2.38（+4.2%~+8.3%）**，两轮均显著 | GPT-4 judge 尚未跑；两轮 Δ 有波动，统计噪声正常（见 doc/alpaca-eval-vl30b-b2-docker-20260608.md）|
@@ -216,7 +218,7 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 - stable prefix 替代方案可退役 → 消除跨分词器 CPU 编码开销（~2ms）和 eager mode 内核调度开销（~5ms，源于无 CUDA graph），b2_score_call 从 ~30ms 降至 **~11ms**（VM 延迟降低）
 - 每次调用读取的 HBM 数据量不变，但质量更好（并发吞吐间接改善）
 
-> **注意（来自已有实验）**：RM CUDA graph（piecewise）在 0GM-VL-35B 上已完整试验并彻底失败——三层修复后 piecewise 比 eager 慢 2.7–3.5×（稳态 @500 步以上：piecewise 130–140ms vs eager 40–50ms）。根本原因：RM 是 prefill-heavy workload（每步 topk=10 条完整序列），vllm PIECEWISE 只优化 decode 步骤（固定 batch=1），对 prefill 无效。同词表 VM 的 L 改善**不依赖 CUDA graph**，而是靠消除跨分词器开销（实验 `alpaca-0gm35b-piecewise-fix3-20260610` 已确认 CUDA graph 死路，见 `doc/0gm-35b-sia-perf-breakdown-20260609.md` §7）。
+> **注意（来自已有实验）**：RM CUDA graph 在 0GM-35B 上经三轮修复均失败，已完全排除。根本原因是 RM 为 prefill-heavy workload，与 vllm PIECEWISE 的优化目标不兼容，同词表 VM 无法改变这一本质。同词表带来的延迟改善**仅来自消除跨分词器开销（~7ms）**，而非 CUDA graph——详见[附录：0GM-35B CUDA Graph 调试过程](#appendix-cuda-graph)。
 
 ### 任务 2.1：偏好数据收集
 
@@ -334,10 +336,10 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 
 ### Month 3 交付标准
 
-| 指标 | Month 3 目标 | Month 2 基线 |
-|------|-------------|------------|
-| conc=16 SIA tok/s | **≥ 750** | ≥ 550 |
-| b2_score_call p50 | **≤ 15ms**（同词表消除跨分词器开销，非 CUDA graph）| ~30ms |
+| 指标 | Month 3 保守目标（CUDA graph 仍不可用）| Month 3 乐观目标（CUDA graph 恢复）| Month 2 基线 |
+|------|--------------------------------------|-------------------------------------|------------|
+| conc=16 SIA tok/s | **≥ 500** | **≥ 750** | ≥ 550 |
+| b2_score_call p50 | **~23ms**（消除跨分词器 ~7ms，eager mode）| **~11ms**（追加 CUDA graph）| ~30ms |
 | AlpacaEval win-rate vs noSIA | **可量化，有正提升** | 65.4%（Skywork judge）|
 | 乘积式 vs 加法式融合对比 | **有结论：乘积式是否更优** | — |
 
@@ -491,11 +493,11 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 
 ## 终态汇总（2026-12 末预期）
 
-| 指标 | 当前（2026-06）| 6 个月后目标 |
-|------|----------------|------------|
-| conc=16 SIA tok/s | 369 | **≥ 750** |
-| SIA/noSIA 吞吐比 | 35% | **≥ 72%** |
-| SIA/noSIA ITL 倍数 | 3.0× | **≤ 1.5×** |
+| 指标 | 当前（2026-06）| 保守目标（CUDA graph 仍不可用）| 乐观目标（CUDA graph 恢复）|
+|------|----------------|-------------------------------|---------------------------|
+| conc=16 SIA tok/s | 369 | **≥ 500** | **≥ 750** |
+| SIA/noSIA 吞吐比 | 35% | **≥ 55%** | **≥ 72%** |
+| SIA/noSIA ITL 倍数 | 3.0× | **≤ 2.0×** | **≤ 1.5×** |
 | AlpacaEval win-rate vs noSIA | 65.4%（Skywork judge，待 GPT-4 验证）| **≥ +5%（GPT-4 judge 独立验证）** |
 | 多模态 VLM 场景支持 | ❌ | **✅** |
 | VM 是否需要每 token 调用 | 是（~20% token）| **否（block-wise + PRM，~5% 以下）**|
@@ -507,7 +509,7 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 ```
 2026-07 末  conc=16 tok/s ≥ 550，评估基准建立
 2026-08 末  同词表 VM 训练完成，两阶段粗过滤 PoC 有结论
-2026-09 末  conc=16 tok/s ≥ 750，同词表 VM 上线，效果首次可量化
+2026-09 末  conc=16 tok/s ≥500（保守）/ ≥750（乐观，CUDA graph 恢复），同词表 VM 上线，效果首次可量化
 2026-10 末  AlpacaEval win-rate ≥ +5%，最优干预模式确定，极小 judge PoC 有结论
 2026-11 末  PRM 上线，推理任务 VM 调用进一步降低
 2026-12 末  多模态 VM 训练完成并上线
@@ -754,3 +756,41 @@ Token-level 对齐已被 ICML 2026（arxiv 2602.02572）形式化为标准 MDP �
 ---
 
 > **远期方向优先级参考**（前期工作完成后）：C0a/C0b（延后轻量探索，随时可启动）> B1 VM 蒸馏（低风险，效果可期）> E1 多目标 VM（效果覆盖）> A1 DSPA（高潜力，需验证）≥ A2 GGRO 梯度（高潜力，工程挑战大）> F1/F2/F3（学术发表，需 6 个月数据积累）> B2/B3（依赖具体指标）。
+
+---
+
+## <a name="appendix-cuda-graph"></a>附录：0GM-35B CUDA Graph 调试过程
+
+**结论**：RM CUDA graph（vllm PIECEWISE 模式）在 0GM-35B 上不可用，已经三轮系统性修复，均失败。此问题与分词器无关，属于架构层面的根本限制。
+
+### 数据对比
+
+| 模式 | 稳态延迟（@500步以上）| vs eager |
+|------|----------------------|---------|
+| eager（当前生产）| 40–50ms / step | 基准 |
+| PIECEWISE fix3（最终尝试）| 130–140ms / step | **慢 2.7–3.5×** |
+
+### 三轮修复历程
+
+| 轮次 | 修复内容 | 结果 |
+|------|---------|------|
+| fix1 | CUDAGraph isolation：RM forward 移入独立 CUDA stream，避免与主 LLM graph 冲突 | ❌ 失败：NaN 链式污染（§3.9）|
+| fix2 | APC=0（禁用自动前缀缓存）+ max_num_batched_tokens=65536 | ❌ 失败：首个 request 后 piecewise 完全退化 |
+| fix3 | 切换 SDPA 后端（flash_attn → math → xformers）逐一测试 | ❌ 失败：首个 request 成功，后续 request 全部失败（⚠️ 根因未解）|
+
+### 根本原因分析
+
+vllm PIECEWISE CUDA graph 的设计假设：decode 步骤 batch_size=1，每步 token 数固定 → 可预编译固定形状 graph。
+
+RM 的实际 workload：topK=10 条**完整候选序列**（prefix + candidate token），每步相当于一次 prefill，batch_size 和序列长度均随时间变化 → 无法满足固定形状假设，graph 执行退化为 eager fallback 或触发形状不匹配错误。
+
+同词表 VM 训练不改变 RM 的 prefill-heavy 本质，因此无法解决此问题。
+
+### 影响
+
+- 0GM-35B 延迟改善只能依赖消除跨分词器开销（~7ms），不依赖 CUDA graph
+- 同词表 VM 上线后 b2_score_call p50 预计从 ~30ms 降至 ~23ms（而非 ~11ms）
+- ~11ms 目标仅在 CUDA graph 问题被后续 vllm 版本修复后才可达
+- VL-30B 上 11ms 成立是因为：① 同词表（无跨分词器开销）② CUDA graph 可用（VL-30B 未复现此 bug）
+
+**参考实验**：`alpaca-0gm35b-piecewise-fix3-20260610`；详细调试日志见 `doc/0gm-35b-sia-perf-breakdown-20260609.md` §7 和 `doc/cuda-graph-debugging-journal.md`。
