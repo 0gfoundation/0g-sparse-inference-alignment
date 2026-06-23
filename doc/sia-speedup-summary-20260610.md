@@ -213,6 +213,32 @@ VL-30B 的 LLM 和 VM 使用同一套分词器，LLM token ID 可以直接传给
 
 ---
 
+### 4.2 高并发吞吐优化（2026-06-18）
+
+以上优化针对单请求延迟。高并发场景（conc=16）下，vllm 把所有活跃请求打成一个 batch，每步 `apply(logits)` 回调一次，但原实现对 N 个 INTERVENE 请求**串行**调用 VM，导致 ITL 随并发数线性劣化（conc=16 时 SIA/noSIA ITL 倍数达 4.8×）。
+
+**优化一：VM 批量打分（Batch VM Scoring）**：将同一 decode step 内所有 INTERVENE 请求的 N×K 个 prompt 合并成一次 `vm_llm.generate()` 提交，消除 N 次顺序 GPU forward。conc=16 ITL −33%。
+
+**优化二：P-3 增量跨分词器前缀缓存**：在 P-2 的 stable prefix 基础上，跨步增量 append（逐 token decode+encode），消除步间 APC cross-step block miss。conc=16 ITL 再 −5.7%。
+
+**实测（input≈480 tokens, max_out=304）**：
+
+| Conc | SIA ITL 基线 | SIA ITL 优化后 | SIA tok/s 基线 | SIA tok/s 优化后 | 变化 |
+|------|:-----------:|:-------------:|:-------------:|:---------------:|:----:|
+| 8  | 35.8ms | **30.0ms** | 217.3 | **257.7** | +18% |
+| 16 | 65.4ms | **41.3ms** | 239.4 | **369.5** | **+54%** |
+
+优化后 conc=16 SIA/noSIA ITL 倍数从 4.8× 降至 3.0×。详见 [`0gm-35b-concurrent-speedup-20260618.md`](0gm-35b-concurrent-speedup-20260618.md)。
+
+**已探索但失败的路径（2026-06-22）**
+
+| 方案 | 结论 | 根因 |
+|------|------|------|
+| **vllm classify runner 替代 VM**（`runner='pooling', convert='classify'`）| ❌ 放弃，7-8× 更慢 | vllm 0.18.0 pooling runner 不支持 APC，每次强制完整 prefill；且打分位置错误（CLS token 非末尾）|
+| **transformers + DynamicCache 替代 b2 inproc**（单 GPU eager forward）| ❌ 放弃，5-8× 更慢 | b2 inproc VM 用 TP=4（每 GPU 读 2GB 权重），transformers 单 GPU 读全 8GB；且 `AutoModelForSequenceClassification` 未能正确透传 `past_key_values`，KV cache 形同虚设（speedup 仅 1.9×）|
+
+---
+
 ## 五、当前优化态耗时分析
 
 数据来源：`exp/alpaca-vl30b-b2-docker-20260610/docker_log.txt`（VL-30B）、`exp/alpaca-0gm35b-stable-prefix-20260610/server.log`（0GM-35B），均取稳态阶段 pf-summary 数据（步骤数 @15000–25000 / @5000–15000，各取 100 个采样点中位数）。
@@ -309,17 +335,22 @@ SIA 回调在每步开始时调用 `torch.cuda.synchronize()`，等待 LLM FULL 
 
 ## 六、后续可能的优化方向
 
-以下方向尚未实施，不提供加速比预估。
+> 标注说明：✅ 已实施  ❌ 已探索放弃  — 尚未实施
 
 ### 6.1 效果无损优化
 
-纯工程改进，不改变候选打分逻辑，生成内容的 Reward 分数理论上不受影响。
-
-- **VM 并行化**：在主 LLM forward 期间同时在独立 CUDA stream 上准备 VM 输入，将 intv_prepare 的 ~0.07ms 与 LLM decode 重叠执行，消除串行等待
+| 方向 | 状态 | 说明 |
+|------|:----:|------|
+| 高并发批量打分（Batch VM Scoring）| ✅ | conc=16 +54%，见 §4.2 |
+| P-3 增量跨分词器前缀缓存 | ✅ | conc=16 再 +5.7%，见 §4.2 |
+| vllm classify runner 替代 VM | ❌ | APC 不工作 + 打分位置错误，见 §4.2 |
+| transformers + DynamicCache 替代 VM | ❌ | TP=4 优势无法复制 + KV cache 不生效，见 §4.2 |
+| **Dual CUDA Stream 流水线** | — | 将 VM 打分与下一步主 LLM forward 重叠，预期 +20–40% 端到端吞吐；需改造 LogitsProcessor 同步语义，架构侵入性较强 |
+| VM 并行化（intv_prepare 重叠）| — | 在主 LLM forward 期间准备 VM 输入，消除 ~0.07ms intv_prepare 串行等待；收益微小 |
 
 ### 6.2 效果有损优化（速度–质量权衡）
 
-以下参数调整或替换可提升速度，但会不同程度地影响 SIA 的干预质量，需根据实际任务评估可接受的权衡点。
+以下参数调整或替换可提升速度，但会不同程度地影响 SIA 干预质量，需根据实际任务评估可接受的权衡点。
 
 - **减少 `--topk`**：每步候选从 10 降到 5 或 3，VM batch 缩小，b2_score_call 时间线性缩短；代价是候选池变小，可能错过更优 token
 - **增大 `--entropy_threshold`**：提高跳过干预的熵阈值，降低干预率（当前 VL-30B 24.9%、0GM-35B 20.1%）；代价是部分高熵关键决策点被跳过，不再受 VM 引导
@@ -327,7 +358,7 @@ SIA 回调在每步开始时调用 `torch.cuda.synchronize()`，等待 LLM FULL 
 
 ### 6.3 模型专属方向
 
-- **0GM-35B：训练与 0GM-35B 相同词表的 VM**：从根本消除跨分词器转换开销，并有望恢复 CUDA graph（参见 Appendix B），b2_score_call 延迟有望接近 VL-30B 当前实测的 ~17ms 水平；该方向属于效果无损的工程优化
+- **0GM-35B：训练与 0GM-35B 相同词表的 VM**（— 尚未实施）：从根本消除跨分词器转换开销，并有望恢复 CUDA graph（参见 Appendix B），b2_score_call 延迟有望接近 VL-30B 当前实测的 ~17ms 水平；是目前剩余单项收益最大的纯工程优化方向
 
 ---
 
