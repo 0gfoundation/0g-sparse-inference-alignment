@@ -30,8 +30,8 @@ SIA 是一套实时提升 AI 回答质量的系统 \[1\]。当 AI 生成回答�
 
 **主要工作**：
 
-- **双重门控机制** \[8\]：在现有"AI 不确定时才介入"的基础上，叠加第二个判断维度——当评分助手判断本次各候选词的好坏差异不明显时（干预价值低），跳过本次打分。两个条件同时满足才触发，将低价值干预过滤掉，评分调用次数从约 20% 降至约 5%。
-- **极小评分头 PoC** \[5\]\[9\]：探索能否用一个极小的评分模块（参数量不到 1000 万，比当前 40 亿参数的评分助手小 400 倍）替代现有方案。该模块直接挂载在主模型内部，几乎零延迟。本月目标是完成原理验证，得出明确的可行性结论。候选技术路线有两条：①训练一个极小分类器，读取主模型隐藏层表示来判断候选词质量 \[5\]；②在主模型隐藏层向量上训练极简线性层（参数量不到主模型的万分之一）直接输出评分 \[9\]。两条路线原理相通，本月均做小规模实验，选效果更好的一条推进。
+- **双重门控机制** \[7\]：在现有"AI 不确定时才介入"的基础上，叠加第二个判断维度——当评分助手判断本次各候选词的好坏差异不明显时（干预价值低），跳过本次打分。两个条件同时满足才触发，将低价值干预过滤掉，评分调用次数从约 20% 降至约 5%。
+- **极小评分头 PoC** \[4\]\[8\]：探索能否用一个极小的评分模块（参数量不到 1000 万，比当前 40 亿参数的评分助手小 400 倍）替代现有方案。该模块直接挂载在主模型内部，几乎零延迟。本月目标是完成原理验证，得出明确的可行性结论。候选技术路线有两条：①训练一个极小分类器，读取主模型隐藏层表示来判断候选词质量 \[4\]；②在主模型隐藏层向量上训练极简线性层（参数量不到主模型的万分之一）直接输出评分 \[8\]。两条路线原理相通，本月均做小规模实验，选效果更好的一条推进。
 
 **预期效果**：
 - 双重门控：评分调用频率从约 20% 降至约 5%，高并发可服务用户数从当前 35% 提升至 **约 50%**
@@ -62,9 +62,9 @@ SIA 是一套实时提升 AI 回答质量的系统 \[1\]。当 AI 生成回答�
 **候选方向**（第 2 个月结束后决策）：
 
 - **加入更高质量的训练数据**：复用高质量公开偏好数据集，并用主模型自动生成候选答案对并标注优劣，在同词表基础上重新训练，提升评分准确性。
-- **整词表评分头** \[3\]：传统方式对每个候选词分别打分（如 10 个候选词需 10 次计算）；新设计改为一次计算输出所有词的评分，理论加速最高 10 倍，实测约 6 倍。
-- **乘积式融合 A/B 实验** \[4\]：当前 SIA 将评分叠加到 AI 的概率分布上（加法）；乘积式融合改为两者概率分布直接相乘，干预更精准。文献实测对比加法式胜率提升约 10%+。
-- **自适应融合权重** \[10\]：现有 `--weight` 是全局固定参数；改为根据当前 token 的不确定性自动调整——高熵（AI 更不确定）位置权重高，低熵位置权重低。无需重新训练评分助手，1–2 天代码修改即可验证，与乘积式融合可组合对比。
+- **整词表评分头** \[2\]：传统方式对每个候选词分别打分（如 10 个候选词需 10 次计算）；新设计改为一次计算输出所有词的评分，理论加速最高 10 倍，实测约 6 倍。
+- **乘积式融合 A/B 实验** \[3\]：当前 SIA 将评分叠加到 AI 的概率分布上（加法）；乘积式融合改为两者概率分布直接相乘，干预更精准。文献实测对比加法式胜率提升约 10%+。
+- **自适应融合权重** \[9\]：现有 `--weight` 是全局固定参数；改为根据当前 token 的不确定性自动调整——高熵（AI 更不确定）位置权重高，低熵位置权重低。无需重新训练评分助手，1–2 天代码修改即可验证，与乘积式融合可组合对比。
 
 **预期效果**：
 - 评分质量或效率有可量化改善
@@ -79,8 +79,8 @@ SIA 是一套实时提升 AI 回答质量的系统 \[1\]。当 AI 生成回答�
 **主要工作**：
 
 - **评分助手规模决策**：若第 3 个月的 4B 版本评分助手效果已满足要求（Skywork 胜率 ≥ 65%），跳过升级；若效果不足，将评分助手从 4B 升级至 8B，借助更强的评分能力进一步提升质量。由于第 1 个月已将调用频率降至 5%，即使换更大模型，速度代价也在可接受范围内。
-- **接受/拒绝干预模式实验**（类似 idea：\[7\]）：现有模式是将评分偏置叠加到 AI 的输出概率上（软干预）；新模式改为：若评分助手强烈认可某个词则直接接受，否则从候选词中重新采样（硬干预）。验证哪种干预方式效果更好。
-- **token 级奖励重分配改善训练数据（RED）** \[11\]：当前评分助手使用序列级偏好数据训练（只知道哪条回答整体更好），精度受限。RED 通过注意力机制自动将序列级奖励分解到每个 token 上，得到更精细的训练信号——无需新增任何人工标注，对现有偏好数据集做一次离线处理即可。用这份 token 级标签重训评分助手，预期进一步提升评分准确性。
+- **接受/拒绝干预模式实验**（类似 idea：\[6\]）：现有模式是将评分偏置叠加到 AI 的输出概率上（软干预）；新模式改为：若评分助手强烈认可某个词则直接接受，否则从候选词中重新采样（硬干预）。验证哪种干预方式效果更好。
+- **token 级奖励重分配改善训练数据（RED）** \[10\]：当前评分助手使用序列级偏好数据训练（只知道哪条回答整体更好），精度受限。RED 通过注意力机制自动将序列级奖励分解到每个 token 上，得到更精细的训练信号——无需新增任何人工标注，对现有偏好数据集做一次离线处理即可。用这份 token 级标签重训评分助手，预期进一步提升评分准确性。
 
 **预期效果**：
 - Skywork 评估胜率 **≥ 65%**
@@ -94,8 +94,8 @@ SIA 是一套实时提升 AI 回答质量的系统 \[1\]。当 AI 生成回答�
 
 **主要工作**：
 
-- **步骤级质量评估（pause-and-rerank）** \[6\]：在 AI 每完成一个推理步骤时自动暂停，同时生成 3 条不同的续写方向，选出最优的一条继续。无需训练新模型，直接复用现有推理能力。
-- **过程奖励模型可行性评估（PRM）** \[7\]：若上述无训练方案效果有限，进一步评估是否值得训练一个专门针对推理步骤的评分模型（Process Reward Model）。该方向在数学推理任务上有顶会论文验证，但需要额外训练成本，本月以"得出明确的 go/no-go 结论"为目标。
+- **步骤级质量评估（pause-and-rerank）** \[5\]：在 AI 每完成一个推理步骤时自动暂停，同时生成 3 条不同的续写方向，选出最优的一条继续。无需训练新模型，直接复用现有推理能力。
+- **过程奖励模型可行性评估（PRM）** \[6\]：若上述无训练方案效果有限，进一步评估是否值得训练一个专门针对推理步骤的评分模型（Process Reward Model）。该方向在数学推理任务上有顶会论文验证，但需要额外训练成本，本月以"得出明确的 go/no-go 结论"为目标。
 
 **预期效果**（如实验结果积极）：
 - 数学、代码等推理任务准确率有明确提升
@@ -110,7 +110,7 @@ SIA 是一套实时提升 AI 回答质量的系统 \[1\]。当 AI 生成回答�
 **主要工作**：
 
 - **多模态评分助手训练**：以支持图文理解的视觉语言模型（Qwen3-VL-4B）为基础，收集图文偏好训练数据，训练能同时理解图片和文字内容的评分助手。
-- **图文场景完整部署**：将多模态评分助手接入 VL 主模型 的推理链路，图文混合请求正式受益于 SIA 质量提升。
+- **图文场景完整部署**：将多模态评分助手接入 VL 主模型的推理链路，图文混合请求正式受益于 SIA 质量提升。
 
 **预期效果**：
 - 看图问答、图文分析等场景同样享受 SIA 质量提升
@@ -137,22 +137,20 @@ SIA 是一套实时提升 AI 回答质量的系统 \[1\]。当 AI 生成回答�
 
 \[1\] Runyi Hu et al. *Inference-time Alignment via Sparse Junction Steering*. arxiv 2602.21215. https://arxiv.org/abs/2602.21215
 
-\[2\] Ji et al. *GenARM: Autoregressive Reward Model*. ICLR 2025. https://arxiv.org/abs/2410.08193
+\[2\] *Cost-Effective RGTG: Vocabulary-wide Reward Head*. ICML 2025. https://arxiv.org/abs/2502.04517
 
-\[3\] *Cost-Effective RGTG: Vocabulary-wide Reward Head*. ICML 2025. https://arxiv.org/abs/2502.04517
+\[3\] *LLMdoctor: Product-of-Distributions Fusion for Inference-time Alignment*. 2026. https://arxiv.org/abs/2601.10416
 
-\[4\] *LLMdoctor: Product-of-Distributions Fusion for Inference-time Alignment*. 2026. https://arxiv.org/abs/2601.10416
+\[4\] *Judge Decoding: Tiny Judge for Speculative Decoding*. ICLR 2025. https://arxiv.org/abs/2501.19309
 
-\[5\] *Judge Decoding: Tiny Judge for Speculative Decoding*. 2025. https://arxiv.org/abs/2501.19309
+\[5\] *AdaDec: Adaptive Decoding via Pause-and-Rerank*. FSE 2026. https://arxiv.org/abs/2506.08980
 
-\[6\] *AdaDec: Adaptive Decoding via Pause-and-Rerank*. FSE 2026. https://arxiv.org/abs/2506.08980
+\[6\] *RSD: Reward-guided Speculative Decoding*. ICML 2025. https://arxiv.org/abs/2501.19324
 
-\[7\] *RSD: Reward-guided Speculative Decoding*. ICML 2025. https://arxiv.org/abs/2501.19324
+\[7\] *To Intervene or Not: Probabilistic Gating for Inference-time Alignment*. ACL 2026. https://arxiv.org/abs/2606.11201
 
-\[8\] *To Intervene or Not: Probabilistic Gating for Inference-time Alignment*. ACL 2026. https://arxiv.org/abs/2606.11201
+\[8\] *SWIFT: Mining Intrinsic Rewards from LLM Hidden States for Efficient Best-of-N*. KDD 2026. https://arxiv.org/abs/2505.12225
 
-\[9\] *SWIFT: Mining Intrinsic Rewards from LLM Hidden States for Efficient Best-of-N*. KDD 2026. https://arxiv.org/abs/2505.12225
+\[9\] *AlignDistil: Token-Level Language Model Alignment as Adaptive Policy Distillation*. ACL 2025. https://arxiv.org/abs/2503.02832
 
-\[10\] *AlignDistil: Token-Level Language Model Alignment as Adaptive Policy Distillation*. ACL 2025. https://arxiv.org/abs/2503.02832
-
-\[11\] *RED: Unleashing Token-Level Rewards from Holistic Feedback via Reward Decomposition*. EMNLP 2025. https://arxiv.org/abs/2411.08302
+\[10\] *RED: Unleashing Token-Level Rewards from Holistic Feedback via Reward Decomposition*. EMNLP 2025. https://arxiv.org/abs/2411.08302
