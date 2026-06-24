@@ -1,27 +1,27 @@
-# VL-30B SIA 在 Docker 里跑通 — 完整部署指南
+# VL-30B SIA Running in Docker — Complete Deployment Guide
 
-**最后更新**: 2026-06-07
-**适用 docker image**: `pytorch/pytorch:2.11.0-cuda12.8-cudnn9-devel`
-**适用配置**: VL-30B (Qwen3-VL-30B-A3B-Instruct) SIA b2 inproc 加速路径 (vllm 0.17.1, [`requirements/vl30b-b2-inproc.txt`](../requirements/vl30b-b2-inproc.txt))
+**Last updated**: 2026-06-07
+**Target docker image**: `pytorch/pytorch:2.11.0-cuda12.8-cudnn9-devel`
+**Target configuration**: VL-30B (Qwen3-VL-30B-A3B-Instruct) SIA b2 inproc accelerated path (vllm 0.17.1, [`requirements/vl30b-b2-inproc.txt`](../requirements/vl30b-b2-inproc.txt))
 
-> 本 doc 覆盖 3 条部署路径 (临时跑 / Dockerfile build / **生产 compose**), 每条都包含: **构建 image** → **启动 server** → **smoke test** → **停止 / 重启 / 清理**。生产部署推荐直接看 [Path C](#path-c--docker-compose--生产推荐)。
+> This doc covers 3 deployment paths (quick run / Dockerfile build / **production compose**), each including: **build image** → **start server** → **smoke test** → **stop / restart / cleanup**. For production deployment, go directly to [Path C](#path-c--docker-compose--production-recommended).
 
-## 前提
+## Prerequisites
 
-### 1. 主机硬件 + NVIDIA 驱动
+### 1. Host Hardware + NVIDIA Driver
 
-- NVIDIA GPU (H100 / H200 / A100, **80GB+ 显存**)
-- NVIDIA 驱动已装：`nvidia-smi` 应当可以正常运行
+- NVIDIA GPU (H100 / H200 / A100, **80GB+ VRAM**)
+- NVIDIA driver installed: `nvidia-smi` should run without errors
 
 ### 2. nvidia-container-toolkit
 
-让 Docker 容器能访问 GPU。先检查是否已装：
+Allows Docker containers to access the GPU. First check if already installed:
 
 ```bash
 docker run --rm --gpus all ubuntu:22.04 nvidia-smi
 ```
 
-如果报错 (`could not select device driver "nvidia"`) 说明还没装，按以下步骤装 (Ubuntu/Debian)：
+If you get an error (`could not select device driver "nvidia"`), it is not installed yet. Follow these steps to install (Ubuntu/Debian):
 
 ```bash
 curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey \
@@ -31,33 +31,33 @@ curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-contai
   | sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
 sudo apt-get update && sudo apt-get install -y nvidia-container-toolkit
 sudo systemctl restart docker
-# 验证
+# Verify
 docker run --rm --gpus all ubuntu:22.04 nvidia-smi
 ```
 
-### 3. Docker + Compose 版本
+### 3. Docker + Compose Version
 
-Docker Compose V2+ 即可（`docker compose` 而非 `docker-compose`）。验证：
+Docker Compose V2+ is sufficient (`docker compose`, not `docker-compose`). Verify:
 
 ```bash
-docker compose version    # 有输出即可，无版本下限要求
+docker compose version    # any output is fine; no minimum version requirement
 ```
 
-> `docker-compose.yml` 使用 `deploy: resources: reservations: devices:` GPU 语法，全版本兼容。
+> `docker-compose.yml` uses `deploy: resources: reservations: devices:` GPU syntax, compatible with all versions.
 
-### 4. 目录结构
+### 4. Directory Structure
 
-Path B/C 把整个 `/dstack/persistent/SIA` 挂载到容器 `/workspace`，需要提前建好这个结构：
+Path B/C mounts the entire `/dstack/persistent/SIA` into the container at `/workspace`. Create this structure in advance:
 
 ```
 /dstack/persistent/SIA/
 ├── models/
-│   ├── Qwen3-VL-30B-A3B-Instruct/     ← 主 LLM，~60 GB  (§5.2)
-│   ├── Qwen3-4B-Base/                  ← RM convert 原料，~8 GB   (§5.3)
-│   ├── SIA-checkpoints/                ← LoRA checkpoints，~3 GB  (§5.3)
-│   └── VM-Qwen3-4B-merged-for-vllm/   ← RM 最终 checkpoint，~11 GB (§5.4 下载或 convert)
+│   ├── Qwen3-VL-30B-A3B-Instruct/     ← main LLM, ~60 GB  (§5.2)
+│   ├── Qwen3-4B-Base/                  ← RM convert source, ~8 GB   (§5.3)
+│   ├── SIA-checkpoints/                ← LoRA checkpoints, ~3 GB  (§5.3)
+│   └── VM-Qwen3-4B-merged-for-vllm/   ← final RM checkpoint, ~11 GB (§5.4 download or convert)
 └── sia-repo/
-    └── 0g-sparse-inference-alignment/  ← 本仓库 (§5.1)
+    └── 0g-sparse-inference-alignment/  ← this repo (§5.1)
 ```
 
 ```bash
@@ -65,55 +65,55 @@ mkdir -p /dstack/persistent/SIA/models
 mkdir -p /dstack/persistent/SIA/sia-repo
 ```
 
-### 5. 仓库 + 模型权重 (~71 GB 最少；含 convert 原料共 ~82 GB)
+### 5. Repo + Model Weights (~71 GB minimum; ~82 GB including convert source)
 
-> 需要 `huggingface-cli`：`pip install huggingface-hub`
+> Requires `huggingface-cli`: `pip install huggingface-hub`
 
-#### 5.1 Clone 仓库（convert 脚本在仓库里，先 clone）
+#### 5.1 Clone the Repo (the convert script lives in the repo; clone first)
 
 ```bash
 git clone <your-repo-url> \
   /dstack/persistent/SIA/sia-repo/0g-sparse-inference-alignment
 ```
 
-#### 5.2 主 LLM — Qwen3-VL-30B-A3B-Instruct (~60 GB)
+#### 5.2 Main LLM — Qwen3-VL-30B-A3B-Instruct (~60 GB)
 
 ```bash
 huggingface-cli download Qwen/Qwen3-VL-30B-A3B-Instruct \
   --local-dir /dstack/persistent/SIA/models/Qwen3-VL-30B-A3B-Instruct
 ```
 
-#### 5.3 RM 原料 — Qwen3-4B-Base + VM-Qwen3-4B-Base LoRA (~11 GB)（仅 §5.4 选项 B 需要）
+#### 5.3 RM Source — Qwen3-4B-Base + VM-Qwen3-4B-Base LoRA (~11 GB) (only needed for §5.4 option B)
 
 ```bash
-# Qwen3-4B-Base: RM 的基础模型 (~8 GB)
+# Qwen3-4B-Base: base model for RM (~8 GB)
 huggingface-cli download Qwen/Qwen3-4B-Base \
   --local-dir /dstack/persistent/SIA/models/Qwen3-4B-Base
 
-# VM-Qwen3-4B-Base: 论文作者提供的 LoRA checkpoint (~3 GB，含全部 VM 变种)
+# VM-Qwen3-4B-Base: LoRA checkpoint from the paper authors (~3 GB, includes all VM variants)
 huggingface-cli download Runyi-Hu/SIA \
   --local-dir /dstack/persistent/SIA/models/SIA-checkpoints
 ```
 
-下载完后 LoRA 路径为 `/dstack/persistent/SIA/models/SIA-checkpoints/VM-Qwen3-4B-Base/`。
+After download, the LoRA path is `/dstack/persistent/SIA/models/SIA-checkpoints/VM-Qwen3-4B-Base/`.
 
-#### 5.4 获取 VM-Qwen3-4B-merged-for-vllm
+#### 5.4 Obtain VM-Qwen3-4B-merged-for-vllm
 
-**选项 A：直接下载（推荐，已融合好的版本）**
+**Option A: Direct download (recommended — pre-merged version)**
 
-融合后的 checkpoint 已上传至 HuggingFace，可以直接下载，跳过融合步骤：
+The merged checkpoint has been uploaded to HuggingFace and can be downloaded directly, skipping the merge step:
 
 ```bash
 huggingface-cli download TengGao/VM-Qwen3-4B-merged-for-vllm_public \
   --local-dir /dstack/persistent/SIA/models/VM-Qwen3-4B-merged-for-vllm
 ```
 
-**选项 B：自行 convert（换了别的 RM / LoRA 时用这个）**
+**Option B: Self-convert (use this when switching to a different RM / LoRA)**
 
-如果需要用不同的 base model 或 LoRA，运行 convert 脚本重新融合：
+If you need to use a different base model or LoRA, run the convert script to re-merge:
 
 ```bash
-# 在宿主机 Python 环境里跑（不依赖 vllm venv，只需要 transformers + peft）
+# Run in a host Python environment (does not depend on the vllm venv; only needs transformers + peft)
 pip install transformers peft safetensors
 
 python /dstack/persistent/SIA/sia-repo/0g-sparse-inference-alignment/scripts/convert_rm_for_vllm.py \
@@ -122,43 +122,43 @@ python /dstack/persistent/SIA/sia-repo/0g-sparse-inference-alignment/scripts/con
   --output  /dstack/persistent/SIA/models/VM-Qwen3-4B-merged-for-vllm
 ```
 
-预计耗时 2-5 分钟，输出 ~11 GB。
+Estimated time: 2-5 minutes, output ~11 GB.
 
-验证（无论选项 A 还是 B）：
+Verify (regardless of option A or B):
 
 ```bash
 ls /dstack/persistent/SIA/models/VM-Qwen3-4B-merged-for-vllm/
-# 预期看到: config.json  model.safetensors  tokenizer*.json  ...
+# Expected: config.json  model.safetensors  tokenizer*.json  ...
 ```
 
-完成后确认必要模型到位：
+Confirm the required models are in place:
 
 ```bash
 ls /dstack/persistent/SIA/models/
-# 选项 A: Qwen3-VL-30B-A3B-Instruct  VM-Qwen3-4B-merged-for-vllm
-# 选项 B: Qwen3-VL-30B-A3B-Instruct  Qwen3-4B-Base  SIA-checkpoints  VM-Qwen3-4B-merged-for-vllm
+# Option A: Qwen3-VL-30B-A3B-Instruct  VM-Qwen3-4B-merged-for-vllm
+# Option B: Qwen3-VL-30B-A3B-Instruct  Qwen3-4B-Base  SIA-checkpoints  VM-Qwen3-4B-merged-for-vllm
 ```
 
-**以上前提全部满足后，再进入下面的三条路径。**
+**Once all prerequisites above are satisfied, proceed to one of the three paths below.**
 
 ---
 
-## 三条路径选一条
+## Choose One of Three Paths
 
-| 路径 | 适用场景 | 步骤 |
+| Path | Best for | Steps |
 |---|---|---|
-| **Path A: 命令行装** | 临时想跑一次, 不留持久 image | Step 1 → Step 2 (跑安装脚本) → Step 3 → Step 4 |
-| **Path B: Dockerfile 构建** ⚡ | 跑多次 / 分发给别人 / CI; 启动后无依赖安装但仍需手动起 server | Step 1B (build image) → Step 1B' (docker run) → Step 3 → Step 4 |
-| **Path C: docker compose** ⭐ **生产推荐** | 生产部署 / 自动重启 / 健康检查 / 持久 compile cache; **server 完全自动起** | Step 1C (`docker compose up -d`) → Step 4 (smoke test) |
+| **Path A: Command-line install** | One-time quick run, no persistent image | Step 1 → Step 2 (run install script) → Step 3 → Step 4 |
+| **Path B: Dockerfile build** ⚡ | Multiple runs / sharing with others / CI; no dep install on startup but server must be started manually | Step 1B (build image) → Step 1B' (docker run) → Step 3 → Step 4 |
+| **Path C: docker compose** ⭐ **Production recommended** | Production deployment / auto-restart / health checks / persistent compile cache; **server starts automatically** | Step 1C (`docker compose up -d`) → Step 4 (smoke test) |
 
 ---
 
-## Path A — 命令行装
+## Path A — Command-line Install
 
-### Step 1 — 启动 docker container
+### Step 1 — Start docker container
 
 ```bash
-# 如果使用标准 /dstack/persistent/SIA 目录结构 (见前提 §4), 推荐整体挂载:
+# If using the standard /dstack/persistent/SIA directory structure (see prerequisites §4), mount the whole directory:
 docker run -it --rm \
   --gpus all \
   --shm-size=16g \
@@ -168,39 +168,39 @@ docker run -it --rm \
   pytorch/pytorch:2.11.0-cuda12.8-cudnn9-devel \
   bash
 
-# 如果 repo 和 models 在不同目录, 也可以分开挂载 (路径按实际情况替换):
+# If repo and models are in different directories, you can mount them separately (replace paths as needed):
 # docker run -it --rm --gpus all --shm-size=16g --ipc=host -p 8000:8000 \
 #   -v /path/to/sia-repo/0g-sparse-inference-alignment:/workspace/sia-repo \
 #   -v /path/to/models:/workspace/models \
 #   pytorch/pytorch:2.11.0-cuda12.8-cudnn9-devel bash
 ```
 
-如果还没 clone repo, 在**容器里**再 clone — pytorch image 默认没装 git, 必须先装:
+If the repo has not been cloned yet, clone it **inside the container** — the pytorch image does not include git by default; install it first:
 ```bash
 apt-get update && apt-get install -y --no-install-recommends git ca-certificates
 mkdir -p /workspace/sia-repo
 cd /workspace/sia-repo && git clone <your-repo-url> 0g-sparse-inference-alignment
 ```
 
-> 推荐做法: 在**主机上**先按前提 §5 clone 好再用 `-v /dstack/persistent/SIA:/workspace` 挂进来, 容器内就不用装 git 了。
+> Recommended: clone the repo on the **host** following prerequisite §5, then mount with `-v /dstack/persistent/SIA:/workspace` — no need to install git inside the container.
 
-### Step 2 — 跑安装脚本 (容器内)
+### Step 2 — Run install script (inside container)
 
 ```bash
 cd /workspace/sia-repo/0g-sparse-inference-alignment
 bash scripts/docker_install_vl30b.sh
 ```
 
-脚本按顺序做的事:
-1. **apt 依赖** — 检查 + 自动装缺失的: `git ca-certificates curl` + `python${ver}-venv` (probe `python3 -c "import ensurepip"`; 失败就查 python 版本装匹配包, 例 `python3.12-venv`。pytorch image 系统 python 默认不带 venv 模块, 这一步必须有)
-2. `python3 -m venv /opt/venv-vl30b` (用系统 python, 跟 docker 预装的 conda env torch 2.11 隔离)
-3. `pip install -r requirements/vl30b-b2-inproc.txt` (装 vllm 0.17.1 + torch 2.10.0 + 全部依赖)
-4. `pip install -e .` (注册 `sia_rm` 这个 vllm 插件, 让 b2 inproc backend 能工作)
-5. **自检**: import vllm/torch, 验证 CUDA 可用, 验证 Qwen3VLMoe arch 注册, 验证 `unlock_workspace` API 存在, 验证 sia_rm 插件可发现
+What the script does in order:
+1. **apt dependencies** — check + auto-install missing: `git ca-certificates curl` + `python${ver}-venv` (probe `python3 -c "import ensurepip"`; if it fails, detect python version and install the matching package, e.g., `python3.12-venv`. The pytorch image's system python does not include the venv module by default; this step is required)
+2. `python3 -m venv /opt/venv-vl30b` (using system python, isolated from the conda env torch 2.11 pre-installed in docker)
+3. `pip install -r requirements/vl30b-b2-inproc.txt` (installs vllm 0.17.1 + torch 2.10.0 + all dependencies)
+4. `pip install -e .` (registers the `sia_rm` vllm plugin, enabling the b2 inproc backend)
+5. **Self-check**: import vllm/torch, verify CUDA available, verify Qwen3VLMoe arch registered, verify `unlock_workspace` API exists, verify sia_rm plugin discoverable
 
-预计耗时: **5-10 分钟** (主要是 vllm 0.17.1 wheel 下载, ~250 MB)。
+Estimated time: **5-10 minutes** (mainly the vllm 0.17.1 wheel download, ~250 MB).
 
-成功后会打印类似:
+On success, output will resemble:
 ```
 python: 3.12.x  (/opt/venv-vl30b/bin/python3)
 vllm  : 0.17.1
@@ -214,27 +214,27 @@ sia_rm plugin       : ✓ (['sia_rm'])
 
 ---
 
-## Path B — Dockerfile 构建 (推荐, 跑多次或分发用)
+## Path B — Dockerfile Build (recommended for repeated runs or sharing)
 
-仓库 + 模型仍然走 bind-mount, 不进 image (image 维持小巧 ~10 GB)。
+Repo + models still use bind-mount — not baked into the image (image stays small ~10 GB).
 
-### Step 1B — 构建 image (一次性, ~5-10 min)
+### Step 1B — Build image (one-time, ~5-10 min)
 
-在主机上, `cd` 到仓库根 (含 `Dockerfile`):
+On the host, `cd` to the repo root (containing `Dockerfile`):
 ```bash
 cd /dstack/persistent/SIA/sia-repo/0g-sparse-inference-alignment
 docker build -t sia-vl30b:0.17.1 .
 ```
 
-构建过程做的事 (跟 Path A 的 install 脚本对应):
-1. `apt-get install python3.12-venv ca-certificates curl` (curl 装在 image 里以便 smoke test)
+What the build does (mirrors the Path A install script):
+1. `apt-get install python3.12-venv ca-certificates curl` (curl is installed in the image for smoke tests)
 2. `python3 -m venv /opt/venv-vl30b`
-3. `pip install -r requirements/vl30b-b2-inproc.txt` (vllm 0.17.1 + 全部 Python 依赖)
-4. COPY 一个 entrypoint 脚本进 image, 容器启动时自动 `pip install -e <mounted-repo>` 注册 sia_rm 插件 (1-2 秒, 必要)
+3. `pip install -r requirements/vl30b-b2-inproc.txt` (vllm 0.17.1 + all Python dependencies)
+4. COPY an entrypoint script into the image; on container startup it auto-runs `pip install -e <mounted-repo>` to register the sia_rm plugin (1-2 seconds; required)
 
-注意: **Dockerfile 不 COPY 源码**, 只 COPY `requirements/` 子目录用于 pip install。源码靠 bind-mount, 你改了 src/ 不用重 build image。
+Note: **The Dockerfile does NOT COPY source code** — it only COPYs the `requirements/` subdirectory for pip install. Source code comes from bind-mount; modifying `src/` does not require rebuilding the image.
 
-### Step 1B' — 启动 container
+### Step 1B' — Start container
 
 ```bash
 docker run -it --rm \
@@ -247,15 +247,15 @@ docker run -it --rm \
   bash
 ```
 
-进容器后看到:
+Inside the container you will see:
 ```
 [entrypoint] registering sia_rm vllm plugin (pip install -e /workspace/sia-repo/0g-sparse-inference-alignment)
 root@xxxx:/workspace/sia-repo/0g-sparse-inference-alignment#
 ```
 
-venv 已经在 `$PATH` 里, 进容器直接 `python --version` 就能看到 venv 的 python。**跳过 Step 2 整段, 直接走 Step 3 启 server**。
+The venv is already in `$PATH`; run `python --version` directly to confirm the venv Python. **Skip Step 2 entirely and proceed to Step 3 to start the server**.
 
-### (可选) 验证 image 内的依赖都齐了
+### (Optional) Verify all dependencies are present in the image
 
 ```bash
 python -c "
@@ -266,74 +266,74 @@ print('torch:', torch.__version__, 'CUDA available:', torch.cuda.is_available())
 print('sia_rm plugin:', [e.name for e in entry_points(group='vllm.general_plugins') if 'sia' in e.name])
 "
 ```
-预期: `vllm: 0.17.1`, `torch: 2.10.0+cu124`, `sia_rm plugin: ['sia_rm']`.
+Expected: `vllm: 0.17.1`, `torch: 2.10.0+cu124`, `sia_rm plugin: ['sia_rm']`.
 
 ---
 
-## Path C — docker compose (⭐ 生产推荐)
+## Path C — docker compose (⭐ Production recommended)
 
-把 GPU 资源 / 挂载 / 重启策略 / 健康检查 / 完整 server 启动命令全部写进 [`docker-compose.yml`](../docker-compose.yml) (跟 Dockerfile 同在 repo 根)。**一条命令拉起全套**, server 自动起来跑。
+All GPU resources / mounts / restart policies / health checks / complete server startup command are specified in [`docker-compose.yml`](../docker-compose.yml) (in the repo root alongside Dockerfile). **One command brings everything up** with the server starting automatically.
 
-### Step 1C — 起服务
+### Step 1C — Start services
 
-在 host 上, cd 到 repo 根 (含 `docker-compose.yml`):
+On the host, cd to the repo root (containing `docker-compose.yml`):
 ```bash
 cd /dstack/persistent/SIA/sia-repo/0g-sparse-inference-alignment
-docker compose up -d --build      # 首次: build image (~5-10 min) + 后台起 container
+docker compose up -d --build      # First time: build image (~5-10 min) + start container in background
 ```
 
-之后日常运维:
+Day-to-day operations:
 ```bash
-docker compose logs -f sia-vl30b  # tail server log (Ctrl+C 不杀 container)
-docker compose ps                  # 看健康状态
-docker compose restart sia-vl30b   # 重启 server (不重 build)
-docker compose down                # 停 + 移除 container (named volume 保留)
+docker compose logs -f sia-vl30b  # tail server log (Ctrl+C does not kill container)
+docker compose ps                  # check health status
+docker compose restart sia-vl30b   # restart server (no rebuild)
+docker compose down                # stop + remove container (named volumes preserved)
 ```
 
-### compose 文件做了什么 (跟 Path A/B 相比的差异)
+### What the compose file does (differences from Path A/B)
 
-| 维度 | Path A/B (docker run) | Path C (compose) |
+| Dimension | Path A/B (docker run) | Path C (compose) |
 |---|---|---|
-| 启动 server | 进容器后手动敲 `python src/sia_vllm_server.py ...` | **自动启** (`command:` 字段) |
-| 后台运行 | 你要写 `nohup ... &` | **docker 管 PID 1**, `up -d` 后台跑 |
-| 日志 | 自己 redirect 到文件 | **`docker compose logs`** 自动收集 stdout/stderr |
-| 进程崩了 | 死了就死了, 要手动重启 | **`restart: unless-stopped`** 自动拉起 |
-| 健康检查 | 自己 curl 测 | **healthcheck**: 自动 curl `/health`, 失败标 unhealthy |
-| 跨容器重启复用 compile cache | 无 | **named volume `vllm-compile-cache`** 持久化, 二次启动省 ~3-5 min torch.compile 时间 |
-| GPU + shm + ipc | 命令行 flag 一堆 | 写在 yaml 里, 一处管理 |
-| 环境差异 (dev/staging/prod) | 一份 shell 命令很难管 | `docker-compose.dev.yml` / `.prod.yml` 各一份, 重用 image |
+| Starting server | Manually type `python src/sia_vllm_server.py ...` inside container | **Auto-starts** (`command:` field) |
+| Background running | You write `nohup ... &` | **docker manages PID 1**, `up -d` runs in background |
+| Logs | Redirect to file yourself | **`docker compose logs`** auto-collects stdout/stderr |
+| Process crash | It dies and stays dead; manual restart needed | **`restart: unless-stopped`** auto-recovers |
+| Health check | Curl manually | **healthcheck**: auto-curls `/health`; marks unhealthy on failure |
+| Reuse compile cache across container restarts | None | **named volume `vllm-compile-cache`** persists; saves ~3-5 min torch.compile time on subsequent starts |
+| GPU + shm + ipc | Many command-line flags | Written in yaml; managed in one place |
+| Environment differences (dev/staging/prod) | Hard to manage with a single shell command | Separate `docker-compose.dev.yml` / `.prod.yml` files reusing the same image |
 
-### 启动命令: 为什么放 compose 不放 Dockerfile
+### Why the startup command goes in compose, not Dockerfile
 
 | | Dockerfile `CMD` | docker-compose `command:` |
 |---|---|---|
-| 改参数 | 要重 build image | 改 yaml + `docker compose up` 重新 create container, **不重 build** |
-| 同一 image 多场景 | 只能一份 default | dev/prod 各一份 compose 文件覆盖 |
-| 调试 | `docker run sia-vl30b bash` 会被 CMD 干扰 | Dockerfile CMD 留 `bash`, compose 用 `command:` 覆盖; debug 时 `docker run` 直接进 bash, 生产用 compose | 
-| 业界标准 | "image self-launching" 风格 | **微服务 + k8s 主流**: image 是通用 artifact, 启动配置在编排层 |
+| Changing parameters | Requires rebuilding image | Edit yaml + `docker compose up` recreates container; **no rebuild** |
+| Multiple scenarios with same image | Only one default | Separate compose files for dev/prod each override it |
+| Debugging | `docker run sia-vl30b bash` is interfered by CMD | Dockerfile CMD stays as `bash`; compose uses `command:` to override; debug via `docker run` drops into bash; production uses compose |
+| Industry standard | "image self-launching" style | **Microservice + k8s mainstream**: image is a generic artifact; startup config lives in the orchestration layer |
 
-**最规范的做法** (本仓库就是这样):
-- `Dockerfile` 的 `CMD ["bash"]` — debug 默认行为, 跟 `docker run` 友好
-- `docker-compose.yml` 的 `command:` — 生产实际启动的命令, 完整参数固化
+**The most standard approach** (as in this repo):
+- `Dockerfile`'s `CMD ["bash"]` — default debug behavior, friendly with `docker run`
+- `docker-compose.yml`'s `command:` — the actual production startup command with full parameters fixed
 
-### 跳过 Step 2 / Step 3, 直接到 Step 4
+### Skip Step 2 / Step 3, go directly to Step 4
 
-Path C 之下, **server 在 `docker compose up -d` 后已经在自动启动**, 不需要 Step 2 (装 deps) 和 Step 3 (手动启 server)。等 `docker compose ps` 显示 `(healthy)` 状态 (大约 15-20 分钟首次启动, 包括首次 torch.compile; 后续重启 ~3-5 分钟) 后, 直接跳到 Step 4 smoke test。
+Under Path C, **the server starts automatically after `docker compose up -d`** — Step 2 (install deps) and Step 3 (manual server start) are not needed. Wait until `docker compose ps` shows `(healthy)` status (approximately 15-20 minutes on first startup, including first torch.compile; subsequent restarts ~3-5 minutes), then skip to Step 4 smoke test.
 
 ---
 
-## Step 3 — 启 SIA server (主 LLM + Value Model 同进程) — Path A / B 手动启动
+## Step 3 — Start SIA server (main LLM + Value Model in same process) — Path A / B manual start
 
-> **谁需要看这一步**: Path A 用户 (Step 2 装完依赖后), Path B 用户 (Step 1B' 进容器后)。**Path C 用户跳过** — server 已经被 compose 自动启起来了。
+> **Who needs this step**: Path A users (after Step 2 installs dependencies), Path B users (after entering container via Step 1B'). **Path C users skip** — the server is already started automatically by compose.
 
-> ℹ️ **重要 — b2 inproc 是单进程拓扑**: 跟 HTTP path 起两个 server (一个主 LLM, 一个 RM 在另一个端口) 不同, b2 inproc 让 **主 LLM (VL-30B) + Value Model (Qwen3-4B) 在同一个 Python 进程里 nested 跑**, 共享一个 CUDA context, RM 调用是直接 Python 函数调用而非 HTTP。所以下面**这一条命令就同时启动了主 LLM + Value Model**, 不需要再开一个 RM server。
+> ℹ️ **Important — b2 inproc is a single-process topology**: unlike the HTTP path which starts two servers (one main LLM, one RM on another port), b2 inproc has the **main LLM (VL-30B) + Value Model (Qwen3-4B) nested in the same Python process**, sharing a CUDA context, with RM calls as direct Python function calls rather than HTTP. So **this single command starts both the main LLM + Value Model** — no separate RM server is needed.
 
-> Path B 容器里 venv 已在 PATH, `source /opt/venv-vl30b/bin/activate` 可省。Path A 用户记得激活。
+> For Path B containers, the venv is already in PATH; `source /opt/venv-vl30b/bin/activate` is optional. Path A users should remember to activate it.
 
 ```bash
 source /opt/venv-vl30b/bin/activate
 
-# 输出重定向到带时间戳的 log 文件, 用 nohup 让进程独立于当前 shell
+# Redirect output to a timestamped log file; use nohup to detach from the current shell
 mkdir -p /workspace/sia-logs
 LOG="/workspace/sia-logs/sia_server_$(date +%Y%m%d_%H%M%S).log"
 echo "[launch] log → $LOG"
@@ -355,48 +355,48 @@ nohup env \
 echo "[launch] pid=$!  (process detached from this shell, log: $LOG)"
 ```
 
-加载过程实时观察 (`Ctrl+C` 退出 tail 不影响 server, server 仍在跑):
+Watch loading progress in real-time (`Ctrl+C` exits tail without affecting the server, which continues running):
 ```bash
 tail -f "$LOG"
 ```
 
-参数对应:
+Parameter reference:
 
-| 参数 | 作用 |
+| Parameter | Purpose |
 |---|---|
-| `--llm` | **主推理 LLM** (VL-30B), 占 GPU 55% 显存 |
-| `--rm_backend b2` | 用 nested in-process backend (vllm 0.17.1 sweet-spot 路径) |
-| `--rm_model` | **Value Model** (Qwen3-4B), nested 在主进程内, 占 GPU 15% 显存 |
-| `--llm_gpu_mem 0.55 + --rm_b2_gpu_mem 0.15` | 加起来 70%, 剩 30% 给 cudagraph + KV cache 头空间 |
-| `--topk 10 --weight 1.0 --entropy_threshold 1.0` | SIA 算法参数: 每个 token 候选 10 个, 干预权重 1.0, entropy > 1.0 才介入 |
-| `SIA_LLM_CUDAGRAPH=piecewise` | 强制主 LLM 用 PIECEWISE cudagraph (vllm 0.17.1 AOT 模式), 避免跟 nested RM 撞 |
-| `SIA_RM_MULTIPROCESS=0` | RM 跟主 LLM 同进程 (InprocClient), 不走 subprocess |
+| `--llm` | **Main inference LLM** (VL-30B), uses 55% of GPU memory |
+| `--rm_backend b2` | Uses nested in-process backend (vllm 0.17.1 sweet-spot path) |
+| `--rm_model` | **Value Model** (Qwen3-4B), nested inside the main process, uses 15% of GPU memory |
+| `--llm_gpu_mem 0.55 + --rm_b2_gpu_mem 0.15` | Total 70%, leaving 30% for cudagraph + KV cache headroom |
+| `--topk 10 --weight 1.0 --entropy_threshold 1.0` | SIA algorithm parameters: 10 candidates per token, intervention weight 1.0, intervene only when entropy > 1.0 |
+| `SIA_LLM_CUDAGRAPH=piecewise` | Force main LLM to use PIECEWISE cudagraph (vllm 0.17.1 AOT mode), avoiding collision with nested RM |
+| `SIA_RM_MULTIPROCESS=0` | RM runs in the same process as the main LLM (InprocClient), not as a subprocess |
 
-等待启动 (主 LLM weights 加载 ~12 min on H200, 然后 cudagraph capture + warmup ~3 min, 再 Value Model 加载 ~1 min), 直到 `tail -f "$LOG"` 输出里看到:
+Wait for startup (main LLM weights loading ~12 min on H200, then cudagraph capture + warmup ~3 min, then Value Model loading ~1 min) until `tail -f "$LOG"` shows:
 ```
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
 ```
 
-随时检查 server 是否还活:
+Check at any time if the server is still alive:
 ```bash
 ps -ef | grep sia_vllm_server | grep -v grep
-# 或:
+# or:
 pgrep -af sia_vllm_server
 ```
 
-要停掉 server:
+To stop the server:
 ```bash
 pkill -f sia_vllm_server.py
 ```
 
-## Step 4 — Smoke test (验证 server 真活)
+## Step 4 — Smoke test (verify server is truly running)
 
-Server 已 ready (Path A/B 看到 "Uvicorn running on http://0.0.0.0:8000", Path C 看到 `docker compose ps` 显示 `(healthy)`) 后, 跑一个 chat completion 验证端到端工作。
+Once the server is ready (Path A/B sees "Uvicorn running on http://0.0.0.0:8000", Path C shows `docker compose ps` displaying `(healthy)`), run a chat completion to verify end-to-end functionality.
 
-Server 暴露的是**OpenAI 兼容** API, 三种方式都行:
+The server exposes an **OpenAI-compatible** API; any of the three approaches below works:
 
-### 4.1 用 curl (最简单)
+### 4.1 Using curl (simplest)
 
 ```bash
 curl -s -X POST http://localhost:8000/v1/chat/completions \
@@ -409,14 +409,14 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
   }' | python3 -m json.tool
 ```
 
-### 4.2 用 OpenAI Python SDK (生产代码集成可这么测)
+### 4.2 Using OpenAI Python SDK (for testing production code integration)
 
 ```bash
 pip install openai
 ```
 ```python
 from openai import OpenAI
-client = OpenAI(base_url="http://localhost:8000/v1", api_key="dummy")   # key 不校验
+client = OpenAI(base_url="http://localhost:8000/v1", api_key="dummy")   # key not validated
 resp = client.chat.completions.create(
     model="/workspace/models/Qwen3-VL-30B-A3B-Instruct",
     messages=[{"role": "user", "content": "What are 3 colors of fruit?"}],
@@ -426,7 +426,7 @@ print(resp.choices[0].message.content)
 print("usage:", resp.usage)   # prompt_tokens / completion_tokens / total_tokens
 ```
 
-### 4.3 Path C 用户也可以从容器内测 (省去暴露端口的麻烦)
+### 4.3 Path C users can also test from inside the container (avoids port exposure)
 
 ```bash
 docker compose exec sia-vl30b bash -c \
@@ -435,30 +435,30 @@ docker compose exec sia-vl30b bash -c \
      -d "{\"model\":\"/workspace/models/Qwen3-VL-30B-A3B-Instruct\",\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}],\"max_tokens\":50}"'
 ```
 
-### 验证 SIA 真的在干预 (不是退化成 noSIA)
+### Verify SIA is truly intervening (not degraded to noSIA)
 
-预期 response 是正常 JSON, 同时 server 日志会打印:
+Expected response is normal JSON, and server logs will print:
 ```
 [SIA] req=0 DONE  intervened=N/M  ratio=X%  top1_flip=K/N (Y%)
 ```
 
-健康指标 (跟 doc [`qwen3-vl-30b-sia-eval-20260605.md` §2.4](qwen3-vl-30b-sia-eval-20260605.md#24-sia-健康指标汇总) 一致):
+Health indicators (consistent with [`qwen3-vl-30b-sia-eval-20260605.md` §2.4](qwen3-vl-30b-sia-eval-20260605.md#24-sia-health-indicator-summary)):
 
-| 指标 | 健康范围 | 红灯 |
+| Metric | Healthy range | Red flag |
 |---|---|---|
-| intervention ratio | 10-40% (短输出 ~20%, 长输出 ~25-30%) | **0%** → RM 死了, SIA 退化为 no-op |
+| intervention ratio | 10-40% (short output ~20%, long output ~25-30%) | **0%** → RM is dead; SIA degraded to no-op |
 | top1 flip rate | 50-80% | 0% / 100% → bug |
-| RM error 日志 | 0 | >0 → RM forward 失败 |
+| RM error log entries | 0 | >0 → RM forward failed |
 
-看日志方法 (per path):
-- **Path A/B**: `tail -f "$LOG"` (你启动时记的那个 `/workspace/sia-logs/sia_server_*.log`)
+How to view logs (per path):
+- **Path A/B**: `tail -f "$LOG"` (the `/workspace/sia-logs/sia_server_*.log` you noted at startup)
 - **Path C**: `docker compose logs -f sia-vl30b`
 
-### 4.4 Per-request SIA 参数测试
+### 4.4 Per-request SIA parameter testing
 
-SIA 支持在单次 request 里覆盖全局参数（`sia_weight` / `sia_topk` / `sia_entropy_threshold`），无需重启 server。以下三条 curl 各验证一个参数，**观察 server 日志里 `DONE` 行的 ratio / top1_flip 变化**确认生效。
+SIA supports overriding global parameters per request (`sia_weight` / `sia_topk` / `sia_entropy_threshold`) without restarting the server. The three curl commands below each verify one parameter — **observe the ratio / top1_flip changes in the `DONE` line of server logs** to confirm they take effect.
 
-#### 关闭 SIA 干预 (`sia_weight=0`)
+#### Disable SIA intervention (`sia_weight=0`)
 
 ```bash
 curl -s -X POST http://localhost:8000/v1/chat/completions \
@@ -472,9 +472,9 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
   }' | python3 -m json.tool
 ```
 
-预期 server 日志：`ratio=0.0%` — RM 完全不调用，退化为纯 vLLM 推理。
+Expected server log: `ratio=0.0%` — RM is never called; degrades to pure vLLM inference.
 
-#### 只评分 1 个候选 (`sia_topk=1`)
+#### Score only 1 candidate (`sia_topk=1`)
 
 ```bash
 curl -s -X POST http://localhost:8000/v1/chat/completions \
@@ -488,9 +488,9 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
   }' | python3 -m json.tool
 ```
 
-预期 server 日志：`ratio≈20-30%`（entropy gate 正常工作）、`top1_flip=0%`（只有 1 个候选，top-1 不可能被替换）。
+Expected server log: `ratio≈20-30%` (entropy gate working normally), `top1_flip=0%` (only 1 candidate; top-1 cannot be replaced).
 
-#### 强制每 token 都干预 (`sia_entropy_threshold=0`)
+#### Force intervention on every token (`sia_entropy_threshold=0`)
 
 ```bash
 curl -s -X POST http://localhost:8000/v1/chat/completions \
@@ -504,13 +504,13 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
   }' | python3 -m json.tool
 ```
 
-预期 server 日志：`ratio=100%` — 所有 token 都经过 RM 评分，包括模型置信度很高的位置（entropy gate 完全旁路）。
+Expected server log: `ratio=100%` — all tokens are scored by RM, including positions where the model is highly confident (entropy gate completely bypassed).
 
-> 三个参数可以在同一个 request 里组合使用，例如 `"sia_weight": 2.0, "sia_topk": 20, "sia_entropy_threshold": 0.5`。未传的参数沿用 server 启动时的全局默认值（`--weight` / `--topk` / `--entropy_threshold`）。
+> The three parameters can be combined in the same request, e.g., `"sia_weight": 2.0, "sia_topk": 20, "sia_entropy_threshold": 0.5`. Parameters not provided use the global defaults set at server startup (`--weight` / `--topk` / `--entropy_threshold`).
 
-### 4.5 多模态输入（图像 + 文本）smoke test
+### 4.5 Multimodal input (image + text) smoke test
 
-Qwen3-VL-30B 是 Vision-Language 模型，支持图像输入。Qwen3-4B 是纯文本模型，不能对图像上下文打分，因此 **server 检测到图像后会自动将 `sia_weight` 强制设为 `0.0`**，跳过 VM 直接用原始模型推理。
+Qwen3-VL-30B is a Vision-Language model that supports image input. Qwen3-4B is a text-only model that cannot score image context, so **the server automatically forces `sia_weight` to `0.0` when an image is detected**, bypassing the VM and using the base model directly.
 
 ```bash
 curl -s -X POST http://localhost:8000/v1/chat/completions \
@@ -527,107 +527,107 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
               "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAAKklEQVR4nO3NsQ0AAAjDsF7L/x/AE3SzlDnOTqp17wAAAAAAAAAAAOCxA0O5lEwRQVLnAAAAAElFTkSuQmCC"
             }
           },
-          {"type": "text", "text": "这张图片里是什么颜色？"}
+          {"type": "text", "text": "What color is in this image?"}
         ]
       }
     ]
   }' | python3 -m json.tool
 ```
 
-预期 server 日志（`docker compose logs -f sia-vl30b`）：
+Expected server log (`docker compose logs -f sia-vl30b`):
 ```
 [SIA] multimodal request detected — SIA bypassed (VM is text-only)
 (EngineCore_DP0 pid=...) [SIA] req=0 DONE  intervened=0/N  ratio=0.0%  top1_flip=0/0 (0.0%)
 ```
 
-`ratio=0.0%` 确认 VM 完全跳过。模型应正确描述图像内容（示例图为橙色方块）。
+`ratio=0.0%` confirms the VM is fully bypassed. The model should correctly describe the image content (the example image is an orange square).
 
 ---
 
-## Step 5 — 停止 / 重启 / 清理 (per path)
+## Step 5 — Stop / Restart / Cleanup (per path)
 
-### Path A / B (手动起 docker run)
+### Path A / B (manual docker run)
 
-| 操作 | 命令 |
+| Operation | Command |
 |---|---|
-| 停 server (进程级) | `pkill -f sia_vllm_server.py` |
-| 看 server 是否还在跑 | `pgrep -af sia_vllm_server` |
-| 重启 server | 重新跑 Step 3 的 nohup 命令 |
-| 退出 container (server 也会被 kill) | 在容器里 `exit` |
-| 容器 docker run 时加了 `--rm`, exit 后容器自动删除 |
+| Stop server (process level) | `pkill -f sia_vllm_server.py` |
+| Check if server is still running | `pgrep -af sia_vllm_server` |
+| Restart server | Re-run the nohup command from Step 3 |
+| Exit container (server will also be killed) | `exit` inside the container |
+| Container started with `--rm`; container is automatically deleted after exit |
 
-### Path C (docker compose) — 生产推荐
+### Path C (docker compose) — Production recommended
 
-| 操作 | 命令 |
+| Operation | Command |
 |---|---|
-| 停 server + 移除 container (保留 named volumes, 含 compile cache) | `docker compose down` |
-| 停 server + 移除 container + 清理 volumes (重置 compile cache) | `docker compose down -v` |
-| 仅重启 server, 不重 build, 不动 volume | `docker compose restart sia-vl30b` |
-| 改了源码后重启 (源码是 bind-mount, 直接 restart 即可) | `docker compose restart sia-vl30b` |
-| 改了 `requirements/vl30b-b2-inproc.txt` 后重 build | `docker compose up -d --build` |
-| 改了 `docker-compose.yml` 后应用新配置 | `docker compose up -d` (会自动 recreate container) |
-| 查看资源占用 | `docker stats sia-vl30b-server` |
-| 直接进容器 debug (server 仍在跑) | `docker compose exec sia-vl30b bash` |
+| Stop server + remove container (preserve named volumes, including compile cache) | `docker compose down` |
+| Stop server + remove container + clean up volumes (reset compile cache) | `docker compose down -v` |
+| Restart server only, no rebuild, no volume changes | `docker compose restart sia-vl30b` |
+| Restart after source code change (bind-mount; restart is sufficient) | `docker compose restart sia-vl30b` |
+| Rebuild after changing `requirements/vl30b-b2-inproc.txt` | `docker compose up -d --build` |
+| Apply new configuration after changing `docker-compose.yml` | `docker compose up -d` (auto-recreates the container) |
+| View resource usage | `docker stats sia-vl30b-server` |
+| Enter container for debugging (server still running) | `docker compose exec sia-vl30b bash` |
 
-> **GPU 显存释放**: container 停掉后 (`docker compose down` 或 `pkill`) GPU 显存通常**几秒内自动释放**。如果 `nvidia-smi` 还显示显存被占, 说明有僵尸进程, 用 `pkill -9 -f sia_vllm_server.py` 强杀。
+> **GPU memory release**: After stopping the container (`docker compose down` or `pkill`), GPU memory is typically released **within a few seconds**. If `nvidia-smi` still shows memory occupied, zombie processes remain — force-kill with `pkill -9 -f sia_vllm_server.py`.
 
 ---
 
-## 关键陷阱 / 注意事项
+## Key Pitfalls / Notes
 
-| 陷阱 | 解决 |
+| Pitfall | Solution |
 |---|---|
-| Docker image 自带 PyTorch 2.11 (conda 里), 跟 vllm 0.17.1 需要的 torch 2.10.0 冲突 | 用 `python3 -m venv` 创建隔离 venv (脚本已处理), **不要直接 pip install vllm 到 conda env** |
-| CUDA 12.8 vs vllm 0.17.1 的 cu124 wheel | 向前兼容, OK (cu124 binary 能跑在 12.8 驱动上) |
-| `--shm-size=16g --ipc=host` 必须加 | vllm 用大量共享内存做 KV cache, 默认 docker 的 64MB 不够 |
-| 主 LLM cudagraph mode 必须 PIECEWISE (`SIA_LLM_CUDAGRAPH=piecewise`) | 0.17.1 的 PIECEWISE 是 AOT 编译, 不会撞 nested RM 的 cudagraph flag。这是 b2 inproc 跑通的关键 env var |
-| 主进程 + nested RM 在同一 GPU 共享显存 | `--llm_gpu_mem 0.55 --rm_b2_gpu_mem 0.15` 加起来 0.70, 给 cudagraph 留 30%; 80 GB GPU 上跑 30B 主 LLM + 4B RM 是紧但够。GPU 上有其他进程时, 减到 `0.48 + 0.08`, 详见 doc 末尾 [显存预算](#显存预算其他进程占用-gpu-时如何调) |
-| Path C 首次启动看 `(unhealthy)` 状态 | start_period=20m, 给主 LLM weights 加载 + torch.compile 留余地。容器不会在这段时间被 docker kill (`unless-stopped` + `start_period` 配合)。20 min 后还 unhealthy 才是真问题 |
-| GPU 访问语法版本问题 | `docker-compose.yml` 已改用 `deploy: resources: reservations: devices:` 写法，兼容全版本。若仍报 `Additional property gpus is not allowed`，说明你本地文件还是旧版，重新 pull 最新代码即可 |
-| 生产长跑日志撑满磁盘 | `docker logs` 默认无上限, 在 `docker-compose.yml` 的 `sia-vl30b` service 下加: `logging: {driver: "json-file", options: {max-size: "500m", max-file: "5"}}` |
-| Path C 怎么改 server 参数 (e.g. `--topk` / `--weight`) | 改 `docker-compose.yml` 的 `command:` 字段, 然后 `docker compose up -d` 自动 recreate container。**不用重 build image** |
+| Docker image ships with PyTorch 2.11 (in conda), conflicting with torch 2.10.0 required by vllm 0.17.1 | Use `python3 -m venv` to create an isolated venv (the script handles this); **do not pip install vllm directly into the conda env** |
+| CUDA 12.8 vs vllm 0.17.1's cu124 wheel | Forward-compatible; OK (cu124 binary runs on 12.8 driver) |
+| Must include `--shm-size=16g --ipc=host` | vllm uses large amounts of shared memory for KV cache; the default docker 64 MB is insufficient |
+| Main LLM cudagraph mode must be PIECEWISE (`SIA_LLM_CUDAGRAPH=piecewise`) | 0.17.1's PIECEWISE is AOT compilation and will not collide with the nested RM's cudagraph flag. This is the critical env var for b2 inproc to work |
+| Main process + nested RM share GPU memory on the same GPU | `--llm_gpu_mem 0.55 --rm_b2_gpu_mem 0.15` totals 0.70, leaving 30% for cudagraph; running a 30B main LLM + 4B RM on an 80 GB GPU is tight but sufficient. When other processes occupy the GPU, reduce to `0.48 + 0.08`; see [GPU Memory Budget](#gpu-memory-budget--how-to-adjust-when-other-processes-occupy-the-gpu) at the end of this doc |
+| Path C shows `(unhealthy)` on first startup | start_period=20m provides buffer for main LLM weights loading + torch.compile. Docker will not kill the container during this period (`unless-stopped` + `start_period` work together). Still unhealthy after 20 min is a real problem |
+| GPU access syntax version issue | `docker-compose.yml` already uses `deploy: resources: reservations: devices:` syntax, compatible with all versions. If you still get `Additional property gpus is not allowed`, your local file is still the old version; re-pull the latest code |
+| Production long-run logs filling up the disk | `docker logs` has no limit by default; add under the `sia-vl30b` service in `docker-compose.yml`: `logging: {driver: "json-file", options: {max-size: "500m", max-file: "5"}}` |
+| How to change server parameters in Path C (e.g., `--topk` / `--weight`) | Edit the `command:` field in `docker-compose.yml`, then `docker compose up -d` auto-recreates the container. **No image rebuild needed** |
 
-## 如何验证 Prefix Caching 是否启用
+## How to Verify Prefix Caching Is Enabled
 
-vllm 的 **Automatic Prefix Caching (APC)** 在共享前缀场景 (system prompt / RAG context / 多轮对话) 能给 prefill **2-10× 加速**, 是生产部署的关键 cache 机制。本仓库已经把它**默认开启** — `sia_vllm_server.py` 的 `--enable_prefix_caching` flag 默认 True, 而且 [`docker-compose.yml`](../docker-compose.yml) `command:` 里显式传了这个 flag。
+vllm's **Automatic Prefix Caching (APC)** can give prefill **2–10× speedup** in shared-prefix scenarios (system prompt / RAG context / multi-turn conversation), and is a key caching mechanism for production deployments. This repository has it **enabled by default** — `sia_vllm_server.py`'s `--enable_prefix_caching` flag defaults to True, and the [`docker-compose.yml`](../docker-compose.yml) `command:` explicitly passes this flag.
 
-> 想关掉测对照: `--disable_prefix_caching` (生产**不推荐**)。
+> To disable for a comparison test: `--disable_prefix_caching` (not recommended for production).
 
-### 验证方法 1: 看 server 启动日志 (最直接)
+### Verification Method 1: Check Server Startup Logs (Most Direct)
 
-server 启动时 vllm 会 dump engine 配置, 里面有 `enable_prefix_caching=True`:
+When the server starts, vllm dumps the engine config, which includes `enable_prefix_caching=True`:
 
 ```bash
 # Path C
 docker compose logs sia-vl30b 2>&1 | grep -m1 enable_prefix_caching
 
 # Path A/B
-grep -m1 enable_prefix_caching $LOG    # 你 Step 3 启动时记的那个 log 文件
+grep -m1 enable_prefix_caching $LOG    # the log file you noted at Step 3 startup
 ```
 
-预期输出 (vllm 内部一长串配置 dump 的一部分):
+Expected output (part of vllm's long internal config dump):
 ```
 ... seed=0, served_model_name=..., enable_prefix_caching=True, enable_chunked_prefill=True, ...
 ```
 
-如果看到 `enable_prefix_caching=False` → APC 关了, 要 debug 启动 flag。
+If you see `enable_prefix_caching=False` → APC is off; debug the startup flags.
 
-### 验证方法 2: 看 server 自己的 prefix_caching 标记
+### Verification Method 2: Check the Server's Own prefix_caching Flag
 
-`sia_vllm_server.py` 在加载 vllm engine 之前打印自己看到的 flag (本仓库的 wrapper 加的):
+`sia_vllm_server.py` prints the flag it sees before loading the vllm engine (added by this repository's wrapper):
 
 ```bash
 docker compose logs sia-vl30b 2>&1 | grep "main LLM prefix_caching"
 ```
 
-预期:
+Expected:
 ```
 [SIA] main LLM prefix_caching = True
 ```
 
-### 验证方法 3: 功能性测试 (共享前缀, 看第二次 TTFT 是否暴跌)
+### Verification Method 3: Functional Test (Shared Prefix — Check if Second TTFT Drops Sharply)
 
-发两次 prompt **相同前缀, 不同结尾** 的 request, 用 `time` 量 wall time。APC 生效时, 第二个 request 的 prefill 几乎免费 (KV 直接复用), wall time 应该明显短:
+Send two requests with **the same prefix but different endings**, and use `time` to measure wall time. When APC is active, the second request's prefill is nearly free (KV reused directly), so wall time should be noticeably shorter:
 
 ```bash
 PROMPT='Imagine you are a senior software engineer reviewing a Python codebase. You should focus on correctness, readability, and idiomatic style. Provide concrete suggestions where appropriate. Now '
@@ -648,69 +648,69 @@ echo "Second call (same long prefix, different ending — should hit cache):"
 time call "review this function: def sub(a, b): return a - b"
 ```
 
-预期: 第二次 wall time 明显小于第一次 (主要是 prefill 时间省掉)。30B 模型上 ~50 token 共享 prefix 应该能省 ~50-100 ms TTFT。
+Expected: the second wall time is noticeably shorter than the first (mainly prefill time saved). With a ~50-token shared prefix on the 30B model, you should save ~50–100 ms TTFT.
 
-> ⚠️ 此测试需要 prompt **完全相同的前缀长度 + content**。SIA 干预**不影响** APC — APC 只对 prefill 阶段的 input prompt KV 做缓存, SIA 介入是 decode 阶段改 logits, 两者作用不同阶段。
+> ⚠️ This test requires the prompt to have **exactly the same prefix length + content**. SIA intervention **does not affect** APC — APC only caches input prompt KV during the prefill phase, while SIA modifies logits during the decode phase; they operate at different stages.
 
-### 关掉对照测速 (可选, 留作日后调优)
+### Disable for Comparison Test (Optional, for Future Tuning)
 
-想看 APC 对自己业务的实际收益:
+To measure APC's actual benefit for your workload:
 ```bash
-# 改 docker-compose.yml 的 command, 把 --enable_prefix_caching 换成 --disable_prefix_caching
-# 重启:
+# Edit docker-compose.yml command, change --enable_prefix_caching to --disable_prefix_caching
+# Restart:
 docker compose up -d
-# 用相同 benchmark 测一遍, 对比 throughput / TTFT
+# Run the same benchmark and compare throughput / TTFT
 ```
 
-注意: 关 APC 后, **SIA 干预效果不变** (Skywork reward / accuracy 等指标跟开 APC 时统计等价), 只是 prefill 慢。这一点跟 b2 inproc 加速一样 — 工程优化跟 SIA 算法层正交。
+Note: disabling APC does **not change SIA intervention effectiveness** (Skywork reward / accuracy metrics are statistically equivalent whether APC is on or off); only prefill is slower. This is the same as b2 inproc acceleration — engineering optimization is orthogonal to the SIA algorithm.
 
 ---
 
-## 显存预算 — 其他进程占用 GPU 时如何调
+## GPU Memory Budget — How to Adjust When Other Processes Occupy the GPU
 
-如果 GPU 上还有别的进程, 用 `nvidia-smi --query-gpu=memory.total,memory.used --format=csv,noheader` 算出 free 显存, 然后调小 `--llm_gpu_mem` 和 `--rm_b2_gpu_mem` (因为 vllm 把它们当作**总显存**的百分比, 不是 free 显存)。
+If other processes are running on the GPU, use `nvidia-smi --query-gpu=memory.total,memory.used --format=csv,noheader` to calculate free memory, then reduce `--llm_gpu_mem` and `--rm_b2_gpu_mem` (because vllm treats them as percentages of **total** GPU memory, not free memory).
 
-例: 143 GB GPU, 别的进程占 57 GB, 剩 86 GB 给 vllm:
+Example: 143 GB GPU, other processes using 57 GB, leaving 86 GB for vllm:
 
-| 配置 | `--llm_gpu_mem` | `--rm_b2_gpu_mem` | 总 vllm 占 | 加其他进程后 | 留 headroom |
+| Config | `--llm_gpu_mem` | `--rm_b2_gpu_mem` | Total vllm usage | After adding other processes | Headroom |
 |---|---|---|---|---|---|
-| 默认 (空闲 GPU) | 0.55 | 0.15 | 100,640 MiB | 158,002 MiB | ❌ **OOM** |
-| 调小后 | **0.48** | **0.08** | 80,512 MiB | 137,874 MiB | ✅ 5,897 MiB |
+| Default (idle GPU) | 0.55 | 0.15 | 100,640 MiB | 158,002 MiB | ❌ **OOM** |
+| Reduced | **0.48** | **0.08** | 80,512 MiB | 137,874 MiB | ✅ 5,897 MiB |
 
-加上 `--max_model_len 2048` (从 4096 降一半) 减少 KV cache 需求, 更稳。
+Adding `--max_model_len 2048` (halved from 4096) reduces KV cache demand and improves stability.
 
-如果 Path C 也想适配, 改 `docker-compose.yml` 的 `command:` 字段对应行即可。
-
----
-
-如果 Step 2 自检有任何 ✗, **不要继续**, 先 debug。任何一步报错先看具体错误信息, 不要硬上 Step 3。
+If you want to apply this to Path C as well, edit the corresponding line in the `command:` field of `docker-compose.yml`.
 
 ---
 
-## AlpacaEval 评测 — SIA vs noSIA (Skywork 打分)
+If Step 2 self-check shows any ✗, **do not proceed** — debug first. For any error at any step, read the specific error message before moving to Step 3.
 
-在 docker 容器内直接复用 SIA server 跑 AlpacaEval 效果评测。两个 arm 共用同一个运行中的 server，通过 per-request `--sia_weight 0` 区分，无需切换服务。
+---
 
-**脚本**: `eval/alpaca_eval.py` (generation) + `scripts/measure_alpaca_reward.py` (scoring)
-**评分模型**: Skywork-Reward-V2-Llama-3.1-8B (第三方 RM，独立于 Qwen3-4B)
-**参考基线**: 旧实验 HTTP path VL-30B 200Q: noSIA mean=29.26, SIA mean=28.67, Δ=-1.57% (p=0.29)
+## AlpacaEval Evaluation — SIA vs noSIA (Skywork Scoring)
 
-### 前提
+Run AlpacaEval quality evaluation directly inside the docker container, reusing the running SIA server. Both arms share the same running server, distinguished by per-request `--sia_weight 0`, with no service switching required.
+
+**Scripts**: `eval/alpaca_eval.py` (generation) + `scripts/measure_alpaca_reward.py` (scoring)
+**Scoring model**: Skywork-Reward-V2-Llama-3.1-8B (third-party RM, independent of Qwen3-4B)
+**Reference baseline**: Previous HTTP path VL-30B 200Q experiment: noSIA mean=29.26, SIA mean=28.67, Δ=-1.57% (p=0.29)
+
+### Prerequisites
 
 ```bash
-# 确认 Skywork 评分模型（路径按实际位置调整）
+# Confirm Skywork scoring model (adjust path to actual location)
 ls /dstack/persistent/SIA/models/Skywork-Reward-V2-Llama-3.1-8B/
-# 若未下载:
+# If not yet downloaded:
 # huggingface-cli download Skywork/Skywork-Reward-V2-Llama-3.1-8B \
 #   --local-dir /dstack/persistent/SIA/models/Skywork-Reward-V2-Llama-3.1-8B
 
-# 确认 AlpacaEval 数据集（仓库内已包含，确认文件存在）
+# Confirm AlpacaEval dataset (included in repo; confirm file exists)
 ls /dstack/persistent/SIA/sia-repo/0g-sparse-inference-alignment/data/alpaca_eval/alpaca_eval.json
 ```
 
-### Phase 1 — Generation（server 正常运行，无需停机）
+### Phase 1 — Generation (server running normally, no downtime needed)
 
-进入容器：
+Enter the container:
 ```bash
 docker compose exec sia-vl30b bash
 cd /workspace/sia-repo/0g-sparse-inference-alignment
@@ -718,7 +718,7 @@ MODEL=/workspace/models/Qwen3-VL-30B-A3B-Instruct
 mkdir -p /workspace/exp
 ```
 
-**SIA arm**（server 默认参数：topk=10, weight=1.0, entropy_threshold=1.0）：
+**SIA arm** (server default parameters: topk=10, weight=1.0, entropy_threshold=1.0):
 ```bash
 nohup python -u eval/alpaca_eval.py \
   --base_url http://localhost:8000/v1 \
@@ -730,7 +730,7 @@ nohup python -u eval/alpaca_eval.py \
 echo "SIA arm PID=$!"
 ```
 
-**noSIA arm**（`--sia_weight 0` 关掉 RM 干预，speed ≈ raw vllm）：
+**noSIA arm** (`--sia_weight 0` disables RM intervention, speed ≈ raw vllm):
 ```bash
 nohup python -u eval/alpaca_eval.py \
   --base_url http://localhost:8000/v1 \
@@ -743,18 +743,18 @@ nohup python -u eval/alpaca_eval.py \
 echo "noSIA arm PID=$!"
 ```
 
-> SIA arm 约 80-90 min (28 tok/s)；noSIA arm 约 20 min (RM 跳过，速度回到 ~120 tok/s)。可以串行跑（等 SIA 完再跑 noSIA），也可以并行跑（同一 server 支持并发请求）。
+> SIA arm takes ~80–90 min (28 tok/s); noSIA arm takes ~20 min (RM skipped, speed returns to ~120 tok/s). Can run serially (wait for SIA to finish before running noSIA) or in parallel (the same server supports concurrent requests).
 
-### Phase 2 — Skywork 打分（需要停 server 释放显存）
+### Phase 2 — Skywork Scoring (requires stopping server to free GPU memory)
 
 ```bash
-# 在宿主机停 server
+# Stop server on the host
 docker compose stop sia-vl30b
 
-# 起临时容器跑打分（named volume 保留，compile cache 不丢）
+# Start a temporary container for scoring (named volume preserved, compile cache intact)
 docker compose run --rm sia-vl30b bash
 cd /workspace/sia-repo/0g-sparse-inference-alignment
-RM=/workspace/models/Skywork-Reward-V2-Llama-3.1-8B   # 按实际路径改
+RM=/workspace/models/Skywork-Reward-V2-Llama-3.1-8B   # adjust to actual path
 
 python scripts/measure_alpaca_reward.py \
   --input_file  /workspace/exp/alpaca_vl30b_b2_sia_*.json \
@@ -767,17 +767,17 @@ python scripts/measure_alpaca_reward.py \
   --rm "$RM" --device cuda:0 --strip_think
 ```
 
-各约 3-5 min（Skywork 8B BF16, ~2.5 题/s）。
+Each takes ~3–5 min (Skywork 8B BF16, ~2.5 questions/s).
 
-### Generation 结束后 — 辅助指标查看
+### After Generation — Auxiliary Metrics
 
-**tokens/s**（generation 结束后 `gen.log` 末尾自动打印）：
+**tokens/s** (printed automatically at the end of `gen.log` after generation completes):
 ```bash
 tail -5 /workspace/exp/alpaca_vl30b_b2_sia_gen.log
-# 预期看到: throughput: XX.X tok/s
+# expected output: throughput: XX.X tok/s
 ```
 
-**干预率 + flip rate**（从 server 日志聚合，需在仓库根目录执行）：
+**Intervention rate + flip rate** (aggregated from server logs; run from repo root):
 ```bash
 cd /dstack/persistent/SIA/sia-repo/0g-sparse-inference-alignment
 docker compose logs sia-vl30b 2>&1 | grep "DONE" | tail -200 | \
@@ -789,14 +789,14 @@ for line in sys.stdin:
     if m: ratios.append(float(m.group(1)))
     m = re.search(r'top1_flip=\d+/\d+ \((\d+\.?\d*)%\)', line)
     if m: flips.append(float(m.group(1)))
-print(f'干预率  mean={sum(ratios)/len(ratios):.1f}%  n={len(ratios)}' if ratios else 'no ratio data')
-print(f'flip率  mean={sum(flips)/len(flips):.1f}%  n={len(flips)}' if flips else 'no flip data')
+print(f'intervention rate  mean={sum(ratios)/len(ratios):.1f}%  n={len(ratios)}' if ratios else 'no ratio data')
+print(f'flip rate  mean={sum(flips)/len(flips):.1f}%  n={len(flips)}' if flips else 'no flip data')
 "
 ```
 
-健康参考值（参见 [§4 smoke test 健康指标](#验证-sia-真的在干预)）：干预率 10–40%，flip rate 50–80%。
+Healthy reference values (see [§4 smoke test health indicators](#verify-sia-is-truly-intervening-not-degraded-to-nosia)): intervention rate 10–40%, flip rate 50–80%.
 
-### Phase 3 — 对比结果
+### Phase 3 — Comparison Results
 
 ```bash
 python - <<'EOF'
@@ -818,23 +818,23 @@ print(f"Δ      {delta_abs:+.4f}  ({delta_rel:+.2f}%)")
 EOF
 ```
 
-打分完重启服务：
+After scoring, restart the service:
 ```bash
-exit   # 退出打分容器
+exit   # exit the scoring container
 docker compose start sia-vl30b
 ```
 
 ---
 
-## 相关 doc
+## Related Docs
 
-- [`qwen3-vl-30b-sia-eval-20260605.md`](qwen3-vl-30b-sia-eval-20260605.md) — VL-30B SIA 评测汇总 (效果 + 性能), 含本地实验结果
-- [`vl30b-b2-inproc-speedup-20260605.md`](vl30b-b2-inproc-speedup-20260605.md) — b2 inproc 加速 1.46× 的原始实验报告 (含 vllm 0.15/0.17.1/0.19 三档对比为什么 0.17.1 是 sweet spot)
-- [`../docker-compose.yml`](../docker-compose.yml) — **Path C 生产 compose 文件** (GPU + 挂载 + restart + healthcheck + 完整启动命令)
-- [`../Dockerfile`](../Dockerfile) — Path B / C 共用的 Dockerfile (vllm 0.17.1 baked-in 镜像)
-- [`../scripts/docker_entrypoint_vl30b.sh`](../scripts/docker_entrypoint_vl30b.sh) — Path B / C 共用 entrypoint, 启动时注册 sia_rm 插件
-- [`../scripts/docker_install_vl30b.sh`](../scripts/docker_install_vl30b.sh) — Path A 用的命令行安装脚本
-- [`../scripts/setup_venv_vl30b_fast.sh`](../scripts/setup_venv_vl30b_fast.sh) — venv 创建底层脚本 (docker_install 会调用它)
-- [`../requirements/vl30b-b2-inproc.txt`](../requirements/vl30b-b2-inproc.txt) — pip 依赖清单
-- [`../CLAUDE.md`](../CLAUDE.md) — 整体 venv 矩阵 (Qwen3-14B / VL-30B / 0GM-35B)
-- [`vllm-rm-backend.md`](vllm-rm-backend.md) — convert_rm_for_vllm.py 详细说明 (RM checkpoint 转换原理)
+- [`qwen3-vl-30b-sia-eval-20260605.md`](qwen3-vl-30b-sia-eval-20260605.md) — VL-30B SIA evaluation summary (quality + performance), with local experiment results
+- [`vl30b-b2-inproc-speedup-20260605.md`](vl30b-b2-inproc-speedup-20260605.md) — Original experiment report for b2 inproc 1.46× speedup (includes vllm 0.15/0.17.1/0.19 three-way comparison explaining why 0.17.1 is the sweet spot)
+- [`../docker-compose.yml`](../docker-compose.yml) — **Path C production compose file** (GPU + mounts + restart + healthcheck + full startup command)
+- [`../Dockerfile`](../Dockerfile) — Dockerfile shared by Path B / C (vllm 0.17.1 baked-in image)
+- [`../scripts/docker_entrypoint_vl30b.sh`](../scripts/docker_entrypoint_vl30b.sh) — Entrypoint shared by Path B / C; registers sia_rm plugin at startup
+- [`../scripts/docker_install_vl30b.sh`](../scripts/docker_install_vl30b.sh) — Command-line install script for Path A
+- [`../scripts/setup_venv_vl30b_fast.sh`](../scripts/setup_venv_vl30b_fast.sh) — Underlying venv creation script (called by docker_install)
+- [`../requirements/vl30b-b2-inproc.txt`](../requirements/vl30b-b2-inproc.txt) — pip dependency list
+- [`../CLAUDE.md`](../CLAUDE.md) — Full venv matrix (Qwen3-14B / VL-30B / 0GM-35B)
+- [`vllm-rm-backend.md`](vllm-rm-backend.md) — Detailed explanation of convert_rm_for_vllm.py (RM checkpoint conversion principles)

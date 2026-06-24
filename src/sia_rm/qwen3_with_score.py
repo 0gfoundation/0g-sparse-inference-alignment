@@ -277,9 +277,10 @@ class Qwen3WithScoreForCausalLM(Qwen3ForCausalLM):
     ) -> Optional[torch.Tensor]:
         # hidden_states shape: (n_samples, hidden), already gathered to
         # sample positions by vLLM (one row per request's last token).
-        # sampling_metadata: vllm 0.10.x 必传; vllm 0.17+ 改为只传 hidden_states,
-        # 这里设成 Optional 以兼容两版。super().compute_logits 在新 vllm 也只接受
-        # hidden_states, 旧 vllm 才接受 sampling_metadata。
+        # sampling_metadata: required in vllm 0.10.x; vllm 0.17+ changed to only pass
+        # hidden_states, so this is Optional for compatibility with both versions.
+        # super().compute_logits in newer vllm only accepts hidden_states; older vllm
+        # also accepts sampling_metadata.
         if _PROFILE_ENABLED:
             score_start = torch.cuda.Event(enable_timing=True)
             score_end = torch.cuda.Event(enable_timing=True)

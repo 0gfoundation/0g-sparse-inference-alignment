@@ -1,16 +1,17 @@
 """
-启动 vLLM RM server 时打 Pydantic 补丁，让 ClassificationRequest.input
-接受 list[int] / list[list[int]] 在内的 token IDs，省服务端 re-tokenize。
+Patches Pydantic when starting a vLLM RM server, so that ClassificationRequest.input
+accepts token IDs including list[int] / list[list[int]], avoiding server-side re-tokenize.
 
-vLLM 0.10.1.1 原 schema：
+vLLM 0.10.1.1 original schema:
     input: Union[list[str], str]
-打补丁后：
+After patch:
     input: Union[list[int], list[list[int]], str, list[str]]
 
-下游 _preprocess_completion 早就支持 token_ids（embedding endpoint 走的是同一逻辑），
-唯一阻拦是 Pydantic 的请求模型校验。本脚本只动 schema，运行时行为不变。
+Downstream _preprocess_completion already supports token_ids (the embedding endpoint uses the same logic);
+the only barrier is Pydantic's request model validation. This script only modifies the schema;
+runtime behavior is unchanged.
 
-用法（替换原本的 `vllm serve ...` 命令）：
+Usage (replace the original `vllm serve ...` command):
     python scripts/vllm_serve_with_token_ids.py serve \\
         /workspace/SIA/models/VM-Qwen3-4B-merged-for-vllm \\
         --runner pooling --convert classify \\
@@ -18,13 +19,13 @@ vLLM 0.10.1.1 原 schema：
         --gpu-memory-utilization 0.3 \\
         --max-model-len 2048 --port 8001
 
-客户端配合 src/sia_vllm_server.py 的 `--use_token_ids` 启动选项即可。
+On the client side, just use the `--use_token_ids` startup option in src/sia_vllm_server.py.
 """
 import sys
 
 
 def patch_classification_request() -> None:
-    """在 vLLM API endpoint 注册前修改 ClassificationRequest.input 的类型注解。"""
+    """Modify the type annotation of ClassificationRequest.input before the vLLM API endpoint is registered."""
     from typing import Union, List
     from vllm.entrypoints.openai.protocol import ClassificationRequest
 
@@ -41,8 +42,8 @@ def patch_classification_request() -> None:
 def main() -> None:
     patch_classification_request()
 
-    # 把后续 argv 透传给 vLLM 的 CLI 主入口
-    # （`/path/to/venv/bin/vllm` 实际 dispatch 到 vllm.entrypoints.cli.main:main）
+    # Pass remaining argv through to vLLM's CLI main entry point
+    # (`/path/to/venv/bin/vllm` actually dispatches to vllm.entrypoints.cli.main:main)
     from vllm.entrypoints.cli.main import main as vllm_main
     sys.argv[0] = "vllm"
     sys.exit(vllm_main())

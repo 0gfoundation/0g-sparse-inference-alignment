@@ -1,14 +1,14 @@
 """
 SIA vLLM OpenAI-compatible HTTP Server
 
-将 sia_vllm_RM.py 包装为 OpenAI-compatible HTTP API，
-兼容 0g-serving-broker 的 proxy 机制。
+Wraps sia_vllm_RM.py as an OpenAI-compatible HTTP API,
+compatible with the 0g-serving-broker proxy mechanism.
 
-broker 会调用的 endpoints（来自 api/inference/const/const.go）：
+Endpoints called by the broker (from api/inference/const/const.go):
   POST /chat/completions      (billing)
-  POST /v1/chat/completions   (billing, /v1/ 前缀版本)
-  GET  /v1/models             (broker 获取模型信息)
-  GET  /health                (健康检查)
+  POST /v1/chat/completions   (billing, /v1/ prefix variant)
+  GET  /v1/models             (broker fetches model info)
+  GET  /health                (health check)
 
 Usage:
   python src/sia_vllm_server.py \\
@@ -29,7 +29,7 @@ import time
 import uuid
 from typing import AsyncIterator, Optional, Union
 
-# 匹配 "Answer:" + 可选空格 + A/B/C/D（不紧跟其他字母）
+# Match "Answer:" + optional whitespace + A/B/C/D (not immediately followed by other letters)
 _ANSWER_RE = re.compile(r"Answer:\s*([ABCD])(?![a-zA-Z])")
 
 import httpx
@@ -43,12 +43,12 @@ from transformers import AutoTokenizer
 from vllm import AsyncLLMEngine, SamplingParams
 from vllm.engine.arg_utils import AsyncEngineArgs
 
-# sia_vllm_RM.py 与本文件同目录
+# sia_vllm_RM.py is in the same directory as this file
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from sia_vllm_RM import make_sia_processor
 
 # ---------------------------------------------------------------------------
-# 全局状态（在 main() 里初始化）
+# Global state (initialized in main())
 # ---------------------------------------------------------------------------
 _engine: Optional[AsyncLLMEngine] = None
 _llm_tok = None
@@ -90,10 +90,10 @@ class ChatCompletionRequest(BaseModel):
     presence_penalty: Optional[float] = 0.0
     frequency_penalty: Optional[float] = 0.0
     n: Optional[int] = 1
-    # 透传给 apply_chat_template 的额外 kwargs (e.g. {"enable_thinking": False})
-    # 用法: 跟 OpenAI 兼容 — eval client 传 chat_template_kwargs={"enable_thinking": False}
+    # Extra kwargs passed through to apply_chat_template (e.g. {"enable_thinking": False})
+    # Usage: OpenAI-compatible — eval client passes chat_template_kwargs={"enable_thinking": False}
     chat_template_kwargs: Optional[dict] = None
-    stream_options: Optional[dict] = None          # e.g. {"include_usage": true} — router 强制注入此字段
+    stream_options: Optional[dict] = None          # e.g. {"include_usage": true} — router force-injects this field
     # Per-request SIA overrides. None = use server default (from --weight / --topk / --entropy_threshold).
     sia_weight: Optional[float] = None            # 0.0 = disable SIA for this request
     sia_topk: Optional[int] = None                # override number of RM candidates
@@ -103,9 +103,9 @@ class ChatCompletionRequest(BaseModel):
 
 
 class CompletionRequest(BaseModel):
-    """raw text completion request (跟 OpenAI /v1/completions 一致, 不走 chat_template)。
-    适用场景: 需要 raw prompt (e.g. 'Human:\\n...\\nAssistant:\\n') 而非 chat-templated 的场景,
-    例如对齐论文 evaluate.py 的 prompt 格式。"""
+    """Raw text completion request (compatible with OpenAI /v1/completions, bypasses chat_template).
+    Use case: when a raw prompt (e.g. 'Human:\\n...\\nAssistant:\\n') is needed instead of
+    chat-templated format, e.g. the prompt format used by alignment paper evaluate.py."""
     model: Optional[str] = None
     prompt: str
     temperature: Optional[float] = 0.7
@@ -116,13 +116,13 @@ class CompletionRequest(BaseModel):
     top_k: Optional[int] = None
     repetition_penalty: Optional[float] = None
     bad_words: Optional[list[str]] = None  # vllm SamplingParams.bad_words —
-                                            # 禁止 sampler 选这些 token
-                                            # (e.g., ["<think>","</think>"] 强制不进 thinking 模式)
+                                            # prevents sampler from selecting these tokens
+                                            # (e.g., ["<think>","</think>"] forces non-thinking mode)
     n: Optional[int] = 1
 
 
 # ---------------------------------------------------------------------------
-# 工具函数
+# Utility functions
 # ---------------------------------------------------------------------------
 
 def _has_image(messages: list[ChatMessage]) -> bool:
@@ -211,12 +211,13 @@ async def _messages_to_multimodal_prompt(
 def _messages_to_prompt(messages: list[ChatMessage],
                         chat_template_kwargs: Optional[dict] = None) -> dict:
     """
-    将 OpenAI messages 转为 vLLM prompt dict（token IDs）。
-    有 chat_template 时用标准 chat template（适合 Instruct 模型）；
-    无 chat_template 时 fallback 到 Human/Assistant 纯文本格式（适合 Base 模型）。
+    Convert OpenAI messages to a vLLM prompt dict (token IDs).
+    Uses the standard chat template when available (suitable for Instruct models);
+    falls back to Human/Assistant plain-text format when no chat_template is set
+    (suitable for Base models).
 
-    chat_template_kwargs: 透传给 apply_chat_template 的额外 kwargs。
-        典型用法: {"enable_thinking": False} 对 Qwen3 Instruct 关掉 thinking 模式。
+    chat_template_kwargs: extra kwargs passed through to apply_chat_template.
+        Typical use: {"enable_thinking": False} to disable thinking mode for Qwen3 Instruct.
     """
     msgs = []
     for m in messages:
@@ -252,11 +253,12 @@ def _messages_to_prompt(messages: list[ChatMessage],
 
 
 def _build_sampling_params(req: ChatCompletionRequest) -> SamplingParams:
-    # repetition_penalty 默认 1.0 (paper-aligned, 2026-06-04 修复)。
-    # 之前默认 1.3 跟 vllm v1 sampler 顺序 (SIA processor → penalties) 联动,
-    # 直接污染 SIA 的 top-K 排序: 200Q Qwen3-14B Skywork mean reward 从 +3.09
-    # 跳到 +11.48 (跟 Paper SIA +11.16 统计等价 p=0.43)。
-    # 客户端若 model-specific 需要 repetition_penalty != 1.0, 显式传入即可。
+    # repetition_penalty defaults to 1.0 (paper-aligned, fixed 2026-06-04).
+    # The previous default of 1.3 interacted with vllm v1 sampler ordering
+    # (SIA processor → penalties), directly polluting SIA's top-K ranking:
+    # 200Q Qwen3-14B Skywork mean reward jumped from +3.09 to +11.48
+    # (statistically equivalent to Paper SIA +11.16 at p=0.43).
+    # Clients that need model-specific repetition_penalty != 1.0 can pass it explicitly.
     kwargs = dict(
         temperature=req.temperature if req.temperature is not None else 0.7,
         max_tokens=req.max_tokens if req.max_tokens is not None else 512,
@@ -326,8 +328,9 @@ async def list_models():
 
 
 def _check_model(model: Optional[str]) -> Optional[JSONResponse]:
-    """model 字段校验：None / 空串 / _model_id / 完整路径 均合法，其余返回 404 JSONResponse。
-    调用方：if err := _check_model(req.model): return err
+    """Validate the model field: None / empty string / _model_id / full path are all valid;
+    anything else returns a 404 JSONResponse.
+    Caller: if err := _check_model(req.model): return err
     """
     if not model:
         return None
@@ -347,7 +350,7 @@ def _check_model(model: Optional[str]) -> Optional[JSONResponse]:
 
 
 async def _log_rm_status():
-    """查询 RM server /status 并打印到日志，失败时静默跳过。b2 inproc 无 HTTP server，跳过。"""
+    """Query RM server /status and print to log; silently skip on failure. b2 inproc has no HTTP server, so skip."""
     if _args.rm_backend == "b2":
         return
     try:
@@ -421,10 +424,13 @@ async def _handle_chat(req: ChatCompletionRequest):
             },
         )
 
-    # 非流式：等待生成完成，超过 REQUEST_TIMEOUT 秒或检测到 Answer: 则立即中止
-    # 2026-06-03: 60s 默认在 PyTorch RM backend (慢) 下会截断 AlpacaEval 长生成,
-    # 导致 SIA arm 跟 noSIA arm (raw vllm 无此 timeout) 比较不公平 — 改 600s
-    # 让 max_tokens=2048 真正能跑到; MMLU 类短答案不受影响 (Answer: A 几秒就触发 abort)
+    # Non-streaming: wait for generation to complete; abort immediately if
+    # REQUEST_TIMEOUT seconds elapse or "Answer:" is detected.
+    # 2026-06-03: the 60s default truncated long AlpacaEval generations under
+    # PyTorch RM backend (slow), making the SIA arm unfairly compared to the
+    # noSIA arm (raw vllm has no such timeout) — changed to 600s so
+    # max_tokens=2048 can actually run to completion; MMLU-style short answers
+    # are unaffected (Answer: A triggers abort within a few seconds).
     REQUEST_TIMEOUT = 600
     start_time = time.time()
     final = None
@@ -433,7 +439,7 @@ async def _handle_chat(req: ChatCompletionRequest):
             final = output
             generated = output.outputs[0].text
 
-            # 全文检测：只要 Answer: 后跟可选空格再接 A/B/C/D，立即停止
+            # Full-text check: stop immediately if Answer: is followed by optional whitespace then A/B/C/D
             if _ANSWER_RE.search(generated):
                 await _engine.abort(request_id)
                 break
@@ -486,11 +492,12 @@ async def _stream_sse(
     model: str,
     include_usage: bool = False,
 ) -> AsyncIterator[str]:
-    """每生成一个 token 立即推送一个 SSE chunk（真·token-level streaming）。
+    """Push one SSE chunk immediately per generated token (true token-level streaming).
 
-    include_usage=True 时，在 [DONE] 前额外发一个 usage chunk（OpenAI V3 计费要求）：
+    When include_usage=True, an extra usage chunk is sent before [DONE] (OpenAI V3 billing requirement):
       data: {"id":...,"choices":[],"usage":{"prompt_tokens":...,"completion_tokens":...,"total_tokens":...}}
-    router 会强制在流式请求里注入 stream_options.include_usage=true，所以生产环境此路径始终触发。
+    The router force-injects stream_options.include_usage=true for streaming requests,
+    so this path is always triggered in production.
     """
     yield _make_chunk(request_id, created, model, role="assistant")
 
@@ -530,7 +537,7 @@ async def _stream_sse(
     yield "data: [DONE]\n\n"
 
 
-# broker 的 TargetRoute 同时包含 /chat/completions 和 /v1/chat/completions
+# broker's TargetRoute includes both /chat/completions and /v1/chat/completions
 @app.post("/v1/chat/completions")
 async def chat_completions_v1(req: ChatCompletionRequest):
     return await _handle_chat(req)
@@ -542,15 +549,15 @@ async def chat_completions(req: ChatCompletionRequest):
 
 
 async def _handle_completion(req: CompletionRequest):
-    """Raw text completion (跳过 chat_template)。SIA logits processor 仍按
-    每个 decode step 触发, 跟 chat_completion 完全一样。"""
+    """Raw text completion (bypasses chat_template). SIA logits processor still
+    fires on every decode step, identical to chat_completion."""
     if err := _check_model(req.model):
         return err
     await _log_rm_status()
-    # 直接用 raw prompt — tokenize 走 vllm 内部 (它接受 string prompt)
+    # Use raw prompt directly — tokenization is handled by vllm internally (it accepts string prompts)
     prompt = req.prompt
-    # 构造 SamplingParams: 复用 _build_sampling_params 逻辑, 但 req 是 CompletionRequest
-    # 不是 ChatCompletionRequest, 这里直接构造
+    # Build SamplingParams: mirrors _build_sampling_params logic, but req is a CompletionRequest
+    # not a ChatCompletionRequest, so we construct it directly here
     kwargs = dict(
         temperature=req.temperature if req.temperature is not None else 0.7,
         max_tokens=req.max_tokens if req.max_tokens is not None else 512,
@@ -607,44 +614,45 @@ async def completions(req: CompletionRequest):
 
 
 # ---------------------------------------------------------------------------
-# CLI & 启动
+# CLI & startup
 # ---------------------------------------------------------------------------
 
 def parse_args():
     p = argparse.ArgumentParser(description="SIA vLLM OpenAI-compatible HTTP Server")
     p.add_argument("--llm",       required=True)
     p.add_argument("--rm_url",    default="http://localhost:8001",
-                   help="RM server 地址（默认 http://localhost:8001）")
+                   help="RM server address (default http://localhost:8001)")
     p.add_argument("--rm_backend",
                    choices=["pytorch", "vllm", "b2"], default="pytorch",
-                   help="RM 后端：pytorch=src/sia_rm_server.py（自定义 /score）；"
-                        "vllm=vllm serve（/classify，推荐：更快更稳）；"
-                        "b2=in-process RMClient（嵌套 vLLM 实例，无 HTTP 开销）")
+                   help="RM backend: pytorch=src/sia_rm_server.py (custom /score); "
+                        "vllm=vllm serve (/classify, recommended: faster and more stable); "
+                        "b2=in-process RMClient (nested vLLM instance, no HTTP overhead)")
     p.add_argument("--rm_model",  default=None,
-                   help="rm_backend ∈ {vllm, b2} 时必填: RM 模型路径")
+                   help="Required when rm_backend is vllm or b2: path to the RM model")
     p.add_argument("--rm_b2_gpu_mem", type=float, default=0.3,
-                   help="b2 backend 下 RM vLLM 实例的 gpu_memory_utilization (默认 0.3)")
+                   help="gpu_memory_utilization for the RM vLLM instance under b2 backend (default 0.3)")
     p.add_argument("--llm_gpu_mem", type=float, default=0.5)
     p.add_argument("--topk",      type=int,   default=10)
     p.add_argument("--weight",    type=float, default=1.0)
     p.add_argument("--entropy_threshold", type=float, default=None)
     p.add_argument("--use_token_ids", action="store_true",
-                   help="rm_backend=vllm 时：客户端预先 tokenize 并发 token_ids 到 RM，"
-                        "省服务端 re-tokenize（~3-5ms/call）。需要 RM server 用 "
-                        "scripts/vllm_serve_with_token_ids.py 启动以打 Pydantic 补丁。")
+                   help="When rm_backend=vllm: pre-tokenize on the client and send token_ids to RM, "
+                        "saving server-side re-tokenize (~3-5ms/call). Requires RM server to be "
+                        "started with scripts/vllm_serve_with_token_ids.py to apply Pydantic patch.")
     p.add_argument("--max_model_len", type=int, default=4096)
-    # Mamba 层 prefix caching 模式（仅对 Hybrid 模型如 0GM-35B 有效）。
-    # 默认 "none" 会把 mamba_block_size 设为 max_model_len，导致 lcm_block_size
-    # 极大，实际上所有请求都无法命中 APC；"align" 将 mamba_block_size 对齐到
-    # 注意力层 block_size（约 1056 tokens），使 prompt >= 1056 tokens 的请求能外报
-    # cached_tokens。0GM-35B 的 Qwen3.5 代码注释里明确说 "please use align"。
+    # Mamba layer prefix caching mode (only relevant for Hybrid models like 0GM-35B).
+    # Default "none" sets mamba_block_size to max_model_len, making lcm_block_size
+    # very large so no requests can hit APC in practice. "align" aligns mamba_block_size
+    # to the attention layer block_size (~1056 tokens), enabling cached_tokens reporting
+    # for prompts >= 1056 tokens. The Qwen3.5 code comments for 0GM-35B explicitly say
+    # "please use align".
     p.add_argument("--mamba_cache_mode", default=None,
                    choices=["all", "align", "none"],
-                   help="透传给 vllm --mamba-cache-mode。Hybrid 模型 (0GM-35B) 建议 align。"
-                        "default=None 表示不传（vllm 用其默认值 none）。")
-    # vllm Automatic Prefix Caching (APC). Default ON (生产推荐):
-    # 多 request 共享前缀时 2-10x prefill 加速; SIA 跟 APC 正交不冲突。
-    # 想关传 --disable_prefix_caching.
+                   help="Passed through to vllm --mamba-cache-mode. Recommended: align for Hybrid models (0GM-35B). "
+                        "default=None means not passed (vllm uses its default value none).")
+    # vllm Automatic Prefix Caching (APC). Default ON (recommended for production):
+    # 2-10x prefill speedup when requests share a prefix; SIA and APC are orthogonal.
+    # Pass --disable_prefix_caching to turn it off.
     p.add_argument("--enable_prefix_caching", dest="enable_prefix_caching",
                    action="store_true", default=True,
                    help="Enable vllm APC (default).")
@@ -652,23 +660,23 @@ def parse_args():
                    action="store_false",
                    help="Disable vllm APC (not recommended for production).")
     p.add_argument("--enable_thinking", choices=["true", "false"], default=None,
-                   help="透传 enable_thinking 给 RM prefix 构造, 跟 LLM 实际看到的 prompt 100% 一致。"
-                        "Qwen3 Instruct 模型 default=true (含 <think> 注入); "
-                        "传 false 跟 eval client --disable_thinking 一致; "
-                        "default=None 表示不传 (用 chat_template 默认值, 也即模型本身默认)。")
+                   help="Passed through to RM prefix construction to match the prompt seen by the LLM exactly. "
+                        "Qwen3 Instruct models default=true (includes <think> injection); "
+                        "pass false to match eval client --disable_thinking; "
+                        "default=None means not passed (uses chat_template default, i.e. model's own default).")
     p.add_argument("--host", default="0.0.0.0")
     p.add_argument("--port", type=int, default=8000)
     p.add_argument("--model_id", default=None,
-                   help="对外暴露的 model 名称（默认取 --llm 的 basename）")
+                   help="Model name exposed externally (defaults to the basename of --llm)")
     p.add_argument("--dummy_processor", choices=[None, "noop", "sync"],
                    default=None,
-                   help="校准用: 替换 SIA processor 为 dummy. "
-                        "noop=完全 no-op (测 hook 开销); "
-                        "sync=做 entropy+cpu sync 但不做决策 (测 sync 开销). "
-                        "默认 None=用真实 SIA processor.")
+                   help="Calibration: replace SIA processor with a dummy. "
+                        "noop=complete no-op (measure hook overhead); "
+                        "sync=perform entropy+cpu sync but no decision (measure sync overhead). "
+                        "Default None=use the real SIA processor.")
     args = p.parse_args()
     if args.rm_backend in ("vllm", "b2") and not args.rm_model:
-        p.error(f"--rm_backend {args.rm_backend} 必须同时指定 --rm_model")
+        p.error(f"--rm_backend {args.rm_backend} requires --rm_model to be specified")
     return args
 
 
@@ -696,7 +704,7 @@ def main():
 
     if _args.dummy_processor is not None:
         # Calibration mode: replace SIA processor with a dummy (no RM call).
-        # 用来分离 "SIA sync 开销" 跟 "SIA RM 调用 + 决策开销"。
+        # Used to isolate "SIA sync overhead" from "SIA RM call + decision overhead".
         from dummy_lp import make_dummy_processor
         SIAProcessor = make_dummy_processor(
             _args.dummy_processor, topk=_args.topk
@@ -704,7 +712,7 @@ def main():
         print(f"[CALIB] dummy_processor={_args.dummy_processor}, "
               f"NO RM call, NO logits modification", flush=True)
     else:
-        # 把 "true"/"false" 字符串转成 bool / None
+        # Convert "true"/"false" strings to bool / None
         _enable_thinking = (
             True if _args.enable_thinking == "true"
             else False if _args.enable_thinking == "false"

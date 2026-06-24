@@ -1,18 +1,18 @@
-# rep_penalty 修复验证实验汇总 (Qwen3-14B + VL-30B)
+# rep_penalty Fix Validation Experiments Summary (Qwen3-14B + VL-30B)
 
-**日期**: 2026-06-04
-**目的**: 系统验证 `repetition_penalty=1.3 → 1.0` 修复后, SIA 在不同模型 / 不同长度配置下都能复现 paper SIA gain。
+**Date**: 2026-06-04
+**Purpose**: Systematically validate that after the `repetition_penalty=1.3 → 1.0` fix, SIA can reproduce the paper's SIA gain across different models and different length configurations.
 
-**核心结论**: ✅ rep_penalty 修复在 4 个实验都有效 (Qwen3-14B + VL-30B 三种长度), SIA Δ vs noSIA **+1.3 ~ +2.8** 全部 p<10⁻³ 显著。**SIA 不仅在 paper 的 max=256 regime 有效, 在 max=2048 长生成 regime 上也 +10% gain**, 完全反转了之前 "OOD 配置 SIA 不可用" 的错误结论。
+**Key conclusion**: ✅ The rep_penalty fix is effective in all 4 experiments (Qwen3-14B + VL-30B at three lengths). SIA Δ vs noSIA is **+1.3 ~ +2.8**, all significant at p<10⁻³. **SIA is effective not only in the paper's max=256 regime, but also yields +10% gain in the max=2048 long-generation regime**, fully reversing the previous incorrect conclusion that "SIA is unusable in OOD configurations."
 
-详见根因分析: [`doc/sia-repetition-penalty-root-cause-20260604.md`](sia-repetition-penalty-root-cause-20260604.md)
-配置 diff: [`doc/project-vs-official-inference-code-diff-20260604.md`](project-vs-official-inference-code-diff-20260604.md)
+Root cause analysis: [`doc/sia-repetition-penalty-root-cause-20260604.md`](sia-repetition-penalty-root-cause-20260604.md)
+Configuration diff: [`doc/project-vs-official-inference-code-diff-20260604.md`](project-vs-official-inference-code-diff-20260604.md)
 
 ---
 
-## 实验总览
+## Experiment Overview
 
-| 实验 | LLM | max_tokens | SIA params | rep_penalty | SIA intv 率 | log 路径 |
+| Experiment | LLM | max_tokens | SIA params | rep_penalty | SIA intv rate | log path |
 |------|-----|-----------|----------|-------------|--------|--------|
 | **Qwen3-14B SIA** | Qwen3-14B | 256 | topk=10, weight=1.0, entropy=1.0 | **1.0** ✅ | (n/a) | [`exp/.../qwen14b-sia-max256/`](../exp/rep-penalty-fix-validation-20260604/qwen14b-sia-max256/) |
 | **VL-30B SIA max=256** | Qwen3-VL-30B | 256 | topk=10, weight=1.0, entropy=1.0 | **1.0** ✅ | **18.8%** | [`exp/.../vl30b-sia-max256/`](../exp/rep-penalty-fix-validation-20260604/vl30b-sia-max256/) |
@@ -22,23 +22,23 @@
 | **VL-30B noSIA MMLU 150Q** | Qwen3-VL-30B | 2048 (eval) | weight=0, entropy=999999 (no-op) | 1.0 ✅ | — | [`exp/.../vl30b-mmlu-noSIA/`](../exp/rep-penalty-fix-validation-20260604/vl30b-mmlu-noSIA/) |
 | **VL-30B SIA MMLU 150Q** | Qwen3-VL-30B | 2048 (eval) | topk=5, weight=1.0, entropy=1.0 | **1.0** ✅ | **10.0%** | [`exp/.../vl30b-mmlu-SIA/`](../exp/rep-penalty-fix-validation-20260604/vl30b-mmlu-SIA/) |
 
-所有 AlpacaEval 实验:
-- LLM 推理代码: `src/sia_vllm_server.py` (本项目, 已修复 rep_penalty 默认 1.0)
-- RM (Value Model): 项目 vllm RM (`vllm serve --runner pooling --convert classify` on VM-Qwen3-4B-merged-for-vllm)
+All AlpacaEval experiments:
+- LLM inference code: `src/sia_vllm_server.py` (this project, rep_penalty default fixed to 1.0)
+- RM (Value Model): project vllm RM (`vllm serve --runner pooling --convert classify` on VM-Qwen3-4B-merged-for-vllm)
 - AlpacaEval 200Q, temperature=1.0
-- 评分: Skywork-Reward-V2-Llama-3.1-8B (`/workspace/SIA/models/Skywork-Reward-V2-Llama-3.1-8B`)
+- Scoring: Skywork-Reward-V2-Llama-3.1-8B (`/workspace/SIA/models/Skywork-Reward-V2-Llama-3.1-8B`)
 
-MMLU 实验:
-- 评测脚本: `eval/mmlu_eval.py` (CoT + "Answer: X" 提取, max_tokens=2048 内置)
-- 数据集: `edinburgh-dawg/mmlu-redux` (30 subjects)
-- 题数: 5 题 / subject × 30 subjects = 150 Q
-- 打分: exact_match on A/B/C/D
+MMLU experiments:
+- Evaluation script: `eval/mmlu_eval.py` (CoT + "Answer: X" extraction, max_tokens=2048 built-in)
+- Dataset: `edinburgh-dawg/mmlu-redux` (30 subjects)
+- Question count: 5 questions / subject × 30 subjects = 150 Q
+- Scoring: exact_match on A/B/C/D
 
 ---
 
-## 一. Qwen3-14B (paper-aligned config)
+## 1. Qwen3-14B (paper-aligned config)
 
-**目的**: 验证项目代码 + rep_penalty 修复后跟 paper Qwen3-14B baseline 统计等价。
+**Purpose**: Verify that project code + rep_penalty fix is statistically equivalent to the paper's Qwen3-14B baseline.
 
 | | Skywork mean | median |
 |--|---|---|
@@ -46,19 +46,19 @@ MMLU 实验:
 | Paper Qwen3-14B SIA (805Q) | +11.16 | — |
 | Paper Qwen3-14B noSIA | +9.59 | — |
 
-**关键 paired (n=200, 跟 paper 同题对比)**:
-- Ours vs Paper SIA: Δ=+0.31, **p=0.43** (n.s.) ✅ **统计上等价**
-- Ours vs Paper noSIA: Δ=+1.89, **p<10⁻⁴** ✅ SIA gain 显著
+**Key paired comparison (n=200, same questions as paper)**:
+- Ours vs Paper SIA: Δ=+0.31, **p=0.43** (n.s.) ✅ **statistically equivalent**
+- Ours vs Paper noSIA: Δ=+1.89, **p<10⁻⁴** ✅ SIA gain significant
 
-**对照 rep=1.0 vs rep=1.3 (paired n=125, 单变量 rep_penalty)**:
-- Δ=**+7.71**, win **109/125 (87%)**, **p<10⁻¹²** ← 完全锁定 rep_penalty 是元凶
+**Control: rep=1.0 vs rep=1.3 (paired n=125, single-variable rep_penalty)**:
+- Δ=**+7.71**, win **109/125 (87%)**, **p<10⁻¹²** ← definitively identifies rep_penalty as the root cause
 
-数据: [`exp/.../qwen14b-sia-max256/outputs_scored.json`](../exp/rep-penalty-fix-validation-20260604/qwen14b-sia-max256/outputs_scored.json)
-评分 log: [`exp/.../analysis/compare_qwen14b.log`](../exp/rep-penalty-fix-validation-20260604/analysis/compare_qwen14b.log)
+Data: [`exp/.../qwen14b-sia-max256/outputs_scored.json`](../exp/rep-penalty-fix-validation-20260604/qwen14b-sia-max256/outputs_scored.json)
+Scoring log: [`exp/.../analysis/compare_qwen14b.log`](../exp/rep-penalty-fix-validation-20260604/analysis/compare_qwen14b.log)
 
 ---
 
-## 二. VL-30B max=256 (paper-aligned 长度)
+## 2. VL-30B max=256 (paper-aligned length)
 
 | | Skywork mean | median |
 |--|---|---|
@@ -68,44 +68,44 @@ MMLU 实验:
 **Paired (n=200)**:
 - **SIA Δ = +2.32 (+19.8%), p<10⁻⁴**, win 132/200 (66%) ✅
 
-VM (RM) intervention 验证:
-- 平均 **18.8%** intervention 率
-- top1 flip 率 ~55-81%
-- RM error 数: 0 (无 Connection refused)
-- Log 节选 (`sia_llm_server.log`):
+VM (RM) intervention verification:
+- Average **18.8%** intervention rate
+- top1 flip rate ~55-81%
+- RM error count: 0 (no Connection refused)
+- Log excerpt (`sia_llm_server.log`):
   ```
   [SIA] req=0 DONE  intervened=50/256  ratio=19.5%  top1_flip=33/50 (66.0%)
   [SIA] req=0 DONE  intervened=83/256  ratio=32.4%  top1_flip=48/83 (57.8%)
   ...
   ```
 
-数据: [`exp/.../vl30b-sia-max256/outputs_scored.json`](../exp/rep-penalty-fix-validation-20260604/vl30b-sia-max256/outputs_scored.json) (SIA) + [`exp/.../vl30b-nosia-max256/outputs_scored.json`](../exp/rep-penalty-fix-validation-20260604/vl30b-nosia-max256/outputs_scored.json) (noSIA)
+Data: [`exp/.../vl30b-sia-max256/outputs_scored.json`](../exp/rep-penalty-fix-validation-20260604/vl30b-sia-max256/outputs_scored.json) (SIA) + [`exp/.../vl30b-nosia-max256/outputs_scored.json`](../exp/rep-penalty-fix-validation-20260604/vl30b-nosia-max256/outputs_scored.json) (noSIA)
 
 ---
 
-## 三. VL-30B max=2048 (长生成 regime)
+## 3. VL-30B max=2048 (long-generation regime)
 
-**关键警告**: 第一次跑 max=2048 时, **vllm RM server 因 GPU 内存竞争 OOM 死了**, SIA 退化为 no-op (intervention 0%), 输出跟 noSIA byte-exact 相同, 得出错误结论 "SIA -6% 损害"。
-**Redo run 用顺序启动 + /classify smoke test 确保 RM 真活着**, 才是有效数据。具体见根因分析 §2 "1992018 / 1932817 race condition" 部分。
+**Critical warning**: In the first max=2048 run, **the vllm RM server died from OOM due to GPU memory contention**. SIA degraded to a no-op (0% intervention rate), outputs were byte-identical to noSIA, and the incorrect conclusion "SIA -6% harm" was drawn.
+**The redo run used sequential startup + /classify smoke test to confirm the RM was truly alive** — only that data is valid. See root cause analysis §2 "1992018 / 1932817 race condition" for details.
 
 | | Skywork mean | median |
 |--|---|---|
-| VL-30B SIA-2048 (REDO, 真 SIA) | **+30.19** | +30.75 |
+| VL-30B SIA-2048 (REDO, genuine SIA) | **+30.19** | +30.75 |
 | VL-30B noSIA-2048 | +27.44 | +27.63 |
 
-**Paired (n=200) — 关键结果**:
+**Paired (n=200) — key result**:
 - **SIA Δ = +2.75 (+10.0%), p<10⁻⁷**, win 123/200 (62%) ✅
 
 **SIA-2048 truncated to 256 vs noSIA-2048 truncated to 256**:
-- Δ=+1.30, p=0.003 ✅ SIA 在前 256 token 也 +11% 优势
+- Δ=+1.30, p=0.003 ✅ SIA also has +11% advantage in the first 256 tokens
 
-### VM intervention 验证
+### VM Intervention Verification
 
-- 平均 **25.83%** intervention 率
-- 平均 top1 flip 率 **66.88%** (22,381 flips / 33,462 interventions)
-- RM error 数: 0
-- Sanity check: SIA-2048 outputs **0/10 byte-identical** to noSIA-2048 (上次 broken run 是 10/10 identical)
-- Log 节选 (`sia_llm_server.log`):
+- Average **25.83%** intervention rate
+- Average top1 flip rate **66.88%** (22,381 flips / 33,462 interventions)
+- RM error count: 0
+- Sanity check: SIA-2048 outputs **0/10 byte-identical** to noSIA-2048 (previous broken run was 10/10 identical)
+- Log excerpt (`sia_llm_server.log`):
   ```
   [SIA] req=0 DONE  intervened=90/451  ratio=20.0%  top1_flip=64/90 (71.1%)
   [SIA] req=0 DONE  intervened=213/1131  ratio=18.8%  top1_flip=140/213 (65.7%)
@@ -113,116 +113,116 @@ VM (RM) intervention 验证:
   ...
   ```
 
-### 性能指标 (n=200, single-stream 跑)
+### Performance Metrics (n=200, single-stream)
 
-**吞吐 (driver wall time)**:
+**Throughput (driver wall time)**:
 
 | | SIA-2048 | noSIA-2048 (baseline) |
 |--|---|---|
-| 总 reqs | 200 | 200 |
-| 总生成 tokens | 129,313 | 151,806 |
-| 总 wall 时间 | 3,599s (60.0 min) | 1,214s (20.2 min) |
-| **平均 tokens/s** | **35.9** | **125.0** (3.5× faster) |
-| 平均 tok/req | 647 | 759 (SIA 输出短 ~15%) |
-| 平均 wall/req | 18.0s | 6.1s |
+| total reqs | 200 | 200 |
+| total generated tokens | 129,313 | 151,806 |
+| total wall time | 3,599s (60.0 min) | 1,214s (20.2 min) |
+| **avg tokens/s** | **35.9** | **125.0** (3.5× faster) |
+| avg tok/req | 647 | 759 (SIA output ~15% shorter) |
+| avg wall/req | 18.0s | 6.1s |
 
-**每 token 推理耗时** (= wall_time / tokens, single-stream):
+**Per-token inference latency** (= wall_time / tokens, single-stream):
 
-| arm | 平均 step (ms/token) | 解读 |
+| arm | avg step (ms/token) | interpretation |
 |--|---|---|
-| **noSIA-2048 (纯 LLM)** | **8.0ms** | 单纯 LLM forward + sampling |
-| **SIA-2048 (混合 SKIP + INTERVENE)** | **27.8ms** | 多了 SIA 干预开销 |
+| **noSIA-2048 (pure LLM)** | **8.0ms** | LLM forward + sampling only |
+| **SIA-2048 (mixed SKIP + INTERVENE)** | **27.8ms** | additional SIA intervention overhead |
 
-**SIA 内部时间拆解** (from `[SIA-pf-summary]` 在 `sia_llm_server.log`):
+**SIA internal time breakdown** (from `[SIA-pf-summary]` in `sia_llm_server.log`):
 
-| 步骤 | p50 (ms) | p95 (ms) | 说明 |
+| Step | p50 (ms) | p95 (ms) | Notes |
 |------|---------|---------|------|
-| **SKIP step (非干预步骤总耗时)** | **3.73** | 4.06 | top-K + entropy + decision, 无 RM 调用 |
-| Top-K 提取 + entropy 计算 | 0.64 | 1.16 | GPU torch.topk + log_softmax |
-| CPU sync (entropy 拉回 CPU) | 3.11 | 3.61 | 主要开销 |
-| **INTERVENE step (干预步骤总耗时)** | **~75** | ~78 | apply_total p95 |
-| ↳ RM HTTP /classify call | 71.18 | 98.34 | **占干预成本 95%** ← 瓶颈 |
-| ↳ format_chat (prompt 构造) | 0.13 | 0.69 | |
-| ↳ intv_prepare (索引/数据准备) | 0.16 | 0.32 | |
-| ↳ intv_apply_logits (改 logits) | 1.15 | 1.32 | |
+| **SKIP step (total cost for non-intervention steps)** | **3.73** | 4.06 | top-K + entropy + decision, no RM call |
+| Top-K extraction + entropy calculation | 0.64 | 1.16 | GPU torch.topk + log_softmax |
+| CPU sync (pulling entropy back to CPU) | 3.11 | 3.61 | dominant cost |
+| **INTERVENE step (total cost for intervention steps)** | **~75** | ~78 | apply_total p95 |
+| ↳ RM HTTP /classify call | 71.18 | 98.34 | **95% of intervention cost** ← bottleneck |
+| ↳ format_chat (prompt construction) | 0.13 | 0.69 | |
+| ↳ intv_prepare (index/data preparation) | 0.16 | 0.32 | |
+| ↳ intv_apply_logits (modify logits) | 1.15 | 1.32 | |
 
-**核心观察**:
-- **INTERVENE 比 SKIP 慢 ~20× ** (75ms vs 3.7ms), 因 RM HTTP 调用 (~71ms p50)
-- SKIP 中 CPU sync (3.1ms) 是主要开销, 远超 GPU 计算 (0.6ms)
-- 加权平均 step = 25.8% × 75ms + 74.2% × 3.7ms = 19.3 + 2.7 = **22.0ms** (理论)
-- 实测 27.8ms — 多出 ~5ms 是 LLM forward + vllm 内部 sampling 开销 (跟 noSIA 的 8ms baseline 接近)
-- **总成本拆分**: LLM forward (8ms) + SIA SKIP overhead (~3.7ms) + INTERVENE 中的 RM 调用 (~18ms 加权) ≈ 29.7ms ≈ 实测
+**Key observations**:
+- **INTERVENE is ~20× slower than SKIP** (75ms vs 3.7ms), due to RM HTTP call (~71ms p50)
+- CPU sync (3.1ms) in SKIP is the dominant cost, far exceeding GPU compute (0.6ms)
+- Weighted avg step = 25.8% × 75ms + 74.2% × 3.7ms = 19.3 + 2.7 = **22.0ms** (theoretical)
+- Measured 27.8ms — the extra ~5ms is LLM forward + vllm internal sampling overhead (consistent with noSIA's 8ms baseline)
+- **Total cost breakdown**: LLM forward (8ms) + SIA SKIP overhead (~3.7ms) + INTERVENE RM call (~18ms weighted) ≈ 29.7ms ≈ measured
 
-**优化方向** (未实施):
-- RM 调用 **batch 多个 candidates** 而不是每 candidate 一次 HTTP → 可降 ~50% 干预成本
-- vllm RM 启用 prefix caching (已开) — 当前命中率 unknown
-- 把 RM 切换成 in-process / shared-memory 调用消除 HTTP 开销
+**Optimization directions** (not yet implemented):
+- **Batch multiple candidates** per RM call instead of one HTTP call per candidate → can reduce intervention cost ~50%
+- vllm RM prefix caching (already enabled) — current hit rate unknown
+- Switch RM to in-process / shared-memory calls to eliminate HTTP overhead
 
-数据: [`exp/.../vl30b-sia-max2048/outputs_scored.json`](../exp/rep-penalty-fix-validation-20260604/vl30b-sia-max2048/outputs_scored.json) (SIA REDO) + [`exp/.../vl30b-nosia-max2048/outputs_scored.json`](../exp/rep-penalty-fix-validation-20260604/vl30b-nosia-max2048/outputs_scored.json) (noSIA)
-评分 log: [`exp/.../analysis/compare_redo.log`](../exp/rep-penalty-fix-validation-20260604/analysis/compare_redo.log)
-完整 SIA 性能日志: [`exp/.../vl30b-sia-max2048/sia_llm_server.log`](../exp/rep-penalty-fix-validation-20260604/vl30b-sia-max2048/sia_llm_server.log) (grep `\[SIA-pf-summary`)
+Data: [`exp/.../vl30b-sia-max2048/outputs_scored.json`](../exp/rep-penalty-fix-validation-20260604/vl30b-sia-max2048/outputs_scored.json) (SIA REDO) + [`exp/.../vl30b-nosia-max2048/outputs_scored.json`](../exp/rep-penalty-fix-validation-20260604/vl30b-nosia-max2048/outputs_scored.json) (noSIA)
+Scoring log: [`exp/.../analysis/compare_redo.log`](../exp/rep-penalty-fix-validation-20260604/analysis/compare_redo.log)
+Full SIA performance log: [`exp/.../vl30b-sia-max2048/sia_llm_server.log`](../exp/rep-penalty-fix-validation-20260604/vl30b-sia-max2048/sia_llm_server.log) (grep `\[SIA-pf-summary`)
 
 ---
 
-## 四. MMLU 回归测试 (知识类任务 SIA 无 regression)
+## 4. MMLU Regression Test (no regression on knowledge tasks)
 
-**目的**: 验证 SIA 在与 Value Model 训练目标 (Helpfulness, Harmlessness) **无关**的知识类任务上, **没有引入负面效果**。Paper 没在 MMLU 测过, 这是项目自检。
+**Purpose**: Verify that SIA introduces **no negative effects** on knowledge tasks that are **unrelated** to the Value Model's training objective (Helpfulness, Harmlessness). The paper does not test MMLU; this is a project-level self-check.
 
-### 配置
+### Configuration
 
-| 项 | 值 |
+| Item | Value |
 |--|---|
 | Dataset | `edinburgh-dawg/mmlu-redux`, 30 subjects |
-| 题数 | 5 题 / subject × 30 = **150 Q** |
-| LLM | Qwen3-VL-30B-A3B-Instruct (项目 `sia_vllm_server.py` 推理) |
-| RM (SIA arm) | 项目 vllm RM (`VM-Qwen3-4B-merged-for-vllm`) |
-| max_tokens | 2048 (脚本内置) |
+| Question count | 5 questions / subject × 30 = **150 Q** |
+| LLM | Qwen3-VL-30B-A3B-Instruct (project `sia_vllm_server.py` inference) |
+| RM (SIA arm) | project vllm RM (`VM-Qwen3-4B-merged-for-vllm`) |
+| max_tokens | 2048 (built into script) |
 | temperature | 1.0 |
-| repetition_penalty | **1.0** (fix 后默认 + driver 显式) |
+| repetition_penalty | **1.0** (post-fix default + driver explicit) |
 | SIA params | topk=**5**, weight=1.0, entropy_threshold=1.0 |
 | noSIA params | topk=5, weight=0.0, entropy_threshold=999999 (no-op) |
-| 答案提取 | CoT + "Answer: X" 正则 (exact match) |
+| Answer extraction | CoT + "Answer: X" regex (exact match) |
 
-`--topk 5` (跟 AlpacaEval 的 10 不同) 是 paper 同 model 上 MMLU 的标准设置, 沿用之前 Qwen3-14B MMLU 实验保持可比。
+`--topk 5` (different from AlpacaEval's 10) is the standard setting for MMLU on this model class in the paper, retained from prior Qwen3-14B MMLU experiments for comparability.
 
-### 结果
+### Results
 
-| 指标 | **SIA** | **noSIA** | Δ |
+| Metric | **SIA** | **noSIA** | Δ |
 |------|--------|----------|---|
-| **Overall accuracy** | **0.8000** (120/150) | 0.7867 (118/150) | **+0.013 (+1.7%, +2 题)** |
+| **Overall accuracy** | **0.8000** (120/150) | 0.7867 (118/150) | **+0.013 (+1.7%, +2 questions)** |
 | Total latency | 698.8s (11.6 min) | 454.3s (7.6 min) | +1.54× |
 | Avg latency/Q | 4.7s | 3.0s | +1.6× |
-| Avg tokens/Q | 262.5 | 287.7 | -25 (SIA 略短) |
-| Throughput | 56.3 tok/s | 95.0 tok/s | -41% (RM 调用开销) |
-| **SIA intervention 率** | **10.03%** (4000/39889) | — | — |
-| **SIA top1 flip 率** | **61.7%** (2467/4000) | — | — |
-| RM error 数 | 0 | — | — |
+| Avg tokens/Q | 262.5 | 287.7 | -25 (SIA slightly shorter) |
+| Throughput | 56.3 tok/s | 95.0 tok/s | -41% (RM call overhead) |
+| **SIA intervention rate** | **10.03%** (4000/39889) | — | — |
+| **SIA top1 flip rate** | **61.7%** (2467/4000) | — | — |
+| RM error count | 0 | — | — |
 
-### 结论 — 无 regression ✅
+### Conclusion — No Regression ✅
 
-- SIA - noSIA = +2 题, 在 n=150 二项分布噪声内 (binomial 95% CI ≈ ±7.7pp)
-- **统计上 SIA 跟 noSIA 等价**, 无显著 gain 也无显著 loss
-- SIA 内部健康指标都正常 (10% intervention, 62% flip, 0 RM error), 跟 AlpacaEval VL-30B 同量级
-- 跟之前 [`doc/eval-report.md`](eval-report.md) 上 Qwen3-14B 的 MMLU 结论一致:
-  > Value Model 在哪个领域训练, 就只在哪个领域的任务上能引导 LLM. ... MMLU 是纯知识问答, 与 Value Model 训练目标无关, 因此干预效果为零 — 这是符合预期的。
+- SIA - noSIA = +2 questions, within n=150 binomial noise (binomial 95% CI ≈ ±7.7pp)
+- **SIA is statistically equivalent to noSIA**, with no significant gain or loss
+- SIA internal health metrics are normal (10% intervention, 62% flip, 0 RM errors), comparable to AlpacaEval VL-30B
+- Consistent with the Qwen3-14B MMLU conclusion from [`doc/eval-report.md`](eval-report.md):
+  > The Value Model can only guide the LLM in the domain it was trained on. ... MMLU is pure knowledge Q&A, unrelated to the Value Model's training objective, so zero intervention effect is expected — this is working as intended.
 
-### MMLU 跟 AlpacaEval 对比 — SIA 的"任务覆盖边界"
+### MMLU vs AlpacaEval — SIA's "Task Coverage Boundary"
 
-| 任务类型 | 配置 | SIA Δ vs noSIA | 显著性 | 解读 |
+| Task type | Configuration | SIA Δ vs noSIA | Significance | Interpretation |
 |----------|------|---------------|--------|------|
-| **AlpacaEval** (max=256) | RM 训练匹配 (alignment) | **+2.32 (+20%)** | p<10⁻⁴ ✅ | RM 引导有效 |
-| **AlpacaEval** (max=2048) | RM 训练匹配 | **+2.75 (+10%)** | p<10⁻⁷ ✅ | RM 引导有效 (长输出) |
-| **MMLU** (150Q) | RM 训练**不匹配** (knowledge) | **+0.013 (+1.7%)** | n.s. | 无 regression, 无 gain |
+| **AlpacaEval** (max=256) | RM training-matched (alignment) | **+2.32 (+20%)** | p<10⁻⁴ ✅ | RM guidance effective |
+| **AlpacaEval** (max=2048) | RM training-matched | **+2.75 (+10%)** | p<10⁻⁷ ✅ | RM guidance effective (long output) |
+| **MMLU** (150Q) | RM training **not matched** (knowledge) | **+0.013 (+1.7%)** | n.s. | No regression, no gain |
 
-**SIA 是 alignment-class 任务的工具**, 不应期望它提升知识类准确率。
+**SIA is a tool for alignment-class tasks** and should not be expected to improve knowledge task accuracy.
 
-数据: [`exp/.../vl30b-mmlu-SIA/results.json`](../exp/rep-penalty-fix-validation-20260604/vl30b-mmlu-SIA/results.json) (SIA) + [`exp/.../vl30b-mmlu-noSIA/results.json`](../exp/rep-penalty-fix-validation-20260604/vl30b-mmlu-noSIA/results.json) (noSIA)
+Data: [`exp/.../vl30b-mmlu-SIA/results.json`](../exp/rep-penalty-fix-validation-20260604/vl30b-mmlu-SIA/results.json) (SIA) + [`exp/.../vl30b-mmlu-noSIA/results.json`](../exp/rep-penalty-fix-validation-20260604/vl30b-mmlu-noSIA/results.json) (noSIA)
 
 ---
 
-## 五. 跨实验一致性
+## 5. Cross-Experiment Consistency
 
-| 实验 | n | SIA mean | noSIA mean | Δ | rel | p |
+| Experiment | n | SIA mean | noSIA mean | Δ | rel | p |
 |------|--|---------|-----------|---|-----|---|
 | Paper Qwen3-14B (baseline, 805Q) | 805 | +13.92 | +12.29 | **+1.63** | +13% | (paper) |
 | Ours Qwen3-14B (max=256) | 200 | +11.48 | +9.59 | **+1.89** | +20% | <10⁻⁴ |
@@ -230,27 +230,27 @@ VM (RM) intervention 验证:
 | **Ours VL-30B (max=2048)** | **200** | **+30.19** | **+27.44** | **+2.75** | **+10%** | **<10⁻⁷** |
 | Ours VL-30B (max=2048, trunc-256) | 200 | +13.32 | +12.01 | **+1.30** | +11% | 0.003 |
 
-**SIA 绝对 gain 在 +1.3 ~ +2.8 之间, 跨模型 / 跨长度高度一致**。max=2048 的 relative gain (+10%) 较小**只是因为 Skywork 偏好长答案让 baseline 升到 +27** (相同绝对 Δ÷大基线 = 小百分比), 不是 SIA 自身能力下降。
+**SIA absolute gain is consistently in the +1.3 ~ +2.8 range, highly consistent across models and lengths**. The smaller relative gain at max=2048 (+10%) is **solely because Skywork favors longer answers, pushing the baseline up to +27** (same absolute Δ ÷ larger baseline = smaller percentage) — it does not reflect a decline in SIA's own capability.
 
-## 六. 推翻先前的错误结论
+## 6. Overturning Previous Incorrect Conclusions
 
-之前 `exp/vl30b_200q_dual_rm/README.md` 写:
-> W2S=7.5× 配置下 SIA 仍 **-75% Δ**, 完全不可用。论文的成功只在 W2S≤3.5× in-distribution 配置成立。
+The previous `exp/vl30b_200q_dual_rm/README.md` stated:
+> Under W2S=7.5× configuration, SIA still shows **-75% Δ** and is completely unusable. The paper's success only holds under W2S≤3.5× in-distribution configuration.
 
-这个结论是错的, 真因是 `repetition_penalty=1.3` 污染了所有那些实验。修复后:
+This conclusion was wrong. The true cause was `repetition_penalty=1.3` contaminating all those experiments. After the fix:
 - VL-30B (W2S=7.5×) max=256: +20% Δ
 - VL-30B (W2S=7.5×) max=2048: +10% Δ
-- 都跟 paper Qwen3-14B (in-distribution) gain 同量级
+- Both are on par with paper Qwen3-14B (in-distribution) gains
 
-也曾错误地推论 "SIA 是短窗口工具, 只在 ≤256 有效":
-- 这是基于 broken-RM 的 SIA-2048 = -6% 数据
-- Redo 后 SIA-2048 真正 +10% Δ, **SIA 在长生成上同样有效**
+There was also an incorrect inference that "SIA is a short-window tool, only effective at ≤256":
+- This was based on the broken-RM SIA-2048 = -6% data
+- After the redo, SIA-2048 shows a genuine +10% Δ — **SIA is equally effective for long-form generation**
 
 ---
 
-## Appendix A. 启动命令 (完整复现)
+## Appendix A. Startup Commands (Full Reproduction)
 
-### A.1 项目 vllm RM server (所有 VL-30B SIA 实验用)
+### A.1 Project vllm RM server (used by all VL-30B SIA experiments)
 
 ```bash
 nohup /workspace/SIA/venv4/bin/vllm serve \
@@ -265,17 +265,17 @@ nohup /workspace/SIA/venv4/bin/vllm serve \
   > /tmp/vl30b_runs/vllm_rm_server.log 2>&1 &
 ```
 
-### A.2 RM /classify smoke test (启动 SIA LLM 之前必做!)
+### A.2 RM /classify smoke test (required before starting the SIA LLM!)
 
 ```bash
-# 等 RM /v1/models 响应
+# Wait for RM /v1/models to respond
 until curl -s --max-time 2 http://localhost:8001/v1/models 2>/dev/null | grep -q object; do sleep 3; done
 
-# 验证 /classify 真返回 probs (port up != engine alive!)
+# Verify /classify actually returns probs (port up != engine alive!)
 curl -s --max-time 10 -X POST http://localhost:8001/classify \
   -H "Content-Type: application/json" \
   -d '{"model":"/workspace/SIA/models/VM-Qwen3-4B-merged-for-vllm","input":[[1,2,3,4,5]]}'
-# 应该返回 {"id":...,"data":[{"index":0,"probs":[...]}], ...}
+# Should return {"id":...,"data":[{"index":0,"probs":[...]}], ...}
 ```
 
 ### A.3 VL-30B SIA LLM server (max=2048)
@@ -294,17 +294,17 @@ nohup /workspace/SIA/venv4/bin/python src/sia_vllm_server.py \
   > /tmp/vl30b_runs/sia_llm_server.log 2>&1 &
 ```
 
-VL-30B SIA max=256 只把 `--max_model_len` 改 2048 (其它保持)。
+VL-30B SIA max=256 only changes `--max_model_len` to 2048 (all other parameters remain the same).
 
-### A.4 VL-30B noSIA SIA LLM server (weight=0 模式)
+### A.4 VL-30B noSIA SIA LLM server (weight=0 mode)
 
-跟上面相同, 仅改:
+Same as above, only change:
 ```bash
-  --topk 10 --weight 0.0 --entropy_threshold 10.0 \   # weight=0 + entropy threshold 永不触发
+  --topk 10 --weight 0.0 --entropy_threshold 10.0 \   # weight=0 + entropy threshold never triggered
 ```
-(此时 RM 不会被查, 但保持 server 启动 + 跟 SIA 一致的 code path)
+(RM is not queried in this mode, but the server stays up and follows the same code path as SIA)
 
-### A.5 Driver (driver 显式传 repetition_penalty=1.0, 跟 server 默认双保险)
+### A.5 Driver (driver explicitly passes repetition_penalty=1.0, double-safe with server default)
 
 `/tmp/vl30b_runs/drive_vl30b.py`:
 ```python
@@ -318,7 +318,7 @@ payload = {
 }
 ```
 
-启动 driver:
+Start the driver:
 ```bash
 nohup /workspace/SIA/venv4/bin/python -u /tmp/vl30b_runs/drive_vl30b.py \
   /tmp/vl30b_runs/sia_VL30B_vllmRM_200q_max2048_v2.json \
@@ -327,9 +327,9 @@ nohup /workspace/SIA/venv4/bin/python -u /tmp/vl30b_runs/drive_vl30b.py \
   > /tmp/vl30b_runs/driver.log 2>&1 &
 ```
 
-### A.6 Qwen3-14B SIA LLM server (官方 PyTorch RM)
+### A.6 Qwen3-14B SIA LLM server (official PyTorch RM)
 
-Qwen3-14B 实验用的是官方 PyTorch RM (`sia_rm_pytorch_official.py`), 而不是项目 vllm RM:
+Qwen3-14B experiments use the official PyTorch RM (`sia_rm_pytorch_official.py`), not the project vllm RM:
 
 ```bash
 # RM (official ValueModel HTTP)
@@ -360,9 +360,9 @@ nohup /workspace/SIA/venv4/bin/python -u /tmp/qwen3_14b_runs/drive_805_rep10.py 
   > /tmp/qwen3_14b_runs/driver_rep10_max256.log 2>&1 &
 ```
 
-### A.7 Skywork 评分脚本
+### A.7 Skywork Scoring Script
 
-跑评分前**必须 kill SIA + RM servers 释放 GPU** (Skywork 需要 ~16GB):
+**Must kill SIA + RM servers to free GPU before running scoring** (Skywork needs ~16GB):
 
 ```bash
 pkill -9 -f 'EngineCore' 2>/dev/null
@@ -371,15 +371,15 @@ pkill -9 -f 'vllm serve' 2>/dev/null
 sleep 8
 nvidia-smi --query-gpu=memory.free --format=csv,noheader
 
-# 跑评分脚本
+# Run scoring script
 cd /tmp/vl30b_runs
 /workspace/SIA/venv4/bin/python -u compare_redo.py
 ```
 
-主评分脚本: [`exp/.../analysis/compare_redo.py`](../exp/rep-penalty-fix-validation-20260604/analysis/compare_redo.py) (VL-30B 全场对比)
-+ [`exp/.../analysis/compare_qwen14b.py`](../exp/rep-penalty-fix-validation-20260604/analysis/compare_qwen14b.py) (Qwen3-14B 跟 paper 对比)
+Main scoring scripts: [`exp/.../analysis/compare_redo.py`](../exp/rep-penalty-fix-validation-20260604/analysis/compare_redo.py) (VL-30B full comparison)
++ [`exp/.../analysis/compare_qwen14b.py`](../exp/rep-penalty-fix-validation-20260604/analysis/compare_qwen14b.py) (Qwen3-14B vs paper comparison)
 
-### A.8 VL-30B MMLU — noSIA arm
+### A.8 VL-30B MMLU — noSIA Arm
 
 ```bash
 cd /workspace/git/0g-sparse-inference-alignment
@@ -399,12 +399,12 @@ nohup /workspace/SIA/venv4/bin/python -u eval/mmlu_eval.py \
     > /tmp/vl30b_runs/mmlu_nosia_driver.log 2>&1 &
 ```
 
-跟之前 Qwen3-14B MMLU noSIA 命令 (`doc/eval-report.md`) 完全一致, 只换 LLM。
+Identical to the previous Qwen3-14B MMLU noSIA command (`doc/eval-report.md`), with only the LLM swapped.
 
-### A.9 VL-30B MMLU — SIA arm
+### A.9 VL-30B MMLU — SIA Arm
 
 ```bash
-# 1. vllm RM server (跟 A.1 一致, 端口 8001)
+# 1. vllm RM server (same as A.1, port 8001)
 nohup /workspace/SIA/venv4/bin/vllm serve \
   /workspace/SIA/models/VM-Qwen3-4B-merged-for-vllm \
   --runner pooling --convert classify \
@@ -413,7 +413,7 @@ nohup /workspace/SIA/venv4/bin/vllm serve \
   --max-model-len 4096 --port 8001 --host 0.0.0.0 --disable-log-stats \
   > /tmp/vl30b_runs/mmlu_sia_rm_server.log 2>&1 &
 
-# 2. 必做 RM /classify smoke test (见 A.2) 避免 broken-RM 坑
+# 2. Required: RM /classify smoke test (see A.2) to avoid broken-RM pitfall
 
 # 3. SIA LLM server
 cd /workspace/git/0g-sparse-inference-alignment
@@ -426,7 +426,7 @@ nohup /workspace/SIA/venv4/bin/python src/sia_vllm_server.py \
     --host 0.0.0.0 --port 8000 \
     > /tmp/vl30b_runs/mmlu_sia_server.log 2>&1 &
 
-# 4. Driver (跟 noSIA 一致, 只改 output 文件名)
+# 4. Driver (same as noSIA, only change the output filename)
 nohup /workspace/SIA/venv4/bin/python -u eval/mmlu_eval.py \
     --base_url http://localhost:8000/v1 \
     --model /workspace/SIA/models/Qwen3-VL-30B-A3B-Instruct \
@@ -435,45 +435,45 @@ nohup /workspace/SIA/venv4/bin/python -u eval/mmlu_eval.py \
     > /tmp/vl30b_runs/mmlu_sia_driver.log 2>&1 &
 ```
 
-跟 noSIA 的 5 处 diff (SIA 启用必需): `--rm_backend vllm` / `--rm_model VM-...-merged-for-vllm` / `--weight 1.0` / `--entropy_threshold 1.0` / 启动独立的 vllm RM server。
+5 diffs from noSIA (required to enable SIA): `--rm_backend vllm` / `--rm_model VM-...-merged-for-vllm` / `--weight 1.0` / `--entropy_threshold 1.0` / launch a separate vllm RM server.
 
 ---
 
-## Appendix B. SIA intervention 健康指标
+## Appendix B. SIA Intervention Health Metrics
 
-判断 SIA 是否真正运行 (避免 broken-RM 跑出 garbage 数据):
+How to determine whether SIA is truly running (to avoid producing garbage data from a broken RM):
 
-| 指标 | 健康范围 | 红灯 |
+| Metric | Healthy range | Red flag |
 |------|--------|------|
-| `intervention ratio` | 10-40% (entropy_threshold=1.0 下) | **0.0%** → RM 死了 |
-| `top1 flip rate` | 50-80% | 0% / 100% (有 bug) |
-| `RM error` 日志数 | **0** | >0 → 连接问题 |
-| `Connection refused` 日志数 | **0** | >0 → RM server 死了 |
-| SIA output vs noSIA output byte-identical | 应该 **不等** | 等 → broken |
+| `intervention ratio` | 10-40% (at entropy_threshold=1.0) | **0.0%** → RM is dead |
+| `top1 flip rate` | 50-80% | 0% / 100% (bug present) |
+| `RM error` log count | **0** | >0 → connection issue |
+| `Connection refused` log count | **0** | >0 → RM server is dead |
+| SIA output vs noSIA output byte-identical | should be **not equal** | equal → broken |
 
-检查命令:
+Check commands:
 ```bash
 SIA_LOG=/tmp/.../sia_llm_server.log
-grep -c "Connection refused\|RM error" $SIA_LOG  # 应该 0
+grep -c "Connection refused\|RM error" $SIA_LOG  # should be 0
 grep -E "intervened=" $SIA_LOG | awk -F'intervened=' '{split($2,a,"/"); split(a[2],b," "); intv+=a[1]; tot+=b[1]; n++} END {print "avg ratio =", intv*100/tot "%, reqs =", n}'
 ```
 
 ---
 
-## Appendix C. 已知 race condition + 启动顺序教训
+## Appendix C. Known Race Condition + Startup Order Lessons
 
-**问题**: 同时启动 vllm RM (port 8001) 和 SIA LLM (port 8000) 会让两个 vllm 进程**竞争 GPU 内存**:
-- vllm RM: `--gpu-memory-utilization 0.10` (希望占 10% = ~14GB)
-- SIA LLM: `--llm_gpu_mem 0.65` (希望占 65% = ~92GB)
-- 同时启动 → 总共 75% target, 但实际 vllm 估算 KV cache 大小时, 看到的"剩余空间"是错的
-- 概率性: RM 在 KV cache 分配阶段 **OOM 死亡**
+**Problem**: Starting vllm RM (port 8001) and SIA LLM (port 8000) simultaneously causes two vllm processes to **compete for GPU memory**:
+- vllm RM: `--gpu-memory-utilization 0.10` (targeting 10% = ~14GB)
+- SIA LLM: `--llm_gpu_mem 0.65` (targeting 65% = ~92GB)
+- Simultaneous start → total 75% target, but when vllm estimates KV cache size, the "remaining space" it sees is wrong
+- Probabilistically: RM **dies from OOM** during KV cache allocation
 
-**正确顺序**:
-1. 启动 RM, 等 /v1/models 200 + **/classify smoke test 返回 probs**
-2. **再** 启动 SIA LLM
-3. SIA LLM ready 后, **再次** ping RM /v1/models 确认它没死
-4. 跑 driver 第一题, 检查 SIA log 出现 `intervened=N/M (N>0)` 才确认 SIA 真活着
+**Correct startup order**:
+1. Start RM, wait for /v1/models 200 + **/classify smoke test to return probs**
+2. **Then** start SIA LLM
+3. After SIA LLM is ready, **ping RM /v1/models again** to confirm it has not died
+4. Run the driver's first question and check that the SIA log shows `intervened=N/M (N>0)` before confirming SIA is truly alive
 
-**坑的特点**: vllm RM 死后, FastAPI 进程残留 (`Z` 状态), `curl /v1/models` 在死亡前夕短暂可能仍返回 200 OK, ready 检查通过, **但后续 /classify 全部 Connection refused**, SIA processor 退化为 no-op, intervention 率 0%, 输出**跟 noSIA byte-identical**。
+**Pitfall characteristics**: After the vllm RM dies, the FastAPI process remains as a zombie (`Z` state). `curl /v1/models` may briefly still return 200 OK just before death, passing the readiness check — **but all subsequent /classify calls get Connection refused**, the SIA processor degrades to a no-op, intervention rate drops to 0%, and outputs are **byte-identical to noSIA**.
 
-这是为什么 Sanity 检查必须查 `/classify` (真正发请求), 不能只信 `/v1/models`。
+This is why the sanity check must query `/classify` (make a real request) and cannot rely on `/v1/models` alone.

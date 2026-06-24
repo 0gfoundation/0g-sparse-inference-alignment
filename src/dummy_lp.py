@@ -58,27 +58,27 @@ def make_dummy_processor(variant: str, topk: int = 5):
             print(f"[dummy-{_VARIANT}] LogitsProcessor ready", flush=True)
 
         def is_argmax_invariant(self) -> bool:
-            # noop / sync 都不改 logits, argmax 保持不变
+            # noop / sync do not modify logits, argmax is unchanged
             return True
 
         def update_state(self, batch_update: Optional[BatchUpdate]) -> None:
-            # 不需要维护 per-request state
+            # No per-request state to maintain
             pass
 
         def apply(self, logits: torch.Tensor) -> torch.Tensor:
             if _VARIANT == "noop":
-                # 完全不动 logits, 也不 sync — 测纯 hook 开销
+                # Do not touch logits, no sync — measure pure hook overhead
                 if self._PROFILE_DETAIL:
                     self._n_apply += 1
                     if self._n_apply % self._PF_INTERVAL == 0:
-                        # noop variant 没什么可记的, 只打 count
+                        # noop variant has nothing to record, just print count
                         print(f"[dummy-noop @{self._n_apply}] no work",
                               flush=True)
                 return logits
 
-            # variant == 'sync': 复刻 SIA processor 的 entropy + sync 流程,
-            # 不做决策, 不调 RM, 不动 logits。这是测"如果只做 SIA 的 sync
-            # 这一步, 开销多少"
+            # variant == 'sync': replicate SIA processor's entropy + sync flow,
+            # no decision, no RM call, no logits modification. Measures "how much
+            # does SIA's sync step alone cost"
             pf_on = self._PROFILE_DETAIL
             t0 = time.perf_counter() if pf_on else 0.0
 
@@ -91,7 +91,7 @@ def make_dummy_processor(variant: str, topk: int = 5):
             _ = entropies.cpu().tolist()  # GPU pipeline sync
             t_after_sync = time.perf_counter() if pf_on else 0.0
 
-            # 不做任何决策, 直接 return
+            # No decision made, return directly
             if pf_on:
                 self._pf_stats["apply_total"].append(
                     (t_after_sync - t0) * 1000)
