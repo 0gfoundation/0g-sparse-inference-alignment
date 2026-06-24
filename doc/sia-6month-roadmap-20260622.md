@@ -357,8 +357,6 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 1. **Hydragen 共享前缀 Attention**（[arxiv 2402.05099](https://arxiv.org/abs/2402.05099)，arxiv preprint（ICLR 2025 未能核实））  
    SIA 的 VM scoring 中，topK 个候选共享完全相同的前缀（prompt + 已生成 token）。Hydragen 将这部分 attention 抽取出来做一次 forward，理论上将 VM 候选评分从 K 次独立计算 → 1 次共享前缀 + K 次极短 suffix attention，并发吞吐改善显著。需修改 VM serving kernel，工作量约 2 周。
 
-2. **异步 VM 调用（SIA 工程探索，无直接论文支撑）**  
-   将 `SIALogitsProcessor` 的同步 VM 调用改为异步——当主 LLM 计算第 t+1 步 logits 时，第 t 步的 VM 打分已在后台线程并行完成。改造 `apply()` 的 blocking call 为 prefetch/overlap 模式，预期 TPOT 可减少 20-50%。**注意**：AsyncSpade（arxiv 2510.07486）原论文核心是异步稀疏 KV cache 筛选，与 VM 异步调用无关，不能作为本方向的参考；实现方案需自行设计验证，约 2 周工作量。
 
 ---
 
