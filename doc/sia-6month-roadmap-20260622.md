@@ -261,23 +261,18 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 
 - **工作量**：约 2-3 周（训练 + 初步 offline 验证）
 
-### 任务 2.3：两阶段粗过滤 PoC——0.6B VM 作为 4B VM 的守门员（VM 延迟优化，1–2 周）
+### 任务 2.3：两阶段粗过滤 PoC——0.6B VM 作为 4B VM 的守门员（实验性，1–2 周）
 
-**理论依据**：RSD（ICML 2025，arxiv 2501.19324）、SSS（EMNLP 2025，arxiv 2508.15044）、GSI（ICLR 2026，arxiv 2506.04118）三篇独立工作验证了两阶段架构的有效性：用小模型快速初筛，只在必要时调用大模型。其中 RSD 在 δ=0.7 阈值下，**约 48% 的问题可完全由 draft model 独立完成**（per-question 指标，非 per-call 跳过率）。
+**原理**：RSD（ICML 2025，arxiv 2501.19324）、SSS（EMNLP 2025，arxiv 2508.15044）、GSI（ICLR 2026，arxiv 2506.04118）验证了"小模型快速初筛、大模型精排"的两阶段架构。SIA 迁移方案：先用 VM-Qwen3-0.6B 对 K 个候选打分，若候选分数方差 < 阈值（差异不显著，干预价值低），跳过 4B VM；否则调用 4B VM 精排。
 
-需要注意：上述三篇论文的架构均为**小生成模型（LLM）门控大生成模型**，而非"小 RM 门控大 RM"。Task 2.3 将此思路迁移到 VM 场景（0.6B reward model 门控 4B reward model），是 SIA 的工程探索，原理相通但尚无顶会直接验证。
+> **注意**：上述三篇论文均为小 LLM 门控大 LLM，非"小 RM 门控大 RM"——迁移到 VM 场景尚无顶会直接验证。
 
-**SIA 实现方案**：利用官方已有的 VM-Qwen3-0.6B-Base checkpoint，在 `SIALogitsProcessor.apply()` 中增加第一阶段：先对当前所有候选用 0.6B VM 打分，计算 K 个候选分数的**方差**；若方差 < 阈值 δ（所有候选分数接近），则认为质量差异不显著、干预价值低，跳过 4B VM 直接用 0.6B 分数（或 0 偏置）；若方差 ≥ δ（候选间有明显质量分歧），则调用 4B VM 做更精确的排序。
+**速度瓶颈**：VM 每次调用有 ~12ms 固定开销（vLLM scheduler + IPC，不随模型大小缩减）。0.6B 的 GPU 计算仅 ~2ms，总调用约 **14ms**。由此，跳过率需超过 **47%** 才开始有净收益；在 50% 跳过率下，平均开销仅从 30ms 降至约 **29ms**。
 
-> **设计说明**：此方差门控逻辑与 RSD 的"draft 模型打分高→接受、打分低→调用大模型"在方向上不同——RSD 用绝对分数判断质量，本方案用候选间方差判断干预必要性。哪种逻辑在 SIA 场景更优是 PoC 要回答的实验问题。
+> **完成后收益（保守）**：若实测跳过率 ≥ 60%，VM 平均开销约 **23–26ms**（vs 当前 30ms，降幅约 15–23%）；效果损失待 A/B 实测。
 
-> **完成后收益**：VM 延迟：4B VM 调用减少约 40–50%，VM 平均开销从 30ms → ~17ms/step（0.6B 预筛约 3–5ms）；与 block-wise B=4 叠加后，VM 有效调用占比从 ~20% → ~3–5%；并发吞吐：conc=16 吞吐在 Month 1 基础上再提升。
-
-- **工作量**：1–2 周（加载 0.6B VM + 修改 apply() 逻辑 + A/B 对比验证）；与 2.1 数据收集并行执行
-- **架构前置验证（PoC 第一步）**：同进程内同时运行两个 `LLM()` 实例（0.6B + 4B）并配合 `VLLM_ENABLE_V1_MULTIPROCESSING=0` 是**尚未验证的架构**。vllm v1 的 EngineCore 以 spawn 模式启动，两个 InprocClient 共进程的行为未经实验确认，有潜在冲突风险。**PoC 第一天应先只验证两个 LLM() 实例能否在同进程内稳定并存**，再进行效果实验，避免 3-5 天白费。
-- **补充优化——cross-request 前缀 pin**（与 PoC 并行，约 3-5 天）：BatchLLM（[arxiv 2412.03594](https://arxiv.org/abs/2412.03594)）发现 vLLM APC 在高并发长前缀场景下因 LRU 驱逐导致命中率仅 6.3%（vs 显式 pin 的 92.6%）。SIA VM 的每条输入以 `system_prompt + partial_response` 为前缀，在 conc=16 时多请求共享同一 system_prompt 前缀块，当前 stable-prefix 优化已解决 per-request 内 KV 复用，但 **cross-request 维度**的前缀块仍可能被 LRU 驱逐。通过向 vLLM b2 后端注入前缀 pin 标记，可在 L+T 维度获得额外收益，预期 conc=16 VM per-call 延迟再降 10–20%。
-- **风险**：① 双 LLM 实例架构冲突（优先验证）；② 0.6B 预筛准确率不足，导致部分高价值干预被错误跳过；需 A/B 对比效果损失 vs 速度收益
-- **成功标准**：双 LLM 实例架构稳定运行（前提）+ 4B VM 调用减少 ≥ 30% + AlpacaEval win-rate 损失 ≤ 1%
+- **工作量**：1–2 周；与 2.1 数据收集并行，不阻塞 Month 2 主线
+- **成功标准**：同进程双 LLM 实例架构稳定运行（前提，vllm v1 共进程行为尚未验证）+ 4B VM 调用减少 ≥ 30% + AlpacaEval win-rate 损失 ≤ 1%
 
 ### Month 2 交付标准
 
