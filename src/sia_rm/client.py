@@ -185,6 +185,12 @@ class RMClient:
         self._sessions: dict[int, list[int]] = {}
         self._next_id = 0
 
+        # Cross-tokenizer incremental prefix cache (P-3).
+        # Maps sid → (prefix_len_at_last_encode, stable_rm_prefix_ids).
+        # Updated every time _get_stable_rm_prefix() is called; invalidated
+        # in end_session().  Only used when _cross_tokenizer is True.
+        self._rm_prefix_cache: dict[int, tuple[int, list[int]]] = {}
+
         # Cross-tokenizer bridge: when LLM tokenizer != RM tokenizer (e.g.
         # 0GM-35B uses 248K-vocab Qwen3.5 tokenizer, RM uses 151K-vocab
         # Qwen3 tokenizer; only 0.2% of overlapping ids match), score_candidates
@@ -293,9 +299,51 @@ class RMClient:
 
     def end_session(self, sid: int) -> None:
         self._sessions.pop(sid, None)
+        self._rm_prefix_cache.pop(sid, None)
 
     def session_length(self, sid: int) -> int:
         return len(self._sessions[sid])
+
+    def _get_stable_rm_prefix(self, sid: int, prefix: list[int]) -> list[int]:
+        """Return stable RM prefix IDs for cross-tokenizer sessions (P-3).
+
+        Encodes only the new LLM tokens since the last call and appends them
+        to the cached RM prefix, instead of re-encoding the full prefix text.
+        delta is typically ~4-5 (SKIP steps between INTERVENEs at 20% rate).
+        Encoding each token individually keeps every previous APC block's hash
+        unchanged across steps, maximising cross-step KV-cache reuse in the VM.
+
+        Falls back to full re-encode on first call or unexpected negative delta.
+        """
+        cached = self._rm_prefix_cache.get(sid)
+        cur_len = len(prefix)
+        if cached is not None:
+            cached_len, cached_ids = cached
+            delta = cur_len - cached_len
+            if delta == 0:
+                return cached_ids
+            if delta > 0:
+                # Encode each new LLM token individually and append.
+                # delta is typically the number of SKIP steps since the last
+                # INTERVENE (~4-5 with entropy_threshold=1.0).  Encoding one
+                # token at a time avoids BPE merges at the old prefix boundary,
+                # keeping every previous APC block's hash unchanged across steps.
+                stable = cached_ids
+                for i in range(delta):
+                    new_text = self._llm_tok.decode(
+                        [prefix[cached_len + i]], skip_special_tokens=False
+                    )
+                    new_rm_ids = self._rm_tok.encode(
+                        new_text, add_special_tokens=False
+                    )
+                    stable = stable + new_rm_ids
+                self._rm_prefix_cache[sid] = (cur_len, stable)
+                return stable
+        # First call for this session, or unexpected negative delta — full re-encode.
+        prefix_text = self._llm_tok.decode(prefix, skip_special_tokens=False)
+        stable = self._rm_tok.encode(prefix_text, add_special_tokens=False)
+        self._rm_prefix_cache[sid] = (cur_len, stable)
+        return stable
 
     # ---- scoring ----
 
@@ -329,21 +377,15 @@ class RMClient:
             # + VM-Qwen3-4B). Decode the LLM-side prefix + each candidate to
             # text, then re-encode with the RM tokenizer.
             #
-            # P-2: 稳定前缀优化 — 对前缀文本只编码一次，让 10 个候选共享完全
-            # 相同的 rm_ids 前缀。好处：
-            #   同一步内：所有候选的 prompt_token_ids 前缀完全相同 → vllm APC
-            #     在第一个候选 forward 时缓存 KV，其余 9 个直接命中，每个候选
-            #     实际只 forward 1-3 个 suffix token（候选本身）。
-            #   跨步之间：前缀每步增长 ~1-2 个 RM token，98%+ 的 block 不变
-            #     → APC 跨步几乎全命中，增量 forward 极少。
-            # 近似误差：split 编码与整体编码在 BPE 边界处差 1-2 个 token，
-            # 但 SIA 只看相对排名，边界噪声可忽略。
-            prefix_text = self._llm_tok.decode(
-                prefix, skip_special_tokens=False
-            )
-            stable_rm_prefix_ids = self._rm_tok.encode(
-                prefix_text, add_special_tokens=False
-            )
+            # P-2: 稳定前缀 — prefix 编码一次，K 个候选共享，同步内 APC 全命中。
+            # P-3: 增量缓存 — 每步只编码新增的 delta 个 LLM token（逐 token），
+            #   append 到缓存前缀；delta ≈ 4-5（两次 INTERVENE 间的 SKIP 步数）。
+            #   效果：跨步的完整 block 哈希完全不变 → APC 跨步 100% 命中，
+            #   每个 prompt 仅需 forward tail (P mod 16) + candidate ≈ 8 tokens，
+            #   而不是全量重编后 last-block-miss 的 ~25 tokens。
+            # 近似误差：增量拼接在 BPE 边界处差 1-2 token，但 SIA 只看相对排名，
+            # 边界噪声可忽略（与 P-2 的 split 编码误差同性质）。
+            stable_rm_prefix_ids = self._get_stable_rm_prefix(sid, prefix)
             prompts = []
             for c in candidate_token_ids:
                 cand_text = self._llm_tok.decode([c], skip_special_tokens=False)
@@ -393,6 +435,101 @@ class RMClient:
                 f"prompts."
             )
         return rewards
+
+    def score_candidates_batch(
+        self,
+        requests: list,
+    ) -> list:
+        """Score candidates for multiple sessions in a single llm.generate() call.
+
+        Args:
+            requests: list of (sid, candidate_token_ids) pairs.
+                      fix_a_token must already have been called for all new
+                      output tokens before this call (same contract as
+                      score_candidates).
+
+        Returns:
+            list of Tensor, one per request, each shape (K_i,).
+            Order matches the input list.  Same device/dtype contract as
+            score_candidates() — GPU tensor in inproc mode, CPU in multiprocess.
+        """
+        if not requests:
+            return []
+        # Single-request fast-path: delegate to the existing method so all
+        # its error-handling and edge cases remain in one place.
+        if len(requests) == 1:
+            sid, cands = requests[0]
+            return [self.score_candidates(sid, cands)]
+
+        TP = self._TokensPrompt
+        all_prompts: list = []
+        offsets: list = []   # (start, end) index into all_prompts per request
+
+        for sid, candidate_token_ids in requests:
+            if sid not in self._sessions:
+                raise ValueError(f"Unknown session id {sid}")
+            prefix = self._sessions[sid]
+            start = len(all_prompts)
+            n = len(candidate_token_ids)
+
+            if self._cross_tokenizer:
+                # P-2 + P-3: stable prefix (same encoding for all K candidates)
+                # with incremental cross-step caching — see score_candidates().
+                stable_rm_prefix_ids = self._get_stable_rm_prefix(sid, prefix)
+                for c in candidate_token_ids:
+                    cand_text = self._llm_tok.decode([c], skip_special_tokens=False)
+                    cand_rm_ids = self._rm_tok.encode(
+                        cand_text, add_special_tokens=False
+                    )
+                    all_prompts.append(
+                        TP(prompt_token_ids=stable_rm_prefix_ids + cand_rm_ids)
+                    )
+            else:
+                for c in candidate_token_ids:
+                    all_prompts.append(TP(prompt_token_ids=prefix + [c]))
+
+            offsets.append((start, start + n))
+
+        n_total = len(all_prompts)
+
+        if self._multiprocessing:
+            truncate_rewards()
+        else:
+            clear_inproc_rewards(self._fid)
+
+        _ = self.llm.generate(all_prompts, self._sp, use_tqdm=False)
+
+        if self._multiprocessing:
+            all_rewards = read_rewards()
+        else:
+            all_rewards = take_inproc_rewards(self._fid)
+
+        if all_rewards is None or all_rewards.numel() != n_total:
+            n_got = 0 if all_rewards is None else int(all_rewards.numel())
+            channel = "/dev/shm" if self._multiprocessing else "inproc buffer"
+            if self._multiprocessing:
+                records = read_all_rewards()
+                shapes = [tuple(r.shape) for r in records]
+                detail = f"records seen: {shapes}"
+            else:
+                detail = ""
+            raise RuntimeError(
+                f"reward channel ({channel}) returned {n_got} values, "
+                f"expected {n_total} (batch of {len(requests)} sessions). "
+                f"{detail}"
+                f"Likely SIA_REWARD_FILE_ID mismatch or vLLM reordered prompts."
+            )
+
+        # ORDERING ASSUMPTION: offsets slicing is correct only if vLLM processes
+        # prompts in the order they were submitted to llm.generate().  This holds
+        # because vLLM v1's InprocClient adds all requests synchronously (FIFO) and
+        # the scheduler's WAITING queue is drained in arrival order (verified
+        # empirically for single-session K-prompt batches; applies to multi-session
+        # N×K batches as long as vLLM does not introduce APC-aware request reordering
+        # in a future release).  The numel check above catches count mismatches but
+        # NOT ordering errors — a silent wrong-score bug would result if vLLM ever
+        # reorders.
+        return [all_rewards[start:end] for (start, end) in offsets]
 
     # ---- bench / introspection ----
 
