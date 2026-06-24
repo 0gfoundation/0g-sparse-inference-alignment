@@ -217,8 +217,8 @@ def compute_metrics(ok: list, wall_s: float) -> dict:
     ttfts = [r["ttft_ms"] for r in ok if r.get("ttft_ms")]
     itls  = [r["itl_ms"]  for r in ok if r.get("itl_ms") and r["itl_ms"] > 0]
     lats  = [r["latency_ms"] for r in ok if r.get("latency_ms")]
-    pts   = [r["prompt_tokens"] for r in ok]
-    cts   = [r["completion_tokens"] for r in ok]
+    pts   = [r.get("prompt_tokens", 0) for r in ok]
+    cts   = [r.get("completion_tokens", 0) for r in ok]
     return {
         "n":          len(ok),
         "input_mean": int(statistics.mean(pts)) if pts else 0,
