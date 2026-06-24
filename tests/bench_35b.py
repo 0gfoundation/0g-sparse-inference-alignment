@@ -491,8 +491,10 @@ async def do_stress_test(
         default=None,
     )
     if best:
-        print(f"\n  🏆 峰值吞吐：conc={best['conc']}  tok/s={best['m']['out_tps']:.1f}"
-              f"  ITL={best['m']['itl_mean']:.1f}ms")
+        bm = best["m"]
+        print(f"\n  🏆 峰值吞吐：conc={best['conc']}  tok/s={bm['out_tps']:.1f}"
+              f"  ITL={bm['itl_mean']:.1f}ms"
+              f"  input={bm['input_mean']}tok  output={bm['out_mean']}tok")
     if stop_reason:
         print(f"  🛑 停止原因：{stop_reason}\n")
 
