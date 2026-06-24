@@ -1,8 +1,5 @@
 # SIA Roadmap（2026-05 回顾 + 2026-07 ~ 2026-12 计划）
 
-**撰写日期**：2026-06-22  
-**执笔**：工程侧  
-
 ---
 
 ## Overview
@@ -18,32 +15,42 @@
 两个月内完成核心系统，0GM-VL-35B 和 Qwen3-VL-30B 两个主力模型均已接近上线标准：
 
 - **效果已验证**：0GM-VL-35B 开启 SIA 后，综合对话质量 AlpacaEval 胜率 **65.4%**（191 配对中 SIA 版本有 65.4% 被评为更优，125/191 对）；MMLU 准确率无明显下降
-- **性能有代价**：高并发场景（16 路并发）吞吐量约为不开 SIA 的 **35%**，即同等硬件可服务的请求量减少约 65%
+- **性能有代价**：单请求串行吞吐约为不开 SIA 的 **59–64%**（0GM-35B 59–61%，VL-30B 64%）；高并发场景（16 路并发）吞吐量约为不开 SIA 的 **35%**，即同等硬件可服务的请求量减少约 65%
+
+### 三个核心痛点（当前状态）
+
+| 痛点 | 当前状态 | 根因 |
+|------|---------|------|
+| **效果高度依赖配置** | 0GM-35B natural thinking：**win rate 65.4%（191 配对），Δ=+4.05**；0GM-35B ban_think：**win rate 54%，Δ=+0.72（不显著）**；VL-30B：**win rate 63%（122/195），Δ=+4.2%~+8.3%，两轮均显著**；Qwen3-14B 同家族：**+13.2%（复现论文）**。MMLU：same-family（VL-30B）无明显下降；0GM-35B 跨家族下降 **−5.5 至 −12.2pp** | **① VM 代际/家族不匹配（主因）**：VM-4B 基于 Qwen3 base（训练 cutoff 2025-04），0GM-35B 为 2026 年新模型，能力差距 W2S=8.75×、时间差 8–12 个月、词表差 248K vs 151K；三组对比结果严格单调（W2S 越大效果越差）。**② VM 分布外用法**：VM 训练任务为完整答案对偏好评分，SIA 实际任务为 partial response + 1 token 的 step-level value prediction，分布不匹配导致打分信号噪声高。**③ 跨分词器 BPE 边界噪声**：0GM-35B 词表 248K vs VM 词表 151K，stable prefix 优化前 APC miss 导致打分不稳定（stable prefix 已部分解决）。④ VM 训练数据量/质量未充分验证 |
+| **VM 延迟高** | **0GM-35B ~30ms/call**（stable prefix 优化后，之前高达 34–50ms 且随序列增长）；**VL-30B 11ms/call**（CUDA graph 开启） | **① 无 CUDA graph（最大贡献）**：vllm 0.18.0 存在 WeakSet bug，主 LLM profiling 阶段 `clear_all_graphs()` 清除了 RM 的 CUDA graph，导致运行时崩溃，0GM-35B 被迫走 eager 路径；VL-30B 上 CUDA graph 使 VM 延迟 71ms→11ms（6.4×）。**② 跨分词器 BPE 边界开销（0GM-35B 特有）**：每步需 decode+re-encode，加上 eager dispatch overhead，合计约 7ms gap；是 0GM-35B vs VL-30B 延迟差异的第二大来源。**③ small-batch memory-bound**：每次 VM forward batch size 极小（topk×1–2 token），但需读全部 ~8GB 权重，GPU 处于 memory-bound 状态 |
+| **高并发吞吐损失** | 批量打分优化后：conc=16 SIA tok/s 369，**35% of noSIA**。完整并发扫描（35B）：conc=4→48%、8→42%、16→35%。**30B 对照**：conc=16 时 66%（vs 35B 的 35%），差距源于跨分词器使 0GM-35B 单次 VM 调用 ~3ms vs 30B 的 ~1.5ms，串行 16 次时累积差距 2× | 当前三个瓶颈（conc=16 ITL 3.0×，41.3ms vs noSIA 13.6ms）：① **APC partial tail compute ~15ms/batch（最大贡献，结构性不可消除）**：每次 VM batch forward 的候选前缀仅 ~15 token，不满一个 APC block（16 token），尾部碎片每步必须完整 prefill；② **无 CUDA graph ~5ms/call（可修复）**：vllm 0.18.0 WeakSet bug 导致 VM 走 eager 路径，每 batch step 有 kernel dispatch overhead；③ **跨分词器 CPU 编码 ~0.5ms**（P-3 优化后已轻微）。其中 ~15ms 为结构性下限，~5ms 可通过 CUDA graph 修复 |
+
+<sub>后续用字母简称：**E** = 效果高度依赖配置；**L** = VM 延迟高；**T** = 高并发吞吐损失。</sub>
 
 ### 两个阶段的工作重心
 
-过去两个月属于**"无损加速"阶段**：在完全不改动 SIA 干预逻辑的前提下，通过纯工程手段（批量打分合并、b2 inproc 架构、跨分词器前缀缓存）将高并发吞吐从基线提升 54%，对齐效果不受影响。这类优化风险极低、收益确定、结果可直接用吞吐数字衡量。
+过去两个月属于**"工程对齐"阶段**：以 NTU SIA 原论文（arxiv 2602.21215）为基准，**刻意不改动任何算法和模型**——干预逻辑、VM 结构、训练权重完全保持原样——目的是先在生产环境复现论文声称的效果，再通过纯工程手段（b2 inproc 架构、用 vLLM 代替低速的 PyTorch、批量打分合并）消除部署开销。这样做保证了任何效果变化都可归因于工程实现，而非算法调整。高并发吞吐从基线提升 54%，优化风险极低、收益确定、结果可直接用吞吐数字衡量。
 
-接下来 6 个月进入**"实验探索"阶段**：引入 Value Model 重新训练、新干预算法（乘积式融合、PRM、accept/reject）和多模态扩展。这些方向**每一项都有不确定性**——新训练的 VM 效果可能不如旧 VM，算法改进可能只在特定任务上有效，实验结果有好有坏。因此后续计划的交付标准更多是"A/B 有结论"而非"数字必须达标"，里程碑也相应保留了保守/乐观两个场景。
+接下来 6 个月进入**"跳出原论文"阶段**：工程对齐已完成，接下来要**主动突破 SIA 原始论文的边界**，大胆尝试算法改动（乘积式融合、block-wise scoring、accept/reject 采样）、模型改进（同词表 VM 重训、更强 base model、更大训练数据集）和训练数据增强（步骤级标注、多模态偏好对）。这些方向**每一项都会对效果产生影响**，结果有好有坏，不能保证优于现状。因此后续计划的交付标准更多是"A/B 有结论"而非"数字必须达标"，里程碑也相应保留了保守/乐观两个场景。
 
 ### 接下来 6 个月的计划
 
 计划分三个阶段，核心目标是将 SIA 的性能代价从"显著"降低到"可忽略"，同时持续提升对齐效果。
 
 **阶段一（Month 1）：减少打分频率，补建 GPT-4 评估基准**  
-通过智能跳过"不重要的 token"，将评分模型（Value Model）的调用次数减少 50% 以上，在几乎不损失对齐效果的前提下大幅降低开销；同时在现有 Skywork judge 基准的基础上补建 GPT-4 标准评估基准，为后续所有改进提供与业界可比的量化依据。
+通过智能跳过"不重要的 token"，将评分模型（Value Model）的调用次数降至原来的 1/4（减少约 75%，从 ~20% 干预率降至 ~5%），在几乎不损失对齐效果的前提下大幅降低开销；同时在现有 Skywork judge 基准的基础上补建 GPT-4 标准评估基准，为后续所有改进提供与业界可比的量化依据。
 
 **阶段二（Month 2–3）：换一个更快的评分模型**  
-当前评分模型与主模型使用不同词表，每次打分都需要额外的词表重编码（CPU 编码 ~2ms + eager 调度 ~5ms，合计约 7ms 额外开销）。训练一个词表完全一致的评分模型，预计将单次打分延迟从 ~30ms 降至 ~11ms；同时验证"乘积式融合"（比当前加法干预更精准的介入方式）能否进一步提升对齐效果。
+当前评分模型与主模型使用不同词表，每次打分都需要额外的词表重编码（CPU 编码 ~2ms + eager 调度 ~5ms，合计约 7ms 额外开销）。训练一个词表完全一致的评分模型，预计将单次打分延迟从 ~30ms 降至 ~23ms（消除跨分词器 ~7ms）；如 CUDA graph 同步修复则可进一步降至 ~11ms；同时验证"乘积式融合"（比当前加法干预更精准的介入方式）能否进一步提升对齐效果。
 
 **阶段三（Month 4–6）：更强的评分能力 + 多模态扩展**  
-引入能理解"推理过程"的过程奖励模型（PRM），在关键决策点精准干预而非盲目打分；同时将 SIA 扩展至多模态，支持图片输入，覆盖更广的业务场景。
+评估步骤级干预（PRM）的可行性——先以无需训练的步骤级 pause-and-rerank（在每个推理步骤结束时让模型试探 3 条方向、选最优继续，参数设计借鉴 AdaDec）验证增量效果，再视结论决定是否训练外部 PRM（RSD 在 MATH500/AIME 验证的有效方案）；同时将 SIA 扩展至多模态，支持图片输入，覆盖更广的业务场景。
 
 ### 6 个月目标
 
 | 维度 | 当前（2026-06） | 保守目标（CUDA graph 仍不可用）| 乐观目标（CUDA graph 恢复后）|
 |------|--------------|-------------------------------|-------------------------------|
-| 高并发吞吐（SIA vs 无 SIA） | **35%** | **≥ 55%** | **≥ 72%** |
+| 高并发吞吐（SIA vs 无 SIA） | **35%** | **≥ 53%** | **≥ 72%** |
 | 单次打分延迟 | ~30ms | ~23ms（消除跨分词器 ~7ms）| ~11ms（追加 CUDA graph）|
 | 多模态支持 | 仅文本 | 文本 + 图片 | 文本 + 图片 |
 | 标准评估基准 | Skywork judge 已有基准；GPT-4 judge 待建立 | Month 1 补建 GPT-4 judge，持续追踪 | Month 1 补建 GPT-4 judge，持续追踪 |
@@ -54,13 +61,13 @@
 
 ```
 Month -2 ██ 项目启动 ██ 批量前向 ██ 首次效果评估          [已完成]
-Month -1 ██ b2 inproc ██ Bug修复 ██ 上线生产 ██ 高并发优化 [已完成]
+Month -1 ██ b2 inproc ██ Bug修复 ██ 上线生产准备完成 ██ 高并发优化 [已完成]
 ─────────────────────── 当前（2026-06-22）──────────────────
 Month 1  ██ block-wise scoring ██ 双熵门控 ██ GPT-4 评估基准
 Month 2  ██ 两阶段粗过滤PoC ██ 数据收集 ██ ARM VM 训练
 Month 3  ██ 同词表 VM 上线（含 MoE 选型） ▶ 乘积式融合A/B
 Month 4  ██ 更强VM ██ accept/reject ▶ 极小judge PoC ▶ 多模态数据准备
-Month 5  ██ PRM 训练（全月主线）
+Month 5  ██ PRM 可行性评估（全月主线）
 Month 6  ██ 多模态VM训练 ██ 多模态VM上线
 ```
 
@@ -86,7 +93,7 @@ Month 6  ██ 多模态VM训练 ██ 多模态VM上线
 
 ---
 
-## Month -1（2026-05-22 ~ 2026-06-22）：架构突破 + 上线生产
+## Month -1（2026-05-22 ~ 2026-06-22）：架构突破 + 上线生产准备完成
 
 > 完成核心架构升级，修复重大效果回归 bug，两个模型全部上线 marketplace。
 
@@ -95,7 +102,7 @@ Month 6  ██ 多模态VM训练 ██ 多模态VM上线
 **1. b2 inproc VM 架构落地**（5 月下旬）  
 将 VM 从独立 HTTP 进程改为嵌入式 nested vLLM 实例（进程内函数调用），彻底消除网络往返开销（~20–30ms/次）。结合 VM CUDA Graph（Qwen3-VL-30B）和主 LLM CUDA Graph 修复（去除 PIECEWISE-only 限制）：
 - Qwen3-VL-30B：HTTP ~36 tok/s → b2 inproc **78.3 tok/s**（**+117%**）
-- 0GM-VL-35B：HTTP ~32 tok/s → b2 inproc 初始 **~49 tok/s**（**+50%**）；叠加 §3 stable prefix 后最终 **66–68 tok/s**（**+106%**）
+- 0GM-VL-35B：HTTP ~32 tok/s → b2 inproc + PIECEWISE fix **54.1 tok/s**（**+69%**）；叠加 §3 stable prefix 后最终 **66–68 tok/s**（**+106%**）
 
 **2. repetition_penalty 关键 Bug 修复**（6 月 4 日）  
 发现 `repetition_penalty` 默认值 1.3 与 SIA logit 干预叠加，导致评估数据显示 SIA Δ = −13% 至 −75%（错误结论）。修复为 1.0 后，SIA 效果全面恢复正向：
@@ -140,19 +147,11 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 | 评估 | 结果 | 备注 |
 |------|------|------|
 | MMLU thinking 模式（0GM-VL-35B，150Q 对照）| SIA vs noSIA 无明显变化 | 已排除 rep_penalty bug |
-
-<sub>多次实验（VL-30B ±1–3pp、14B ±1pp）均统计不显著；0GM-35B thinking 模式有 +12pp 例外，主要源于 SIA 减少了 thinking 截断（noSIA cap-hit 25.3% → SIA 8.0%），非通识知识本身提升，待多次重复后再下结论。</sub>
 | AlpacaEval win-rate（0GM-VL-35B）| **65.4%**（Skywork judge，**191 配对**）| Skywork judge 基准已建立（200Q 中 9 题因超 RM 上限排除）；GPT-4 judge 尚未跑，Month 1 补建 |
 | AlpacaEval Skywork Δ（0GM-VL-35B）| **+5.45 reward（+22.7%）** | SIA mean 29.46 vs noSIA 24.01（191 对口径，实验 stable-prefix-20260610）|
 | Qwen3-VL-30B AlpacaEval（b2 inproc，200Q）| SIA Skywork mean **+1.22~+2.38（+4.2%~+8.3%）**，两轮均显著 | GPT-4 judge 尚未跑；两轮 Δ 有波动，统计噪声正常（见 doc/alpaca-eval-vl30b-b2-docker-20260608.md）|
 
-### 三个核心痛点（当前状态）
-
-| 痛点 | 当前状态 | 根因 |
-|------|---------|------|
-| **E 效果不显著** | AlpacaEval 65.4%（Skywork judge，191 配对）；MMLU 无明显下降 | 跨分词器噪声可能影响 VM 打分精度；GPT-4 judge 独立验证尚未完成 |
-| **L VM 延迟高** | 0GM-VL-35B ~30ms/call | dense 4B VM，memory-bound，无 CUDA graph |
-| **T 高并发吞吐损失** | conc=16 仅 35% of noSIA | VM 调用仍占关键路径；每 token 都可能调用 |
+<sub>MMLU 注：多次实验（VL-30B ±1–3pp、14B ±1pp）均统计不显著；0GM-35B thinking 模式有 +12pp 例外，主要源于 SIA 减少了 thinking 截断（noSIA cap-hit 25.3% → SIA 8.0%），非通识知识本身提升，待多次重复后再下结论。</sub>
 
 ---
 
@@ -166,7 +165,7 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 
 > **完成后收益**：VM 实际调用率从当前 ~20%（熵门控）降至 ~5%（block-wise 叠加），每 token 摊销的 VM 调用开销降低约 75%（per-call p50 延迟 ~30ms 不变，调用次数降至原来 1/4），conc=16 吞吐从 369 tok/s 预计升至 ~500+ tok/s。
 
-- **理论依据**：arxiv 2503.02368 实测 per-token RM 比 block-wise(4) 慢 2.7-4.4×（来源：论文数据，未经内部独立实验核实，实际收益以 SIA A/B 实测为准）
+- **理论依据**：减少 VM 调用次数至 1/B 直接降低 VM 累计开销，是工程上的显然推论，无需单独引用。具体加速比以 SIA A/B 实测为准。**关于跳过 3/4 高熵 token 是否损失效果**：SIA 原论文（arxiv 2602.21215）已给出直接依据——只干预 ~20% 的高熵 junction（而非全量 100%）即可达到甚至超过全量干预的对齐效果，说明绝大多数 token 位置的干预贡献接近零，干预价值在序列中高度不均匀。Block-wise 是在熵门控（已筛出 ~20%）的基础上再跳过 3/4：刚发生干预后，模型已被引导到高奖励轨迹，后续几步 token 沿该轨迹自然延伸，此时立即再次干预的边际价值低（cooldown window 设计正是基于此）。效果损失的实际上界取决于被跳过的 token 中有多少是真正独立的高价值 junction，这是 Month 1 A/B（B=2/4/8）要定量回答的核心问题。
 - **实现方案选择**：
   - **固定 block（简单）**：只在位置 4/8/12/… 检查熵，实现简单，但关键 token 若落在 block 前三位会被机械跳过。
   - **cooldown window（推荐）**：每次干预触发后，抑制接下来 N 个 token 的检查（`cooldown_remaining` 计数器递减）；无干预时恢复正常熵检查。优势：刚校正过的位置附近风险低，可跳过；关键 junction 不会因固定步长错过。实现同样简单（在 `apply()` 中加一个 per-request 计数器），效果损失预期优于固定 block。两种方案均纳入 Month 1 A/B 对比。
@@ -175,17 +174,20 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 
 **补充备选——Vocabulary-wide Reward Head**（[arxiv 2502.04517](https://arxiv.org/abs/2502.04517)，ICML 2025）：当前 SIA 对 top-K 候选分别做 forward，即使 batch 合并仍是 K 条序列。该论文将 RM head 改为单次 forward 输出**整个 vocab 的 reward 分数**，从 K 次 → 1 次 forward，理论 VM 延迟改善 topK 倍。工作量：需修改 VM 推理接口，适合在 Month 2 训练同词表 VM 时一并实现，而非 Month 1 改动现有模型。本月只需了解架构方案。
 
-### 任务 1.2：双熵门控替换单熵门控
+### 任务 1.2：双门控替换单熵门控
 
 现有门控：主模型熵 > θ 才干预（单熵）。  
-改为：主模型熵 > θ₁ **且** VM 上一步评分也显示高不确定性时才干预（双熵）。  
+改为：主模型熵 > θ₁ **且** VM 上一步打分显示候选之间分歧较小时才干预（双门控）。  
 减少低质量的无效干预，同时减少 VM 调用次数约 20-30%。
+
+**"VM 分歧"的具体定义**：VM 上一次调用时，最高分候选与次高分候选的 reward score 差值 < δ（差距小 = VM 对哪个更好没把握 = 当前位置语义敏感，值得继续干预）；差距大（VM 强烈偏好某候选）= 当前区域 VM 信号稳定，短期内干预价值低，可跳过。与 block-wise 组合时的边界处理：若上一次 VM 调用已超过 B 步（即 block-wise 跳过期间），缺少近期分歧数据，**默认触发干预**（保守策略，避免因缺少历史数据而误跳过关键位置）。
 
 > **完成后收益**：VM 有效调用率（延迟/吞吐）在 block-wise 基础上再降 ~20-30%，端到端吞吐额外提升 ~10-15%；无效干预减少同时轻微改善对齐效果（降低噪声干预比例）。
 
-- **理论依据**：EASD（arxiv 2512.23765）提出分层熵门控方案，在 speculative decoding 中引入两级熵阈值（注：EASD "减少 25% 无效干预"的具体数值未经内部独立核实，实际收益以 SIA A/B 实测为准）；TARo（arxiv 2603.18411）进一步表明基于当前步不确定性的自适应路由优于固定比例干预。
-- **补充文献**：Learning Adaptive Decoding（[arxiv 2603.09065](https://arxiv.org/abs/2603.09065)，2026 preprint）表明仅用熵判断不够，建议引入 learned routing policy（小分类头，基于 token 上下文特征决定是否干预）——可与双熵门控串联作为 Month 1 进阶探索。"To Intervene or Not"（[arxiv 2606.11201](https://arxiv.org/abs/2606.11201)，ACL 2026）提供概率性干预框架，可在固定熵阈值之上叠加不确定性置信度，预期再减少 ~30% 无效调用。
-- **工作量**：约 1 周（`apply()` 中增加一个状态缓存）
+- **理论依据**：**"To Intervene or Not"**（[arxiv 2606.11201](https://arxiv.org/abs/2606.11201)，ACL 2026）直接研究"何时干预"的决策问题，提出当基础模型置信度低时（最大 token 概率 < 0.4）用两模型置信度比计算**软混合权重**取代二元干预，实验表明非均匀干预优于始终干预；方向支持本任务的双门控思路，但该论文的机制是软混合而非硬阈值。**TARo**（arxiv 2603.18411）提出 end-to-end **学习得到**的 token 级路由器，自动决定每个位置的干预力度，实验提升最高 +22.4%；结论支持"自适应策略优于固定策略"，但 TARo 的路由器需要训练，与本任务的规则型 score 差值门控不同。
+- **注意**：EASD（arxiv 2512.23765）的"双熵"针对两个生成模型（draft + target），两者均有 token 概率分布可算 entropy，与 SIA 的 reward model 场景**不直接适用**，不作为本任务的理论依据。
+- **补充文献**：Learning Adaptive LLM Decoding（[arxiv 2603.09065](https://arxiv.org/abs/2603.09065)，2026 preprint）建议引入 learned routing policy（小分类头，基于上下文特征决定是否干预）——可与双门控串联作为 Month 1 进阶探索。
+- **工作量**：约 1 周（`apply()` 中增加一个 per-request 状态缓存，记录上一次 VM 调用的 score 差值和距上次调用的步数）
 
 ### 任务 1.3：补建 GPT-4 标准评估基准
 
@@ -201,7 +203,7 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 
 - **评估框架**：AlpacaEval 2.0（arxiv 2404.04475）以 GPT-4 为 judge 计算 win-rate，200 题固定集保证跨实验可比性，相比人工评估成本降低约 100×。
 - **VM 质量基准**：同时使用 RMB（[arxiv 2410.09893](https://arxiv.org/abs/2410.09893)，ICLR 2025）和 RewardBench 2（[arxiv 2506.01937](https://arxiv.org/abs/2506.01937)，2026）评估 VM-Qwen3-4B 的原始评分质量，建立"VM 能力 → SIA 效果"的映射关系，指导 Month 2 VM 训练目标。
-- **⚠️ Reward Hacking 风险**：Inference-Time Reward Hacking（[arxiv 2506.19248](https://arxiv.org/abs/2506.19248)，NeurIPS 2025 Spotlight）表明推理时 RM 干预会导致分布外样本触发奖励黑客，尤其在 --weight 较大时。Task 1.3 的评估 pipeline 应同步设计奖励异常检测指标（如输出长度分布、重复率、困惑度），避免 SIA 在某些问题上"刷高分实为退化"。
+- **⚠️ Reward Hacking 风险**：Inference-Time Reward Hacking（[arxiv 2506.19248](https://arxiv.org/abs/2506.19248)，NeurIPS 2025 Spotlight）表明推理时 RM 干预对 true reward 呈**先升后降的倒 U 形曲线**——代理奖励随干预强度单调上升，但 true reward 在超过最优点后开始下降；这是普遍规律而非仅在 --weight 较大时才触发。Task 1.3 的评估 pipeline 应同步设计奖励异常检测指标（如输出长度分布、重复率、困惑度），避免 SIA 在某些问题上"刷高分实为退化"。
 - **工作量**：约 1 周
 
 ### Month 1 交付标准
@@ -221,7 +223,7 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 **为什么同词表是最高优先级**：当前 VM（Qwen3-4B）和主 LLM（0GM-VL-35B）使用不同 tokenizer（Qwen3 151K 词表 vs Qwen3.5 248K 词表）。这意味着 VM 看到的 prefix token ID 与主 LLM 生成的 token 不是一一对应的，评分信号存在系统性噪声。同词表训练一次性解决：
 
 - 跨分词器噪声消除 → 评分精度提升（对齐效果提升）
-- stable prefix 替代方案可退役 → 消除跨分词器 CPU 编码开销（~2ms）和 eager mode 内核调度开销（~5ms，源于无 CUDA graph），b2_score_call 从 ~30ms 降至 **~11ms**（VM 延迟降低）
+- stable prefix 替代方案可退役 → 消除跨分词器 CPU 编码开销（~2ms）和跨分词器引起的 eager mode 内核调度开销（~5ms），b2_score_call 从 ~30ms 降至 **~23ms**（VM 延迟降低；CUDA graph 仍不可用，故无法降至 ~11ms）
 - 每次调用读取的 HBM 数据量不变，但质量更好（并发吞吐间接改善）
 
 > **注意（来自已有实验）**：RM CUDA graph 在 0GM-35B 上经三轮修复均失败，已完全排除。根本原因是 RM 为 prefill-heavy workload，与 vllm PIECEWISE 的优化目标不兼容，同词表 VM 无法改变这一本质。同词表带来的延迟改善**仅来自消除跨分词器开销（~7ms）**，而非 CUDA graph——详见[附录：0GM-35B CUDA Graph 调试过程](#appendix-cuda-graph)。
@@ -243,35 +245,34 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 
 以 Qwen3.5-4B（248K 词表，与 0GM-VL-35B 相同）为 base 训练 reward head。
 
-> **完成后收益**（Month 3 上线后生效）：对齐效果：跨分词器噪声消除，VM 评分质量显著提升；VM 延迟：b2_score_call 从 ~30ms → ~11ms（消除跨分词器编码开销 ~2ms + eager mode 调度开销 ~5ms）；若 vocabulary-wide head 实现，VM 延迟额外改善最多 topK 倍（topK=10 时理论最高 10×）。
+> **完成后收益**（Month 3 上线后生效）：对齐效果：跨分词器噪声消除，VM 评分质量显著提升；VM 延迟：b2_score_call 从 ~30ms → ~23ms（消除跨分词器开销共 ~7ms：CPU 编码 ~2ms + eager mode 调度 ~5ms；CUDA graph 仍不可用，~23ms 为实际下限）；若 vocabulary-wide head 实现，VM 延迟额外改善最多 topK 倍（topK=10 时理论最高 10×）。
 
 **训练目标**：沿用原 SIA VM 的 ARM（Autoregressive Reward Model）训练方式——VM 输出每个 token 位置的 reward，推理时取前缀末尾位置的值作为干预分数。这是 SIA token 级干预的必要条件（ORM 只对完整回答末尾有意义，无法在 decoding 中途打分）。理论依据见 GenARM（ICLR 2025，arxiv 2410.08193）。本轮的核心变化是 **base 换为 Qwen3.5-4B（与 0GM-VL-35B 同词表）**，训练目标本身不变。
 
 同步评估是否有合适的小 MoE base 可选（VRAM 允许时 MoE per-call 读带宽更低）。
 
 **🎯 架构设计目标——Vocabulary-wide Scoring Head**（来自 [arxiv 2502.04517](https://arxiv.org/abs/2502.04517)，ICML 2025）：  
-训练新 VM 时，**不要沿用旧的"输入一条候选序列 → 输出一个标量"接口**，而是将 reward head 设计为"输入当前 prefix → 输出整个 vocabulary 的 reward 向量"。这样 SIA 对 top-K 候选的评分从 **K 次 forward → 1 次 forward**，L 理论改善 topK 倍（topK=10 时最多 10×）。实现上：RM head 从 `[hidden → scalar]` 改为 `[hidden → vocab_size]`，标签仍是偏好对。这是本轮 VM 训练**最高优先级的架构决策**，不单独占工作量，在训练开始前确认接口设计即可。
+训练新 VM 时，**不要沿用旧的"输入一条候选序列 → 输出一个标量"接口**，而是将 reward head 设计为"输入当前 prefix → 输出整个 vocabulary 的 reward 向量"。这样 SIA 对 top-K 候选的评分从 **K 次 forward → 1 次 forward**，理论上界为 topK 倍加速（topK=10 时理论最高 10×）；该论文（FaRMA）实测加速约 **6–6.5×**，不到理论上界，因为 RM head 输出规模增大部分抵消了调用次数减少的收益，实际收益以 SIA A/B 实测为准。实现上：RM head 从 `[hidden → scalar]` 改为 `[hidden → vocab_size]`，标签仍是偏好对。这是本轮 VM 训练**最高优先级的架构决策**，不单独占工作量，在训练开始前确认接口设计即可。
 
 **补充训练技巧**：
 - **低秩 Reward Head**（[arxiv 2407.04615](https://arxiv.org/abs/2407.04615)，TMLR 2025）：vocabulary-wide head 的矩阵从 `[d × V]` 分解为 `[d × r] × [r × V]`（r ≪ V），在 vocab=248K 的 Qwen3.5 词表下效果尤为明显，与上述架构目标天然兼容。
-- **From r to Q\* 训练初始化**（[arxiv 2404.12358](https://arxiv.org/abs/2404.12358)，COLM 2024）：标注数据不足时，用主模型 0GM-VL-35B 的 log-prob 差值作为伪标签初始化 VM，降低冷启动门槛。
-- **RED 蒸馏**（[arxiv 2411.08302](https://arxiv.org/abs/2411.08302)，EMNLP 2025）：从 holistic feedback 蒸馏 token 级奖励，可作为无 token 级标注时的备用路径。
+- **From r to Q\* 理论启发**（[arxiv 2404.12358](https://arxiv.org/abs/2404.12358)，COLM 2024）：该论文证明 DPO 等价于 token 级隐式 Q-learning，LLM 的 log-prob 差值 β(log π_θ − log π_ref) 本身编码隐含奖励值。**SIA 工程推导**：标注数据不足时，可将 0GM-VL-35B 与参考模型的 log-prob 差值作为弱监督伪标签辅助 VM 冷启动——此应用为 SIA 对该理论的延伸推导，非论文原著直接贡献。
+- **RED**（reward redistribution，[arxiv 2411.08302](https://arxiv.org/abs/2411.08302)，venue 待确认）：利用现有 RM 对序列前缀的差分分值还原 token 级奖励——r̃ᵗ = R(x,y≤t) − R(x,y≤t−1)，无需训练，与蒸馏不同。可作为无 token 级标注时的备用路径。
 
 - **工作量**：约 2-3 周（训练 + 初步 offline 验证）
 
-### 任务 2.3：两阶段粗过滤 PoC——0.6B VM 作为 4B VM 的守门员（VM 延迟优化，1–2 周）
+### 任务 2.3：两阶段粗过滤 PoC——0.6B VM 作为 4B VM 的守门员（实验性，1–2 周）
 
-**理论依据**：RSD（ICML 2025，arxiv 2501.19324）、SSS（EMNLP 2025，arxiv 2508.15044）、GSI（ICLR 2026，arxiv 2506.04118）三篇独立工作验证了两阶段粗过滤模式：用极小模型做第一阶段快速筛选，只在不确定位置调用大模型。在 δ=0.7 阈值下，**约 48% 的调用可完全跳过大模型**。
+**原理**：RSD（ICML 2025，arxiv 2501.19324）、SSS（EMNLP 2025，arxiv 2508.15044）、GSI（ICLR 2026，arxiv 2506.04118）验证了"小模型快速初筛、大模型精排"的两阶段架构。SIA 迁移方案：先用 VM-Qwen3-0.6B 对 K 个候选打分，若候选分数方差 < 阈值（差异不显著，干预价值低），跳过 4B VM；否则调用 4B VM 精排。
 
-**SIA 实现方案**：利用官方已有的 VM-Qwen3-0.6B-Base checkpoint，在 `SIALogitsProcessor.apply()` 中增加第一阶段：先对当前所有候选用 0.6B VM 打分，计算 N 个候选分数的**方差**；若方差 < 阈值 δ（所有候选分数接近，说明 0.6B 无法区分），则跳过 4B VM，直接用 0.6B 分数（或 0 偏置）作为干预信号；若方差 ≥ δ，则正常调用 4B VM 做精细打分。
+> **注意**：上述三篇论文均为小 LLM 门控大 LLM，非"小 RM 门控大 RM"——迁移到 VM 场景尚无顶会直接验证。
 
-> **完成后收益**：VM 延迟：4B VM 调用减少约 40–50%，VM 平均开销从 30ms → ~17ms/step（0.6B 预筛约 3–5ms）；与 block-wise B=4 叠加后，VM 有效调用占比从 ~20% → ~3–5%；并发吞吐：conc=16 吞吐在 Month 1 基础上再提升。
+**速度瓶颈**：VM 每次调用有 ~12ms 固定开销（vLLM scheduler + IPC，不随模型大小缩减）。0.6B 的 GPU 计算仅 ~2ms，总调用约 **14ms**。由此，跳过率需超过 **47%** 才开始有净收益；在 50% 跳过率下，平均开销仅从 30ms 降至约 **29ms**。
 
-- **工作量**：1–2 周（加载 0.6B VM + 修改 apply() 逻辑 + A/B 对比验证）；与 2.1 数据收集并行执行
-- **架构前置验证（PoC 第一步）**：同进程内同时运行两个 `LLM()` 实例（0.6B + 4B）并配合 `VLLM_ENABLE_V1_MULTIPROCESSING=0` 是**尚未验证的架构**。vllm v1 的 EngineCore 以 spawn 模式启动，两个 InprocClient 共进程的行为未经实验确认，有潜在冲突风险。**PoC 第一天应先只验证两个 LLM() 实例能否在同进程内稳定并存**，再进行效果实验，避免 3-5 天白费。
-- **补充优化——cross-request 前缀 pin**（与 PoC 并行，约 3-5 天）：BatchLLM（[arxiv 2412.03594](https://arxiv.org/abs/2412.03594)）发现 vLLM APC 在高并发长前缀场景下因 LRU 驱逐导致命中率仅 6.3%（vs 显式 pin 的 92.6%）。SIA VM 的每条输入以 `system_prompt + partial_response` 为前缀，在 conc=16 时多请求共享同一 system_prompt 前缀块，当前 stable-prefix 优化已解决 per-request 内 KV 复用，但 **cross-request 维度**的前缀块仍可能被 LRU 驱逐。通过向 vLLM b2 后端注入前缀 pin 标记，可在 L+T 维度获得额外收益，预期 conc=16 VM per-call 延迟再降 10–20%。
-- **风险**：① 双 LLM 实例架构冲突（优先验证）；② 0.6B 预筛准确率不足，导致部分高价值干预被错误跳过；需 A/B 对比效果损失 vs 速度收益
-- **成功标准**：双 LLM 实例架构稳定运行（前提）+ 4B VM 调用减少 ≥ 30% + AlpacaEval win-rate 损失 ≤ 1%
+> **完成后收益（保守）**：若实测跳过率 ≥ 60%，VM 平均开销约 **23–26ms**（vs 当前 30ms，降幅约 15–23%）；效果损失待 A/B 实测。
+
+- **工作量**：1–2 周；与 2.1 数据收集并行，不阻塞 Month 2 主线
+- **成功标准**：同进程双 LLM 实例架构稳定运行（前提，vllm v1 共进程行为尚未验证）+ 4B VM 调用减少 ≥ 30% + AlpacaEval win-rate 损失 ≤ 1%
 
 ### Month 2 交付标准
 
@@ -282,7 +283,7 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 | 两阶段粗过滤 PoC | **架构稳定性验证通过，有初步效果数据** | — |
 | conc=16 SIA tok/s | **维持 ≥ 550** | ≥ 550 |
 
-> 📌 本月为训练月，性能数字维持不变。同词表 VM 的延迟和吞吐收益（b2_score_call ~30ms → ~11ms，conc=16 吞吐 ≥ 750）在 Month 3 部署上线后兑现。
+> 📌 本月为训练月，性能数字维持不变。同词表 VM 的延迟和吞吐收益（b2_score_call ~30ms → ~23ms，conc=16 吞吐 ≥ 550（保守））在 Month 3 部署上线后兑现。
 
 ---
 
@@ -314,11 +315,11 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 
 替换生产 VM，重新跑 AlpacaEval，验证效果提升。
 
-> **完成后收益**：对齐效果：跨分词器噪声彻底消除，AlpacaEval win-rate 首次可量化对比；VM 延迟：b2_score_call 从 ~30ms → ~11ms（−63%）；并发吞吐：conc=16 吞吐从 ≥550 升至 ≥750 tok/s。
+> **完成后收益**：对齐效果：跨分词器噪声彻底消除，AlpacaEval win-rate 首次可量化对比；VM 延迟：b2_score_call 从 ~30ms → **~23ms**（消除跨分词器编码 ~7ms；CUDA graph 仍不可用于 0GM-35B，保守收益如此；若后续 CUDA graph 修复则可进一步降至 ~11ms）；并发吞吐：conc=16 吞吐保守预期 **≥550（维持基线）**，消除跨分词器开销后有改善空间；若 CUDA graph 后续修复则可升至 ≥750 tok/s（见下方交付标准表）。
 
 ### 任务 3.3：乘积式分布融合 A/B 实验（1-2 天，来自 LLMdoctor）
 
-**来源**：LLMdoctor（arxiv 2601.10416，2026 年 1 月）将加法式 logit biasing 改为乘积式分布融合，在 AlpacaEval 类对比中 62.10% win vs. GenARM（ICLR 2025），76.00% win vs. ARGS。
+**来源**：LLMdoctor（arxiv 2601.10416，2026 年 1 月）将加法式 logit biasing 改为乘积式分布融合（π_decode ∝ π_base^α · π_r^β），在 GPT-4o 裁判头对头评测中 62.10% win vs. GenARM（ICLR 2025），76.00% win vs. ARGS。
 
 > **完成后收益（如成功）**：AlpacaEval win-rate 额外 +3-5%（对齐效果提升）；改动仅修改 `SIALogitsProcessor.apply()` 融合逻辑，工程成本极低可随时回滚；结果直接决定 Month 4 accept/reject 实验的优先级。
 
@@ -344,20 +345,18 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 
 | 指标 | Month 3 保守目标（CUDA graph 仍不可用）| Month 3 乐观目标（CUDA graph 恢复）| Month 2 基线 |
 |------|--------------------------------------|-------------------------------------|------------|
-| conc=16 SIA tok/s | **≥ 500** | **≥ 750** | ≥ 550 |
+| conc=16 SIA tok/s | **≥ 550** | **≥ 750** | ≥ 550 |
 | b2_score_call p50 | **~23ms**（消除跨分词器 ~7ms，eager mode）| **~11ms**（追加 CUDA graph）| ~30ms |
-| AlpacaEval win-rate vs noSIA | **可量化，有正提升** | 65.4%（Skywork judge）|
-| 乘积式 vs 加法式融合对比 | **有结论：乘积式是否更优** | — |
+| AlpacaEval win-rate vs noSIA | **可量化，有正提升** | — | 65.4%（Skywork judge）|
+| 乘积式 vs 加法式融合对比 | **有结论：乘积式是否更优** | — | — |
 
 ### Month 3 系统备选方向（如有余量，1-2 周探索）
 
 以下方向有文献依据但尚未纳入主线，Month 3 可作为探索性实验并行启动：
 
-1. **Hydragen 共享前缀 Attention**（[arxiv 2402.05099](https://arxiv.org/abs/2402.05099)，ICLR 2025）  
+1. **Hydragen 共享前缀 Attention**（[arxiv 2402.05099](https://arxiv.org/abs/2402.05099)，arxiv preprint（ICLR 2025 未能核实））  
    SIA 的 VM scoring 中，topK 个候选共享完全相同的前缀（prompt + 已生成 token）。Hydragen 将这部分 attention 抽取出来做一次 forward，理论上将 VM 候选评分从 K 次独立计算 → 1 次共享前缀 + K 次极短 suffix attention，并发吞吐改善显著。需修改 VM serving kernel，工作量约 2 周。
 
-2. **AsyncSpade 异步 VM 调用**（[arxiv 2510.07486](https://arxiv.org/abs/2510.07486)，arXiv 2025）  
-   将 `SIALogitsProcessor` 的同步 VM 调用改为异步（VM 调用与主 LLM decoding 并行），实测每 token 输出时间（TPOT）减少 20-50%。改造 `apply()` 的 blocking call 为 prefetch/overlap 模式，约 2 周工作量。
 
 ---
 
@@ -367,11 +366,11 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 
 ### 任务 4.1：规模决策——ARM 4B 效果若不足，训练 ARM 8B
 
-**决策逻辑**（来自文献调研）：文献（GenARM，ICLR 2025，arxiv 2410.08193）表明 VM 的关键在于**训练目标**而非模型规模——ARM（Autoregressive RM）4B 理论上优于 ORM 8B。Month 3 完成 ARM 4B 上线后，先用 AlpacaEval 验证效果。
+**决策逻辑**（来自文献调研）：文献（GenARM，ICLR 2025，arxiv 2410.08193）表明 VM 的关键在于**训练目标**而非模型规模——ARM 的 token 级训练目标在实验中优于 ORM。据此推论（非论文直接对比数据）：在训练充分的前提下，ARM 4B 理论上优于 ORM 8B。Month 3 完成 ARM 4B 上线后，先用 AlpacaEval 验证效果。
 
-> **完成后收益**：AlpacaEval win-rate（对齐效果）≥ +5% vs noSIA；若 ARM 4B 已足够则节省训练资源，将预算提前投入 Month 5 PRM 或多模态；若需扩至 8B，block-wise 已降低调用频率，8B 更高的 per-call latency 可被 b2 承受。
+> **完成后收益**：AlpacaEval win-rate（对齐效果）≥ +5% vs noSIA；若 ARM 4B 已足够则节省训练资源，将预算提前投入 Month 5 PRM 可行性评估或多模态；若需扩至 8B，block-wise 已降低调用频率，8B 更高的 per-call latency 可被 b2 承受。
 
-- 若 ARM 4B 的 win-rate 已达 ≥ +5%：**跳过 8B 训练**，把资源投入 Month 5 的 PRM 或多模态
+- 若 ARM 4B 的 win-rate 已达 ≥ +5%：**跳过 8B 训练**，把资源投入 Month 5 的 PRM 可行性评估或多模态
 - 若 ARM 4B 效果仍不足：在 ARM 训练目标下扩大到 8B（此时 block-wise 已降低调用频率，8B 的更高 per-call latency 可承受）
 
 - **工作量**：2-3 周（视 Month 3 结果决定是否执行）
@@ -392,9 +391,9 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 
 ### 任务 4.3：极小 judge PoC（视余量执行）
 
-**来源**：Judge Decoding（ICLR 2025，arxiv 2501.19309）用 16.4k 参数线性层替换 speculative decoding 的接受准则，500 条偏好对、1.5 小时训练，实现 3.9–9.7× 加速。
+**来源**：Judge Decoding（arXiv 2025 preprint，arxiv 2501.19309）用 16.4k 参数线性层替换 speculative decoding 的接受准则，500 条三元组（问题 + 正确答案 + 错误答案）、1.5 小时训练，实现 3.9–9.7× 加速。
 
-**SIA 类比**：在主 LLM（0GM-VL-35B）的 LogitsProcessor 内部，基于 top-K logit 分布训练一个**极小线性评分头**（<10M 参数），替代外部 4B VM。如果可行，per-call latency 从 ~30ms 降至 <0.1ms，L/T 根本解决。
+**SIA 类比**：在主 LLM（0GM-VL-35B）的 LogitsProcessor 内部，基于 top-K logit 分布训练一个**极小线性评分头**（<10M 参数），替代外部 4B VM。**35B 主模型完全冻结，只训练评分头**——先跑 35B 推理收集 top-K logit 特征（存盘，仅需几 MB），再离线单独训练评分头，两步可分开执行，单卡 144GB 完全够用。如果可行，per-call latency 从 ~30ms 降至 <0.1ms，L/T 根本解决。
 
 > **完成后收益（如成功）**：VM 延迟：VM per-call latency 从 ~30ms → <0.1ms（300×）；并发吞吐：VM 完全移出关键路径，吞吐接近 noSIA 水平；即使部分成功，也能大幅降低 VM 调用频率。
 
@@ -421,42 +420,90 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 | 干预模式对比 | **logit bias vs accept/reject 有实测数据** | — |
 | 极小 judge PoC | **完成实验，有效果对比数据**（视余量）| — |
 | 多模态 VM 数据 | **已启动收集**（视余量）| — |
-| conc=16 SIA tok/s | **维持 ≥ 750** | ≥ 750 |
+| conc=16 SIA tok/s | **维持 ≥ 550**（保守）；若 Month 3 CUDA graph 已修复则维持 ≥ 750 | ≥ 550 |
 
 ---
 
-## Month 5（2026-11）：PRM——推理任务专项优化
+## Month 5（2026-11）：PRM 可行性评估
 
-**主线任务**：全力完成 Process Reward Model 的数据准备、训练和上线，将 VM 在推理/数学/代码类任务中的调用频率从 O(token) 降至 O(step)。多模态 VM 数据收集在 Month 4 已并行准备，训练和上线集中在 Month 6。
+**主线任务**：评估 Process Reward Model 在 SIA 推理场景中的可行性——明确 PRM 相比 ARM VM 的增量效果上限，以及 step 级干预在 vLLM streaming serving 中的工程实现路径。本月**不承诺训练和上线 PRM**，以"A/B 有结论"为交付标准。多模态 VM 数据收集在 Month 4 已并行准备，训练和上线集中在 Month 6。
 
-### 任务 5.1：训练推理专用 VM（PRM，Process Reward Model）——聚焦推理/数学/代码任务
+### 任务 5.1：PRM 可行性评估——推理任务的步骤级干预
 
-**PRM 本质上是一种新的 VM**，专为推理/数学/代码任务设计。与 Month 3 上线的通用 ARM VM 的区别：
+#### 现有 ARM VM 的局限
 
-- **训练数据**：step 级偏好标注——对推理链的每一步（如数学解题每步、思维链每段）打好/坏标签，而非 token 级偏好对
-- **调用时机**：只在推理步骤边界处调用（如 `\n\n`、Qwen3 `/think` 段落分隔），而非每个高熵 token
-- **效果**：调用频率从 O(token) 降至 O(step)（一道数学题约十几步 vs 数百 token），信号更精准、调用更少
+SIA 目前的干预方式是**逐 token 打分**：在每个高熵位置，用 Value Model 评估候选 token 的质量，偏置 logit 分布。这在通用对话场景下工作良好。
 
-对于通用问答场景，仍使用 Month 3 的 ARM VM；PRM 仅在识别到推理类任务时接管。
+但在数学/推理类任务的 think 模式下，模型会生成一段完整的推理过程，每一"步"（如"第一步：化简左边"）往往包含几十到上百个 token。**逐 token 干预的盲区在于：它能纠正单个 token 的措辞，却无法判断"这整步推理的方向是否正确"**——等到步骤末尾发现方向走偏时，前面的 token 已经生成完了。
 
-> **完成后收益**：对齐效果：推理/数学/代码类任务效果显著提升（step 级奖励信号比 token 级更精准）；VM 延迟/并发吞吐：VM 调用频率从 O(token) → O(step)，降低 3-5×，吞吐损失大幅减少。
+PRM（Process Reward Model，过程奖励模型）的思路是：**在每个推理步骤结束时，评估"这步走对了吗"，如果走偏，在进入下一步之前及时纠正**。相比逐 token 干预，信号粒度从字级别上升到步骤级别。
 
-**适用范围说明**（基于文献）：ICLR 2024 对 ORM vs PRM 的系统对比（Lightman et al.，[arxiv 2305.20050](https://arxiv.org/abs/2305.20050)）实验全部在 MATH 数学数据集上进行。PRM 优于 ORM 的结论在**推理/数学/代码**类任务上有顶会支撑，在通用问答/对话类任务上缺乏直接验证。**本任务优先针对推理类任务，不宜对通用指令跟随场景过度承诺。**
+#### ARM VM 与步骤级干预的分工
 
-**补充文献**：PRM as Unified Control Signal（[arxiv 2602.01070](https://arxiv.org/abs/2602.01070)，2026 preprint）将推理过程形式化为"迭代轨迹生成与选择"，用 step-level PRM 在生成中途剪枝低 reward 候选（支持 beam search 和 lookahead search），机制描述经文献核实。与 SIA 粒度互补：SIA 做 token 级局部干预，PRM 做 step 级轨迹选择，两者可叠加。
+两者不互斥，而是粒度互补：
 
-- **数据需求**：构建 step-level preference 数据集（数学/推理类，每步打好/坏标签）
-- **补充文献**（来自综合调研）：
-  - **SP-PRM**（[arxiv 2506.12446](https://arxiv.org/abs/2506.12446)，2025）：从 ORM 推导过程奖励，**大幅降低 PRM 训练数据收集门槛**——无需 step 级人工标注，利用已有 outcome 偏好数据自动生成 step 奖励信号，直接适合 SIA 资源约束。
-  - **ThinkPRM**（[arxiv 2504.16828](https://arxiv.org/abs/2504.16828)，2025）：在 thinking token 级别应用 PRM，对应 Qwen3 的 `/think` 模式；为推理过程中的每个思维步骤打分，与 SIA 在 thinking 模式下的应用高度匹配。
-  - **DG-PRM**（[arxiv 2507.17849](https://arxiv.org/abs/2507.17849)，ACL 2025）：动态 PRM，跨任务泛化性强，减少 SIA 对特定任务标注数据的依赖；适合从数学推理扩展到代码生成。
-- **工作量**：4 周（数据准备 2 周 + 训练 + 验证 2 周）
+| 场景 | 干预方式 | 触发时机 |
+|------|---------|---------|
+| 通用问答 / 指令跟随 | ARM VM（逐 token） | 高熵 token 位置 |
+| 数学 / 推理 / 代码（think 模式）| ARM VM + 步骤级干预叠加 | ARM VM：高熵 token；步骤干预：每步结束时 |
+
+步骤级干预只在 `<think>` 块内生效（通用对话无推理步骤结构，不触发）。
+
+#### 步骤边界怎么识别
+
+Qwen3 在 think 模式下，每完成一个推理步骤，会自然输出**双换行 `\n\n`** 作为分隔。这是步骤边界的天然信号，无需额外训练分类器。
+
+RSD（ICML 2025）、ThinkPRM（[arxiv 2504.16828](https://arxiv.org/abs/2504.16828)）均使用 `\n\n` 作为步骤分隔符，做法一致。
+
+#### 步骤结束后具体怎么干预
+
+**核心思路：不回滚，而是"抢跑三条路，选最好的那条"。**
+
+直觉上，"这步走偏了"→ 回滚重新生成这一步，听起来合理，但在 vLLM streaming 中，已生成内容的 KV cache 无法廉价地回滚到步骤起点（代价等同于重新 prefill 整步）。实际可行的做法是：不修改已生成的内容，而是**在进入下一步的瞬间，让模型同时试探三条不同的起始方向，选最好的那条继续**。
+
+具体流程：
+
+```
+模型输出 \n\n（当前步骤结束）
+  ↓
+暂停，让模型从当前位置独立生成 3 条候选续写
+  每条 greedy 展开 L 个 token（L 是实验参数，初始 L=5，对照组 L=10/L=20）
+  ↓
+比较 3 条候选的"流畅度分"（avg log-prob，模型自己有多大把握写出这几个字）
+  ↓
+选得分最高的那条，丢掉另外两条，继续正常生成
+```
+
+**优势**：不需要训练任何新模型，直接复用现有 vLLM forward pass，今天就能实现。`\n\n` 触发借鉴自 RSD/ThinkPRM；B=3 候选和 log-prob 打分借鉴自 AdaDec（FSE 2026，[arxiv 2506.08980](https://arxiv.org/abs/2506.08980)，代码生成场景）。**这个组合本身没有论文端到端验证**，是 SIA 的探索。
+
+**理论局限**：log-prob 衡量的是"这个方向模型写得自不自然"，而不是"这个推理步骤逻辑上对不对"。模型完全可以对一个听起来合理但逻辑错误的步骤赋予高概率（即"自信地错"）；若模型在这个位置本来就倾向于走错方向，fork 出的三条路可能都是不同版本的错误，log-prob 最高的那条仍然错。**预期：路线一能过滤明显离谱的方向，但对"听起来合理但逻辑错误"的步骤无能为力，效果上限有限。**
+
+#### 两条路线对比
+
+| 路线 | 触发 | 候选长度 | 打分信号 | 文献验证 | 是否需要训练 |
+|------|------|---------|---------|---------|------------|
+| **路线一**（先做）| `\n\n` | L=？（待实验）| LLM avg log-prob | 无端到端验证，SIA 探索 | **不需要** |
+| **路线二**（视结论）| `\n\n` | 完整一步到 `\n\n` | 外部 PRM 打分 | **RSD（ICML 2025）MATH500/AIME 验证 ✓** | 需要训练 PRM |
+
+路线一的主要价值是**零成本建立工程基础、量化"免费能得到多少"**，而非期待高效果——其结论大概率是"效果有限，建议上路线二"。路线二是唯一在数学推理上有顶会端到端验证的方案，训练数据门槛可用 SP-PRM 方案降低（从已有 outcome 偏好数据自动生成 step 标签）。
+
+**适用范围说明**：PRM 优于 ORM 的顶会结论（Lightman et al.，ICLR 2024，[arxiv 2305.20050](https://arxiv.org/abs/2305.20050)）基于 MATH 数学数据集，在推理/代码任务上有支撑，通用对话场景无直接验证。步骤级干预仅对 think 模式下的推理类任务承诺效果。
+
+#### 本月实际工作内容
+
+1. **实现路线一（步骤级 pause-and-rerank）**：在 `SIALogitsProcessor` 中，检测 `<think>` 块内的 `\n\n`，触发 B=3 greedy fork，用 LLM avg log-prob 打分选最优；候选展开长度 L 作为实验变量（初始值 L=5，对照组 L=10/L=20），确定适合推理步骤边界的最优 L
+2. **A/B 效果评估**：MATH500 / AIME think 模式下，AdaDec baseline vs 纯 ARM VM vs noSIA 三路对比，量化步骤级干预的增量收益
+3. **吞吐影响测量**：conc=16 下，每个 `\n\n` 触发 B=3 greedy fork 的实际吞吐开销
+4. **go/no-go 外部 PRM**：若 AdaDec baseline 效果满足需求，外部 PRM 训练推迟至 6 个月外；若效果不足，输出训练 PRM 的数据需求和工作量估算
 
 ### Month 5 交付标准
 
 | 指标 | Month 5 目标 |
 |------|-------------|
-| PRM 上线（推理类任务）| 推理任务 VM 调用次数 ≤ 20% of token 数 |
+| 路线一实现 | `SIALogitsProcessor` 内 `\n\n` 触发、B=3 greedy fork 端到端跑通，最优 L 通过实验确定 |
+| A/B 效果结论 | MATH500 路线一 vs 纯 ARM VM vs noSIA 三路对比完成 |
+| overhead 测量 | conc=16 下路线一吞吐影响有数据 |
+| go/no-go 外部 PRM | 是否需要训练外部 PRM 有明确结论 |
 | 多模态 VM 数据 | **收集完成** |
 
 ---
@@ -476,7 +523,7 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 - **补充文献**：
   - **Skywork-VL Reward**（[arxiv 2505.07263](https://arxiv.org/abs/2505.07263)，2025）：当前最强开源视觉语言 RM 之一，可直接作为 backbone 选型参考或微调起点。
   - **MSRL**（[arxiv 2603.25108](https://arxiv.org/abs/2603.25108)，CVPR 2026）：多阶段多模态 reward modeling，提供完整的 VLM RM 训练框架。
-  - **BaseReward**（[arxiv 2509.16127](https://arxiv.org/abs/2509.16127)，2025）：强 baseline 多模态 RM，用于评估训练质量的对照基准。
+  - **BaseReward**（[arxiv 2509.16127](https://arxiv.org/abs/2509.16127)，2025）：系统分析多模态 RM 关键组件（建模范式、奖励头、训练策略、数据筛选）的 baseline 研究，在 MM-RLHF-Reward Bench 等多项 benchmark 上达到 SOTA，可作为 VLM RM 建设的系统参考。
 - **工作量**：2-3 周训练（数据已备）
 
 ### 任务 6.2：多模态 VM 上线（Qwen3-VL 场景完整支持）
@@ -501,12 +548,12 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 
 | 指标 | 当前（2026-06）| 保守目标（CUDA graph 仍不可用）| 乐观目标（CUDA graph 恢复）|
 |------|----------------|-------------------------------|---------------------------|
-| conc=16 SIA tok/s | 369 | **≥ 500** | **≥ 750** |
-| SIA/noSIA 吞吐比 | 35% | **≥ 55%** | **≥ 72%** |
-| SIA/noSIA ITL 倍数 | 3.0× | **≤ 2.0×** | **≤ 1.5×** |
+| conc=16 SIA tok/s | 369 | **≥ 550** | **≥ 750** |
+| SIA/noSIA 吞吐比 | 35% | **≥ 53%**（550÷1040）| **≥ 72%**（750÷1040）|
+| SIA/noSIA ITL 倍数 | 3.0× | **≤ 1.9×** | **≤ 1.5×** |
 | AlpacaEval win-rate vs noSIA | 65.4%（Skywork judge，待 GPT-4 验证）| **≥ +5%（GPT-4 judge 独立验证）** |
 | 多模态 VLM 场景支持 | ❌ | **✅** |
-| VM 是否需要每 token 调用 | 是（~20% token）| **否（block-wise + PRM，~5% 以下）**|
+| VM 是否需要每 token 调用 | 是（~20% token）| **否（block-wise，~5% 以下；PRM 待 Month 5 评估后定）**|
 
 ---
 
@@ -515,9 +562,9 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 ```
 2026-07 末  conc=16 tok/s ≥ 550，GPT-4 评估基准建立
 2026-08 末  同词表 VM 训练完成，两阶段粗过滤 PoC 有结论
-2026-09 末  conc=16 tok/s ≥500（保守）/ ≥750（乐观，CUDA graph 恢复），同词表 VM 上线，效果首次可量化
+2026-09 末  conc=16 tok/s ≥550（保守）/ ≥750（乐观，CUDA graph 恢复），同词表 VM 上线，效果首次可量化
 2026-10 末  AlpacaEval win-rate ≥ +5%，最优干预模式确定，极小 judge PoC 有结论
-2026-11 末  PRM 上线，推理任务 VM 调用进一步降低
+2026-11 末  PRM 可行性评估完成，go/no-go 决策有结论（ARM VM 盲区量化 + 工程 overhead 评估）
 2026-12 末  多模态 VM 训练完成并上线
 ```
 
@@ -527,23 +574,23 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 
 本 roadmap 在制定前进行了系统性文献调研（覆盖 NeurIPS、ICML、ICLR、ACL 等顶会，100+ 篇论文，多轮交叉核实）。以下三项发现值得重点关注：
 
-### 发现一：高并发吞吐是学术空白，SIA 有机会贡献原创研究
+### 发现一：高并发吞吐是 token 级对齐论文的研究空白
 
-当前所有 token 级对齐论文（包括 ICLR 2025 的 GenARM、ICML 2025 的 RSD 等顶会工作）**均只在单请求或小并发（≤4）场景下评估效果**，没有任何顶会论文系统研究"高并发连续批处理下 token 级干预的吞吐-效果权衡"。
+据本次调研所见，token 级对齐论文（包括 ICLR 2025 的 GenARM、ICML 2025 的 RSD 等顶会工作）**均只在单请求或小并发（≤4）场景下评估效果**，没有任何顶会论文系统研究"高并发连续批处理下 token 级干预的吞吐-效果权衡"。
 
 这意味着我们在生产环境中观察到的吞吐问题（conc=16 吞吐下降 64%）是一个**尚未有学术解答的真实工程难题**。如果 SIA 项目系统性地：
 
 - 建立高并发场景下的评估基准（吞吐 vs 对齐效果 Pareto）
-- 验证 block-wise scoring / PRM 等方案在高并发下的实际效果
+- 验证 block-wise scoring 及 AdaDec 步骤级干预（如 Month 5 go/no-go 通过，则包含外部 PRM）在高并发下的实际效果
 - 发表相关结果
 
-**有可能成为该方向的第一批顶会投稿**，填补当前学术空白。
+这一方向目前在学术界尚无系统性研究，是潜在的工程贡献点。
 
 ---
 
 ### 发现二：Judge Decoding 的"极小 judge"思路对 SIA 有重大潜力，尚无人探索
 
-ICLR 2025 发表的 Judge Decoding（arxiv 2501.19309）提出了一个反直觉的结论：用**仅 16,384 个参数（16.4k）的线性投影层**替换大模型的 token 接受准则，以 500 条标注数据、不到 1.5 小时训练，实现 Llama-405B 推理 **3.9–9.7× 加速**。
+Judge Decoding（arXiv 2025 preprint，arxiv 2501.19309）提出了一个反直觉的结论：用**仅 16,384 个参数（16.4k）的线性投影层**替换大模型的 token 接受准则，以 500 条三元组数据、不到 1.5 小时训练，实现 Llama-405B 推理 **3.9–9.7× 加速**。
 
 当前 SIA 使用 4B 参数的 VM 打分，每次调用延迟 ~30ms。
 
@@ -563,8 +610,8 @@ ICLR 2025 发表的 Judge Decoding（arxiv 2501.19309）提出了一个反直觉
 |---------|---------|
 | TARo：比 baseline 提升 +22.4% | ❌ 数字无法在原文中核实 |
 | TARo：比现有 token 级方法提升 +8.4% | ❌ 数字无法在原文中核实 |
-| TITA：在 LLaVA-1.5 上 MMVet +8.6%、POPE +6.7% | ❌ 实验条件存疑，无法复现 |
-| RSD：比并行解码方法平均提升 +3.5 准确率 | ❌ 数字无法在原文中核实 |
+| TITA：在 LLaVA-1.5 上 MMVet +8.6%、POPE +6.7% | ⚠️ 仅 ICLR 2026 submission 状态，未经同行评审，无法独立验证 |
+| RSD：比并行解码方法平均提升 +3.5 准确率 | ❌ 调研记录中查无此数字；RSD 原文可核实数字为 MATH500 达 88.0%、FLOPs 降低最多 4.4× |
 | GSI：端到端延迟降低 28%、吞吐提升 51% | ❌ 原文数字口径与声称不符 |
 
 **内部实验佐证**：SIA 原论文（arxiv 2602.21215）强调"稀疏干预只在约 20% 的高熵 token 处触发，因此推理开销远小于全量干预"。这一说法在理论上成立，但在我们的工程实践中，**实际性能代价远超论文暗示的水平**。原因在于论文中完全忽略了 Value Model 本身的执行开销：每次 VM 调用需要对候选序列做一次完整的 GPU forward（~30ms/call），而主 LLM 每生成一个 token 只需约 9ms。即使只有 20% 的 token 触发 VM，VM 调用的开销已经大于主 LLM 自身，导致 conc=16 场景下整体吞吐降至 noSIA 的 35%——而非论文语境中"稀疏=低开销"所暗示的轻微损失。这一差距是工程落地中最关键的发现，也是本 roadmap 将 VM 延迟优化列为最高优先级的直接动因。
@@ -625,25 +672,24 @@ CMU 的 DSPA（arxiv 2603.21461）用稀疏自编码器在 LLM 激活空间直�
 | SIA 原论文 ([arxiv 2602.21215](https://arxiv.org/abs/2602.21215)) | 整体框架基础 / 任务 6.1 | 2026 preprint |
 | AlpacaEval 2.0 ([arxiv 2404.04475](https://arxiv.org/abs/2404.04475)) | 任务 1.3 评估基准 | 2024 preprint |
 | GenARM: Autoregressive Reward Model ([arxiv 2410.08193](https://arxiv.org/abs/2410.08193)) | 任务 2.2 ARM 训练目标 / 任务 4.1 | **ICLR 2025** ✅ |
-| Judge Decoding ([arxiv 2501.19309](https://arxiv.org/abs/2501.19309)) | 任务 4.3 极小 judge PoC | **ICLR 2025** ✅ |
+| Judge Decoding ([arxiv 2501.19309](https://arxiv.org/abs/2501.19309)) | 任务 4.3 极小 judge PoC | 2025 preprint（ICLR 2025 未能核实）|
 | Let's Verify Step by Step / ORM vs PRM ([arxiv 2305.20050](https://arxiv.org/abs/2305.20050)) | 任务 5.1 PRM 适用范围 | **ICLR 2024** ✅ |
 | Scaling LLM Test-Time Compute ([arxiv 2408.03314](https://arxiv.org/abs/2408.03314)) | 整体方向验证 | NeurIPS 2024 Workshop ✅ |
 | RSD: Reward-guided Speculative Decoding ([arxiv 2501.19324](https://arxiv.org/abs/2501.19324)) | 任务 2.3 两阶段过滤 / 任务 4.2 | **ICML 2025** ✅ |
 | SSS: Stepwise Speculative Search ([arxiv 2508.15044](https://arxiv.org/abs/2508.15044)) | 任务 2.3 两阶段过滤依据 | **EMNLP 2025** ✅ |
 | GSI: Generative Speculative Inference ([arxiv 2506.04118](https://arxiv.org/abs/2506.04118)) | 任务 2.3 两阶段过滤依据 | **ICLR 2026** ✅ |
-| Iterative Value Function Optimization ([arxiv 2503.02368](https://arxiv.org/abs/2503.02368)) | 任务 1.1 block-wise scoring | 2025 preprint |
-| EASD: Entropy-Aware Speculative Decoding ([arxiv 2512.23765](https://arxiv.org/abs/2512.23765)) | 任务 1.2 双熵门控 | 2025 preprint |
+| EASD: Entropy-Aware Speculative Decoding ([arxiv 2512.23765](https://arxiv.org/abs/2512.23765)) | 背景参考（speculative decoding 双熵机制；**不适用**于 SIA 的 reward model 场景）| 2025 preprint |
 | TARo: Token-level Adaptive Routing ([arxiv 2603.18411](https://arxiv.org/abs/2603.18411)) | 任务 1.2 自适应路由参考 | 2026 preprint |
 | LLMdoctor: Product-of-Distributions Fusion ([arxiv 2601.10416](https://arxiv.org/abs/2601.10416)) | 任务 3.3 乘积式融合 A/B | 2026 preprint |
 | TITA: Token-level Inference-Time Alignment ([arxiv 2510.21794](https://arxiv.org/abs/2510.21794)) | 任务 6.2 DPO 蒸馏参考 | 2025 preprint |
 | GGRO: Gradient-Guided Reward Optimization ([arxiv 2606.09635](https://arxiv.org/abs/2606.09635)) | 发现四 / 附录 A2 | **UAI 2026** ✅ |
 | SeLaR: Soft Embedding Alignment at Low-Confidence ([arxiv 2604.08299](https://arxiv.org/abs/2604.08299)) | 发现四：稀疏干预独立验证 | 2026 preprint |
-| AdaDec: Pause-and-Rerank at High Uncertainty ([arxiv 2506.08980](https://arxiv.org/abs/2506.08980)) | 发现四：稀疏干预独立验证 | **FSE 2026** ✅ |
+| AdaDec: Pause-and-Rerank at High Uncertainty ([arxiv 2506.08980](https://arxiv.org/abs/2506.08980)) | 发现四：稀疏干预独立验证；**任务 5.1 AdaDec baseline 实现参考**（L=5 greedy fork + LLM log-prob）| **FSE 2026** ✅ |
 | PRM as Unified Control Signal for Reasoning ([arxiv 2602.01070](https://arxiv.org/abs/2602.01070)) | 任务 5.1 PRM 粒度互补支撑 | 2026 preprint |
 | Seesaw: PP↔TP Dynamic Parallelism Switching ([arxiv 2503.06433](https://arxiv.org/abs/2503.06433)) | 工程优化参考（TP/PP 动态调度）| 2025 preprint |
 | DSPA: SAE-based Activation Steering ([arxiv 2603.21461](https://arxiv.org/abs/2603.21461)) | 发现四 / 附录 A1 | 2026 preprint（CMU）|
 | ArmoRM: Multi-Objective Reward Model ([arxiv 2406.12845](https://arxiv.org/abs/2406.12845)) | 任务 6.1 / 附录 C1 多目标 VM | 2024 preprint |
-| Token-level MDP Formalization ([arxiv 2602.02572](https://arxiv.org/abs/2602.02572)) | 附录 D2 学术发表基础 | **ICML 2026** ✅ |
+| Token-level MDP Formalization ([arxiv 2602.02572](https://arxiv.org/abs/2602.02572)) | 理论背景参考 | **ICML 2026** ✅ |
 | Nudging: Uncertainty-gated Sparse Intervention ([arxiv 2410.09300](https://arxiv.org/abs/2410.09300)) | 任务 2.3 / 方向验证 | 2024 preprint |
 | BatchLLM: Explicit Global Prefix Sharing ([arxiv 2412.03594](https://arxiv.org/abs/2412.03594)) | 工程优化参考 | 2024 preprint |
 | HybridFlow: ResourcePool LLM+RM Co-deployment ([arxiv 2409.19256](https://arxiv.org/abs/2409.19256)) | 附录 B4 独立 GPU VM | **EuroSys 2025** ✅ |
@@ -651,12 +697,11 @@ CMU 的 DSPA（arxiv 2603.21461）用稀疏自编码器在 LLM 激活空间直�
 | STEP: Memory-triggered Search Tree Pruning ([arxiv 2601.09093](https://arxiv.org/abs/2601.09093)) | 工程优化参考（压力感知降级）| 2026 preprint |
 | RM Knowledge Distillation ([arxiv 2411.08302](https://arxiv.org/abs/2411.08302)) | 附录 B1 VM 蒸馏依据 / 任务 2.2 训练技巧 | 2024 preprint |
 | RM Distillation: Reward Model Compression ([arxiv 2405.19316](https://arxiv.org/abs/2405.19316)) | 附录 B1 VM 蒸馏依据 | 2024 preprint |
-| RM Ensemble / NeurIPS 2024 consensus | 附录 B3 reward hacking 防护 | NeurIPS 2024 ✅ |
+| RM Ensemble（通行工程实践） | 附录 B3 reward hacking 防护 | 通行实践，无单一出处 |
 | Cost-Effective RGTG: Vocabulary-wide Reward Head ([arxiv 2502.04517](https://arxiv.org/abs/2502.04517)) | 任务 1.1 备选 / 任务 2.2 VM 架构 | **ICML 2025** ✅ |
 | Low-Rank RM Parametrization ([arxiv 2407.04615](https://arxiv.org/abs/2407.04615)) | 任务 2.2 VM scoring 加速 | **TMLR 2025** ✅ |
-| From r to Q*: LLM as Q-Function ([arxiv 2404.12358](https://arxiv.org/abs/2404.12358)) | 任务 2.2 VM 训练初始化 | **COLM 2024** ✅ |
+| From r to Q*: LLM as Q-Function ([arxiv 2404.12358](https://arxiv.org/abs/2404.12358)) | 任务 2.2 VM 冷启动理论支撑（DPO ≡ Q-learning，log-prob 差值编码隐含奖励，SIA 推导延伸） | **COLM 2024** ✅ |
 | Hydragen: High-Throughput Shared-Prefix Inference ([arxiv 2402.05099](https://arxiv.org/abs/2402.05099)) | 任务 Month 3 备选 / T 系统优化 | **ICLR 2025** ✅ |
-| AsyncSpade: Asynchronous Sparse Decoding ([arxiv 2510.07486](https://arxiv.org/abs/2510.07486)) | 任务 Month 3 备选 / 异步 VM 调用 | 2025 preprint |
 | To Intervene or Not: Probabilistic Gating ([arxiv 2606.11201](https://arxiv.org/abs/2606.11201)) | 任务 1.2 双熵门控进阶 | **ACL 2026** ✅ |
 | Learning Adaptive LLM Decoding ([arxiv 2603.09065](https://arxiv.org/abs/2603.09065)) | 任务 1.2 learned routing | 2026 preprint |
 | Inference-Time Reward Hacking ([arxiv 2506.19248](https://arxiv.org/abs/2506.19248)) | 任务 1.3 评估 pipeline 安全设计 | **NeurIPS 2025** ✅ |
@@ -688,9 +733,9 @@ CMU 的 DSPA（arxiv 2603.21461）用稀疏自编码器在 LLM 激活空间直�
 用稀疏自编码器（SAE）在 LLM 内部激活空间直接施加对齐引导，完全不调用外部 VM（99.8% 激活值为零）。若效果可接近 4B VM，L/T 从根本解决。当前挑战：SAE 需离线训练，效果能否匹敌 4B VM 尚未验证。  
 **建议**：先用 1-2 周做 paper-reading + 小规模可行性实验，再决定是否立项。
 
-**A2. RM 梯度引导（GGRO 思路，UAI 2026，arxiv 2606.09635）**
+**A2. RM 梯度引导（探索性方向，无直接文献支撑）**
 
-在高熵位置用 RM 的**梯度信息**（而非分数）指导 token 选择，理论上可避免 RM 全量前向传播。当前挑战：标准推理不维护梯度图，需探索 gradient checkpointing 或近似梯度方案，工程可行性待研究。可与 A1 并行探索，代码实验成本低。
+思路：在高熵位置用 RM 的**梯度信息**（而非分数）指导 token 选择，理论上可避免完整前向传播。注意：此方向**目前无顶会直接验证**——GGRO（UAI 2026，arxiv 2606.09635）常被援引，但该论文的实际贡献是验证"只在高熵位置干预"的 entropy-adaptive 策略（与 SIA 的 `--entropy_threshold` 一致），并不涉及梯度引导。此外，标准推理不维护梯度图，实现时需 gradient checkpointing 或近似方案，工程成本远高于直接前向传播，可行性有待独立实验验证再决定是否立项。
 
 ---
 
@@ -698,14 +743,14 @@ CMU 的 DSPA（arxiv 2603.21461）用稀疏自编码器在 LLM 激活空间直�
 
 **B1. VM 蒸馏：4B → 1.7B（NeurIPS 2024 研究背景）**
 
-Month 3 的同词表 4B ARM VM 验证效果后，用 4B 作教师蒸馏出 1.7B 学生 VM。文献（[arxiv 2411.08302](https://arxiv.org/abs/2411.08302)、[arxiv 2405.19316](https://arxiv.org/abs/2405.19316)）表明大 RM 蒸馏小 RM 可保留约 80–90% 偏好判断能力，latency 降低约 2×，VRAM 占用减半。  
+Month 3 的同词表 4B ARM VM 验证效果后，用 4B 作教师蒸馏出 1.7B 学生 VM。相关文献（[arxiv 2411.08302](https://arxiv.org/abs/2411.08302)、[arxiv 2405.19316](https://arxiv.org/abs/2405.19316)）初步显示大 RM 蒸馏小 RM 可保留约 80–90% 偏好判断能力，latency 降低约 2×，VRAM 占用减半——但上述具体数字**未经内部独立验证**，应视为量级参考而非确定结论。  
 **建议时机**：2027 Q1，前提是 Month 3 的 4B ARM VM 效果经评估已达标。
 
 **B2. VM 内部注意力头裁剪（EntropyInfer 思路，arxiv 2606.09508）**
 
-将 VM 内部注意力头分为"结构性（Rigid）"和"语义决策型（Dynamic）"两类，Rigid 头可跳过或降精度计算，预期降低 VM per-call latency 20–40%。前提：需先对当前 VM（Qwen3.5-4B）的注意力激活模式做离线分析，确认 Rigid 头比例是否足够大，否则收益有限。
+将 VM 内部注意力头分为"结构性（Rigid）"和"语义决策型（Dynamic）"两类，Rigid 头可跳过或降精度计算。注意：EntropyInfer 原论文的 2.39× 加速是在 **LLM prefill、100k+ token** 场景下测得，而 SIA 的 VM 开销集中在 **decode 阶段的短序列打分**，场景差异大，"20–40% latency 降低"是外推估计，**无直接实验支撑**，实际收益需在 VM 上独立实测。前提：需先对当前 VM（Qwen3.5-4B）的注意力激活模式做离线分析，确认 Rigid 头比例是否足够大，否则收益更为有限。
 
-**B3. RM Ensemble（NeurIPS 2024 共识）**
+**B3. RM Ensemble（通行工程实践）**
 
 部署 2–3 个不同 VM，对分数取均值，降低单 VM reward hacking 风险。在 B1 完成后（1.7B VM 可用），两个 1.7B VM 的 VRAM 需求低于当前一个 4B VM，对吞吐影响可控。  
 **当前前提**：先建立 reward hacking 监控指标（如高 VM 分但人工评分差的样本率），有证据后再引入 ensemble。
@@ -740,28 +785,11 @@ TITA（2025，arxiv 2510.21794）展示了推理时 log-ratio 方法（DPO 等�
 
 **C2. PRM 与 token 级 VM 的融合**
 
-Month 5 的 PRM 给出步骤级分数，如何将其降维分摊到 token 级（如一步内均匀分摊），在不额外构建 token 级偏好数据的情况下提升 token 级干预信号质量，是一个开放问题。目前无顶会直接验证，建议 Month 5 PRM 上线后顺带做消融实验。
+若 Month 5 可行性评估结论为 go，PRM 给出步骤级分数后，如何将其降维分摊到 token 级（如一步内均匀分摊），在不额外构建 token 级偏好数据的情况下提升 token 级干预信号质量，是一个开放问题。目前无顶会直接验证，建议 PRM 实际上线后顺带做消融实验。
 
 ---
 
-### F. 原创学术发表机会
-
-**F1. 高并发场景下 token 级对齐的吞吐-效果 Pareto（学术空白）**
-
-所有现有顶会工作（包括 ICLR 2025 的 GenARM、ICML 2025 的 RSD）均在单请求或 conc ≤ 4 场景下评估，**无一研究高并发连续批处理场景**。SIA 若系统性对比 block-wise / PRM / 乘积式融合在 conc = 4/8/16/32 下的吞吐-效果 Pareto 并发表，有望成为该方向的首批顶会工作。  
-**目标会议**：MLSys 2027 / ICML 2027 Systems Track；数据积累可从 Month 1 评估基准起步。
-
-**F2. 基于 ICML 2026 MDP 框架形式化 SIA → 投稿 ICLR 2027**
-
-Token-level 对齐已被 ICML 2026（arxiv 2602.02572）形式化为标准 MDP 框架，SIA 是该框架的一个具体实例（VM 估计 $Q(s_t, a_t)$，logit 空间加权）。以此框架重新表述 SIA 的理论保证——结合 ARM 训练目标 + 熵稀疏干预 + 乘积式融合的理论组合——加上 6 个月的工程实测数据，ICLR 2027（截稿约 2026-10）是可行的投稿窗口。
-
-**F3. 极小 judge 作为独立学术贡献（条件触发：Month 4 PoC 结果积极）**
-
-若 Month 4 任务 4.3（<10M 参数线性评分头替代 4B VM）的效果达标，效果-延迟权衡本身是原创贡献。可与 F1 合并：以极小 judge 作为效率方案、以高并发场景作为评估框架，合写一篇"SIA 高并发吞吐系统工作"，比分别发表更完整。
-
----
-
-> **远期方向优先级参考**（前期工作完成后）：C0a/C0b（延后轻量探索，随时可启动）> B1 VM 蒸馏（低风险，效果可期）> E1 多目标 VM（效果覆盖）> A1 DSPA（高潜力，需验证）≥ A2 GGRO 梯度（高潜力，工程挑战大）> F1/F2/F3（学术发表，需 6 个月数据积累）> B2/B3（依赖具体指标）。
+> **远期方向优先级参考**（前期工作完成后）：C0a/C0b（延后轻量探索，随时可启动）> B1 VM 蒸馏（低风险，效果可期）> E1 多目标 VM（效果覆盖）> A1 DSPA（高潜力，需验证）≥ A2 GGRO 梯度（高潜力，工程挑战大）> B2/B3（依赖具体指标）。
 
 ---
 
