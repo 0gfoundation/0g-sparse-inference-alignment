@@ -62,9 +62,9 @@ The next six months are focused on systematically addressing all three issues.
 **Candidate Directions** (decided after Month 2 results are in):
 
 - **Higher-quality training data**: Incorporate high-quality public preference datasets and use the main model to auto-generate response pairs with quality labels, then retrain on the vocabulary-aligned foundation to improve scoring accuracy.
-- **Vocabulary-wide scoring head** \[2\]: The current approach scores each candidate token in a separate forward pass (e.g., 10 candidates = 10 passes). The new design outputs scores for all vocabulary entries in a single pass—theoretical speedup up to 10×, measured at ~6× in practice.
-- **Multiplicative fusion A/B experiment** \[3\]: SIA currently adds the Value Model's signal on top of the AI's output probability distribution. Multiplicative fusion instead multiplies the two distributions together for more precise steering. Literature shows a 10%+ win-rate improvement over additive fusion.
-- **Adaptive fusion weight** \[9\]: The current `--weight` parameter is a fixed global value. We make it dynamic—automatically higher at high-entropy positions and lower when the AI is already confident. No retraining required; a 1–2 day code change that can be combined with multiplicative fusion for comparison.
+- **Vocabulary-wide scoring head** \[2\]: The current approach scores each candidate token in a separate inference run (e.g., 10 candidates = 10 runs). The new design outputs scores for all vocabulary entries in a single inference run—theoretical speedup up to 10×, measured at ~6× in practice.
+- **Multiplicative fusion A/B experiment** \[3\]: SIA currently adds the Value Model's signal on top of the AI's output probability scores. Multiplicative fusion instead multiplies the two distributions together for more precise steering. Literature shows a 10%+ win-rate improvement over additive fusion.
+- **Adaptive fusion weight** \[9\]: The current intervention strength parameter is a fixed global value. We make it dynamic—automatically higher at high-entropy positions and lower when the AI is already confident. No retraining required; a 1–2 day code change that can be combined with multiplicative fusion for comparison.
 
 **Expected Outcomes**:
 - Measurable improvement in scoring quality or efficiency
