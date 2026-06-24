@@ -348,12 +348,16 @@ _STRESS_OOM_KEYWORDS     = ("cuda out of memory", "oom", "out of memory",
 
 
 def _next_conc(conc: int) -> int:
-    """按 ~1.5× 梯度递增，结果取整到方便读的数字。"""
+    """递增策略：
+    conc < 16  → 2×（1→2→4→8→16，覆盖低并发基线）
+    conc >= 16 → ~1.5×，凑整到 4 的倍数（<100）或 16 的倍数（≥100）
+    """
+    if conc < 16:
+        return conc * 2
     raw = conc * 1.5
-    # 凑整：< 100 取 4 的倍数，≥ 100 取 16 的倍数
     if raw < 100:
-        return int(round(raw / 4) * 4)
-    return int(round(raw / 16) * 16)
+        return max(conc + 1, int(round(raw / 4) * 4))
+    return max(conc + 1, int(round(raw / 16) * 16))
 
 
 def _is_oom(results: list) -> bool:
@@ -453,7 +457,7 @@ async def do_stress_test(
 
         status_tag = f"↓{tps/peak_tps:.0%}" if drop_flag else "✓"
         print(f"ok={len(ok)}/{total_reqs}  ITL={m['itl_mean']:.1f}ms  "
-              f"tok/s={tps:.1f}  {status_tag}  "
+              f"tok/s={tps:.1f}  TPM={tps*60:.0f}  {status_tag}  "
               f"(fail={fail_rate:.0%})")
 
         if drop_count >= _STRESS_DROP_CONSECUTIVE:
@@ -498,8 +502,8 @@ async def main():
     # ── 极限压测 ──────────────────────────────────────────────────────────────
     parser.add_argument("--stress", action="store_true",
                         help="极限并发压测：从 --stress-start 开始自动递增到崩溃")
-    parser.add_argument("--stress-start", type=int, default=16,
-                        help="压测起始并发数（默认 16）")
+    parser.add_argument("--stress-start", type=int, default=1,
+                        help="压测起始并发数（默认 1）")
     parser.add_argument("--stress-rounds", type=int, default=2,
                         help="每档重复轮数（默认 2，比常规压测少以加快探索）")
     args = parser.parse_args()
