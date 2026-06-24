@@ -233,10 +233,10 @@ def compute_metrics(ok: list, wall_s: float) -> dict:
     }
 
 
-_COL = "  {conc:>4}  {inp:>7}  {out:>6}  {ttft_m:>10}  {ttft_p99:>9}  {itl:>9}  {lat:>9}  {tps:>10}  {rps:>6}"
-_HDR = "  {:>4}  {:>7}  {:>6}  {:>10}  {:>9}  {:>9}  {:>9}  {:>10}  {:>6}".format(
+_COL = "  {conc:>4}  {inp:>7}  {out:>6}  {ttft_m:>10}  {ttft_p99:>9}  {itl:>9}  {lat:>9}  {tps:>10}  {rps:>6}  {tpm:>7}"
+_HDR = "  {:>4}  {:>7}  {:>6}  {:>10}  {:>9}  {:>9}  {:>9}  {:>10}  {:>6}  {:>7}".format(
     "Conc", "Input", "Output", "TTFT mean", "TTFT p99", "ITL mean",
-    "Req Lat", "Out tok/s", "Req/s"
+    "Req Lat", "Out tok/s", "Req/s", "TPM"
 )
 _SEP = "  " + "─" * (len(_HDR) - 2)
 
@@ -263,6 +263,7 @@ def print_table(rows: list, title: str):
                 lat=f"{m['lat_mean']:.0f}ms",
                 tps=f"{m['out_tps']:.1f}",
                 rps=f"{m['req_s']:.2f}",
+                tpm=f"{m['out_tps']*60:.0f}",
             ))
     print(_SEP)
 
