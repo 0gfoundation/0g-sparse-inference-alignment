@@ -393,7 +393,7 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 
 **来源**：Judge Decoding（arXiv 2025 preprint，arxiv 2501.19309）用 16.4k 参数线性层替换 speculative decoding 的接受准则，500 条三元组（问题 + 正确答案 + 错误答案）、1.5 小时训练，实现 3.9–9.7× 加速。
 
-**SIA 类比**：在主 LLM（0GM-VL-35B）的 LogitsProcessor 内部，基于 top-K logit 分布训练一个**极小线性评分头**（<10M 参数），替代外部 4B VM。如果可行，per-call latency 从 ~30ms 降至 <0.1ms，L/T 根本解决。
+**SIA 类比**：在主 LLM（0GM-VL-35B）的 LogitsProcessor 内部，基于 top-K logit 分布训练一个**极小线性评分头**（<10M 参数），替代外部 4B VM。**35B 主模型完全冻结，只训练评分头**——先跑 35B 推理收集 top-K logit 特征（存盘，仅需几 MB），再离线单独训练评分头，两步可分开执行，单卡 144GB 完全够用。如果可行，per-call latency 从 ~30ms 降至 <0.1ms，L/T 根本解决。
 
 > **完成后收益（如成功）**：VM 延迟：VM per-call latency 从 ~30ms → <0.1ms（300×）；并发吞吐：VM 完全移出关键路径，吞吐接近 noSIA 水平；即使部分成功，也能大幅降低 VM 调用频率。
 
