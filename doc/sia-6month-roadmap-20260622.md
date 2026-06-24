@@ -22,7 +22,7 @@
 | 痛点 | 当前状态 | 根因 |
 |------|---------|------|
 | **E 效果高度依赖配置** | 0GM-35B natural thinking：**win rate 65.4%，Δ=+4.05（p<0.0001）**；0GM-35B ban_think：**win rate 44%，Δ=−13%（与随机无区别）**；VL-30B + VM-4B：**win rate 4.6%，Δ=−75%（灾难性退化）**；Qwen3-14B 同家族：**+13.2%（复现论文）**。MMLU：same-family（VL-30B）无明显下降；0GM-35B 跨家族下降 **−5.5 至 −12.2pp** | **① VM 代际/家族不匹配（主因）**：VM-4B 基于 Qwen3 base（训练 cutoff 2025-04），0GM-35B 为 2026 年新模型，能力差距 W2S=8.75×、时间差 8–12 个月、词表差 248K vs 151K；三组对比结果严格单调（W2S 越大效果越差）。**② VM 分布外用法**：VM 训练任务为完整答案对偏好评分，SIA 实际任务为 partial response + 1 token 的 step-level value prediction，分布不匹配导致打分信号噪声高。**③ 跨分词器 BPE 边界噪声**：0GM-35B 词表 248K vs VM 词表 151K，stable prefix 优化前 APC miss 导致打分不稳定（stable prefix 已部分解决）。④ VM 训练数据量/质量未充分验证 |
-| **L VM 延迟高** | **0GM-35B ~30ms/call**（stable prefix 优化后，之前高达 34–55ms 且随序列增长）；**VL-30B ~17ms/call**（CUDA graph 开启时 11ms） | **① 无 CUDA graph（最大贡献）**：vllm 0.18.0 存在 WeakSet bug，主 LLM profiling 阶段 `clear_all_graphs()` 清除了 RM 的 CUDA graph，导致运行时崩溃，0GM-35B 被迫走 eager 路径；VL-30B 上 CUDA graph 使 VM 延迟 71ms→11ms（6.4×）。**② 跨分词器 BPE 边界开销（0GM-35B 特有）**：每步需 decode+re-encode，加上 eager dispatch overhead，合计约 7ms gap；是 0GM-35B vs VL-30B 延迟差异的第二大来源。**③ small-batch memory-bound**：每次 VM forward batch size 极小（topk×1–2 token），但需读全部 ~8GB 权重，GPU 处于 memory-bound 状态 |
+| **L VM 延迟高** | **0GM-35B ~30ms/call**（stable prefix 优化后，之前高达 34–50ms 且随序列增长）；**VL-30B ~17ms/call**（CUDA graph 开启时 11ms） | **① 无 CUDA graph（最大贡献）**：vllm 0.18.0 存在 WeakSet bug，主 LLM profiling 阶段 `clear_all_graphs()` 清除了 RM 的 CUDA graph，导致运行时崩溃，0GM-35B 被迫走 eager 路径；VL-30B 上 CUDA graph 使 VM 延迟 71ms→11ms（6.4×）。**② 跨分词器 BPE 边界开销（0GM-35B 特有）**：每步需 decode+re-encode，加上 eager dispatch overhead，合计约 7ms gap；是 0GM-35B vs VL-30B 延迟差异的第二大来源。**③ small-batch memory-bound**：每次 VM forward batch size 极小（topk×1–2 token），但需读全部 ~8GB 权重，GPU 处于 memory-bound 状态 |
 | **T 高并发吞吐损失** | 批量打分优化后：conc=16 SIA tok/s 369，**35% of noSIA**（优化前为 23%）。完整并发扫描（35B，优化前）：conc=1→84%、4→44%、8→35%、16→23%。**30B 对照**：conc=16 时 66%（vs 35B 的 23%），差距源于跨分词器使 0GM-35B 单次 VM 调用 ~3ms vs 30B 的 ~1.5ms，串行 16 次时累积差距 2× | **优化前主因**：N 次串行 VM 调用，overhead 随并发线性累加（conc=16 VM 串行部分 ~48ms vs LLM batching 仅 9→14ms）；per-token 触发率 ~20%（熵门控），但 conc=16 时每 batch step 至少一个请求触发概率 ≈97%，VM 事实上串行阻塞每一步。**批量打分已实施后，剩余瓶颈**：① eager dispatch kernel overhead ~5ms/call（需 CUDA graph 消除）；② APC partial tail compute ~15ms/batch（每候选仅 ~15 token，不满一个 APC block，结构性限制，不可消除）；③ 跨分词器 CPU 编码开销（P-3 优化后已降至 ~0.5ms） |
 
 ### 两个阶段的工作重心
@@ -36,7 +36,7 @@
 计划分三个阶段，核心目标是将 SIA 的性能代价从"显著"降低到"可忽略"，同时持续提升对齐效果。
 
 **阶段一（Month 1）：减少打分频率，补建 GPT-4 评估基准**  
-通过智能跳过"不重要的 token"，将评分模型（Value Model）的调用次数减少 50% 以上，在几乎不损失对齐效果的前提下大幅降低开销；同时在现有 Skywork judge 基准的基础上补建 GPT-4 标准评估基准，为后续所有改进提供与业界可比的量化依据。
+通过智能跳过"不重要的 token"，将评分模型（Value Model）的调用次数降至原来的 1/4（减少约 75%，从 ~20% 干预率降至 ~5%），在几乎不损失对齐效果的前提下大幅降低开销；同时在现有 Skywork judge 基准的基础上补建 GPT-4 标准评估基准，为后续所有改进提供与业界可比的量化依据。
 
 **阶段二（Month 2–3）：换一个更快的评分模型**  
 当前评分模型与主模型使用不同词表，每次打分都需要额外的词表重编码（CPU 编码 ~2ms + eager 调度 ~5ms，合计约 7ms 额外开销）。训练一个词表完全一致的评分模型，预计将单次打分延迟从 ~30ms 降至 ~11ms；同时验证"乘积式融合"（比当前加法干预更精准的介入方式）能否进一步提升对齐效果。
@@ -48,7 +48,7 @@
 
 | 维度 | 当前（2026-06） | 保守目标（CUDA graph 仍不可用）| 乐观目标（CUDA graph 恢复后）|
 |------|--------------|-------------------------------|-------------------------------|
-| 高并发吞吐（SIA vs 无 SIA） | **35%** | **≥ 55%** | **≥ 72%** |
+| 高并发吞吐（SIA vs 无 SIA） | **35%** | **≥ 53%** | **≥ 72%** |
 | 单次打分延迟 | ~30ms | ~23ms（消除跨分词器 ~7ms）| ~11ms（追加 CUDA graph）|
 | 多模态支持 | 仅文本 | 文本 + 图片 | 文本 + 图片 |
 | 标准评估基准 | Skywork judge 已有基准；GPT-4 judge 待建立 | Month 1 补建 GPT-4 judge，持续追踪 | Month 1 补建 GPT-4 judge，持续追踪 |
