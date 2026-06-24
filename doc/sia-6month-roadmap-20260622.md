@@ -1,8 +1,5 @@
 # SIA Roadmap（2026-05 回顾 + 2026-07 ~ 2026-12 计划）
 
-**撰写日期**：2026-06-22  
-**执笔**：工程侧  
-
 ---
 
 ## Overview
@@ -18,13 +15,21 @@
 两个月内完成核心系统，0GM-VL-35B 和 Qwen3-VL-30B 两个主力模型均已接近上线标准：
 
 - **效果已验证**：0GM-VL-35B 开启 SIA 后，综合对话质量 AlpacaEval 胜率 **65.4%**（191 配对中 SIA 版本有 65.4% 被评为更优，125/191 对）；MMLU 准确率无明显下降
-- **性能有代价**：高并发场景（16 路并发）吞吐量约为不开 SIA 的 **35%**，即同等硬件可服务的请求量减少约 65%
+- **性能有代价**：单请求串行吞吐约为不开 SIA 的 **59–64%**（0GM-35B 59–61%，VL-30B 64%）；高并发场景（16 路并发）吞吐量约为不开 SIA 的 **35%**，即同等硬件可服务的请求量减少约 65%
+
+### 三个核心痛点（当前状态）
+
+| 痛点 | 当前状态 | 根因 |
+|------|---------|------|
+| **E 效果高度依赖配置** | 0GM-35B natural thinking：**win rate 65.4%，Δ=+4.05（p<0.0001）**；0GM-35B ban_think：**win rate 44%，Δ=−13%（与随机无区别）**；VL-30B + VM-4B：**win rate 4.6%，Δ=−75%（灾难性退化）**；Qwen3-14B 同家族：**+13.2%（复现论文）**。MMLU：same-family（VL-30B）无明显下降；0GM-35B 跨家族下降 **−5.5 至 −12.2pp** | **① VM 代际/家族不匹配（主因）**：VM-4B 基于 Qwen3 base（训练 cutoff 2025-04），0GM-35B 为 2026 年新模型，能力差距 W2S=8.75×、时间差 8–12 个月、词表差 248K vs 151K；三组对比结果严格单调（W2S 越大效果越差）。**② VM 分布外用法**：VM 训练任务为完整答案对偏好评分，SIA 实际任务为 partial response + 1 token 的 step-level value prediction，分布不匹配导致打分信号噪声高。**③ 跨分词器 BPE 边界噪声**：0GM-35B 词表 248K vs VM 词表 151K，stable prefix 优化前 APC miss 导致打分不稳定（stable prefix 已部分解决）。④ VM 训练数据量/质量未充分验证 |
+| **L VM 延迟高** | **0GM-35B ~30ms/call**（stable prefix 优化后，之前高达 34–55ms 且随序列增长）；**VL-30B ~17ms/call**（CUDA graph 开启时 11ms） | **① 无 CUDA graph（最大贡献）**：vllm 0.18.0 存在 WeakSet bug，主 LLM profiling 阶段 `clear_all_graphs()` 清除了 RM 的 CUDA graph，导致运行时崩溃，0GM-35B 被迫走 eager 路径；VL-30B 上 CUDA graph 使 VM 延迟 71ms→11ms（6.4×）。**② 跨分词器 BPE 边界开销（0GM-35B 特有）**：每步需 decode+re-encode，加上 eager dispatch overhead，合计约 7ms gap；是 0GM-35B vs VL-30B 延迟差异的第二大来源。**③ small-batch memory-bound**：每次 VM forward batch size 极小（topk×1–2 token），但需读全部 ~8GB 权重，GPU 处于 memory-bound 状态 |
+| **T 高并发吞吐损失** | 批量打分优化后：conc=16 SIA tok/s 369，**35% of noSIA**（优化前为 23%）。完整并发扫描（35B，优化前）：conc=1→84%、4→44%、8→35%、16→23%。**30B 对照**：conc=16 时 66%（vs 35B 的 23%），差距源于跨分词器使 0GM-35B 单次 VM 调用 ~3ms vs 30B 的 ~1.5ms，串行 16 次时累积差距 2× | **优化前主因**：N 次串行 VM 调用，overhead 随并发线性累加（conc=16 VM 串行部分 ~48ms vs LLM batching 仅 9→14ms）；per-token 触发率 ~20%（熵门控），但 conc=16 时每 batch step 至少一个请求触发概率 ≈97%，VM 事实上串行阻塞每一步。**批量打分已实施后，剩余瓶颈**：① eager dispatch kernel overhead ~5ms/call（需 CUDA graph 消除）；② APC partial tail compute ~15ms/batch（每候选仅 ~15 token，不满一个 APC block，结构性限制，不可消除）；③ 跨分词器 CPU 编码开销（P-3 优化后已降至 ~0.5ms） |
 
 ### 两个阶段的工作重心
 
-过去两个月属于**"无损加速"阶段**：在完全不改动 SIA 干预逻辑的前提下，通过纯工程手段（批量打分合并、b2 inproc 架构、跨分词器前缀缓存）将高并发吞吐从基线提升 54%，对齐效果不受影响。这类优化风险极低、收益确定、结果可直接用吞吐数字衡量。
+过去两个月属于**"工程对齐"阶段**：以 NTU SIA 原论文（arxiv 2602.21215）为基准，**刻意不改动任何算法和模型**——干预逻辑、VM 结构、训练权重完全保持原样——目的是先在生产环境复现论文声称的效果，再通过纯工程手段（b2 inproc 架构、批量打分合并、跨分词器前缀缓存）消除部署开销。这样做保证了任何效果变化都可归因于工程实现，而非算法调整。高并发吞吐从基线提升 54%，优化风险极低、收益确定、结果可直接用吞吐数字衡量。
 
-接下来 6 个月进入**"实验探索"阶段**：引入 Value Model 重新训练、新干预算法（乘积式融合、PRM、accept/reject）和多模态扩展。这些方向**每一项都有不确定性**——新训练的 VM 效果可能不如旧 VM，算法改进可能只在特定任务上有效，实验结果有好有坏。因此后续计划的交付标准更多是"A/B 有结论"而非"数字必须达标"，里程碑也相应保留了保守/乐观两个场景。
+接下来 6 个月进入**"跳出原论文"阶段**：工程对齐已完成，接下来要**主动突破 SIA 原始论文的边界**，大胆尝试算法改动（乘积式融合、block-wise scoring、accept/reject 采样）、模型改进（同词表 VM 重训、更强 base model、更大训练数据集）和训练数据增强（步骤级标注、多模态偏好对）。这些方向**每一项都会对效果产生影响**，结果有好有坏，不能保证优于现状。因此后续计划的交付标准更多是"A/B 有结论"而非"数字必须达标"，里程碑也相应保留了保守/乐观两个场景。
 
 ### 接下来 6 个月的计划
 
@@ -145,14 +150,6 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 | Qwen3-VL-30B AlpacaEval（b2 inproc，200Q）| SIA Skywork mean **+1.22~+2.38（+4.2%~+8.3%）**，两轮均显著 | GPT-4 judge 尚未跑；两轮 Δ 有波动，统计噪声正常（见 doc/alpaca-eval-vl30b-b2-docker-20260608.md）|
 
 <sub>MMLU 注：多次实验（VL-30B ±1–3pp、14B ±1pp）均统计不显著；0GM-35B thinking 模式有 +12pp 例外，主要源于 SIA 减少了 thinking 截断（noSIA cap-hit 25.3% → SIA 8.0%），非通识知识本身提升，待多次重复后再下结论。</sub>
-
-### 三个核心痛点（当前状态）
-
-| 痛点 | 当前状态 | 根因 |
-|------|---------|------|
-| **E 效果不显著** | AlpacaEval 65.4%（Skywork judge，191 配对）；MMLU 无明显下降 | 跨分词器噪声导致 VM 打分信号有系统性偏差；VM 训练数据量/质量未充分验证；当前 VM 为跨分词器 4B 模型，模型能力和训练对齐程度有限；GPT-4 judge 独立验证尚未完成 |
-| **L VM 延迟高** | 0GM-VL-35B ~30ms/call | dense 4B VM，memory-bound，无 CUDA graph |
-| **T 高并发吞吐损失** | conc=16 仅 35% of noSIA | VM 在 token 级关键路径上：per-token 触发率 ~20%（熵门控），但 conc=16 时几乎每个 batch decode step 都有至少一个请求触发（概率 ≈97%），VM 事实上阻塞了每一步 |
 
 ---
 
