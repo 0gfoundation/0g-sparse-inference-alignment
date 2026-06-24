@@ -158,7 +158,8 @@ async def one_request(
         error = str(exc)
 
     if not token_times:
-        return {"status": status or 0, "error": error or "no tokens received"}
+        # 不管 HTTP 状态如何，没有收到任何 token 就算失败（status=0 → 不进 ok 列表）
+        return {"status": 0, "error": f"no tokens received (http={status})"}
 
     t_end = time.perf_counter()
     ttft_ms = (token_times[0] - t0) * 1000
