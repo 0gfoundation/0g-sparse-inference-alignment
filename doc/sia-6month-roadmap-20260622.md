@@ -702,7 +702,6 @@ CMU 的 DSPA（arxiv 2603.21461）用稀疏自编码器在 LLM 激活空间直�
 | Low-Rank RM Parametrization ([arxiv 2407.04615](https://arxiv.org/abs/2407.04615)) | 任务 2.2 VM scoring 加速 | **TMLR 2025** ✅ |
 | From r to Q*: LLM as Q-Function ([arxiv 2404.12358](https://arxiv.org/abs/2404.12358)) | 任务 2.2 VM 冷启动理论支撑（DPO ≡ Q-learning，log-prob 差值编码隐含奖励，SIA 推导延伸） | **COLM 2024** ✅ |
 | Hydragen: High-Throughput Shared-Prefix Inference ([arxiv 2402.05099](https://arxiv.org/abs/2402.05099)) | 任务 Month 3 备选 / T 系统优化 | **ICLR 2025** ✅ |
-| AsyncSpade: Asynchronous Sparse Decoding ([arxiv 2510.07486](https://arxiv.org/abs/2510.07486)) | 背景参考（异步稀疏 KV cache；**不适用**于 VM 异步调用场景）| 2025 preprint |
 | To Intervene or Not: Probabilistic Gating ([arxiv 2606.11201](https://arxiv.org/abs/2606.11201)) | 任务 1.2 双熵门控进阶 | **ACL 2026** ✅ |
 | Learning Adaptive LLM Decoding ([arxiv 2603.09065](https://arxiv.org/abs/2603.09065)) | 任务 1.2 learned routing | 2026 preprint |
 | Inference-Time Reward Hacking ([arxiv 2506.19248](https://arxiv.org/abs/2506.19248)) | 任务 1.3 评估 pipeline 安全设计 | **NeurIPS 2025** ✅ |
