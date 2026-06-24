@@ -95,7 +95,7 @@ The next six months are focused on systematically addressing all three issues.
 **Key Work**:
 
 - **Step-level quality evaluation (pause-and-rerank)** \[5\]: At each completed reasoning step, automatically pause and generate 3 alternative continuations, then select the best one to proceed. No new model training required—reuses the main model's existing reasoning capability.
-- **Process Reward Model feasibility assessment (PRM)** \[6\]: If the no-training approach above shows limited gains, assess whether it's worth training a Value Model specifically designed to evaluate reasoning steps. This direction has been validated on math benchmarks in top-tier published research, but requires additional training cost. The deliverable for this month is a clear go/no-go decision.
+- **Process Reward Model feasibility assessment (PRM)** \[6\]: If the no-training approach above shows limited gains, assess whether it's worth training a Process Reward Model specifically designed to evaluate reasoning steps. This direction has been validated on math benchmarks in top-tier published research, but requires additional training cost. The deliverable for this month is a clear go/no-go decision.
 
 **Expected Outcomes** (if experiments are positive):
 - Measurable accuracy gains on math, code, and reasoning tasks
