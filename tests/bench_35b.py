@@ -379,6 +379,7 @@ def _is_server_down(results: list) -> bool:
 async def do_stress_test(
     url: str,
     start_conc: int,
+    max_conc: int,
     rounds: int,
     no_sia: bool,
 ):
@@ -391,10 +392,10 @@ async def do_stress_test(
     stop_reason = ""
     conc = start_conc
 
-    print(f"\n[{label}] Stress Test — 从 conc={conc} 开始，每档 {rounds} 轮")
+    print(f"\n[{label}] Stress Test — 从 conc={conc} 开始，每档 {rounds} 轮，上限 conc={max_conc}")
     print(f"  输入 ≈{CONC_SWEEP_INPUT_TOKENS} tokens，max_out={CONC_SWEEP_OUTPUT_TOKENS}")
     print(f"  停止条件：tok/s < 峰值×{_STRESS_DROP_THRESHOLD:.0%}（连续{_STRESS_DROP_CONSECUTIVE}档）"
-          f" 或 失败率>{_STRESS_ERROR_THRESHOLD:.0%} 或 服务崩溃\n")
+          f" 或 失败率>{_STRESS_ERROR_THRESHOLD:.0%} 或 服务崩溃 或 conc>{max_conc}\n")
 
     while True:
         total_reqs = conc * rounds
@@ -470,6 +471,9 @@ async def do_stress_test(
         next_c = _next_conc(conc)
         if next_c <= conc:          # 防止整数舍入卡死
             next_c = conc + max(4, conc // 4)
+        if next_c > max_conc:
+            stop_reason = f"已达上限 conc={max_conc}（可用 --stress-max-conc 调整）"
+            break
         conc = next_c
 
     # ── 汇总表 ──────────────────────────────────────────────────────────────
@@ -507,6 +511,8 @@ async def main():
                         help="压测起始并发数（默认 1）")
     parser.add_argument("--stress-rounds", type=int, default=2,
                         help="每档重复轮数（默认 2，比常规压测少以加快探索）")
+    parser.add_argument("--stress-max-conc", type=int, default=512,
+                        help="压测并发上限，防止 KV cache OOM（默认 512）")
     args = parser.parse_args()
 
     print(f"目标服务: {args.url}")
@@ -522,6 +528,7 @@ async def main():
             await do_stress_test(
                 args.url,
                 start_conc=args.stress_start,
+                max_conc=args.stress_max_conc,
                 rounds=args.stress_rounds,
                 no_sia=no_sia,
             )
