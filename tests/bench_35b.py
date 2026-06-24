@@ -5,6 +5,10 @@
   1. Concurrency Sweep: input≈512 tokens, max_out=304, 并发 1/2/4/8/16
   2. Input-Length Sweep: 变化 input 长度，超过 max_model_len 的组跳过
 
+极限压力模式：
+  3. Stress Test: 从 conc=16 起按 ~1.5× 梯度递增，直到吞吐严重下滑
+     或服务崩溃为止，测出最大可承载并发数。
+
 指标：TTFT均值/p99, ITL均值, Req Latency均值, Output tok/s, Req/s
 
 依赖：aiohttp（pip install aiohttp）
@@ -16,6 +20,10 @@
     python tests/bench_35b.py --only-concurrency  # 只跑并发扫描
     python tests/bench_35b.py --only-input        # 只跑输入长度扫描
     python tests/bench_35b.py --rounds 3          # 每档重复轮数（默认 3）
+    python tests/bench_35b.py --stress            # 极限并发压测（自动递增至崩溃）
+    python tests/bench_35b.py --stress --no-sia   # noSIA 极限压测
+    python tests/bench_35b.py --stress --stress-start 32   # 从 conc=32 开始
+    python tests/bench_35b.py --stress --stress-rounds 1   # 每档只跑 1 轮（更快）
 """
 import argparse
 import asyncio
@@ -150,7 +158,8 @@ async def one_request(
         error = str(exc)
 
     if not token_times:
-        return {"status": status or 0, "error": error or "no tokens received"}
+        # 不管 HTTP 状态如何，没有收到任何 token 就算失败（status=0 → 不进 ok 列表）
+        return {"status": 0, "error": f"no tokens received (http={status})"}
 
     t_end = time.perf_counter()
     ttft_ms = (token_times[0] - t0) * 1000
@@ -209,8 +218,8 @@ def compute_metrics(ok: list, wall_s: float) -> dict:
     ttfts = [r["ttft_ms"] for r in ok if r.get("ttft_ms")]
     itls  = [r["itl_ms"]  for r in ok if r.get("itl_ms") and r["itl_ms"] > 0]
     lats  = [r["latency_ms"] for r in ok if r.get("latency_ms")]
-    pts   = [r["prompt_tokens"] for r in ok]
-    cts   = [r["completion_tokens"] for r in ok]
+    pts   = [r.get("prompt_tokens", 0) for r in ok]
+    cts   = [r.get("completion_tokens", 0) for r in ok]
     return {
         "n":          len(ok),
         "input_mean": int(statistics.mean(pts)) if pts else 0,
@@ -224,10 +233,10 @@ def compute_metrics(ok: list, wall_s: float) -> dict:
     }
 
 
-_COL = "  {conc:>4}  {inp:>7}  {out:>6}  {ttft_m:>10}  {ttft_p99:>9}  {itl:>9}  {lat:>9}  {tps:>10}  {rps:>6}"
-_HDR = "  {:>4}  {:>7}  {:>6}  {:>10}  {:>9}  {:>9}  {:>9}  {:>10}  {:>6}".format(
+_COL = "  {conc:>4}  {inp:>7}  {out:>6}  {ttft_m:>10}  {ttft_p99:>9}  {itl:>9}  {lat:>9}  {tps:>10}  {rps:>6}  {tpm:>7}"
+_HDR = "  {:>4}  {:>7}  {:>6}  {:>10}  {:>9}  {:>9}  {:>9}  {:>10}  {:>6}  {:>7}".format(
     "Conc", "Input", "Output", "TTFT mean", "TTFT p99", "ITL mean",
-    "Req Lat", "Out tok/s", "Req/s"
+    "Req Lat", "Out tok/s", "Req/s", "TPM"
 )
 _SEP = "  " + "─" * (len(_HDR) - 2)
 
@@ -254,6 +263,7 @@ def print_table(rows: list, title: str):
                 lat=f"{m['lat_mean']:.0f}ms",
                 tps=f"{m['out_tps']:.1f}",
                 rps=f"{m['req_s']:.2f}",
+                tpm=f"{m['out_tps']*60:.0f}",
             ))
     print(_SEP)
 
@@ -329,6 +339,166 @@ async def check_health(url: str) -> bool:
         return False
 
 
+# ── Stress Test ────────────────────────────────────────────────────────────
+
+# 停止条件参数
+_STRESS_DROP_THRESHOLD   = 0.60   # tok/s 跌至峰值 60% 以下 → 判定严重下滑
+_STRESS_DROP_CONSECUTIVE = 2      # 连续 N 档下滑才停（避免单点抖动误判）
+_STRESS_ERROR_THRESHOLD  = 0.50   # 单档请求失败率超过 50% → 判定服务崩溃
+_STRESS_OOM_KEYWORDS     = ("cuda out of memory", "oom", "out of memory",
+                             "cuDAError", "device-side assert")
+
+
+def _next_conc(conc: int) -> int:
+    """递增策略：
+    conc < 16  → 2×（1→2→4→8→16，覆盖低并发基线）
+    conc >= 16 → ~1.5×，凑整到 4 的倍数（<100）或 16 的倍数（≥100）
+    """
+    if conc < 16:
+        return conc * 2
+    raw = conc * 1.5
+    if raw < 100:
+        return max(conc + 1, int(round(raw / 4) * 4))
+    return max(conc + 1, int(round(raw / 16) * 16))
+
+
+def _is_oom(results: list) -> bool:
+    for r in results:
+        err = r.get("error", "") or ""
+        if any(kw in err.lower() for kw in _STRESS_OOM_KEYWORDS):
+            return True
+    return False
+
+
+def _is_server_down(results: list) -> bool:
+    """全部请求都是连接错误（非 HTTP 400/500）。"""
+    if not results:
+        return True
+    return all(r.get("status", 0) == 0 for r in results)
+
+
+async def do_stress_test(
+    url: str,
+    start_conc: int,
+    max_conc: int,
+    rounds: int,
+    no_sia: bool,
+):
+    label = "noSIA" if no_sia else "SIA"
+    prompt = make_prompt(CONC_SWEEP_INPUT_TOKENS, CONC_SWEEP_OUTPUT_TOKENS)
+    rows: list = []
+
+    peak_tps   = 0.0
+    drop_count = 0      # 连续下滑计数
+    stop_reason = ""
+    conc = start_conc
+
+    print(f"\n[{label}] Stress Test — 从 conc={conc} 开始，每档 {rounds} 轮，上限 conc={max_conc}")
+    print(f"  输入 ≈{CONC_SWEEP_INPUT_TOKENS} tokens，max_out={CONC_SWEEP_OUTPUT_TOKENS}")
+    print(f"  停止条件：tok/s < 峰值×{_STRESS_DROP_THRESHOLD:.0%}（连续{_STRESS_DROP_CONSECUTIVE}档）"
+          f" 或 失败率>{_STRESS_ERROR_THRESHOLD:.0%} 或 服务崩溃 或 conc>{max_conc}\n")
+
+    while True:
+        total_reqs = conc * rounds
+        print(f"  conc={conc:>4}  ({total_reqs} 请求)...", end=" ", flush=True)
+
+        # 每档 timeout 随并发适当放宽（高并发时请求排队时间更长）
+        timeout_s = max(300, conc * 20)
+        try:
+            all_results: list = []
+            async with aiohttp.ClientSession() as session:
+                t_start = time.perf_counter()
+                for _ in range(rounds):
+                    batch = await asyncio.gather(
+                        *[one_request(session, url, prompt,
+                                      CONC_SWEEP_OUTPUT_TOKENS, no_sia)
+                          for _ in range(conc)]
+                    )
+                    all_results.extend(batch)
+                wall_s = time.perf_counter() - t_start
+        except Exception as exc:
+            print(f"CRASH ({exc})")
+            stop_reason = f"异常崩溃: {exc}"
+            rows.append({"conc": conc, "target": CONC_SWEEP_INPUT_TOKENS,
+                         "skip": True, "reason": stop_reason})
+            break
+
+        # ── 失败分析 ───────────────────────────────────────────────
+        ok = [r for r in all_results if r.get("status") == 200]
+        fail_rate = 1.0 - len(ok) / max(len(all_results), 1)
+
+        if _is_server_down(all_results):
+            print("CRASH (服务不可达)")
+            stop_reason = "服务崩溃/不可达"
+            rows.append({"conc": conc, "target": CONC_SWEEP_INPUT_TOKENS,
+                         "skip": True, "reason": stop_reason})
+            break
+
+        if _is_oom(all_results):
+            print("OOM")
+            stop_reason = "CUDA OOM"
+            rows.append({"conc": conc, "target": CONC_SWEEP_INPUT_TOKENS,
+                         "skip": True, "reason": stop_reason})
+            break
+
+        if fail_rate > _STRESS_ERROR_THRESHOLD:
+            print(f"FAIL (失败率 {fail_rate:.0%}，ok={len(ok)}/{total_reqs})")
+            stop_reason = f"失败率 {fail_rate:.0%} > {_STRESS_ERROR_THRESHOLD:.0%}"
+            rows.append({"conc": conc, "target": CONC_SWEEP_INPUT_TOKENS,
+                         "skip": True, "reason": stop_reason})
+            break
+
+        # ── 正常有数据 ─────────────────────────────────────────────
+        m = compute_metrics(ok, wall_s)
+        tps = m.get("out_tps", 0.0)
+        rows.append({"conc": conc, "target": CONC_SWEEP_INPUT_TOKENS, "m": m,
+                     "fail_rate": fail_rate})
+
+        peak_tps = max(peak_tps, tps)
+        drop_flag = (peak_tps > 0 and tps < peak_tps * _STRESS_DROP_THRESHOLD)
+        drop_count = drop_count + 1 if drop_flag else 0
+
+        status_tag = f"↓{tps/peak_tps:.0%}" if drop_flag else "✓"
+        print(f"ok={len(ok)}/{total_reqs}  ITL={m['itl_mean']:.1f}ms  "
+              f"tok/s={tps:.1f}  TPM={tps*60:.0f}  {status_tag}  "
+              f"(fail={fail_rate:.0%})")
+
+        if drop_count >= _STRESS_DROP_CONSECUTIVE:
+            stop_reason = (f"tok/s={tps:.1f} < 峰值{peak_tps:.1f}×{_STRESS_DROP_THRESHOLD:.0%}"
+                           f"，连续 {drop_count} 档")
+            break
+
+        # ── 下一档 ─────────────────────────────────────────────────
+        next_c = _next_conc(conc)
+        if next_c <= conc:          # 防止整数舍入卡死
+            next_c = conc + max(4, conc // 4)
+        if next_c > max_conc:
+            stop_reason = f"已达上限 conc={max_conc}（可用 --stress-max-conc 调整）"
+            break
+        conc = next_c
+
+    # ── 汇总表 ──────────────────────────────────────────────────────────────
+    print_table(
+        rows,
+        f"Stress Test [{label}]  "
+        f"(input≈{CONC_SWEEP_INPUT_TOKENS}, max_out={CONC_SWEEP_OUTPUT_TOKENS})"
+    )
+
+    # 找出峰值行
+    best = max(
+        (r for r in rows if not r.get("skip")),
+        key=lambda r: r["m"].get("out_tps", 0),
+        default=None,
+    )
+    if best:
+        bm = best["m"]
+        print(f"\n  🏆 峰值吞吐：conc={best['conc']}  tok/s={bm['out_tps']:.1f}"
+              f"  ITL={bm['itl_mean']:.1f}ms"
+              f"  input={bm['input_mean']}tok  output={bm['out_mean']}tok")
+    if stop_reason:
+        print(f"  🛑 停止原因：{stop_reason}\n")
+
+
 async def main():
     parser = argparse.ArgumentParser(description="35B SIA 压测 v2")
     parser.add_argument("--url", default=URL_DEFAULT)
@@ -337,6 +507,15 @@ async def main():
     parser.add_argument("--compare", action="store_true", help="SIA vs noSIA 对比")
     parser.add_argument("--only-concurrency", action="store_true", help="只跑并发扫描")
     parser.add_argument("--only-input", action="store_true", help="只跑输入长度扫描")
+    # ── 极限压测 ──────────────────────────────────────────────────────────────
+    parser.add_argument("--stress", action="store_true",
+                        help="极限并发压测：从 --stress-start 开始自动递增到崩溃")
+    parser.add_argument("--stress-start", type=int, default=1,
+                        help="压测起始并发数（默认 1）")
+    parser.add_argument("--stress-rounds", type=int, default=2,
+                        help="每档重复轮数（默认 2，比常规压测少以加快探索）")
+    parser.add_argument("--stress-max-conc", type=int, default=512,
+                        help="压测并发上限，防止 KV cache OOM（默认 512）")
     args = parser.parse_args()
 
     print(f"目标服务: {args.url}")
@@ -345,6 +524,21 @@ async def main():
         sys.exit(1)
     print("✅ /health OK")
 
+    # ── 极限压测模式 ──────────────────────────────────────────────────────────
+    if args.stress:
+        modes = [False, True] if args.compare else [args.no_sia]
+        for no_sia in modes:
+            await do_stress_test(
+                args.url,
+                start_conc=args.stress_start,
+                max_conc=args.stress_max_conc,
+                rounds=args.stress_rounds,
+                no_sia=no_sia,
+            )
+        print("\n压测完成。")
+        return
+
+    # ── 普通扫描模式 ──────────────────────────────────────────────────────────
     run_conc  = not args.only_input
     run_input = not args.only_concurrency
     modes     = [False, True] if args.compare else [args.no_sia]
