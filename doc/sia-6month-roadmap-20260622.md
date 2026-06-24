@@ -102,7 +102,7 @@ Month 6  ██ 多模态VM训练 ██ 多模态VM上线
 **1. b2 inproc VM 架构落地**（5 月下旬）  
 将 VM 从独立 HTTP 进程改为嵌入式 nested vLLM 实例（进程内函数调用），彻底消除网络往返开销（~20–30ms/次）。结合 VM CUDA Graph（Qwen3-VL-30B）和主 LLM CUDA Graph 修复（去除 PIECEWISE-only 限制）：
 - Qwen3-VL-30B：HTTP ~36 tok/s → b2 inproc **78.3 tok/s**（**+117%**）
-- 0GM-VL-35B：HTTP ~32 tok/s → b2 inproc 初始 **~49 tok/s**（**+50%**）；叠加 §3 stable prefix 后最终 **66–68 tok/s**（**+106%**）
+- 0GM-VL-35B：HTTP ~32 tok/s → b2 inproc + PIECEWISE fix **54.1 tok/s**（**+69%**）；叠加 §3 stable prefix 后最终 **66–68 tok/s**（**+106%**）
 
 **2. repetition_penalty 关键 Bug 修复**（6 月 4 日）  
 发现 `repetition_penalty` 默认值 1.3 与 SIA logit 干预叠加，导致评估数据显示 SIA Δ = −13% 至 −75%（错误结论）。修复为 1.0 后，SIA 效果全面恢复正向：
