@@ -1,18 +1,18 @@
 """
-Skywork-Reward-V2 第三方打分 — 给 AlpacaEval 生成结果打 reward 分。
-基于 /workspace/SIA/git/SIA/src/measure_reward.py 简化, 只针对 AlpacaEval 的输出格式。
+Skywork-Reward-V2 third-party scoring — assigns reward scores to AlpacaEval generation results.
+Simplified from /workspace/SIA/git/SIA/src/measure_reward.py, targeting only the AlpacaEval output format.
 
-用法:
+Usage:
     python scripts/measure_alpaca_reward.py \\
         --input_file exp/alpaca_results.json \\
         --output_file exp/alpaca_results_scored.json \\
         --rm /workspace/SIA/models/Skywork-Reward-V2-Llama-3.1-8B \\
         --device cuda:0
 
-可选:
-    --strip_think    在喂给 Skywork 前剥离 <think>...</think> 内容
-                     (0GM-thinking 模型用; 14B 也可用因为它也会输出 <think>)
-    --max_length     RM tokenizer 截断长度, 默认 2048
+Optional:
+    --strip_think    Strip <think>...</think> content before feeding to Skywork
+                     (for 0GM-thinking models; also applicable to 14B which also outputs <think>)
+    --max_length     RM tokenizer truncation length, default 2048
 """
 import argparse
 import json
@@ -22,11 +22,12 @@ import torch
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
 
-# 处理 thinking 模型的 output 剥离, 涵盖两类情况:
-# 1) 配对块 `<think>...</think>` 或 `<thinking>...</thinking>` (含嵌套/自创变体)
-# 2) Leading thinking — 当 chat_template 把 opening `<think>` 注入 prompt 末尾时, output
-#    实际形如 "{thinking content}</think>{answer}", 没有开 tag → 旧的配对正则不匹配。
-#    用 `_LEAD_THINK_END_RE` 找第一个 `</think>` (或变体), 把它之前的所有内容剥掉。
+# Handle thinking model output stripping, covering two cases:
+# 1) Paired blocks `<think>...</think>` or `<thinking>...</thinking>` (including nested/custom variants)
+# 2) Leading thinking — when chat_template injects the opening `<think>` at the end of the prompt,
+#    the output is actually "{thinking content}</think>{answer}" with no opening tag → the old
+#    paired regex won't match. Use `_LEAD_THINK_END_RE` to find the first `</think>` (or variant)
+#    and strip everything before it.
 _PAIR_THINK_RE = re.compile(r"<think(?:ing)?>.*?</think(?:ing)?>\s*", flags=re.DOTALL)
 _LEAD_THINK_END_RE = re.compile(r"^.*?</think(?:ing)?>\s*", flags=re.DOTALL)
 
@@ -34,32 +35,32 @@ _LEAD_THINK_END_RE = re.compile(r"^.*?</think(?:ing)?>\s*", flags=re.DOTALL)
 def maybe_strip_think(text: str, strip: bool) -> str:
     if not strip:
         return text
-    # Step 1: 剥 leading thinking (chat_template-injected <think> 在 prompt 末尾的产物)
+    # Step 1: strip leading thinking (artifact of chat_template-injected <think> at prompt end)
     text = _LEAD_THINK_END_RE.sub("", text, count=1)
-    # Step 2: 剥任何剩余的嵌套配对 think/thinking 块
+    # Step 2: strip any remaining nested paired think/thinking blocks
     return _PAIR_THINK_RE.sub("", text)
 
 
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--input_file", required=True,
-                   help="alpaca_eval.py 输出的 JSON")
+                   help="JSON output from alpaca_eval.py")
     p.add_argument("--output_file", required=True,
-                   help="加 reward 字段后保存到这里")
+                   help="Save here after adding reward field")
     p.add_argument("--rm",
                    default="/workspace/SIA/models/Skywork-Reward-V2-Llama-3.1-8B",
-                   help="Skywork RM 路径")
+                   help="Skywork RM path")
     p.add_argument("--device", default="cuda:0")
     p.add_argument("--max_length", type=int, default=2048,
-                   help="Skywork RM tokenizer 截断 (max_model_len), 默认 2048")
+                   help="Skywork RM tokenizer truncation (max_model_len), default 2048")
     p.add_argument("--strip_think", action="store_true",
-                   help="对 thinking 模型, 先剥离 <think>...</think> 再打分")
+                   help="For thinking models, strip <think>...</think> before scoring")
     args = p.parse_args()
 
     print(f"loading Skywork RM: {args.rm}")
     tok = AutoTokenizer.from_pretrained(args.rm, use_fast=True)
-    # transformers 4.48 (venv) 用 torch_dtype=, 4.55+ (venv4) 用 dtype=
-    # 这里走旧 API (torch_dtype) — 新版 transformers 会发 deprecation warning 但仍 work
+    # transformers 4.48 (venv) uses torch_dtype=, 4.55+ (venv4) uses dtype=
+    # Using old API (torch_dtype) here — newer transformers will emit deprecation warning but still works
     rm = AutoModelForSequenceClassification.from_pretrained(
         args.rm, torch_dtype=torch.bfloat16, device_map=args.device,
         attn_implementation="sdpa", num_labels=1,
@@ -87,17 +88,17 @@ def main():
             scored.append(row)
             continue
 
-        # 可选: 剥离 <think>...</think>
+        # Optional: strip <think>...</think>
         output_to_score = maybe_strip_think(output, args.strip_think)
         if not output_to_score.strip():
-            # 剥离后空了 (整个回答全在 think 内, 没 final answer)
+            # Empty after stripping (entire response was inside think, no final answer)
             row["reward"] = None
             row["skip_reason"] = "empty_after_strip_think"
             n_skip_err += 1
             scored.append(row)
             continue
 
-        # 构造 Skywork chat: user + assistant
+        # Build Skywork chat: user + assistant
         convs = [
             {"role": "user", "content": instr},
             {"role": "assistant", "content": output_to_score},

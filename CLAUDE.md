@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Communication Language
 
-**只用中文和英文**。正文用中文，技术术语（命令、参数名、模型名等）用英文。严禁出现日文、韩文或其他语言。
+**Use English only.** Technical terms (commands, parameter names, model names, etc.) are already in English. Japanese, Korean, and other non-English languages are not permitted.
 
 ## Project Overview
 
@@ -14,13 +14,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Dependencies — pick the venv that matches your main LLM:**
 
-| 主推理 LLM | 推荐 venv | vllm | SIA 路径 | 备注 |
-|------------|----------|------|---------|------|
-| Qwen3-14B | qwen14b | 0.10.1.1 | `--rm_backend b2` (inproc) | 原始 baseline |
-| Qwen3-VL-30B-A3B-Instruct | **vl30b-fast** | **0.17.1** | `--rm_backend b2` (inproc) | 速度最佳, 1.46× ([doc](doc/vl30b-b2-inproc-speedup-20260605.md)) |
-| Qwen3-VL-30B-A3B-Instruct | 0gm35b-http | 0.19.0 | `--rm_backend vllm` (HTTP) | 备选 |
-| 0GM-1.0-35B-A3B | **0gm35b-b2** | **0.18.0** | `--rm_backend b2` (inproc) | 速度最佳, ~1.5× vs HTTP ([doc](doc/0gm-35b-b2-inproc-speedup-20260609.md)); 须 `SIA_RM_CUDAGRAPH=none` |
-| 0GM-1.0-35B-A3B | 0gm35b-http | 0.19.0 | `--rm_backend vllm` (HTTP) | 备选（b2 在 0.19 上全部失败）|
+| Main LLM | Recommended venv | vllm | SIA path | Notes |
+|----------|-----------------|------|----------|-------|
+| Qwen3-14B | qwen14b | 0.10.1.1 | `--rm_backend b2` (inproc) | Original baseline |
+| Qwen3-VL-30B-A3B-Instruct | **vl30b-fast** | **0.17.1** | `--rm_backend b2` (inproc) | Fastest, 1.46× ([doc](doc/vl30b-b2-inproc-speedup-20260605.md)) |
+| Qwen3-VL-30B-A3B-Instruct | 0gm35b-http | 0.19.0 | `--rm_backend vllm` (HTTP) | Fallback |
+| 0GM-1.0-35B-A3B | **0gm35b-b2** | **0.18.0** | `--rm_backend b2` (inproc) | Fastest, ~1.5× vs HTTP ([doc](doc/0gm-35b-b2-inproc-speedup-20260609.md)); requires `SIA_RM_CUDAGRAPH=none` |
+| 0GM-1.0-35B-A3B | 0gm35b-http | 0.19.0 | `--rm_backend vllm` (HTTP) | Fallback (b2 fails entirely on 0.19) |
 
 ```bash
 # Setup (one-shot)
@@ -39,7 +39,7 @@ Requirements files live in `requirements/`:
 - `0gm35b-b2-inproc.txt` — vllm 0.18.0 + transformers 4.57.6 (b2 inproc for 0GM-35B)
 - `0gm35b-or-vl30b-http.txt` — vllm 0.19.0 + transformers 4.57.6
 
-> **不要混用** — vllm 0.10 / 0.17 / 0.18 / 0.19 pin 不同的 torch 版本，必须各自独立 venv。根目录的 `requirements.txt` 仅为 qwen14b 默认配置。
+> **Do not mix** — vllm 0.10 / 0.17 / 0.18 / 0.19 pin different torch versions; each must use its own isolated venv. The root `requirements.txt` is for the qwen14b default configuration only.
 
 **CLI mode (no HTTP server):**
 ```bash
@@ -68,9 +68,9 @@ python src/sia_vllm_server.py \
   --llm_gpu_mem 0.3 --topk 5 --weight 1.0
 ```
 
-**vLLM-backed RM (推荐，比 pytorch RM 快 35% 且稳定):**
+**vLLM-backed RM (recommended — 35% faster than pytorch RM and more stable):**
 
-先一次性转换 RM 到 vLLM 兼容格式：
+First, perform a one-time conversion of the RM to a vLLM-compatible format:
 ```bash
 python scripts/convert_rm_for_vllm.py \
   --rm /path/to/qwen3-base \
@@ -78,13 +78,13 @@ python scripts/convert_rm_for_vllm.py \
   --output /path/to/merged-for-vllm
 ```
 
-启动 vLLM RM server + SIA LLM server（详见 `doc/vllm-rm-backend.md`）：
+Start the vLLM RM server + SIA LLM server (see `doc/vllm-rm-backend.md` for details):
 ```bash
 # RM
 vllm serve /path/to/merged-for-vllm --runner pooling --convert classify \
   --enable-prefix-caching --gpu-memory-utilization 0.3 --port 8001 &
 
-# LLM 用 --rm_backend vllm
+# LLM with --rm_backend vllm
 python src/sia_vllm_server.py --llm /path/to/llm \
   --rm_url http://localhost:8001 \
   --rm_backend vllm \
@@ -92,7 +92,7 @@ python src/sia_vllm_server.py --llm /path/to/llm \
   --topk 5 --weight 1.0 --entropy_threshold 1.0 &
 ```
 
-**0GM-35B b2 inproc（推荐，比 HTTP 快 ~1.5×）:**
+**0GM-35B b2 inproc (recommended — ~1.5× faster than HTTP):**
 
 ```bash
 SIA_RM_CUDAGRAPH=none \
@@ -127,16 +127,16 @@ There is no test suite.
 **"Inference-time Alignment via Sparse Junction Steering"**
 Runyi Hu et al. — [https://arxiv.org/pdf/2602.21215](https://arxiv.org/pdf/2602.21215)
 
-核心思路：不在每个 decoding step 都干预，而是**只在高熵的关键决策点（junction）介入**，20–80% 的 token 干预率即可达到或超过全量 dense steering 的效果，同时将计算开销降低最多 6 倍。`--entropy_threshold` 参数直接对应此论文的稀疏干预策略。
+Core idea: rather than intervening at every decoding step, **only intervene at high-entropy critical decision points (junctions)**. An intervention rate of 20–80% of tokens achieves or exceeds the effect of full dense steering while reducing computational overhead by up to 6×. The `--entropy_threshold` parameter directly corresponds to this paper's sparse intervention strategy.
 
 ### Experimental Code
 
-原始实验代码（训练 Value Model、评估脚本等）：
+Original experimental code (Value Model training, evaluation scripts, etc.):
 [https://github.com/hurunyi/SIA](https://github.com/hurunyi/SIA)
 
 ### Pretrained Value Models
 
-已训练好的 Value Model checkpoints（LoRA 格式，用于 `--rm_lora`）：
+Pre-trained Value Model checkpoints (LoRA format, for use with `--rm_lora`):
 [https://huggingface.co/Runyi-Hu/SIA/tree/main](https://huggingface.co/Runyi-Hu/SIA/tree/main)
 
 | Checkpoint | Base Model |
@@ -147,7 +147,7 @@ Runyi Hu et al. — [https://arxiv.org/pdf/2602.21215](https://arxiv.org/pdf/260
 | `VM-Skywork-Reward-V2-Llama-3.2-1B` | Llama-3.2-1B |
 | `VM-Skywork-Reward-V2-Llama-3.2-3B` | Llama-3.2-3B |
 
-使用时将对应 checkpoint 目录路径传给 `--rm_lora`，`--rm` 指向对应的基础模型。
+Pass the corresponding checkpoint directory path to `--rm_lora`, and point `--rm` at the corresponding base model.
 
 ## Architecture
 

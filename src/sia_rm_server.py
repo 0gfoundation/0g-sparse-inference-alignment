@@ -1,22 +1,22 @@
 """
-SIA RM Server — 独立的 Reward Model 打分服务
+SIA RM Server — standalone Reward Model scoring service
 
-将 RM（Value Model + 可选 LoRA）部署为独立 FastAPI 服务。
-主 LLM server（sia_vllm_server.py）通过 HTTP 调用本服务打分，
-热切换 RM 只需调用 /reload，无需重启 vLLM。
+Deploys the RM (Value Model + optional LoRA) as an independent FastAPI service.
+The main LLM server (sia_vllm_server.py) calls this service via HTTP for scoring.
+Hot-swapping the RM only requires calling /reload — no need to restart vLLM.
 
 Endpoints:
-  POST /score    — 批量对 topk 候选 token 打分（per-token 调用）
-  POST /reload   — 热切换 RM（同步，完成后返回）
-  GET  /status   — 查询当前加载状态
-  GET  /health   — 健康检查
+  POST /score    — batch score topk candidate tokens (per-token call)
+  POST /reload   — hot-swap the RM (synchronous, returns after completion)
+  GET  /status   — query current load status
+  GET  /health   — health check
 
 Usage:
-  # 不带 LoRA
+  # Without LoRA
   python sia_rm_server.py \\
     --rm /path/to/rm --rm_device cuda:0 --port 8001
 
-  # 带 LoRA
+  # With LoRA
   python sia_rm_server.py \\
     --rm /path/to/rm --rm_lora /path/to/lora --rm_device cuda:0 --port 8001
 """
@@ -36,7 +36,7 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification
 
 
 # ---------------------------------------------------------------------------
-# ValueModel 包装（与原 sia_vllm_RM.py 逻辑一致）
+# ValueModel wrapper (consistent with the original sia_vllm_RM.py logic)
 # ---------------------------------------------------------------------------
 
 class _ValueModelOutput:
@@ -61,7 +61,7 @@ class _ValueModelWrapper(nn.Module):
         else:
             backbone = self.base_model
 
-        # 新版 HF backbone 要求 Cache 对象，不接受 legacy tuple
+        # Newer HF backbone requires a Cache object, does not accept legacy tuple
         kv_in = _to_dynamic_cache(past_key_values)
         prefix_kv_len = _dc_seq_len(kv_in)
 
@@ -83,13 +83,13 @@ class _ValueModelWrapper(nn.Module):
 
         token_rewards = self.token_reward_head(hidden.float()).squeeze(-1)  # (batch, seq)
 
-        # CUDA graph 要求 arange 在 device 上创建，避免 CPU→GPU 拷贝触发
-        # "operation not permitted when stream is capturing"
+        # CUDA graph requires arange to be created on device, to avoid CPU→GPU copy
+        # triggering "operation not permitted when stream is capturing"
         _batch_idx = torch.arange(
             token_rewards.size(0), device=token_rewards.device,
         )
         if past_key_values is not None:
-            # KV cache 模式：找 diff 中最后一个有效 token
+            # KV cache mode: find the last valid token in the diff
             if attention_mask is not None:
                 diff_mask = attention_mask[:, prefix_kv_len:]
                 diff_lens = diff_mask.sum(dim=1) - 1
@@ -117,7 +117,7 @@ class _ValueModelOutputWithPast:
 
 
 # ---------------------------------------------------------------------------
-# 全局状态
+# Global state
 # ---------------------------------------------------------------------------
 _rm_model = None
 _rm_tok = None
@@ -125,26 +125,26 @@ _rm_device: str = "cuda:0"
 _rm_lock = threading.Lock()
 _status = {"status": "initializing", "rm": "", "rm_lora": None}
 
-# 跨步 KV 状态：request_id → {"prefix_ids": list[int], "kv": DynamicCache}
+# Cross-step KV state: request_id → {"prefix_ids": list[int], "kv": DynamicCache}
 _req_kv: dict = {}
 _MAX_REQ_KV = 64
 
-# 修剪末尾 token 数，消除 BPE 边界影响
+# Number of trailing tokens to trim, to eliminate BPE boundary effects
 _BPE_TRIM = 5
 
-# 统计 hit/miss（仅用于日志）
+# hit/miss stats (for logging only)
 _kv_stats = {"hit": 0, "miss": 0}
 
-# 是否启用 torch.compile（CLI --compile 时置 True）
+# Whether to enable torch.compile (set to True when CLI --compile is passed)
 _compile_mode: bool = False
 
 # ---------------------------------------------------------------------------
-# Profiling 开关与统计
+# Profiling switches and stats
 # ---------------------------------------------------------------------------
-# 环境变量 RM_PROFILE=0 关闭详细 timing；默认 1（开启）
+# Set env var RM_PROFILE=0 to disable detailed timing; default is 1 (enabled)
 _PROFILE_DETAIL: bool = os.environ.get("RM_PROFILE", "1") == "1"
 
-# 每个阶段的耗时（ms），用于 rolling stats
+# Per-phase elapsed time (ms) for rolling stats
 _pf_phases = [
     "tokenize", "prefix_calc", "state_lookup",
     "prep_tensor", "kv_expand", "forward", "score_extract", "kv_save",
@@ -152,11 +152,11 @@ _pf_phases = [
 ]
 _pf_stats: dict = {p: [] for p in _pf_phases}
 _pf_call_count: int = 0
-_PF_STATS_INTERVAL = 50  # 每 N 次调用输出一次 p50/p95/max
+_PF_STATS_INTERVAL = 50  # print p50/p95/max summary every N calls
 
 
 def _pf_now():
-    """同步 GPU 后取高精度 CPU 时间。"""
+    """Synchronize GPU then return high-precision CPU time."""
     if torch.cuda.is_available():
         torch.cuda.synchronize()
     return time.perf_counter()
@@ -174,7 +174,7 @@ def _pf_record(phase: str, t_start: float, t_end: float):
 
 
 def _pf_summary_if_due():
-    """每 _PF_STATS_INTERVAL 次调用打印一次 p50/p95/max 汇总。"""
+    """Print a p50/p95/max summary every _PF_STATS_INTERVAL calls."""
     global _pf_call_count
     if not _PROFILE_DETAIL:
         return
@@ -193,16 +193,16 @@ def _pf_summary_if_due():
         mx = s[-1]
         parts.append(f"{phase}: p50={p50:.1f} p95={p95:.1f} max={mx:.1f}")
     print(f"[RM-pf-summary @{_pf_call_count}] " + " | ".join(parts), flush=True)
-    # 每 N 次也输出一次 per-layer 汇总（若启用）
+    # Also print a per-layer summary every N calls (if enabled)
     _pf_layer_summary()
 
 
-# === Per-layer profiling（可选，环境变量 RM_PROFILE_LAYERS=1 启用） ===
+# === Per-layer profiling (optional, enabled via env var RM_PROFILE_LAYERS=1) ===
 _PROFILE_LAYERS: bool = os.environ.get("RM_PROFILE_LAYERS", "0") == "1"
 _layer_times: dict = {}      # layer_idx → [ms, ms, ...]
 _layer_count: int = 0
-_layer_active: bool = False  # forward 中由 hook 临时设置
-_layer_t_prev: float = 0.0   # 上一层 hook 时间戳
+_layer_active: bool = False  # temporarily set by hook during forward
+_layer_t_prev: float = 0.0   # timestamp from the previous layer's hook
 
 
 def _layer_pre_hook(idx):
@@ -232,10 +232,10 @@ def _layer_post_hook(idx):
 
 
 def _install_layer_hooks(model):
-    """对 transformer 每层 decoder layer 安装 pre/post hook，需要 RM_PROFILE_LAYERS=1。"""
+    """Install pre/post hooks on each transformer decoder layer. Requires RM_PROFILE_LAYERS=1."""
     if not _PROFILE_LAYERS:
         return
-    # 找到 base transformer（Qwen3ForSequenceClassification 的 .model.layers）
+    # Find the base transformer (Qwen3ForSequenceClassification's .model.layers)
     base = getattr(model, "base_model", model)
     backbone = getattr(base, "model", None) or getattr(base, "transformer", None) or base
     layers = getattr(backbone, "layers", None)
@@ -253,7 +253,7 @@ def _install_layer_hooks(model):
 def _pf_layer_summary():
     if not _PROFILE_LAYERS or not _layer_times:
         return
-    # 取近 50 次每层平均时间，打印
+    # Take the average time per layer from the last 50 calls and print
     arr_per_layer = []
     for idx in sorted(_layer_times.keys()):
         v = _layer_times[idx]
@@ -275,11 +275,11 @@ def _pf_layer_summary():
 
 
 # ---------------------------------------------------------------------------
-# DynamicCache 辅助
+# DynamicCache helpers
 # ---------------------------------------------------------------------------
 
 def _to_dynamic_cache(past_kv):
-    """将任意格式 past_key_values 转为 DynamicCache。"""
+    """Convert any past_key_values format to DynamicCache."""
     if past_kv is None:
         return None
     try:
@@ -294,7 +294,7 @@ def _to_dynamic_cache(past_kv):
 
 
 def _dc_seq_len(dc) -> int:
-    """获取 DynamicCache 已缓存的序列长度。"""
+    """Get the cached sequence length from a DynamicCache."""
     if dc is None:
         return 0
     if hasattr(dc, 'get_seq_length'):
@@ -305,8 +305,8 @@ def _dc_seq_len(dc) -> int:
 
 
 def _dc_expand_batch(dc, k: int):
-    """将 batch=1 的 DynamicCache 扩展到 batch=k（.contiguous() 物化）。
-    兼容 transformers 4.57+ 新 API（layers[i].keys/values + update()）。
+    """Expand a batch=1 DynamicCache to batch=k (materializing via .contiguous()).
+    Compatible with transformers 4.57+ new API (layers[i].keys/values + update()).
     """
     from transformers.cache_utils import DynamicCache
     new_dc = DynamicCache()
@@ -316,7 +316,7 @@ def _dc_expand_batch(dc, k: int):
         V = layer.values.expand(k, -1, -1, -1).contiguous()
         new_dc.update(K, V, i)
         n_layers += 1
-    # 在 _PROFILE_DETAIL 时记录形状供单行输出引用
+    # Record shape for single-line output reference when _PROFILE_DETAIL is enabled
     if _PROFILE_DETAIL:
         new_dc._pf_n_layers = n_layers  # type: ignore
     return new_dc
@@ -324,9 +324,10 @@ def _dc_expand_batch(dc, k: int):
 
 def _dc_extract_batch0_trim(dc, keep_len: int):
     """
-    从 batch>=1 的 DynamicCache 中取 batch[0]，并只保留前 keep_len 个位置。
-    前缀 token 的 KV 对所有 batch 相同（causal attention 中 pos<keep_len 不依赖后续 token）。
-    兼容 transformers 4.57+ 新 API。
+    Extract batch[0] from a batch>=1 DynamicCache, keeping only the first keep_len positions.
+    The KV for prefix tokens is identical across all batches (in causal attention, pos<keep_len
+    does not depend on subsequent tokens).
+    Compatible with transformers 4.57+ new API.
     """
     try:
         from transformers.cache_utils import DynamicCache
@@ -341,26 +342,26 @@ def _dc_extract_batch0_trim(dc, keep_len: int):
 
 
 # ---------------------------------------------------------------------------
-# CUDA graph 静态形状 bucketing
+# CUDA graph static shape bucketing
 # ---------------------------------------------------------------------------
 
-# 全局：单个 HIT bucket（覆盖最常见的 batch=topk, diff<=64, kv<=2048 场景）
+# Global: single HIT bucket (covers the most common batch=topk, diff<=64, kv<=2048 cases)
 _CUDA_GRAPH_ENABLED: bool = False
-_hit_bucket = None  # _CudaGraphHitBucket 实例
+_hit_bucket = None  # _CudaGraphHitBucket instance
 
-# Adaptive disable（per-request）：某个 request 一旦在 bucket 里 NaN 太多，
-# 就只关掉那个 request 的 bucket，其他 request 仍然享受加速。
-# 全局 disable 在最坏情况下也会触发（防止 catastrophic 失败）。
-_cg_request_nan: dict = {}        # request_id → 连续 NaN 次数
-_CG_PER_REQ_NAN_THRESHOLD: int = 5  # 同一个 request 连续 5 次 NaN 就降级
-_cg_per_req_disabled: set = set()  # 被降级的 request_id 集合
+# Adaptive disable (per-request): if a request hits too many NaNs in the bucket,
+# only that request's bucket is disabled; other requests still benefit from acceleration.
+# Global disable is triggered in the worst case (to prevent catastrophic failure).
+_cg_request_nan: dict = {}        # request_id → consecutive NaN count
+_CG_PER_REQ_NAN_THRESHOLD: int = 5  # downgrade if same request gets 5 consecutive NaNs
+_cg_per_req_disabled: set = set()  # set of downgraded request_ids
 
-# 全局 safety net
+# Global safety net
 _cg_consecutive_nan: int = 0
-_CG_NAN_DISABLE_THRESHOLD: int = 50  # 整个 server 累计 50 次（跨 request）连续 NaN 才全局关
+_CG_NAN_DISABLE_THRESHOLD: int = 50  # disable globally after 50 cumulative consecutive NaNs across requests
 _cg_runtime_disabled: bool = False
 
-# 模型架构信息，bucket 初始化用
+# Model architecture info, used during bucket initialization
 _mc_num_layers: int = 0
 _mc_num_kv_heads: int = 0
 _mc_head_dim: int = 0
@@ -369,29 +370,29 @@ _mc_dtype = None
 
 class _CudaGraphHitBucket:
     """
-    单个静态形状的 CUDA graph bucket，用于 HIT 路径 forward。
+    Single static-shape CUDA graph bucket for HIT path forward.
 
-    覆盖输入：
+    Covered inputs:
       - input_ids:      (batch, diff_max)
       - attention_mask: (batch, kv_max + diff_max)
       - past_key_values: DynamicCache with batch=batch, kv_max positions per layer
-      - position_ids:   (batch, diff_max)   — 显式传入，因为 buffer 中 diff 起始位置
-                                              是 kv_max（不是真实 kv_actual）
+      - position_ids:   (batch, diff_max)   — explicitly passed, because the diff start
+                                              position in the buffer is kv_max (not the real kv_actual)
 
-    Buffer 布局（实际 kv_actual <= kv_max, diff_actual <= diff_max）：
+    Buffer layout (actual kv_actual <= kv_max, diff_actual <= diff_max):
       KV buffer [0..kv_max-1]:
-        [0..kv_actual-1]  ← 真实 prefix KV（输入）
-        [kv_actual..kv_max-1] ← padding（垃圾，被 attention_mask 屏蔽）
+        [0..kv_actual-1]  <- real prefix KV (input)
+        [kv_actual..kv_max-1] <- padding (garbage, masked by attention_mask)
       input_ids [0..diff_max-1]:
-        [0..diff_actual-1] ← 真实 diff tokens
-        [diff_actual..diff_max-1] ← padding（被 attention_mask 屏蔽）
+        [0..diff_actual-1] <- real diff tokens
+        [diff_actual..diff_max-1] <- padding (masked by attention_mask)
       attention_mask [0..kv_max+diff_max-1]:
         [0..kv_actual-1]                   = real prefix mask
         [kv_actual..kv_max-1]              = 0 (mask out padded prefix)
         [kv_max..kv_max+diff_actual-1]     = real diff mask
         [kv_max+diff_actual..]             = 0
       position_ids [0..diff_max-1]:
-        [i] = kv_actual + i  for i in 0..diff_actual-1 (RoPE 用真实绝对位置)
+        [i] = kv_actual + i  for i in 0..diff_actual-1 (RoPE uses real absolute positions)
     """
 
     def __init__(self, model_wrapper, batch, diff_max, kv_max,
@@ -407,13 +408,13 @@ class _CudaGraphHitBucket:
         self.device = device
         self.model_wrapper = model_wrapper
 
-        # 输入 buffers（CPU→GPU 通道，每次 replay 前由 run() 写入）
+        # Input buffers (CPU→GPU channel, written by run() before each replay)
         self.input_ids = torch.zeros(batch, diff_max, dtype=torch.long, device=device)
         self.attention_mask = torch.zeros(batch, self.full, dtype=torch.long, device=device)
         self.position_ids = torch.zeros(batch, diff_max, dtype=torch.long, device=device)
 
-        # Prefix KV buffers：每层 (batch, num_kv_heads, kv_max, head_dim)
-        # 由 DynamicCache 持有引用；model forward 时 attention 从这里读
+        # Prefix KV buffers: per layer (batch, num_kv_heads, kv_max, head_dim)
+        # Referenced by DynamicCache; attention reads from here during model forward
         self.prefix_K = [
             torch.zeros(batch, num_kv_heads, kv_max, head_dim, dtype=dtype, device=device)
             for _ in range(num_layers)
@@ -423,14 +424,14 @@ class _CudaGraphHitBucket:
             for _ in range(num_layers)
         ]
 
-        # 由 capture 设置：graph + 输出张量引用
+        # Set by capture: graph + output tensor references
         self.graph = None
         self.output_logits = None   # (batch, 1)
         self.full_K = None          # list of (batch, h, full, d) — post-forward K
         self.full_V = None
 
     def _new_dc(self):
-        """构造一个 DynamicCache，layers 指向 self.prefix_K / prefix_V。"""
+        """Construct a DynamicCache whose layers point to self.prefix_K / prefix_V."""
         from transformers.cache_utils import DynamicCache
         dc = DynamicCache()
         for i in range(self.num_layers):
@@ -438,21 +439,22 @@ class _CudaGraphHitBucket:
         return dc
 
     def capture(self, n_warmup: int = 3):
-        """运行 warmup forward 后 capture CUDA graph。"""
+        """Run warmup forwards then capture the CUDA graph."""
         print(
             f"[RM] CudaGraph warmup+capture: batch={self.batch} "
             f"diff_max={self.diff_max} kv_max={self.kv_max} "
             f"layers={self.num_layers} kv_heads={self.num_kv_heads} head_dim={self.head_dim}",
             flush=True,
         )
-        # 初始化 buffer 为合法的非全零值
+        # Initialize buffers to valid non-zero values
         self.input_ids.fill_(1)
-        # attention_mask: 用真实推理时的稀疏布局（部分 0），确保 SDPA dispatch
-        # 选支持 mask 的 backend（mem_efficient/math），而不是被全 1 mask 误导成 Flash
-        # （Flash 不支持自定义 mask 值，会把所有 key 当成有效）。
+        # attention_mask: use the sparse layout from real inference (some zeros), to ensure
+        # SDPA dispatch selects a backend that supports masks (mem_efficient/math) rather
+        # than being misled by an all-ones mask into choosing Flash
+        # (Flash doesn't support custom mask values; it treats all keys as valid).
         self.attention_mask.zero_()
-        cap_kv_actual = self.kv_max // 2          # 假装一半是真 prefix
-        cap_diff_actual = self.diff_max // 2      # 假装一半是真 diff
+        cap_kv_actual = self.kv_max // 2          # pretend half is real prefix
+        cap_diff_actual = self.diff_max // 2      # pretend half is real diff
         self.attention_mask[:, :cap_kv_actual] = 1
         self.attention_mask[:, self.kv_max:self.kv_max + cap_diff_actual] = 1
         pos_diff = torch.arange(
@@ -461,7 +463,7 @@ class _CudaGraphHitBucket:
         )
         self.position_ids.copy_(pos_diff.unsqueeze(0).expand(self.batch, -1))
 
-        # Warmup runs（不 capture，让 cuDNN / kernel 选择稳定）
+        # Warmup runs (no capture, let cuDNN / kernel settle on a stable choice)
         for w in range(n_warmup):
             dc = self._new_dc()
             with torch.inference_mode():
@@ -487,11 +489,11 @@ class _CudaGraphHitBucket:
                     use_cache=True,
                     position_ids=self.position_ids,
                 )
-        # 保存对捕获时分配的输出张量的引用（fixed addresses）
+        # Save references to output tensors allocated during capture (fixed addresses)
         self.output_logits = out.logits  # (batch, 1)
         self.full_K = [layer.keys for layer in capture_dc.layers]
         self.full_V = [layer.values for layer in capture_dc.layers]
-        # 保留 capture_dc 引用防止张量被释放
+        # Retain capture_dc reference to prevent tensors from being freed
         self._capture_dc = capture_dc
 
         print(
@@ -509,28 +511,28 @@ class _CudaGraphHitBucket:
     def run(self, prefix_dc, diff_ids, attn_mask_compact, position_ids_actual,
             extension_len: int):
         """
-        用 CUDA graph 跑一次 HIT forward。
+        Run one HIT forward using CUDA graph.
 
         Args:
-          prefix_dc: DynamicCache，batch=1，kv_actual positions
+          prefix_dc: DynamicCache, batch=1, kv_actual positions
           diff_ids: (batch, diff_actual)
-          attn_mask_compact: (batch, kv_actual + diff_actual) — 原始 compact 布局，
-                              本方法会重排到 bucket 的稀疏布局
-          position_ids_actual: (batch, diff_actual) — 真实绝对位置 [kv_actual..]
-          extension_len: diff 序列前 N 个 token 属于"extension"，
-                          用来构造新的 prefix（next call 复用）
+          attn_mask_compact: (batch, kv_actual + diff_actual) — original compact layout,
+                              this method rearranges it to the bucket's sparse layout
+          position_ids_actual: (batch, diff_actual) — real absolute positions [kv_actual..]
+          extension_len: the first N tokens of the diff sequence belong to "extension",
+                          used to build the new prefix (reused on next call)
 
         Returns:
           logits: (batch, 1)
-          new_prefix_dc: DynamicCache batch=1，kv_actual + extension_len positions
+          new_prefix_dc: DynamicCache batch=1, kv_actual + extension_len positions
 
-        失败（含 NaN、CUDA 错误等）时返回 None，由调用方回退到 eager。
+        Returns None on failure (including NaN, CUDA errors, etc.); caller falls back to eager.
         """
         try:
             return self._run_unsafe(prefix_dc, diff_ids, attn_mask_compact,
                                      position_ids_actual, extension_len)
         except Exception as e:
-            # 任何异常（含 CUDA 异步错误延迟报告）都不允许 server 挂掉
+            # No exception (including delayed CUDA async error reports) should bring down the server
             import traceback
             print(
                 f"[RM-cg-error] Exception in bucket.run(): {type(e).__name__}: {e}\n"
@@ -552,7 +554,7 @@ class _CudaGraphHitBucket:
         assert diff_actual <= self.diff_max
         assert kv_actual <= self.kv_max
 
-        # 0) 输入 prefix_dc 完整性检查（debug：定位 NaN 来源） — 扫描所有层
+        # 0) Input prefix_dc integrity check (debug: locate NaN source) — scan all layers
         in_K_stack = torch.stack([layer.keys for layer in prefix_dc.layers])
         in_V_stack = torch.stack([layer.values for layer in prefix_dc.layers])
         in_K_finite = torch.isfinite(in_K_stack).all().item()
@@ -565,23 +567,23 @@ class _CudaGraphHitBucket:
             )
             return None
 
-        # 1) 写入 input_ids（padding 部分清零）
+        # 1) Write input_ids (zero out padding)
         self.input_ids.zero_()
         self.input_ids[:, :diff_actual].copy_(diff_ids)
 
-        # 2) 写入 position_ids（padding 部分写为合法的连续位置）
+        # 2) Write position_ids (fill padding with valid consecutive positions)
         self.position_ids[:, :diff_actual].copy_(position_ids_actual)
         if diff_actual < self.diff_max:
-            # 填充值随便，因为对应 attention_mask=0；用连续位置避免 RoPE 出错
+            # Padding values don't matter since attention_mask=0; use consecutive positions to avoid RoPE errors
             pad_pos = torch.arange(
                 kv_actual + diff_actual, kv_actual + self.diff_max,
                 dtype=torch.long, device=self.device,
             )
             self.position_ids[:, diff_actual:].copy_(pad_pos.unsqueeze(0).expand(self.batch, -1))
 
-        # 3) 重排 attention_mask 到 bucket 稀疏布局
-        #    [0:kv_actual] = real prefix mask（compact 输入的 [0:kv_actual]）
-        #    [kv_actual:kv_max] = 0（padded prefix，被屏蔽）
+        # 3) Rearrange attention_mask to bucket sparse layout:
+        #    [0:kv_actual] = real prefix mask (compact input [0:kv_actual])
+        #    [kv_actual:kv_max] = 0 (padded prefix, masked out)
         #    [kv_max:kv_max+diff_actual] = real diff mask
         #    [kv_max+diff_actual:] = 0
         self.attention_mask.zero_()
@@ -590,14 +592,14 @@ class _CudaGraphHitBucket:
             attn_mask_compact[:, kv_actual:kv_actual + diff_actual]
         )
 
-        # 4) 把 prefix KV 拷到 buffer 的前 kv_actual 位置（batch=1 → batch=k 展开）
-        #    关键：必须显式清零 padded 部分 [kv_actual:kv_max]，因为：
-        #    - 这些位置可能保留上一次调用的真实 K/V 值（不是全零）
-        #    - mem_efficient attention 的 max-shifted softmax 在 stale K 值
-        #      上做 Q@K 可能产生数值不稳定（虽然理论上 mask=0 会屏蔽，
-        #      但实测发现 stale 数据会污染整个 bucket 输出 → NaN）
+        # 4) Copy prefix KV to the first kv_actual positions of the buffer (expand batch=1 → batch=k)
+        #    Critical: must explicitly zero out the padded portion [kv_actual:kv_max], because:
+        #    - those positions may retain real K/V values from the previous call (not all-zeros)
+        #    - mem_efficient attention's max-shifted softmax doing Q@K on stale K values
+        #      can produce numerical instability (even though mask=0 should mask them out,
+        #      empirically stale data can poison the entire bucket output → NaN)
         for i in range(self.num_layers):
-            # 先清零整个 buffer，再写真实 prefix
+            # Zero the entire buffer first, then write the real prefix
             self.prefix_K[i].zero_()
             self.prefix_V[i].zero_()
             self.prefix_K[i][:, :, :kv_actual, :].copy_(
@@ -610,11 +612,11 @@ class _CudaGraphHitBucket:
         # 5) Replay
         self.graph.replay()
 
-        # 6) 取出 logits（clone 避免下次 replay 覆盖）
+        # 6) Extract logits (clone to avoid overwrite on next replay)
         logits = self.output_logits.clone()
 
-        # 6.5) NaN/Inf safety check — 偶发 NaN 时返回 None 触发 eager fallback
-        #      （根因待查；通常发生在 long-prefix MISS 之后，会污染所有后续 HIT）
+        # 6.5) NaN/Inf safety check — return None on occasional NaN to trigger eager fallback
+        #      (root cause TBD; usually occurs after a long-prefix MISS, which poisons all subsequent HITs)
         if not torch.isfinite(logits).all():
             nan_cnt = int((~torch.isfinite(logits)).sum().item())
             print(
@@ -625,17 +627,17 @@ class _CudaGraphHitBucket:
             )
             return None
 
-        # 7) 构造 new_prefix_dc（batch=1，kv_actual + extension_len positions）
-        #    数据来源：
-        #      [0:kv_actual]: full_K[0:1, :, 0:kv_actual, :] (原始 prefix，未变)
-        #      [kv_actual:kv_actual+ext]: full_K[0:1, :, kv_max:kv_max+ext, :] (新算的 extension)
+        # 7) Build new_prefix_dc (batch=1, kv_actual + extension_len positions)
+        #    Data sources:
+        #      [0:kv_actual]: full_K[0:1, :, 0:kv_actual, :] (original prefix, unchanged)
+        #      [kv_actual:kv_actual+ext]: full_K[0:1, :, kv_max:kv_max+ext, :] (newly computed extension)
         new_prefix_len = kv_actual + extension_len
         from transformers.cache_utils import DynamicCache
         new_dc = DynamicCache()
-        # 7a) 同时检查 extension 部分（new K/V）是否有 NaN：
-        #     logits 可能因为 mask 偶然没受 NaN K/V 污染就返回干净的，
-        #     但保存进 _req_kv 后下次 HIT 拿来用 → 一定 NaN。
-        #     所以这里 stack 后扫一遍。
+        # 7a) Also check the extension portion (new K/V) for NaN:
+        #     logits might come back clean due to masking even if the K/V has NaN,
+        #     but saving that into _req_kv and using it on the next HIT → guaranteed NaN.
+        #     So stack and scan here.
         nan_in_extension = False
         if extension_len > 0:
             ext_K_stack = torch.stack(
@@ -680,15 +682,16 @@ class _CudaGraphHitBucket:
 
 
 def _init_cuda_graph_buckets(model_wrapper, device, batch, diff_max, kv_max):
-    """初始化 HIT bucket。失败时返回 False（调用方应回退到 eager）。
+    """Initialize the HIT bucket. Returns False on failure (caller should fall back to eager).
 
-    关键技巧：SDPA backend 选择会被烧到 CUDA graph 里（replay 时不重新 dispatch）。
-    所以我们临时切换到 mem_efficient 后端做 capture，capture 完成后恢复原状（Flash），
-    让 eager 路径继续用 Flash（快），bucket replay 用 mem_efficient（正确处理 mask）。
+    Key technique: SDPA backend selection gets baked into the CUDA graph (no re-dispatch on replay).
+    So we temporarily switch to the mem_efficient backend for capture, then restore to Flash
+    after capture completes, allowing the eager path to keep using Flash (faster) while
+    bucket replay uses mem_efficient (correctly handles masks).
     """
     global _hit_bucket, _mc_num_layers, _mc_num_kv_heads, _mc_head_dim, _mc_dtype
 
-    # 保存原始 SDPA flags
+    # Save original SDPA flags
     orig_flash = orig_mem_eff = orig_math = orig_cudnn = None
     try:
         orig_flash = torch.backends.cuda.flash_sdp_enabled()
@@ -704,7 +707,7 @@ def _init_cuda_graph_buckets(model_wrapper, device, batch, diff_max, kv_max):
     except Exception as e:
         print(f"[RM] Failed to read SDPA flags ({e}); continuing", flush=True)
 
-    # 临时切换到 mem_efficient 后端（用于 capture）
+    # Temporarily switch to mem_efficient backend (for capture)
     try:
         torch.backends.cuda.enable_flash_sdp(False)
         torch.backends.cuda.enable_mem_efficient_sdp(True)
@@ -757,9 +760,9 @@ def _init_cuda_graph_buckets(model_wrapper, device, batch, diff_max, kv_max):
         _hit_bucket = None
         return False
     finally:
-        # 恢复原始 SDPA flags：让 eager 路径继续用 Flash（快）。
-        # CUDA graph 已经把 capture 时的 mem_eff backend 烧到 graph 里了，
-        # replay 时不会重新 dispatch，所以这个恢复不会影响 bucket。
+        # Restore original SDPA flags: allow the eager path to keep using Flash (faster).
+        # The CUDA graph has already baked in the mem_eff backend from capture time,
+        # so replay won't re-dispatch — this restore does not affect the bucket.
         try:
             if orig_flash is not None:
                 torch.backends.cuda.enable_flash_sdp(orig_flash)
@@ -793,20 +796,20 @@ def _find_common_prefix(seqs: list) -> list:
 
 
 # ---------------------------------------------------------------------------
-# 核心：单次 forward 的 KV cache 打分
+# Core: single-forward KV cache scoring
 # ---------------------------------------------------------------------------
 
 def _score_with_prefix_kv(
-    prefix_dc,          # DynamicCache，batch=1，seq=stable_prefix_len
+    prefix_dc,          # DynamicCache, batch=1, seq=stable_prefix_len
     stable_prefix_len: int,
-    diff_seqs: list,    # list[list[int]]，每个候选的 diff token IDs（含 extension + cand）
-    update_len: int,    # diff_seqs 中属于"extension"的前缀长度（用于更新 cache）
-    request_id: Optional[str] = None,  # per-request bucket disable 判定用
+    diff_seqs: list,    # list[list[int]], diff token IDs per candidate (extension + cand)
+    update_len: int,    # length of the "extension" prefix within diff_seqs (used to update cache)
+    request_id: Optional[str] = None,  # used for per-request bucket disable decision
 ) -> tuple:
     """
-    单次 forward：batch=k, seq=max(diff_len), 使用 prefix_dc 作为 KV cache。
-    返回 (scores: list[float], new_prefix_dc: DynamicCache | None)
-      new_prefix_dc 包含 stable_prefix + extension 的 KV（batch=1）。
+    Single forward: batch=k, seq=max(diff_len), using prefix_dc as KV cache.
+    Returns (scores: list[float], new_prefix_dc: DynamicCache | None)
+      new_prefix_dc contains KV for stable_prefix + extension (batch=1).
     """
     k = len(diff_seqs)
     max_diff = max(len(d) for d in diff_seqs)
@@ -815,7 +818,7 @@ def _score_with_prefix_kv(
     _pf_on = _PROFILE_DETAIL
     _t0 = _pf_now() if _pf_on else 0.0
 
-    # --- Phase: prep_tensor （构造 diff_ids + attn_mask） ---
+    # --- Phase: prep_tensor (build diff_ids + attn_mask) ---
     diff_ids = torch.full((k, max_diff), pad_id, dtype=torch.long, device=_rm_device)
     for i, d in enumerate(diff_seqs):
         diff_ids[i, :len(d)] = torch.tensor(d, dtype=torch.long)
@@ -828,7 +831,7 @@ def _score_with_prefix_kv(
 
     _t1 = _pf_now() if _pf_on else 0.0
 
-    # --- Phase: kv_expand （batch=1 → batch=k 展开 KV cache） ---
+    # --- Phase: kv_expand (expand KV cache from batch=1 to batch=k) ---
     batch_dc = _dc_expand_batch(prefix_dc, k)
 
     if _compile_mode:
@@ -841,14 +844,14 @@ def _score_with_prefix_kv(
 
     _t2 = _pf_now() if _pf_on else 0.0
 
-    # --- 优先尝试 CUDA graph bucket（HIT path 快路径） ---
+    # --- Prefer CUDA graph bucket (HIT path fast track) ---
     global _cg_consecutive_nan, _cg_runtime_disabled
     per_req_skip = (request_id is not None and request_id in _cg_per_req_disabled)
     if (_CUDA_GRAPH_ENABLED and _hit_bucket is not None
             and not _cg_runtime_disabled
             and not per_req_skip
             and _hit_bucket.can_fit(k, max_diff, stable_prefix_len)):
-        # 构造真实绝对 position_ids: [stable_prefix_len .. stable_prefix_len+max_diff-1]
+        # Build real absolute position_ids: [stable_prefix_len .. stable_prefix_len+max_diff-1]
         pos_ids = torch.arange(
             stable_prefix_len, stable_prefix_len + max_diff,
             dtype=torch.long, device=_rm_device,
@@ -861,11 +864,11 @@ def _score_with_prefix_kv(
             position_ids_actual=pos_ids,
             extension_len=update_len,
         )
-        # bucket 检测到 NaN/Inf 时返回 None，此处穿透到 eager 路径
+        # bucket returns None when NaN/Inf detected; fall through to eager path here
         if cg_result is not None:
-            _cg_consecutive_nan = 0  # 全局连续失败计数清零
+            _cg_consecutive_nan = 0  # reset global consecutive failure count
             if request_id is not None:
-                _cg_request_nan[request_id] = 0  # per-request 也清零
+                _cg_request_nan[request_id] = 0  # also reset per-request count
             logits_tensor, new_prefix_dc = cg_result
             _t3 = _pf_now() if _pf_on else 0.0
             scores = logits_tensor.flatten().tolist()
@@ -886,8 +889,8 @@ def _score_with_prefix_kv(
                     flush=True,
                 )
             return scores, new_prefix_dc
-        # cg_result is None：bucket 输出有 NaN
-        # 1) per-request 计数 + 该 request 累计太多就只关它
+        # cg_result is None: bucket output has NaN
+        # 1) per-request count + disable only that request if too many accumulated
         if request_id is not None:
             _cg_request_nan[request_id] = _cg_request_nan.get(request_id, 0) + 1
             if _cg_request_nan[request_id] >= _CG_PER_REQ_NAN_THRESHOLD:
@@ -899,7 +902,7 @@ def _score_with_prefix_kv(
                         f"can still use bucket.",
                         flush=True,
                     )
-        # 2) 全局连续失败计数（跨 request）
+        # 2) Global consecutive failure count (across requests)
         _cg_consecutive_nan += 1
         if _cg_consecutive_nan >= _CG_NAN_DISABLE_THRESHOLD and not _cg_runtime_disabled:
             _cg_runtime_disabled = True
@@ -910,8 +913,8 @@ def _score_with_prefix_kv(
                 flush=True,
             )
 
-    # --- 否则走原 eager 路径 ---
-    # Phase: forward （主 forward，含全部 36 层）
+    # --- Otherwise fall through to the original eager path ---
+    # Phase: forward (main forward, all 36 layers)
     global _layer_active
     _layer_active = _PROFILE_LAYERS
     try:
@@ -927,12 +930,12 @@ def _score_with_prefix_kv(
 
     _t3 = _pf_now() if _pf_on else 0.0
 
-    # --- Phase: score_extract （取出 logits） ---
+    # --- Phase: score_extract (extract logits) ---
     scores = out.logits.flatten().tolist()
 
     _t4 = _pf_now() if _pf_on else 0.0
 
-    # --- Phase: kv_save （提取并 trim batch[0] 用于下一步） ---
+    # --- Phase: kv_save (extract and trim batch[0] for next step) ---
     new_prefix_dc = None
     raw_kv = getattr(out, 'past_key_values', None)
     if raw_kv is not None:
@@ -964,17 +967,17 @@ def _score_with_prefix_kv(
 
 def _try_score_with_kv_cache(texts: list, request_id: str) -> Optional[list]:
     """
-    尝试用跨步 KV cache 打分。优先级：
-      HIT ：1 pass (batch=k, seq≈8)                 最快，O(8×N)，与 N 无关
-      MISS：2 pass (batch=1, seq=N) + (batch=k, seq≈8)  O(N/k + 8)，约 5× 快于 batch=k full
-    返回 None → score() 降级到 baseline (batch=k, seq=N 完整 forward)。
+    Try scoring with cross-step KV cache. Priority:
+      HIT : 1 pass (batch=k, seq~=8)                 fastest, O(8*N), independent of N
+      MISS: 2 pass (batch=1, seq=N) + (batch=k, seq~=8)  O(N/k + 8), ~5x faster than batch=k full
+    Returns None → score() falls back to baseline (batch=k, seq=N full forward).
     """
     global _req_kv
 
     _pf_on = _PROFILE_DETAIL
     _t_enter = _pf_now() if _pf_on else 0.0
 
-    # ── Tokenize（不 padding，保持原始 IDs 用于前缀匹配） ──────────────────────
+    # -- Tokenize (no padding, keep raw IDs for prefix matching) -----------------
     try:
         encoded_list = [
             _rm_tok(
@@ -1000,7 +1003,7 @@ def _try_score_with_kv_cache(texts: list, request_id: str) -> Optional[list]:
         _pf_record("tokenize",    _t_enter, _t_tok)
         _pf_record("prefix_calc", _t_tok,   _t_prefix)
 
-    # ── HIT path：复用上一步缓存的 prefix KV ──────────────────────────────────
+    # -- HIT path: reuse the cached prefix KV from the previous step --------------
     try:
         _t_lookup_start = _pf_now() if _pf_on else 0.0
         state = _req_kv.get(request_id)
@@ -1047,7 +1050,7 @@ def _try_score_with_kv_cache(texts: list, request_id: str) -> Optional[list]:
     except Exception as e:
         print(f"[RM] KV HIT failed ({e}), trying MISS", flush=True)
 
-    # ── Optimized MISS：batch=1 只处理 stable_prefix，再 batch=k 只处理 diff ────
+    # -- Optimized MISS: batch=1 processes only stable_prefix, then batch=k processes only diff --
     try:
         _t_miss_start = _pf_now() if _pf_on else 0.0
         prefix_ids_t = torch.tensor(
@@ -1110,7 +1113,7 @@ def _try_score_with_kv_cache(texts: list, request_id: str) -> Optional[list]:
 
 
 # ---------------------------------------------------------------------------
-# 模型加载函数
+# Model loading functions
 # ---------------------------------------------------------------------------
 
 def _load_rm_base(rm_path: str, device: str):
@@ -1161,26 +1164,26 @@ def _load_rm_with_lora(rm_path: str, rm_lora_path: str, device: str):
 
 
 # ---------------------------------------------------------------------------
-# torch.compile 辅助
+# torch.compile helpers
 # ---------------------------------------------------------------------------
 
 def _apply_compile_and_warmup(model, tok, device: str):
     """
-    对 model 应用 torch.compile 并执行 warmup forward，触发 JIT 编译。
+    Apply torch.compile to the model and run warmup forwards to trigger JIT compilation.
 
-    torch.compile 消除 PyTorch kernel launch overhead（~36ms → ~5ms），
-    使 KV cache 的 short-sequence forward 真正受益。
-    首次 warmup 约需 20-60s，后续调用无额外开销。
+    torch.compile eliminates PyTorch kernel launch overhead (~36ms → ~5ms),
+    making short-sequence KV cache forwards genuinely faster.
+    First warmup takes approximately 20-60s; subsequent calls have no extra overhead.
     """
     import torch._dynamo
-    # 遇到不支持的 op 时使用 graph break 而非报错
+    # Use graph break instead of error on unsupported ops
     torch._dynamo.config.suppress_errors = True
 
     print("[RM] Applying torch.compile(dynamic=True, fullgraph=False)...", flush=True)
     compiled = torch.compile(model, dynamic=True, fullgraph=False)
 
     print("[RM] Running warmup pass 1/3: standard forward (may take 30-90s)...", flush=True)
-    dummy_text = "Warmup " * 50   # ~50 tokens, pad 到 256
+    dummy_text = "Warmup " * 50   # ~50 tokens, padded to 256
     dummy_texts = [dummy_text] * 5
     enc = tok(
         dummy_texts, return_tensors="pt", padding=True,
@@ -1190,7 +1193,7 @@ def _apply_compile_and_warmup(model, tok, device: str):
         out1 = compiled(**enc, use_cache=True)
         _ = compiled(**enc, use_cache=True)
 
-    # Pass 2: KV cache HIT 路径 — diff_len 必须 > _BPE_TRIM，且标记为 dynamic
+    # Pass 2: KV cache HIT path — diff_len must be > _BPE_TRIM, marked as dynamic
     print("[RM] Running warmup pass 2/3: KV cache HIT forward (mark dynamic dims)...", flush=True)
     raw_kv = getattr(out1, 'past_key_values', None)
     if raw_kv is not None:
@@ -1198,7 +1201,7 @@ def _apply_compile_and_warmup(model, tok, device: str):
             from transformers.cache_utils import DynamicCache
             kv_dc = _to_dynamic_cache(raw_kv)
             if kv_dc is not None:
-                diff_len = _BPE_TRIM + 3  # 8, 大于 _BPE_TRIM=5，覆盖实际最小 diff
+                diff_len = _BPE_TRIM + 3  # 8, greater than _BPE_TRIM=5, covers minimum actual diff
                 prefix_len = _dc_seq_len(kv_dc) - diff_len
                 if prefix_len > 0:
                     prefix_dc = _dc_extract_batch0_trim(kv_dc, prefix_len)
@@ -1207,7 +1210,7 @@ def _apply_compile_and_warmup(model, tok, device: str):
                         diff_ids = torch.zeros((5, diff_len), dtype=torch.long, device=device)
                         full_len = prefix_len + diff_len
                         attn_mask = torch.ones((5, full_len), dtype=torch.long, device=device)
-                        # 标记 diff 维度为 fully symbolic，消除 shape guard
+                        # Mark diff dimension as fully symbolic to eliminate shape guard
                         torch._dynamo.mark_dynamic(diff_ids, 1)
                         torch._dynamo.mark_dynamic(attn_mask, 1)
                         for layer in batch_dc.layers:
@@ -1229,7 +1232,7 @@ def _apply_compile_and_warmup(model, tok, device: str):
         except Exception as e:
             print(f"[RM] KV cache HIT warmup skipped ({e})", flush=True)
 
-    # Pass 3: MISS 路径 — batch=1 full forward，seq 维度标记为 dynamic
+    # Pass 3: MISS path — batch=1 full forward, seq dimension marked as dynamic
     print("[RM] Running warmup pass 3/3: MISS path batch=1 forward (mark dynamic seq)...", flush=True)
     try:
         dummy_ids_1 = torch.zeros((1, 256), dtype=torch.long, device=device)
@@ -1255,7 +1258,7 @@ class ScoreRequest(BaseModel):
     user_content: str
     response_so_far: str
     candidate_texts: list[str]
-    request_id: Optional[str] = None   # 提供时启用跨步 KV cache
+    request_id: Optional[str] = None   # enables cross-step KV cache when provided
 
 
 class ReloadRequest(BaseModel):
@@ -1275,7 +1278,7 @@ def get_status():
 
 @app.post("/score")
 def score(req: ScoreRequest):
-    """对外暴露的 endpoint，加 top-level try/except 防止 server 进程被异常杀掉。"""
+    """Externally exposed endpoint with top-level try/except to prevent the server process from being killed by exceptions."""
     try:
         return _score_impl(req)
     except Exception as e:
@@ -1286,7 +1289,7 @@ def score(req: ScoreRequest):
             f"Stack:\n{tb}",
             flush=True,
         )
-        # 把 NaN-safe 的 0 分数返回出去，至少让 LLM server 不会卡住
+        # Return NaN-safe zero scores so the LLM server at least won't hang
         n = len(req.candidate_texts) if req.candidate_texts else 5
         return {"scores": [0.0] * n, "error": f"{type(e).__name__}: {e}"}
 
@@ -1324,7 +1327,7 @@ def _score_impl(req: ScoreRequest):
             scores = None
 
         if scores is None:
-            # 真正的 fallback：不带 use_cache 的标准 batch forward
+            # True fallback: standard batch forward without use_cache
             _t_fb_start = _pf_now() if _PROFILE_DETAIL else 0.0
             encoded = _rm_tok(
                 texts, return_tensors="pt", padding=True,
@@ -1386,13 +1389,13 @@ def _score_impl(req: ScoreRequest):
 
 @app.post("/reload")
 def reload_rm(req: ReloadRequest):
-    """热切换 RM（同步，加载完成后才返回）。"""
+    """Hot-swap the RM (synchronous, returns only after loading completes)."""
     global _rm_model, _rm_tok, _req_kv, _hit_bucket, _CUDA_GRAPH_ENABLED
     with _rm_lock:
         _status["status"] = "reloading"
         print(f"[RM] Reloading: rm={req.rm}  rm_lora={req.rm_lora}", flush=True)
 
-        # CUDA graph 与新模型不兼容（指针/形状变了），reload 后禁用
+        # CUDA graph is incompatible with the new model (pointers/shapes changed), disable after reload
         if _hit_bucket is not None:
             print("[RM] Disabling CUDA graph bucket due to model reload "
                   "(restart server with --cuda_graph to re-capture).", flush=True)
@@ -1421,26 +1424,26 @@ def reload_rm(req: ReloadRequest):
 
 
 # ---------------------------------------------------------------------------
-# CLI & 启动
+# CLI & startup
 # ---------------------------------------------------------------------------
 
 def parse_args():
     p = argparse.ArgumentParser(description="SIA RM Server")
-    p.add_argument("--rm",        required=True,  help="RM 基础模型路径")
-    p.add_argument("--rm_lora",   default=None,   help="RM LoRA checkpoint 路径")
+    p.add_argument("--rm",        required=True,  help="RM base model path")
+    p.add_argument("--rm_lora",   default=None,   help="RM LoRA checkpoint path")
     p.add_argument("--rm_device", default="cuda:0")
     p.add_argument("--host",      default="0.0.0.0")
     p.add_argument("--port",      type=int, default=8001)
     p.add_argument("--compile",   action="store_true",
-                   help="启用 torch.compile 加速推理（消除 kernel launch overhead，建议与 KV cache 一起使用）")
+                   help="Enable torch.compile to accelerate inference (eliminates kernel launch overhead, recommended with KV cache)")
     p.add_argument("--cuda_graph", action="store_true",
-                   help="启用 CUDA graph + 静态 bucketing 加速 HIT 路径（与 --compile 互斥）")
-    p.add_argument("--cg_batch",    type=int, default=5,   help="CUDA graph bucket batch (默认匹配 --topk)")
-    p.add_argument("--cg_diff_max", type=int, default=64,  help="CUDA graph bucket diff_max 上限")
-    p.add_argument("--cg_kv_max",   type=int, default=2048, help="CUDA graph bucket kv_max 上限")
+                   help="Enable CUDA graph + static bucketing to accelerate HIT path (mutually exclusive with --compile)")
+    p.add_argument("--cg_batch",    type=int, default=5,   help="CUDA graph bucket batch (default matches --topk)")
+    p.add_argument("--cg_diff_max", type=int, default=64,  help="CUDA graph bucket diff_max upper bound")
+    p.add_argument("--cg_kv_max",   type=int, default=2048, help="CUDA graph bucket kv_max upper bound")
     args = p.parse_args()
     if args.compile and args.cuda_graph:
-        p.error("--compile 与 --cuda_graph 互斥，二选一即可")
+        p.error("--compile and --cuda_graph are mutually exclusive, choose one")
     return args
 
 

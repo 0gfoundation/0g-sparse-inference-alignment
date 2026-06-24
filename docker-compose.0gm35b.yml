@@ -35,10 +35,10 @@ services:
       - vllm-compile-cache-0gm35b:/root/.cache/vllm
 
     environment:
-      # 主 LLM：不设置 SIA_LLM_CUDAGRAPH，默认 FULL_AND_PIECEWISE
-      # （比 piecewise-only 快 ~2×；vllm 0.18.0 AOT capture，推理时只 replay）
-      # RM：必须 none（eager），不能用 piecewise——0.18.0 RM 在推理时遇到新
-      # batch_descriptor 会尝试 runtime capture，触发 RuntimeError
+      # Main LLM: SIA_LLM_CUDAGRAPH not set, defaults to FULL_AND_PIECEWISE
+      # (~2x faster than piecewise-only; vllm 0.18.0 does AOT capture, inference only replays)
+      # RM: must be none (eager), piecewise cannot be used — under 0.18.0 RM
+      # attempts runtime capture when it encounters a new batch_descriptor, triggering RuntimeError
       SIA_RM_CUDAGRAPH: "none"
       SIA_RM_MULTIPROCESS: "0"
 

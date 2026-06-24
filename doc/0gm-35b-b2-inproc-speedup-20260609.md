@@ -1,94 +1,94 @@
-# 0GM-35B b2 inproc 速度优化实测 — vllm 0.18.0 sweet spot (2026-06-09)
+# 0GM-35B b2 inproc Speed Optimization Measurements — vllm 0.18.0 sweet spot (2026-06-09)
 
-**TL;DR**: 在 vllm **0.18.0** + `SIA_RM_CUDAGRAPH=none` 上启用 `--rm_backend b2`，0GM-35B 首次实现同进程 RM：
+**TL;DR**: Enabling `--rm_backend b2` on vllm **0.18.0** + `SIA_RM_CUDAGRAPH=none`, 0GM-35B achieves in-process RM for the first time:
 
-- **SIA 吞吐: ~49 tok/s (vs HTTP ~32 tok/s) → ~1.5× 加速**
-- **noSIA 吞吐: ~54 tok/s（b2 inproc 对无干预步骤零开销）**
-- **0 RM error, 0 cudagraph 冲突**（venv6 smoke test, H200 单卡）
-- **零代码改动**: 只需切 venv (0.18.0) + 两个 env var
+- **SIA throughput: ~49 tok/s (vs HTTP ~32 tok/s) → ~1.5× speedup**
+- **noSIA throughput: ~54 tok/s (b2 inproc has zero overhead on non-intervention steps)**
+- **0 RM errors, 0 cudagraph conflicts** (venv6 smoke test, H200 single GPU)
+- **Zero code changes**: only need to switch venv (0.18.0) + two env vars
 
-已通过 smoke test，无需另外测试即可部署。
+Passed smoke test; ready to deploy without additional testing.
 
 ---
 
-## 1. 背景：为什么 0GM-35B 之前不能用 b2 inproc
+## 1. Background: Why 0GM-35B Could Not Use b2 inproc Before
 
-0GM-35B 使用 `Qwen3_5MoeForConditionalGeneration` 架构（Qwen3.5 系列），该架构在 vllm 0.17.x 及更早版本中**未注册**，无法加载，强制要求 0.18+。
+0GM-35B uses the `Qwen3_5MoeForConditionalGeneration` architecture (Qwen3.5 series), which was **not registered** in vllm 0.17.x and earlier, making it impossible to load — requiring 0.18+ as a minimum.
 
-而 vllm 0.19.x 的 PIECEWISE 改为了 runtime capture 模式，主 LLM 推理时会进入 `torch.cuda.graph()` context，设置进程级全局 `is_currently_capturing` flag，同进程任何 CUDA op（包括 eager RM forward）都被 block。经过穷举测试，vllm 0.19 上所有 b2 配置均 100% 失败：
+In vllm 0.19.x, PIECEWISE was changed to runtime capture mode: during main LLM inference it enters a `torch.cuda.graph()` context and sets a process-level global `is_currently_capturing` flag, which blocks any CUDA op in the same process (including eager RM forward). Exhaustive testing confirmed that all b2 configurations on vllm 0.19 fail 100%:
 
-| 配置 | 结果 |
+| Configuration | Result |
 |---|---|
-| FULL_AND_PIECEWISE 主 LLM + PIECEWISE RM | ❌ RM error 10%+ steps |
-| FULL_AND_PIECEWISE 主 LLM + eager RM | ❌ RM error（flag 来自主 LLM） |
-| PIECEWISE-only 主 LLM + PIECEWISE RM | ❌ 100% INTERVENE failure |
-| PIECEWISE-only 主 LLM + eager RM | ❌ RM error |
+| FULL_AND_PIECEWISE main LLM + PIECEWISE RM | ❌ RM error 10%+ steps |
+| FULL_AND_PIECEWISE main LLM + eager RM | ❌ RM error (flag comes from main LLM) |
+| PIECEWISE-only main LLM + PIECEWISE RM | ❌ 100% INTERVENE failure |
+| PIECEWISE-only main LLM + eager RM | ❌ RM error |
 
-详见 [`doc/0gm-35b-sia-rm-inproc-path-20260602.md`](0gm-35b-sia-rm-inproc-path-20260602.md)。
+See [`doc/0gm-35b-sia-rm-inproc-path-20260602.md`](0gm-35b-sia-rm-inproc-path-20260602.md) for details.
 
 ---
 
-## 2. 为什么 vllm 0.18.0 是 sweet spot
+## 2. Why vllm 0.18.0 Is the Sweet Spot
 
-| 条件 | 影响 | 0.17.1 | **0.18.0** | 0.19.0 |
+| Condition | Impact | 0.17.1 | **0.18.0** | 0.19.0 |
 |------|------|--------|-----------|--------|
-| 支持 `Qwen3_5MoeForConditionalGeneration` | 0GM-35B 能加载 | ❌ | ✅ | ✅ |
-| PIECEWISE 仍是 AOT capture | 推理期不进入 `torch.cuda.graph()` | ✅ | ✅ | ❌ (改 runtime) |
-| 有 `unlock_workspace()` | 过得了 MoE workspace lock | ❌ | ✅ | ✅ |
+| Supports `Qwen3_5MoeForConditionalGeneration` | 0GM-35B can load | ❌ | ✅ | ✅ |
+| PIECEWISE is still AOT capture | Does not enter `torch.cuda.graph()` during inference | ✅ | ✅ | ❌ (changed to runtime) |
+| Has `unlock_workspace()` | Passes MoE workspace lock | ❌ | ✅ | ✅ |
 
-0.18.0 同时满足三个条件，是 0GM-35B b2 inproc 的唯一可用版本。
+0.18.0 satisfies all three conditions simultaneously and is the only viable version for 0GM-35B b2 inproc.
 
 ---
 
-## 3. 为什么 `SIA_RM_CUDAGRAPH=none`（而非 `piecewise`）
+## 3. Why `SIA_RM_CUDAGRAPH=none` (Not `piecewise`)
 
-vllm 0.18.0 RM 侧设置 `SIA_RM_CUDAGRAPH=piecewise` 同样失败：
+Setting `SIA_RM_CUDAGRAPH=piecewise` on the RM side in vllm 0.18.0 also fails:
 
-**失败原因**: RM 的 PIECEWISE 模式在 warmup 阶段只捕获固定 batch_descriptor 集合。推理时，prefix caching（APC）会生成 warmup 未见过的新 batch_descriptor，`CUDAGraphWrapper.__call__` 检测到新 key 后调用 `validate_cudagraph_capturing_enabled()`，该函数因 post-startup capturing 被禁用而 raise：
+**Failure reason**: RM's PIECEWISE mode only captures a fixed set of batch_descriptors during the warmup phase. At inference time, prefix caching (APC) generates new batch_descriptors not seen during warmup; `CUDAGraphWrapper.__call__` detects the new key and calls `validate_cudagraph_capturing_enabled()`, which raises because post-startup capturing is disabled:
 ```
 RuntimeError: CUDA graph capturing detected at an inappropriate time.
 ```
 
-注意：这个 raise 发生在进入 `torch.cuda.graph()` context **之前**，所以不会设置 CUDA 全局 flag——这是和 0.19 故障模式的关键区别（0.19 是 flag 冲突，0.18 是 Python 异常）。
+Note: this raise occurs **before** entering the `torch.cuda.graph()` context, so it does not set the CUDA global flag — this is the key difference from the 0.19 failure mode (0.19 is a flag conflict; 0.18 is a Python exception).
 
-**解决方案**: `SIA_RM_CUDAGRAPH=none` → `enforce_eager=True`，RM 完全跳过 `CUDAGraphWrapper`，无任何 graph capture 尝试。
+**Solution**: `SIA_RM_CUDAGRAPH=none` → `enforce_eager=True`, so the RM completely skips `CUDAGraphWrapper` with no graph capture attempts.
 
-0.18 主 LLM 的 PIECEWISE 在推理时只 **replay** 已捕获的 graph（不进入 `torch.cuda.graph()` context），所以 eager RM 可以自由 forward。
+The 0.18 main LLM's PIECEWISE only **replays** already-captured graphs during inference (does not enter `torch.cuda.graph()` context), so eager RM can forward freely.
 
 ---
 
-## 4. 配置
+## 4. Configuration
 
-### 4.1 拓扑 — b2 inproc
+### 4.1 Topology — b2 inproc
 
-**单进程**：SIA EngineCore 内嵌套一个 nested vllm `LLM(...)` 作为 RM。
+**Single process**: A nested vllm `LLM(...)` is embedded inside the SIA EngineCore as the RM.
 
 ```
-┌─────────── 主进程 (sia_vllm_server.py) ─────────────┐
-│   FastAPI server (port 8000)                          │
-│   ↓                                                    │
-│   AsyncLLMEngine (主 LLM = 0GM-35B, vllm 0.18.0)     │
-│   ↓ EngineCore subprocess                             │
-│   ┌───────────────────────────────────────────────┐   │
-│   │  SIA LogitsProcessor                           │   │
-│   │  ↓  __call__()                                 │   │
-│   │  RMClient (b2 backend, inproc)                 │   │
-│   │  ↓  score_candidates(...)  ← Python 直接调用  │   │
-│   │  ┌─────────────────────────────────────────┐  │   │
-│   │  │  nested vllm LLM(VM-Qwen3-4B-merged...) │  │   │
-│   │  │  enforce_eager=True  (SIA_RM_CUDAGRAPH   │  │   │
-│   │  │  =none)                                  │  │   │
-│   │  │  on same CUDA context as 主 LLM          │  │   │
-│   │  └─────────────────────────────────────────┘  │   │
-│   └───────────────────────────────────────────────┘   │
-└───────────────────────────────────────────────────────┘
+┌─────────── Main Process (sia_vllm_server.py) ───────────────┐
+│   FastAPI server (port 8000)                                  │
+│   ↓                                                            │
+│   AsyncLLMEngine (main LLM = 0GM-35B, vllm 0.18.0)           │
+│   ↓ EngineCore subprocess                                     │
+│   ┌───────────────────────────────────────────────┐           │
+│   │  SIA LogitsProcessor                           │           │
+│   │  ↓  __call__()                                 │           │
+│   │  RMClient (b2 backend, inproc)                 │           │
+│   │  ↓  score_candidates(...)  ← direct Python call│           │
+│   │  ┌─────────────────────────────────────────┐  │           │
+│   │  │  nested vllm LLM(VM-Qwen3-4B-merged...) │  │           │
+│   │  │  enforce_eager=True  (SIA_RM_CUDAGRAPH   │  │           │
+│   │  │  =none)                                  │  │           │
+│   │  │  on same CUDA context as main LLM        │  │           │
+│   │  └─────────────────────────────────────────┘  │           │
+│   └───────────────────────────────────────────────┘           │
+└───────────────────────────────────────────────────────────────┘
 ```
 
-无 HTTP 跨进程通信。RM 调用走同进程 Python 函数，cross-tokenizer bridge 自动处理 0GM-35B（248044 vocab）到 VM-Qwen3-4B（151643 vocab）的 token 映射。
+No HTTP cross-process communication. RM calls go through in-process Python functions; the cross-tokenizer bridge automatically handles token mapping from 0GM-35B (248044 vocab) to VM-Qwen3-4B (151643 vocab).
 
-### 4.2 关键参数
+### 4.2 Key Parameters
 
-| 参数 | 值 |
+| Parameter | Value |
 |------|---|
 | `--llm` | 0GM-1.0-35B-A3B-0427 |
 | `--rm_backend` | **`b2`** |
@@ -99,25 +99,25 @@ RuntimeError: CUDA graph capturing detected at an inappropriate time.
 | `--topk` | 10 |
 | `--weight` | 1.0 |
 | `--entropy_threshold` | 1.0 |
-| `SIA_LLM_CUDAGRAPH` | **`piecewise`**（主 LLM PIECEWISE-only AOT） |
-| `SIA_RM_CUDAGRAPH` | **`none`**（RM eager，必须，见 §3） |
-| `SIA_RM_MULTIPROCESS` | `0`（同进程 InprocClient） |
+| `SIA_LLM_CUDAGRAPH` | **`piecewise`** (main LLM PIECEWISE-only AOT) |
+| `SIA_RM_CUDAGRAPH` | **`none`** (RM eager, required — see §3) |
+| `SIA_RM_MULTIPROCESS` | `0` (in-process InprocClient) |
 
 ---
 
-## 5. 实测吞吐（H200 单卡，2026-06-09）
+## 5. Measured Throughput (H200 single GPU, 2026-06-09)
 
-| 模式 | tok/s | 说明 |
+| Mode | tok/s | Notes |
 |------|-------|------|
-| noSIA（sia_weight=0） | **~54** | 纯 vllm 推理，零 RM 开销 |
-| SIA（entropy_threshold=1.0，~8% 干预率） | **~49** | 默认配置，约 9% 开销 |
-| 旧 HTTP vllm RM backend（基线） | **~32** | 同机型历史测量 |
+| noSIA (sia_weight=0) | **~54** | Pure vllm inference, zero RM overhead |
+| SIA (entropy_threshold=1.0, ~8% intervention rate) | **~49** | Default configuration, ~9% overhead |
+| Old HTTP vllm RM backend (baseline) | **~32** | Historical measurement on same hardware |
 
-**b2 inproc vs HTTP：~1.5× 加速** — 匹配 VL-30B b2 inproc 的 1.46×。
+**b2 inproc vs HTTP: ~1.5× speedup** — matches VL-30B b2 inproc's 1.46×.
 
-> 注意：上述测量使用了 0GM-35B 的 thinking 模式（默认输出含 thinking token），实际对话场景中如关闭 thinking 吞吐会更高。
+> Note: The measurements above used 0GM-35B's thinking mode (default output includes thinking tokens); throughput will be higher if thinking is disabled in production chat scenarios.
 
-### SIA 干预日志样本（smoke test）
+### SIA Intervention Log Sample (smoke test)
 
 ```
 [SIA] req=0 DONE  intervened=3/20    ratio=15.0%  top1_flip=1/3   (33.3%)
@@ -126,32 +126,32 @@ RuntimeError: CUDA graph capturing detected at an inappropriate time.
 [SIA] req=0 DONE  intervened=22/200  ratio=11.0%  top1_flip=18/22 (81.8%)
 ```
 
-top1_flip 率 78–88%，说明 RM 干预有实质性影响（仅在高熵位置改变 token 选择）。
+top1_flip rate of 78–88% indicates that RM interventions have a meaningful impact (changing token selection only at high-entropy positions).
 
 ---
 
-## 6. 与 VL-30B 对比
+## 6. Comparison with VL-30B
 
-| 维度 | VL-30B | 0GM-35B |
+| Dimension | VL-30B | 0GM-35B |
 |------|--------|---------|
-| 架构 | `Qwen3VLMoe` | `Qwen3_5MoeForConditionalGeneration` |
-| b2 inproc 的 vllm 版本 | 0.17.1 | **0.18.0** |
+| Architecture | `Qwen3VLMoe` | `Qwen3_5MoeForConditionalGeneration` |
+| vllm version for b2 inproc | 0.17.1 | **0.18.0** |
 | `SIA_LLM_CUDAGRAPH` | `piecewise` | `piecewise` |
-| `SIA_RM_CUDAGRAPH` | `piecewise` | **`none`**（0.18 RM PIECEWISE 有 prefix-cache 新 descriptor 问题）|
-| 端到端加速 vs HTTP | 1.46× | ~1.5× |
+| `SIA_RM_CUDAGRAPH` | `piecewise` | **`none`** (0.18 RM PIECEWISE has prefix-cache new descriptor issue) |
+| End-to-end speedup vs HTTP | 1.46× | ~1.5× |
 | venv / requirements | `vl30b-b2-inproc.txt` | `0gm35b-b2-inproc.txt` |
 
 ---
 
-## 7. 快速上手
+## 7. Quick Start
 
-### 7.1 安装 venv
+### 7.1 Install venv
 
 ```bash
 scripts/setup_venv_0gm35b_b2.sh /path/to/venv-0gm35b-b2
 ```
 
-手动步骤：
+Manual steps:
 ```bash
 python3 -m venv /path/to/venv-0gm35b-b2
 source /path/to/venv-0gm35b-b2/bin/activate
@@ -159,7 +159,7 @@ pip install -r requirements/0gm35b-b2-inproc.txt
 pip install -e .
 ```
 
-### 7.2 启动服务
+### 7.2 Start the Server
 
 ```bash
 SIA_LLM_CUDAGRAPH=piecewise SIA_RM_CUDAGRAPH=none \
@@ -173,9 +173,9 @@ python src/sia_vllm_server.py \
   --max_model_len 2048 --port 8000
 ```
 
-启动时间约 15 分钟（首次 JIT 编译 FlashInfer GDN kernel + PIECEWISE warmup）。
+Startup takes approximately 15 minutes (first-time JIT compilation of FlashInfer GDN kernel + PIECEWISE warmup).
 
-### 7.3 冒烟测试
+### 7.3 Smoke Test
 
 ```bash
 curl -s -X POST http://localhost:8000/v1/chat/completions \
@@ -184,36 +184,36 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
   | python3 -m json.tool
 ```
 
-服务端日志应出现（无 `RM error` 行）：
+The server log should show (with no `RM error` lines):
 ```
 [SIA] req=0 DONE  intervened=X/20  ratio=Y%  top1_flip=...
 ```
 
-### 7.4 关闭 SIA 干预对比
+### 7.4 Disable SIA for Comparison
 
 ```bash
-# SIA on（默认）
+# SIA on (default)
 curl -s ... -d '{"...", "max_tokens":200}'
 
-# SIA off（纯 vllm baseline）
+# SIA off (pure vllm baseline)
 curl -s ... -d '{"...", "max_tokens":200, "sia_weight":0}'
 ```
 
 ---
 
-## 8. 注意事项
+## 8. Notes
 
-- **`SIA_RM_CUDAGRAPH=none` 是必须的**，不能用 `piecewise`（见 §3）
-- **不要在 0.19 venv 里跑 b2**，无论什么 cudagraph 配置都会失败
-- `--max_model_len 2048` 是为了给 RM 留出 GPU 内存；若 GPU 有足够余量可增大
-- 首次启动会触发 FlashInfer GDN prefill kernel JIT 编译（~4 分钟），之后缓存复用
-- MoE config 警告（`Using default MoE config`）是正常现象，vllm 0.18 无 H200 特定 MoE 调优配置
+- **`SIA_RM_CUDAGRAPH=none` is required** — `piecewise` cannot be used (see §3)
+- **Do not run b2 in a 0.19 venv** — it will fail regardless of the cudagraph configuration
+- `--max_model_len 2048` is set to leave GPU memory for the RM; increase it if the GPU has sufficient headroom
+- The first startup triggers FlashInfer GDN prefill kernel JIT compilation (~4 minutes); subsequent runs use cached kernels
+- The MoE config warning (`Using default MoE config`) is expected — vllm 0.18 has no H200-specific MoE tuning configuration
 
 ---
 
-## 参考
+## References
 
-- [`doc/0gm-35b-speedup-plan-20260609.md`](0gm-35b-speedup-plan-20260609.md) — 完整方案对比（P0–P6）+ P0 测试过程
-- [`doc/vl30b-b2-inproc-speedup-20260605.md`](vl30b-b2-inproc-speedup-20260605.md) — VL-30B 同类加速，含 AlpacaEval 质量验证
-- `requirements/0gm35b-b2-inproc.txt` — vllm 0.18.0 依赖配置
-- `scripts/setup_venv_0gm35b_b2.sh` — 一键建 venv 脚本
+- [`doc/0gm-35b-speedup-plan-20260609.md`](0gm-35b-speedup-plan-20260609.md) — Full plan comparison (P0–P6) + P0 test process
+- [`doc/vl30b-b2-inproc-speedup-20260605.md`](vl30b-b2-inproc-speedup-20260605.md) — VL-30B equivalent speedup, including AlpacaEval quality validation
+- `requirements/0gm35b-b2-inproc.txt` — vllm 0.18.0 dependency configuration
+- `scripts/setup_venv_0gm35b_b2.sh` — one-command venv setup script

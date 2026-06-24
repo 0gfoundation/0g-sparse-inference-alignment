@@ -1,15 +1,15 @@
 """
-将 VM-Qwen3-4B-merged-for-vllm 量化为 FP8_DYNAMIC，保留 score head 为 BF16。
+Quantize VM-Qwen3-4B-merged-for-vllm to FP8_DYNAMIC, keeping the score head in BF16.
 
-ignore list 基于 Step 1.0 实测出的真实模块名：
+ignore list is based on actual module names measured in Step 1.0:
   classifier head:  score              -> Linear(2560, 1)
   embedding:        model.embed_tokens -> Embedding(151936, 2560)
 
-用法:
+Usage:
     python scripts/quantize_rm_fp8_dynamic.py
         [--src /path/to/source] [--dst /path/to/output] [--n_samples 50]
 
-详见 doc/rm-fp8-dynamic-quantization-plan.md。
+See doc/rm-fp8-dynamic-quantization-plan.md for details.
 """
 import argparse
 import random
@@ -20,18 +20,19 @@ from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
 
 def build_calibration_dataset(tok, n_samples: int = 50, max_len: int = 1024):
-    """构造 calibration 样本。FP8_DYNAMIC 不依赖分布，但 oneshot 仍需要样本走模型图。
+    """Build calibration samples. FP8_DYNAMIC does not depend on the distribution,
+    but oneshot still needs samples to trace the model graph.
 
-    样本格式必须与部署一致：chat-formatted user+assistant turn。
-    覆盖多种主题（技术 / 科学 / 人文 / 数学 / 闲聊 / 多语言 / 长短文），
-    以更好覆盖 Linear 层的所有激活路径。
+    Sample format must match deployment: chat-formatted user+assistant turns.
+    Covers diverse topics (tech / science / humanities / math / chat / multilingual / long+short)
+    to better cover all activation paths through Linear layers.
     """
     sample_pairs = [
-        # 数学 / 算术
+        # math / arithmetic
         ("What is 2+2?", "The answer is 4."),
         ("Calculate 15% of 200.", "30."),
         ("Solve x^2 = 25.", "x = 5 or x = -5."),
-        # 科学 / 自然
+        # science / nature
         ("Explain photosynthesis briefly.",
          "Plants convert sunlight to energy via chlorophyll."),
         ("What is the boiling point of water?",
@@ -39,22 +40,22 @@ def build_calibration_dataset(tok, n_samples: int = 50, max_len: int = 1024):
         ("Why is the sky blue?",
          "Rayleigh scattering of sunlight by air molecules."),
         ("Name 3 noble gases.", "Helium, neon, argon."),
-        # 人文 / 历史 / 文学
+        # humanities / history / literature
         ("Who wrote Hamlet?", "William Shakespeare."),
         ("When did World War II end?", "September 2, 1945."),
         ("Capital of France?", "Paris."),
         ("Translate 'hello' to Spanish.", "Hola."),
-        # 编程 / 技术
+        # programming / tech
         ("What is recursion in programming?",
          "A function calling itself with smaller inputs."),
         ("Difference between TCP and UDP?",
          "TCP is connection-oriented and reliable; UDP is connectionless."),
         ("What does HTTP stand for?", "HyperText Transfer Protocol."),
-        # 日常 / 列表
+        # everyday / lists
         ("List 3 colors.", "Red, blue, green."),
         ("Suggest a quick breakfast.", "Toast with peanut butter and a banana."),
         ("Name 2 musical instruments.", "Piano and guitar."),
-        # 长一些的指令
+        # longer instructions
         ("Write a short poem about autumn.",
          "Leaves of amber dance in fading light, "
          "the crisp air whispers summer's end."),
@@ -63,27 +64,27 @@ def build_calibration_dataset(tok, n_samples: int = 50, max_len: int = 1024):
         ("Summarize the plot of Romeo and Juliet.",
          "Two young lovers from feuding families secretly marry, "
          "then die by misunderstanding."),
-        # 推理 / 多步
+        # reasoning / multi-step
         ("If a train travels 60 mph for 2 hours, how far did it go?",
          "120 miles."),
         ("Is 17 prime?", "Yes, 17 has only 1 and 17 as divisors."),
-        # 否定 / 偏见检查
+        # negation / bias check
         ("What's the capital of the moon?",
          "The moon has no capital city; it's not a country."),
-        # 中英混合 / 多语言
-        ("北京的首都是哪？", "北京就是中国的首都。"),
-        ("用英文说'谢谢'。", "Thank you."),
-        # 代码
+        # mixed language / multilingual
+        ("What is the capital of Beijing?", "Beijing is the capital of China."),
+        ("How do you say 'thank you' in English?", "Thank you."),
+        # code
         ("Python print 'hello world'.", "print('hello world')"),
         ("What does this Python do: x = [1,2,3]; print(sum(x))?",
          "It prints 6, the sum of the list."),
-        # 哲学 / 开放
+        # philosophy / open-ended
         ("Is free will real?",
          "Philosophers debate this; both compatibilist and "
          "libertarian views exist."),
         ("Define consciousness.",
          "Subjective awareness of one's surroundings and inner experience."),
-        # 长输入
+        # long input
         ("List 10 fruits.",
          "Apple, banana, orange, grape, mango, strawberry, watermelon, "
          "pineapple, kiwi, peach."),
@@ -138,7 +139,7 @@ def main():
           flush=True)
     ds = build_calibration_dataset(tok, n_samples=args.n_samples)
 
-    # Step 1.0 实测确认的真实模块名
+    # Actual module names confirmed by measurement in Step 1.0
     recipe = QuantizationModifier(
         targets=["Linear"],
         scheme="FP8_DYNAMIC",

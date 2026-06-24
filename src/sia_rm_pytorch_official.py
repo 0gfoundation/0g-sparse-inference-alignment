@@ -1,14 +1,14 @@
 """
-SIA RM Server — 严格用官方 ValueModel.from_pretrained 加载, 跳过 vllm 服务路径
+SIA RM Server — loads strictly using the official ValueModel.from_pretrained, bypassing the vllm serve path.
 
-跟 src/sia_rm_server.py (用 _ValueModelWrapper 自定义实现) 的区别:
-本 server 直接 import /workspace/SIA/git/SIA/src/value_model/model.ValueModel,
-完全按官方代码加载 base + LoRA + token_reward_head, 不做任何转换。
+Difference from src/sia_rm_server.py (which uses a custom _ValueModelWrapper implementation):
+This server directly imports /workspace/SIA/git/SIA/src/value_model/model.ValueModel
+and loads base + LoRA + token_reward_head entirely following the official code, with no conversion.
 
-Endpoint /score 跟现有 sia_rm_server.py 完全兼容, 主 LLM server 不用改任何代码,
-只需 --rm_url 指向本 server。
+The /score endpoint is fully compatible with the existing sia_rm_server.py; the main LLM server
+does not need any code changes — just point --rm_url at this server.
 
-启动:
+Startup:
   python src/sia_rm_pytorch_official.py \\
     --rm /workspace/SIA/models/Qwen3-4B \\
     --rm_lora /workspace/SIA/models/VM-Qwen3-4B-Base/VM-Qwen3-4B-Base \\
@@ -19,7 +19,7 @@ import sys
 import time
 from typing import Optional
 
-# 把官方 SIA 仓库路径加进来
+# Add the official SIA repo path
 sys.path.insert(0, '/workspace/SIA/git/SIA')
 
 import torch
@@ -47,9 +47,9 @@ class ScoreRequest(BaseModel):
 
 
 class ScoreTokenIdsRequest(BaseModel):
-    """跟 vllm /classify (path A direct-token-ids) 完全同 payload schema 对齐:
-    input = list[list[int]], 每个内 list = 一个候选完整序列 (prefix + gen + cand)。
-    request_id 仅用于 dual-VM 日志关联。
+    """Fully aligned with the vllm /classify (path A direct-token-ids) payload schema:
+    input = list[list[int]], each inner list = one complete candidate sequence (prefix + gen + cand).
+    request_id is used only for dual-VM log correlation.
     """
     input: list[list[int]]
     request_id: Optional[str] = None
@@ -62,7 +62,7 @@ def health():
 
 @app.post("/score")
 def score(req: ScoreRequest):
-    """跟 sia_rm_server.py 同 schema, 但用官方 ValueModel 加载, 返回 raw logit (无 sigmoid)。"""
+    """Same schema as sia_rm_server.py, but loads using the official ValueModel, returns raw logit (no sigmoid)."""
     try:
         return _score_impl(req)
     except Exception as e:
@@ -75,13 +75,13 @@ def score(req: ScoreRequest):
 
 def _score_impl(req: ScoreRequest):
     """
-    把 prefix + response_so_far + candidate (无 <|im_end|> close tag, Fix #1 后的格式)
-    分别 tokenize, 通过 ValueModel forward, 取 attention_mask 指示的最后非 pad 位置的
-    token_reward 作为 raw logit。
+    Tokenize prefix + response_so_far + candidate (no <|im_end|> close tag, format after Fix #1)
+    separately, run through ValueModel forward, and take the token_reward at the last non-pad
+    position indicated by attention_mask as the raw logit.
     """
     t0 = time.time()
 
-    # 1. 构造 prefix (chat_template 渲染 user_msg + 假 assistant SENTINEL, split)
+    # 1. Build prefix (render user_msg + fake assistant SENTINEL via chat_template, then split)
     convs = [
         {"role": "user", "content": req.user_content},
         {"role": "assistant", "content": "ZSIASENTINELZ"},
@@ -91,24 +91,26 @@ def _score_impl(req: ScoreRequest):
     if TOK.bos_token and prefix.startswith(TOK.bos_token):
         prefix = prefix[len(TOK.bos_token):]
 
-    # 2. 拼 5 个 formatted_text (跟 _score_candidates_vllm Fix #1 后一致, 无 suffix)
+    # 2. Build 5 formatted_texts (consistent with _score_candidates_vllm after Fix #1, no suffix)
     formatted = [prefix + req.response_so_far + ct for ct in req.candidate_texts]
 
-    # 3. 批量 tokenize, padding 到最长
+    # 3. Batch tokenize, padding to longest
     enc = TOK(formatted, return_tensors='pt', padding=True,
               add_special_tokens=False).to(DEVICE)
 
-    # 4. Forward 官方 ValueModel — 注意官方 forward 是 token_rewards[:, -1],
-    #    不看 attention_mask。我们用 attention_mask 找最后非 pad 位置, 才能正确处理
-    #    batch 内不同长度的输入 (用 backbone.forward 拿 token_rewards 后手动 pick)。
+    # 4. Forward through official ValueModel — note: official forward uses token_rewards[:, -1]
+    #    without looking at attention_mask. We use attention_mask to find the last non-pad position,
+    #    to correctly handle variable-length inputs within a batch (get token_rewards from
+    #    backbone.forward then pick manually).
     with torch.no_grad():
-        # ValueModel.forward 返回 token_rewards (batch, seq) 和 logits (batch, 1) = [:, -1]
-        # 但 [:, -1] 对 padded 输入是错的, 我们手动从 token_rewards 中按 mask 取最后非 pad
+        # ValueModel.forward returns token_rewards (batch, seq) and logits (batch, 1) = [:, -1]
+        # But [:, -1] is wrong for padded inputs; we manually pick the last non-pad position
+        # from token_rewards using the mask
         out = VM(input_ids=enc.input_ids,
                  attention_mask=enc.attention_mask)
-        # token_rewards 形状: (batch, seq)
+        # token_rewards shape: (batch, seq)
         token_rewards = out.token_rewards
-        # 找每行最后一个非 pad 的位置
+        # Find the last non-pad position for each row
         seq_lens = enc.attention_mask.sum(dim=1) - 1   # (batch,)
         idx = torch.arange(token_rewards.size(0), device=DEVICE)
         last_rewards = token_rewards[idx, seq_lens]    # (batch,) raw logit
@@ -121,14 +123,14 @@ def _score_impl(req: ScoreRequest):
 
 @app.post("/score_token_ids")
 def score_token_ids(req: ScoreTokenIdsRequest):
-    """token-ids 直传版本: input = list[list[int]] 候选完整序列。
+    """Direct token-ids version: input = list[list[int]] of complete candidate sequences.
 
-    用法: dual-VM 对比 — 跟 vllm /classify (path A direct-token-ids) 接收完全
-    一致的 payload (LLM 生成的 token_ids + 候选 cand_id), 跑官方 ValueModel.forward
-    + 取最后非 pad token 的 reward, 返回 raw logit list[float]。
+    Usage: dual-VM comparison — accepts the exact same payload as vllm /classify
+    (path A direct-token-ids) (LLM-generated token_ids + candidate cand_id), runs official
+    ValueModel.forward + takes the reward at the last non-pad token, returns raw logit list[float].
 
-    跟 /score 的区别: 完全跳过 apply_chat_template / re-tokenize 路径, 用上游
-    传来的 token_ids 直接 forward, 100% 对齐 vllm /classify 的输入分布。
+    Difference from /score: completely skips the apply_chat_template / re-tokenize path,
+    forwarding directly with the token_ids from upstream — 100% aligned with the vllm /classify input distribution.
     """
     try:
         t0 = time.time()
@@ -136,7 +138,7 @@ def score_token_ids(req: ScoreTokenIdsRequest):
         if not token_id_lists:
             return {"scores": [], "elapsed_ms": 0.0}
 
-        # Pad 到最长
+        # Pad to longest
         max_len = max(len(ids) for ids in token_id_lists)
         pad_id = TOK.pad_token_id
         input_ids = torch.full(
@@ -173,10 +175,10 @@ def score_token_ids(req: ScoreTokenIdsRequest):
 def main():
     p = argparse.ArgumentParser()
     p.add_argument("--rm",      required=True,
-                   help="Base 模型路径 (例: /workspace/SIA/models/Qwen3-4B)")
+                   help="Base model path (e.g. /workspace/SIA/models/Qwen3-4B)")
     p.add_argument("--rm_lora", required=True,
-                   help="LoRA + token_reward_head 目录 "
-                        "(例: /workspace/SIA/models/VM-Qwen3-4B-Base/VM-Qwen3-4B-Base)")
+                   help="LoRA + token_reward_head directory "
+                        "(e.g. /workspace/SIA/models/VM-Qwen3-4B-Base/VM-Qwen3-4B-Base)")
     p.add_argument("--device",  default="cuda:0")
     p.add_argument("--host",    default="0.0.0.0")
     p.add_argument("--port",    type=int, default=8001)

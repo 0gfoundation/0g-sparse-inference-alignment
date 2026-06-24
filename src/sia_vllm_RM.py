@@ -1,20 +1,20 @@
 """
-SIA per-token 干预（HTTP RM Server 版本）- vLLM v1 engine 版本
+SIA per-token intervention (HTTP RM Server version) - vLLM v1 engine version
 
-架构：
-  - LLM: vllm (v1 engine) 负责生成，GPU 由 vllm 管理
-  - RM:  独立 RM server（sia_rm_server.py），通过 HTTP /score 调用
-  - SIALogitsProcessor 运行在 EngineCore 子进程中，通过 LLM(logits_processors=[...]) 注册
+Architecture:
+  - LLM: vllm (v1 engine) handles generation; GPU managed by vllm
+  - RM:  standalone RM server (sia_rm_server.py), called via HTTP /score
+  - SIALogitsProcessor runs in the EngineCore subprocess, registered via LLM(logits_processors=[...])
 
-干预逻辑（per-token）：
-  1. 从 LLM logits 中取 top-k candidate token IDs
-  2. 将当前生成序列 + 各 candidate 解码成文本
-  3. 通过 HTTP POST /score 批量发送到 RM server 打分
+Intervention logic (per-token):
+  1. Extract top-k candidate token IDs from LLM logits
+  2. Decode the current generation sequence + each candidate to text
+  3. Batch-send to the RM server for scoring via HTTP POST /score
   4. combined_logits[topk_indices] += rm_scores * weight
-  5. 返回 combined_logits
+  5. Return combined_logits
 
-用法示例：
-  # 先启动 RM server（sia_rm_server.py），再启动本脚本
+Usage example:
+  # First start the RM server (sia_rm_server.py), then run this script
   python sia_vllm_RM.py \\
     --llm  /workspace/SIA/models/Qwen3-1.7B-Base \\
     --rm_url http://localhost:8001 \\
@@ -54,7 +54,7 @@ from vllm.v1.sample.logits_processor.interface import (
 
 
 # ---------------------------------------------------------------------------
-# 工具函数
+# Utility functions
 # ---------------------------------------------------------------------------
 
 _SIA_WEIGHT_RE = re.compile(r'^\[SIA:weight=([-+]?[0-9]*\.?[0-9]+)\]\n?')
@@ -62,8 +62,8 @@ _SIA_WEIGHT_RE = re.compile(r'^\[SIA:weight=([-+]?[0-9]*\.?[0-9]+)\]\n?')
 
 def _parse_sia_header(prompt_text: str):
     """
-    检查 prompt 开头是否有 [SIA:weight=X] header（由 HTTP server 注入）。
-    返回 (weight, cleaned_text)；无 header 则 weight 为 None。
+    Check whether the prompt starts with a [SIA:weight=X] header (injected by the HTTP server).
+    Returns (weight, cleaned_text); weight is None if no header is present.
     """
     m = _SIA_WEIGHT_RE.match(prompt_text)
     if m:
@@ -73,15 +73,15 @@ def _parse_sia_header(prompt_text: str):
 
 def parse_conversation(text: str):
     """
-    将对话文本解析为 conversations list。支持以下格式：
-      - 'Human:\\nQ\\nAssistant:\\nA'（带冒号格式）
-      - '[INST] Q [/INST] A'（Llama 2 / Mistral 格式）
-      - 'user\\nQ\\nassistant\\nA'（ChatML stripped，如 Qwen3 / Llama 3）
-      - 'user\\nQ\\nmodel\\nA'（Gemma，model 为 assistant 别名）
+    Parse conversation text into a conversations list. Supports the following formats:
+      - 'Human:\\nQ\\nAssistant:\\nA'  (colon-separated format)
+      - '[INST] Q [/INST] A'          (Llama 2 / Mistral format)
+      - 'user\\nQ\\nassistant\\nA'    (ChatML stripped, e.g. Qwen3 / Llama 3)
+      - 'user\\nQ\\nmodel\\nA'        (Gemma; 'model' is an alias for 'assistant')
     """
     text = text.strip()
 
-    # Format 1: Human: / Assistant: 带冒号
+    # Format 1: Human: / Assistant: with colon
     parts = re.split(r'(Human|Assistant):\s*', text, flags=re.IGNORECASE)
     conversations = []
     current_role = None
@@ -116,8 +116,8 @@ def parse_conversation(text: str):
             if conversations:
                 return conversations
 
-    # Format 3: role 单独一行（ChatML stripped / Gemma 等）
-    # 'model' 是 Gemma 对 assistant 的别名
+    # Format 3: role on its own line (ChatML stripped / Gemma etc.)
+    # 'model' is Gemma's alias for 'assistant'
     parts = re.split(r'\n(user|assistant|system|human|model)\n', '\n' + text, flags=re.IGNORECASE)
     conversations = []
     current_role = None
@@ -142,7 +142,7 @@ def parse_conversation(text: str):
 
 
 def extract_user_content(prompt_text: str) -> str:
-    """从 prompt 文本中提取最后一个 user turn 内容。"""
+    """Extract the content of the last user turn from the prompt text."""
     user_content = None
     for c in parse_conversation(prompt_text):
         if c['role'] == 'user':
@@ -151,7 +151,7 @@ def extract_user_content(prompt_text: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# LogitsProcessor 工厂
+# LogitsProcessor factory
 # ---------------------------------------------------------------------------
 
 def make_sia_processor(
@@ -160,32 +160,32 @@ def make_sia_processor(
     weight: float = 1.0,
     entropy_threshold: Optional[float] = None,
     rm_backend: str = "pytorch",       # "pytorch" / "vllm" / "b2"
-    rm_model: Optional[str] = None,    # rm_backend ∈ {"vllm","b2"} 时必填：RM 模型路径
-    use_token_ids: bool = False,       # C2: 客户端预先 tokenize，直接发 token_ids 给 RM
-    rm_b2_gpu_mem: float = 0.3,        # b2 backend: RM vLLM 实例的 gpu_memory_utilization
-    rm_max_model_len: int = 4096,      # b2 backend: RM vLLM 实例的 max_model_len
-    enable_thinking: Optional[bool] = None,   # chat_template enable_thinking 透传给 RM prefix 构造,
-                                              # 跟 LLM 实际看到的 prompt 100% 一致 (None=不传)
+    rm_model: Optional[str] = None,    # required when rm_backend ∈ {"vllm","b2"}: RM model path
+    use_token_ids: bool = False,       # C2: client pre-tokenizes and sends token_ids directly to RM
+    rm_b2_gpu_mem: float = 0.3,        # b2 backend: gpu_memory_utilization for the RM vLLM instance
+    rm_max_model_len: int = 4096,      # b2 backend: max_model_len for the RM vLLM instance
+    enable_thinking: Optional[bool] = None,   # chat_template enable_thinking forwarded to RM prefix construction,
+                                              # 100% consistent with what the LLM actually sees (None=not passed)
 ):
     """
-    返回一个 SIALogitsProcessor 类（不是实例）。
-    vllm 引擎以 (vllm_config, device, is_pin_memory) 参数实例化该类。
+    Returns a SIALogitsProcessor class (not an instance).
+    The vllm engine instantiates the class with (vllm_config, device, is_pin_memory) arguments.
 
     rm_backend:
-      - "pytorch": 调用 src/sia_rm_server.py（手写 FastAPI）的 POST /score endpoint
-      - "vllm":    调用 vllm serve 启动的 /classify endpoint（HTTP 协议，需独立启动）
-      - "b2":      in-process stateful RM (sia_rm.RMClient)，跟 LLM 共享 GPU。
-                    无 HTTP/IPC 开销，依赖 vLLM prefix caching 让多步 score
-                    几乎是 decode-only（~7-15ms vs HTTP /classify ~30ms）。
-                    rm_model 必填: VM 模型路径 (architectures 通过 hf_overrides
-                    强转为 Qwen3WithScoreForCausalLM)。
+      - "pytorch": calls the POST /score endpoint of src/sia_rm_server.py (hand-written FastAPI)
+      - "vllm":    calls the /classify endpoint of a running vllm serve instance (HTTP, must be started separately)
+      - "b2":      in-process stateful RM (sia_rm.RMClient), shares GPU with the LLM.
+                    No HTTP/IPC overhead; relies on vLLM prefix caching so multi-step scoring
+                    is nearly decode-only (~7-15ms vs HTTP /classify ~30ms).
+                    rm_model is required: VM model path (architecture is coerced to
+                    Qwen3WithScoreForCausalLM via hf_overrides).
 
-    use_token_ids (仅 rm_backend="vllm" 时生效):
-      - False: 客户端发字符串，vLLM 服务端 re-tokenize
-      - True:  客户端预先 tokenize 后发 list[list[int]]
+    use_token_ids (only effective when rm_backend="vllm"):
+      - False: client sends strings; vLLM server re-tokenizes
+      - True:  client pre-tokenizes and sends list[list[int]]
 
-    SIA_PROFILE 环境变量（默认 "1"，开）：每次 INTERVENE 累积 per-phase 耗时，每 100 次
-    INTERVENE 打一次 [SIA-pf-summary] aggregate p50/p95/max。
+    SIA_PROFILE env var (default "1", enabled): accumulates per-phase timing for each INTERVENE;
+    prints a [SIA-pf-summary] aggregate p50/p95/max every 100 INTERVENE calls.
     """
     if rm_backend in ("vllm", "b2") and not rm_model:
         raise ValueError(
@@ -204,88 +204,89 @@ def make_sia_processor(
         _RM_MAX_MODEL_LEN = rm_max_model_len
         _ENABLE_THINKING = enable_thinking   # None / True / False
 
-        # SIA 客户端 profiling（区别于 RM_PROFILE 那套服务端 profiling）
+        # SIA client-side profiling (distinct from the RM_PROFILE server-side profiling)
         _PROFILE_DETAIL: bool = os.environ.get("SIA_PROFILE", "1") == "1"
         _PF_STATS_INTERVAL: int = int(os.environ.get("SIA_PF_INTERVAL", "100"))
-        # D-1: per-step INTERVENE/SKIP/error print 开关
-        #   verbose — 保留完整 log, debug 友好, 多 1 次 cpu().tolist() sync
-        #   quiet (默认) — 跳过 per-step print, 省 ~0.5-1ms/step (含 format + stdout flush
-        #                  + topk_values cpu sync)。flip 检测改走 GPU argmax 路径,
-        #                  仍保留 flip 计数 (per-batch 1 次 int sync, 不是 5 次 float)
-        #   flip 统计 / startup 提示 / DONE / SIA-pf-summary 不受此 var 影响
+        # D-1: per-step INTERVENE/SKIP/error print switch
+        #   verbose — full log retained, debug-friendly, one extra cpu().tolist() sync
+        #   quiet (default) — skips per-step print, saves ~0.5-1ms/step (includes format + stdout flush
+        #                     + topk_values cpu sync). Flip detection uses GPU argmax path;
+        #                     flip count is still tracked (1 int sync per batch, not 5 floats)
+        #   flip stats / startup messages / DONE / SIA-pf-summary are unaffected by this var
         _LOG_LEVEL: str = os.environ.get("SIA_LOG_LEVEL", "quiet")
 
         # ===== Dual-VM validation hook =====
-        # 当 SIA_DUAL_VM_URL 被设置时 (e.g. http://localhost:8002/score_token_ids),
-        # _score_candidates_vllm 在 path A (same vocab) 完成 vllm /classify 调用后,
-        # 把同 payload 转发给该 URL (期望是 sia_rm_pytorch_official.py /score_token_ids
-        # endpoint), 并把两套 scores 写到 SIA_DUAL_VM_LOG (JSONL) 用于离线对比分析。
-        # 默认空字符串 ⇒ disabled, 零开销。仅做日志, 不影响 SIA 实际干预。
+        # When SIA_DUAL_VM_URL is set (e.g. http://localhost:8002/score_token_ids),
+        # _score_candidates_vllm, after completing the vllm /classify call in path A (same vocab),
+        # forwards the same payload to that URL (expected to be the sia_rm_pytorch_official.py
+        # /score_token_ids endpoint) and writes both sets of scores to SIA_DUAL_VM_LOG (JSONL)
+        # for offline comparison analysis.
+        # Default empty string => disabled, zero overhead. Logging only; does not affect SIA intervention.
         _DUAL_VM_URL: str = os.environ.get("SIA_DUAL_VM_URL", "")
         _DUAL_VM_LOG: str = os.environ.get(
             "SIA_DUAL_VM_LOG", "/tmp/sia_dual_vm.jsonl",
         )
 
         # ===== SIA DEBUG HISTOGRAM START =====
-        # 用于诊断"为什么干预率低"。开 SIA_DEBUG_HIST=1 后, 每个请求 DONE 时打:
-        #   - ENTROPY_HIST: top-5 重归一化 entropy 的 16-bin 直方图 [0..1.6 step=0.1]
-        #   - GAP_HIST: top-1 vs top-2 logit gap 的 16-bin 直方图 [0..8.0 step=0.5]
-        #   - ENTROPY_INTHINK / ENTROPY_OUTTHINK: 按 <think>/</think> 边界分桶
-        # 默认 SIA_DEBUG_HIST=0 → 零 hot-path 成本。
-        # 整段代码以 SIA DEBUG HISTOGRAM START/END 注释包围, 便于手动回滚 (grep + sed)。
+        # For diagnosing "why is the intervention rate low". When SIA_DEBUG_HIST=1, prints at each request DONE:
+        #   - ENTROPY_HIST: 16-bin histogram of top-5 re-normalized entropy [0..1.6 step=0.1]
+        #   - GAP_HIST: 16-bin histogram of top-1 vs top-2 logit gap [0..8.0 step=0.5]
+        #   - ENTROPY_INTHINK / ENTROPY_OUTTHINK: bucketed by <think>/</think> boundary
+        # Default SIA_DEBUG_HIST=0 -> zero hot-path cost.
+        # This entire block is bracketed by SIA DEBUG HISTOGRAM START/END comments for easy manual rollback (grep + sed).
         _DEBUG_HIST: bool = os.environ.get("SIA_DEBUG_HIST", "0") == "1"
         # ===== SIA DEBUG HISTOGRAM END =====
 
         # ----------------------------------------------------------------
-        # 初始化：在 EngineCore 子进程里执行
+        # Initialization: runs inside the EngineCore subprocess
         # ----------------------------------------------------------------
         def __init__(self, vllm_config, device: torch.device,
                      is_pin_memory: bool) -> None:
             self._llm_device = device
 
-            # LLM tokenizer（用于解码候选 token、提取 user content）
+            # LLM tokenizer (for decoding candidate tokens and extracting user content)
             llm_model_path = vllm_config.model_config.model
             print(f"[SIA] Loading LLM tokenizer: {llm_model_path}", flush=True)
             self._llm_tok = AutoTokenizer.from_pretrained(
                 llm_model_path, trust_remote_code=True
             )
 
-            # HTTP session（复用 TCP 连接到 RM server）
+            # HTTP session (reuse TCP connection to RM server)
             self._rm_session = requests.Session()
             print(f"[SIA] RM URL: {self._RM_URL}", flush=True)
 
-            # 预计算哨兵边界（启动时一次，用于 _extract_user_content）
+            # Pre-compute sentinel bounds once at startup (used by _extract_user_content)
             self._sentinel_prefix, self._sentinel_suffix = self._compute_sentinel_bounds()
 
-            # per-request 状态
+            # per-request state
             self._prompt_user: dict[int, str] = {}
             self._output_ids: dict[int, list] = {}
             self._weight_per_req: dict[int, float] = {}
             self._topk_per_req: dict[int, int] = {}
             self._entropy_per_req: dict[int, Optional[float]] = {}
-            # 干预统计：每个请求的 total token steps 和实际干预次数
+            # Intervention stats: total token steps and actual intervention count per request
             self._total_steps: dict[int, int] = {}
             self._intervened_steps: dict[int, int] = {}
-            # 干预导致 top-1 token 翻转（pre top-1 ≠ post top-1）的次数
+            # Number of times intervention caused top-1 token to flip (pre top-1 != post top-1)
             self._flipped_steps: dict[int, int] = {}
-            # response_so_far 增量解码缓存（避免每步 O(n) 全量 re-decode）
+            # response_so_far incremental decode cache (avoids O(n) full re-decode each step)
             self._decoded_text: dict[int, str] = {}
             self._decoded_token_count: dict[int, int] = {}
-            # C1: chat template prefix/suffix 缓存（每个 request 渲染一次）
+            # C1: chat template prefix/suffix cache (rendered once per request)
             self._chat_prefix_per_req: dict[int, Optional[str]] = {}
             self._chat_suffix_per_req: dict[int, Optional[str]] = {}
-            # C3 (2026-06-03): 同 tokenizer 情况下直接发 token_ids 的 prefix_ids 缓存
-            # (每个 request 一次，避免 INTERVENE 步重复 encode 用户 turn)
+            # C3 (2026-06-03): prefix_ids cache for direct token_ids path when tokenizers are the same
+            # (once per request, avoids re-encoding the user turn at each INTERVENE step)
             self._manual_prefix_ids_per_req: dict[int, Optional[list[int]]] = {}
 
             # C2: RM tokenizer
-            # vllm backend 总是加载 RM tokenizer:
-            #   - 用来检测 LLM/RM 是否同 vocab (决定走 direct-token-ids fast path
-            #     还是 text round-trip fallback)
-            #   - 同 vocab 路径下不需要 (因为 LLM tok 即 RM tok), 仅作 sanity 比较
-            #   - 跨 vocab 路径 (e.g. 0GM-35B + VM-Qwen3-4B) 需要它 re-encode text
+            # The vllm backend always loads the RM tokenizer:
+            #   - used to detect whether LLM/RM share the same vocab (decides between
+            #     direct-token-ids fast path and text round-trip fallback)
+            #   - not needed on the same-vocab path (LLM tok == RM tok), used only for sanity comparison
+            #   - required on the cross-vocab path (e.g. 0GM-35B + VM-Qwen3-4B) for re-encoding text
             self._rm_tok = None
-            self._same_tokenizer = False  # True ⇒ LLM/RM 同 vocab, 可直接传 token IDs
+            self._same_tokenizer = False  # True => LLM/RM share the same vocab; token IDs can be passed directly
             if self._RM_BACKEND == "vllm":
                 print(f"[SIA] Loading RM tokenizer: {self._RM_MODEL}", flush=True)
                 self._rm_tok = AutoTokenizer.from_pretrained(
@@ -302,35 +303,35 @@ def make_sia_processor(
                     flush=True,
                 )
 
-            # 客户端 profiling 累积
-            # 注: SIA-pf-summary @N 中 N 是 _pf_intervene_calls (只 INTERVENE 计数).
-            # SKIP / apply_entry 等阶段在每个 token 都会记 (不只是 INTERVENE), 所以这些
-            # phase 的样本数会 >> N。p50/p95 仍然是这些 phase 自己样本的分位数。
+            # Client-side profiling accumulation
+            # Note: N in SIA-pf-summary @N is _pf_intervene_calls (INTERVENE-only count).
+            # SKIP / apply_entry and similar phases are recorded every token (not just on INTERVENE),
+            # so those phases will have sample counts >> N. p50/p95 are still percentiles of each phase's own samples.
             self._pf_stats: dict[str, list] = {
                 # vllm http backend phases (legacy, not used by b2)
                 "format_chat":      [],
                 "tokenize_client":  [],
                 "http_post":        [],
                 "parse_response":   [],
-                # b2 backend phases (RMClient call internals — 一次 INTERVENE 内)
+                # b2 backend phases (RMClient call internals — within one INTERVENE call)
                 "b2_prefix_adv":    [],   # _prepare_b2_session (session init + fix_a_token)
-                "b2_score_call":    [],   # RMClient.score_candidates 端到端（per-request 均摊）
-                "total":            [],   # 一次 INTERVENE 端到端
+                "b2_score_call":    [],   # RMClient.score_candidates end-to-end (amortized per-request)
+                "total":            [],   # one INTERVENE call end-to-end
 
-                # === apply() 内分段 (per-token) — 2026-06-01 新增 ===
-                # 每次 apply() 调用都记的 phase:
-                "apply_total":      [],   # apply() 端到端 (含 INTERVENE 或 SKIP)
+                # === apply() sub-phases (per-token) — added 2026-06-01 ===
+                # Phases recorded on every apply() call:
+                "apply_total":      [],   # apply() end-to-end (includes INTERVENE or SKIP)
                 "apply_topk_ent":   [],   # torch.topk + log_softmax + entropy (GPU)
-                "apply_cpu_sync":   [],   # entropy.cpu().tolist() (GPU→CPU sync wait)
-                "skip_step":        [],   # 仅 SKIP 路径 (上面 sync 后到 apply return)
-                # 仅 INTERVENE 路径的额外分段 (subset of apply() time):
-                "intv_prepare":     [],   # topk_indices.cpu().tolist() + output_ids/user_content 取
+                "apply_cpu_sync":   [],   # entropy.cpu().tolist() (GPU->CPU sync wait)
+                "skip_step":        [],   # SKIP path only (from sync completion to apply return)
+                # Additional sub-phases for INTERVENE path only (subset of apply() time):
+                "intv_prepare":     [],   # topk_indices.cpu().tolist() + output_ids/user_content retrieval
                 "intv_apply_logits":[],   # mean-norm + .to(gpu) + index_add_ + flip
             }
             self._pf_intervene_calls: int = 0
-            self._pf_apply_calls: int = 0  # 每次 apply 都计数 (用来定 per-token level interval)
+            self._pf_apply_calls: int = 0  # incremented on every apply call (used to set per-token level interval)
 
-            # Dual-VM log counter (用于限制 error message 频率)
+            # Dual-VM log counter (used to rate-limit error messages)
             self._dual_vm_call_count: int = 0
             if self._DUAL_VM_URL:
                 print(
@@ -343,14 +344,14 @@ def make_sia_processor(
             # debug state (only used when SIA_DEBUG_HIST=1; empty dicts are zero-cost)
             self._dbg_entropy_hist: dict[int, list[int]] = {}        # req_idx -> 16 bins [0..1.6]
             self._dbg_gap_hist: dict[int, list[int]] = {}            # req_idx -> 16 bins [0..8.0]
-            self._dbg_entropy_hist_inthink: dict[int, list[int]] = {}  # 仅 <think>...</think> 内的 entropy
-            self._dbg_entropy_hist_outthink: dict[int, list[int]] = {} # </think> 之后的 entropy
-            self._dbg_in_think: dict[int, bool] = {}                 # req_idx -> 当前是否在 think 内
+            self._dbg_entropy_hist_inthink: dict[int, list[int]] = {}  # entropy inside <think>...</think> only
+            self._dbg_entropy_hist_outthink: dict[int, list[int]] = {} # entropy after </think>
+            self._dbg_in_think: dict[int, bool] = {}                 # req_idx -> whether currently inside think block
             self._think_open_ids: set[int] = set()
             self._think_close_ids: set[int] = set()
             if self._DEBUG_HIST:
-                # 探测 <think> / </think> 是否是单 token (Qwen3.5 thinking models 一般是)
-                # 多 token 的话桶化逻辑会跳过 (last_tok 永远 not in set), 全部归 inthink
+                # Detect whether <think> / </think> are single tokens (they usually are in Qwen3.5 thinking models).
+                # If multi-token, the bucketing logic will skip them (last_tok never in set) and all go to inthink.
                 for marker, target_set in (
                     ("<think>", self._think_open_ids),
                     ("</think>", self._think_close_ids),
@@ -362,36 +363,37 @@ def make_sia_processor(
                     except Exception:
                         pass
                 print(
-                    f"[SIA-debug] SIA_DEBUG_HIST=1 启用; "
+                    f"[SIA-debug] SIA_DEBUG_HIST=1 enabled; "
                     f"think_open_ids={self._think_open_ids}, think_close_ids={self._think_close_ids}",
                     flush=True,
                 )
             # ===== SIA DEBUG HISTOGRAM END =====
 
-            # B2 backend: in-process RMClient + per-request session 表
-            # 假设 LLM 和 RM 用同一个 tokenizer (B2 路径前提)，所以 token_id 通用
+            # B2 backend: in-process RMClient + per-request session table
+            # Assumes LLM and RM use the same tokenizer (prerequisite for the B2 path), so token IDs are interchangeable
             self._rm: Optional[object] = None
             self._b2_sessions: dict[int, int] = {}        # req_idx -> rm_sid
-            self._b2_chat_prefix_len: dict[int, int] = {}  # req_idx -> chat_prefix tokens 数
+            self._b2_chat_prefix_len: dict[int, int] = {}  # req_idx -> chat_prefix token count
             if self._RM_BACKEND == "b2":
                 print(f"[SIA-b2] Starting RMClient(model={self._RM_MODEL}, "
                       f"gpu_mem={self._RM_B2_GPU_MEM}) ...", flush=True)
-                # 这里会再 fork 一个 vLLM EngineCore subprocess (RM 用)
-                # 该过程跑在 LLM EngineCore subprocess 里, 嵌套但可行
+                # This forks another vLLM EngineCore subprocess (for the RM).
+                # The process runs inside the LLM EngineCore subprocess — nested but viable.
                 from sia_rm import RMClient
-                # vllm 0.19 + MoE 主 LLM (e.g. 0GM-35B): InprocClient 模式让 RM
-                # 跟主 LLM 同进程共享全局 workspace, RM 先 init 后 lock workspace,
-                # 主 LLM MoE forward 需要更大 workspace 但 grow 被阻 → AssertionError.
-                # 用 env var SIA_RM_MULTIPROCESS=1 强制 RM 子进程化以隔离 workspace。
-                # 代价: 1+4 split 复活, b2_score_call ~9ms → ~24ms。
+                # vllm 0.19 + MoE main LLM (e.g. 0GM-35B): InprocClient mode lets RM
+                # share the global workspace with the main LLM in the same process. RM inits first
+                # and locks the workspace; the main LLM MoE forward needs a larger workspace but
+                # grow is blocked -> AssertionError.
+                # Use env var SIA_RM_MULTIPROCESS=1 to force RM into a subprocess to isolate the workspace.
+                # Trade-off: 1+4 split revives, b2_score_call ~9ms -> ~24ms.
                 rm_mp = os.environ.get("SIA_RM_MULTIPROCESS", "0") == "1"
                 if rm_mp:
                     print(f"[SIA-b2] RMClient using multiprocessing=True "
                           f"(workspace isolation for MoE main LLM)", flush=True)
-                # 传 LLM tokenizer 进 RMClient: 若跟 RM 自己的 tokenizer
-                # 不一致 (例如 0GM-35B 用 Qwen3.5 248K vocab vs RM Qwen3 151K),
-                # RMClient 内部启用 cross-tokenizer bridge (decode→encode);
-                # 一致时 (例如 Qwen3-14B + VM-Qwen3-4B) 不开桥, 零 overhead。
+                # Pass the LLM tokenizer into RMClient: if it differs from the RM's own tokenizer
+                # (e.g. 0GM-35B uses Qwen3.5 248K vocab vs RM Qwen3 151K),
+                # RMClient internally enables the cross-tokenizer bridge (decode->encode).
+                # When they match (e.g. Qwen3-14B + VM-Qwen3-4B), the bridge is disabled with zero overhead.
                 self._rm = RMClient(
                     model_path=self._RM_MODEL,
                     gpu_mem=self._RM_B2_GPU_MEM,
@@ -402,12 +404,14 @@ def make_sia_processor(
                 print(f"[SIA-b2] RMClient ready", flush=True)
 
         # ----------------------------------------------------------------
-        # 从 prompt token IDs 中提取 user 内容
+        # Extract user content from prompt token IDs
         # ----------------------------------------------------------------
         def _compute_sentinel_bounds(self):
             """
-            启动时调用一次：用哨兵字符串推算 user turn 的 prefix / suffix token 序列。
-            成功返回 (prefix, suffix) list；tokenizer 无 chat_template 或推算失败返回 (None, None)。
+            Called once at startup: uses a sentinel string to determine the prefix / suffix token
+            sequence of a user turn.
+            Returns (prefix, suffix) lists on success; returns (None, None) if the tokenizer
+            has no chat_template or if detection fails.
             """
             SENTINEL = "XSIASENTINELX"
             try:
@@ -438,16 +442,17 @@ def make_sia_processor(
 
         def _extract_user_content(self, prompt_ids: list) -> str:
             """
-            主方案：在 token ID 层用预计算的 prefix/suffix 定位最后一个 user turn，
-            不依赖格式假设，适用于任何有 chat_template 的 tokenizer。
-            回退方案：基于正则的文本解析（覆盖 Llama 2 / Gemma / Human: 格式）。
-            两种方案均无声切换，不打印警告。
+            Primary method: locates the last user turn at the token ID level using pre-computed
+            prefix/suffix bounds; makes no format assumptions and works with any tokenizer that
+            has a chat_template.
+            Fallback: regex-based text parsing (covers Llama 2 / Gemma / Human: formats).
+            Both methods switch silently with no warnings printed.
             """
             prefix = self._sentinel_prefix
             suffix = self._sentinel_suffix
             if prefix is not None and suffix is not None:
                 prompt_list = list(prompt_ids)
-                # 最后一次出现 prefix（处理多轮对话）
+                # Last occurrence of prefix (handles multi-turn conversations)
                 last_prefix_pos = next(
                     (i for i in range(len(prompt_list) - len(prefix), -1, -1)
                      if prompt_list[i:i + len(prefix)] == prefix),
@@ -468,33 +473,33 @@ def make_sia_processor(
                         if content:
                             return content
 
-            # Fallback：文本解析（raw string prompt / 无 chat_template 时的正常路径）
+            # Fallback: text parsing (normal path for raw string prompts / no chat_template)
             prompt_text = self._llm_tok.decode(prompt_ids, skip_special_tokens=True)
             return extract_user_content(prompt_text)
 
         # ----------------------------------------------------------------
-        # C3 helper: 检测 LLM/RM 是否同 vocab + 缓存的 "官方 sia.py 一致" prefix_ids
+        # C3 helper: detect whether LLM/RM share the same vocab + cached prefix_ids consistent with official sia.py
         # ----------------------------------------------------------------
         @staticmethod
         def _tokenizers_compatible(llm_tok, rm_tok) -> bool:
-            """判断 LLM 和 RM tokenizer 是否 token-id 兼容 (同一份 vocab)。
+            """Check whether the LLM and RM tokenizers are token-ID compatible (same vocabulary).
 
-            同 vocab ⇒ LLM 输出的 token id 可以直接传给 RM, 跳过 text round-trip,
-            消除 BPE 边界 / decode-encode 不可逆带来的精度损失。
+            Same vocab => LLM output token IDs can be passed directly to RM, skipping text round-trip
+            and eliminating precision loss from irreversible BPE boundary decode-encode.
 
-            用例:
-              - Qwen3-14B + Qwen3-4B → same (151,936 vocab)
-              - Qwen3-VL-30B-A3B-Instruct + Qwen3-4B → same (Qwen3 vocab 151,936)
-              - 0GM-1.0-35B-A3B-0427 + Qwen3-4B → not same (0GM 扩展到 248k)
+            Examples:
+              - Qwen3-14B + Qwen3-4B -> same (151,936 vocab)
+              - Qwen3-VL-30B-A3B-Instruct + Qwen3-4B -> same (Qwen3 vocab 151,936)
+              - 0GM-1.0-35B-A3B-0427 + Qwen3-4B -> not same (0GM extended to 248k)
 
-            策略: vocab_size 一致 + 多个采样字符串编码 ID 完全一致。
+            Strategy: vocab_size matches + encoding IDs are identical for several sampled strings.
             """
             try:
                 if llm_tok.vocab_size != rm_tok.vocab_size:
                     return False
             except Exception:
                 return False
-            # 采样多种类型的字符串, 覆盖 ASCII / CJK / chat-special / 数字
+            # Sample various string types, covering ASCII / CJK / chat-special / numeric
             samples = [
                 "Hello world",
                 "你好世界",
@@ -517,20 +522,20 @@ def make_sia_processor(
         def _get_manual_prefix_ids(
             self, req_idx: int, user_content: str,
         ) -> Optional[list[int]]:
-            """构造跟官方 sia.py 完全一致的手工 chat prefix, encode 后缓存返回。
+            """Build a manual chat prefix fully consistent with the official sia.py, encode it, and return it cached.
 
-            格式 (跟官方 src/sia.py 一致, **不** 走 apply_chat_template, 避免 Qwen3
-            chat_template 在 enable_thinking=False 时自动注入 <think>\\n\\n</think>
-            空块导致 RM 看到 OOD prefix):
+            Format (matches official src/sia.py; does **not** use apply_chat_template to avoid Qwen3
+            chat_template auto-injecting <think>\\n\\n</think> empty block when enable_thinking=False,
+            which would cause RM to see an OOD prefix):
                 <|im_start|>user\n{Q}<|im_end|>\n<|im_start|>assistant\n
 
-            仅在 _same_tokenizer=True 时调用 (LLM tok = RM tok), 用 LLM tokenizer
-            encode (跟 RM tokenizer encode 等价)。
+            Only called when _same_tokenizer=True (LLM tok == RM tok); encodes using the LLM tokenizer
+            (equivalent to encoding with the RM tokenizer).
 
-            注: 这里假设 Qwen3 chat template (ChatML)。若 LLM 是非 Qwen3 系列但跟
-            RM tokenizer 仍 vocab-compat (极罕见), encode 出来的 prefix 可能不被
-            模型识别成对话开头 — 这种情况由 _tokenizers_compatible 已经过滤
-            (我们的 SIA value model 全部是 Qwen3 系列)。
+            Note: assumes Qwen3 chat template (ChatML). If the LLM is non-Qwen3 but still vocab-compatible
+            with the RM tokenizer (extremely rare), the encoded prefix may not be recognized as a
+            conversation start by the model — this case is already filtered by _tokenizers_compatible
+            (all our SIA value models are Qwen3-series).
             """
             cached = self._manual_prefix_ids_per_req.get(req_idx)
             if cached is not None:
@@ -554,28 +559,28 @@ def make_sia_processor(
             return prefix_ids
 
         # ----------------------------------------------------------------
-        # C1 helper: 缓存的 chat template prefix/suffix
+        # C1 helper: cached chat template prefix/suffix
         # ----------------------------------------------------------------
         def _get_chat_template_parts(self, req_idx: int, user_content: str):
-            """每个 request 渲染一次 chat template，缓存跟 LLM 实际看到的完全一致的 prefix。
+            """Renders the chat template once per request and caches a prefix 100% consistent with what the LLM sees.
 
-            2026-06-03 修复: 之前用 [user, assistant=SENTINEL] + 分割的方式, 得到的 prefix
-            **不含** chat_template 的 generation_prompt 注入 (例如 Qwen3 enable_thinking 时
-            的 `<think>\\n` 或 enable_thinking=False 时的 `<think>\\n\\n</think>\\n\\n` 空块)。
-            这导致 RM 看到的 context 跟 LLM 实际生成时看到的不一致, RM 评分 OOD。
+            2026-06-03 fix: the previous approach using [user, assistant=SENTINEL] + split produced a prefix
+            that **did not include** the chat_template's generation_prompt injection (e.g. Qwen3's `<think>\\n`
+            when enable_thinking is on, or the `<think>\\n\\n</think>\\n\\n` empty block when off).
+            This caused the RM to see a context inconsistent with what the LLM sees at generation time (OOD).
 
-            新做法: 用 `apply_chat_template(user, add_generation_prompt=True, enable_thinking=X)`
-            得到跟 LLM-side 100% 一致的 prefix。suffix 永远是 "" (Fix #1 已去 close tag)。
+            New approach: use `apply_chat_template(user, add_generation_prompt=True, enable_thinking=X)`
+            to get a prefix 100% consistent with the LLM side. suffix is always "" (Fix #1 removed close tag).
 
-            后续 INTERVENE 步只需 `prefix + response_so_far + candidate` 字符串拼接。
-            返回 (prefix, suffix=""); 若 apply_chat_template 失败返回 (None, None) 触发 fallback。
+            Subsequent INTERVENE steps only need `prefix + response_so_far + candidate` string concatenation.
+            Returns (prefix, suffix=""); returns (None, None) triggering fallback if apply_chat_template fails.
             """
             if req_idx in self._chat_prefix_per_req:
                 return self._chat_prefix_per_req[req_idx], self._chat_suffix_per_req[req_idx]
 
             try:
-                # 关键: 跟 LLM 同样的 apply_chat_template 调用 (add_generation_prompt=True
-                # + 同 enable_thinking), 这样 RM 看到的 prefix 跟 LLM 实际看到的 100% 一致
+                # Key: same apply_chat_template call as the LLM (add_generation_prompt=True
+                # + same enable_thinking), so the prefix the RM sees is 100% consistent with what the LLM sees
                 kwargs = {
                     "tokenize": False,
                     "add_generation_prompt": True,
@@ -591,25 +596,25 @@ def make_sia_processor(
                 self._chat_suffix_per_req[req_idx] = None
                 return None, None
 
-            # 去掉 leading BOS（如果有）
+            # Strip leading BOS (if present)
             bos = self._llm_tok.bos_token
             if bos and prefix.startswith(bos):
                 prefix = prefix[len(bos):]
-            # Suffix 永远是空 (Fix #1 后我们不在 RM 输入末尾加 close tag)
+            # Suffix is always empty (after Fix #1 we no longer append a close tag at the end of RM input)
             suffix = ""
             self._chat_prefix_per_req[req_idx] = prefix
             self._chat_suffix_per_req[req_idx] = suffix
             return prefix, suffix
 
         # ----------------------------------------------------------------
-        # Profiling 工具
+        # Profiling utilities
         # ----------------------------------------------------------------
         def _pf_record(self, phase: str, dur_ms: float) -> None:
             arr = self._pf_stats.get(phase)
             if arr is None:
                 return
             arr.append(dur_ms)
-            # 防止无界增长：超过 2000 时砍掉前一半
+            # Prevent unbounded growth: drop the first half when size exceeds 2000
             if len(arr) > 2000:
                 del arr[:1000]
 
@@ -634,7 +639,7 @@ def make_sia_processor(
             )
 
         # ----------------------------------------------------------------
-        # RM 打分：批量发送到 RM server，一次 HTTP 调用
+        # RM scoring: batch-send to RM server in a single HTTP call
         # ----------------------------------------------------------------
         def _score_candidates(
             self,
@@ -644,26 +649,26 @@ def make_sia_processor(
             candidate_token_ids: list[int],
             output_ids: list[int],
         ) -> torch.Tensor:
-            """返回 shape (topk,) float32 tensor（CPU）。
+            """Returns a shape (topk,) float32 tensor (CPU).
 
-            根据 rm_backend 分发到不同实现：
-              - pytorch: POST /score （sia_rm_server.py 自定义协议）
-              - vllm:    POST /classify （vLLM 原生协议）
-              - b2:      in-process RMClient (token_ids 路径，跳过 chat template / HTTP)
+            Dispatches to different implementations based on rm_backend:
+              - pytorch: POST /score (sia_rm_server.py custom protocol)
+              - vllm:    POST /classify (vLLM native protocol)
+              - b2:      in-process RMClient (token_ids path, skips chat template / HTTP)
             """
             if self._RM_BACKEND == "b2":
                 return self._score_candidates_b2(
                     req_idx, user_content, output_ids, candidate_token_ids
                 )
             if self._RM_BACKEND == "vllm":
-                # vllm backend: 同 vocab 走 direct-token-ids fast path (跳过 decode),
-                # 跨 vocab 走 text round-trip 兜底。两路都在 _score_candidates_vllm 内分支。
-                # decode 推迟到真正需要 text path 时再做。
+                # vllm backend: same vocab takes the direct-token-ids fast path (skipping decode);
+                # cross-vocab falls back to text round-trip. Both branches are inside _score_candidates_vllm.
+                # Decode is deferred until a text path is actually needed.
                 return self._score_candidates_vllm(
                     req_idx, user_content, response_so_far,
                     candidate_token_ids, output_ids,
                 )
-            # pytorch /score 始终需要 text candidate
+            # pytorch /score always requires text candidates
             candidate_texts = [
                 self._llm_tok.decode([tid], skip_special_tokens=False)
                 for tid in candidate_token_ids
@@ -737,14 +742,14 @@ def make_sia_processor(
                 self._pf_record("b2_score_call",   (t_score   - t_advance)   * 1000)
                 self._pf_record("total",           (t_score   - t0)          * 1000)
                 self._pf_summary_if_due()
-            # D-1: score_candidates 已经返回 CPU float32 tensor, 不再 list→tensor 重建
+            # D-1: score_candidates already returns a CPU float32 tensor; no longer need to rebuild from list
             return rewards
 
         def _score_candidates_pytorch(
             self, user_content: str, response_so_far: str,
             candidate_texts: list[str],
         ) -> torch.Tensor:
-            """调用 sia_rm_server.py 的 POST /score"""
+            """Call sia_rm_server.py POST /score"""
             resp = self._rm_session.post(
                 f"{self._RM_URL}/score",
                 json={
@@ -763,26 +768,25 @@ def make_sia_processor(
             self, req_idx: int, user_content: str, response_so_far: str,
             candidate_token_ids: list[int], output_ids: list[int],
         ) -> torch.Tensor:
-            """调用 vllm serve 的 POST /classify (activation=false 拿原始 logit)。
+            """Call vllm serve POST /classify (activation=false to get raw logits).
 
-            两条路径根据 LLM/RM tokenizer 是否同 vocab 自动选择:
+            Two paths are selected automatically based on whether LLM/RM tokenizers share the same vocab:
 
             **A. Direct-token-ids fast path (same vocab, e.g. Qwen3-VL-30B + VM-Qwen3-4B)**
-              - 直接发 `prefix_ids + output_ids + [cand_id]` 给 vllm /classify
-              - prefix_ids 来自 _get_manual_prefix_ids: 手写 ChatML, 跟官方 sia.py 一致,
-                **不** 经过 apply_chat_template (避免 Qwen3 enable_thinking=False 时
-                自动注入 `<think>\\n\\n</think>` 空块导致 RM 看到 OOD prefix)
-              - 跳过 decode/encode, 零 BPE 边界扰动
-              - 这是 2026-06-03 dual-VM 实验验证过的"跟官方 PyTorch VM 98%+ top-1 一致"路径
+              - Sends `prefix_ids + output_ids + [cand_id]` directly to vllm /classify
+              - prefix_ids from _get_manual_prefix_ids: hand-written ChatML, consistent with official sia.py,
+                does **not** go through apply_chat_template (avoids Qwen3 enable_thinking=False
+                auto-injecting `<think>\\n\\n</think>` empty block causing RM to see OOD prefix)
+              - Skips decode/encode; zero BPE boundary perturbation
+              - This is the path validated by the 2026-06-03 dual-VM experiment as "98%+ top-1 agreement with official PyTorch VM"
 
             **B. Text round-trip fallback (cross vocab, e.g. 0GM-35B + VM-Qwen3-4B)**
-              - 不得不 decode 候选 token / 累积 output 成 text, 再让 vllm 用 RM tokenizer
-                re-encode
-              - 已知 BPE 边界精度损失 ~1.2 logit, top-1 一致率 ~82-88%
-              - prefix 用 _get_chat_template_parts (含 _ENABLE_THINKING 透传给 chat_template)
+              - Must decode candidate tokens / accumulated output to text, then let vllm re-encode with RM tokenizer
+              - Known BPE boundary precision loss ~1.2 logit, top-1 agreement rate ~82-88%
+              - prefix from _get_chat_template_parts (includes _ENABLE_THINKING forwarded to chat_template)
 
-            Fix #1 (2026-06-03): 两路 prefix 末尾都没有 `<|im_end|>` close tag,
-            跟官方 ValueModel forward 路径一致 (避免 partial-response OOD)。
+            Fix #1 (2026-06-03): Neither path has an `<|im_end|>` close tag at the end of the prefix,
+            consistent with the official ValueModel forward path (avoids partial-response OOD).
             """
             pf_on = self._PROFILE_DETAIL
             t0 = time.perf_counter() if pf_on else 0.0
@@ -798,10 +802,10 @@ def make_sia_processor(
                     t_format = time.perf_counter() if pf_on else 0.0
                     t_tokenize = t_format  # no separate tokenize step
                 else:
-                    # encode 失败 (极罕见), 回退 text 路径
+                    # encode failed (extremely rare), fall back to text path
                     input_payload = None  # fall through to text path
             else:
-                input_payload = None  # cross-vocab → text path
+                input_payload = None  # cross-vocab -> text path
 
             if input_payload is None:
                 # ==== Path B: text round-trip (cross-tokenizer fallback) ====
@@ -834,9 +838,9 @@ def make_sia_processor(
                     ]
                 t_format = time.perf_counter() if pf_on else 0.0
 
-                # 跨 vocab: 用 RM tokenizer re-encode (add_special_tokens=False
-                # 跟官方对齐, 避免 vllm 服务端再注入 BOS/EOS); 或直接发 string
-                # 让 vllm 用默认设置 tokenize (兼容)
+                # Cross-vocab: re-encode with RM tokenizer (add_special_tokens=False
+                # aligns with official; avoids vllm server injecting BOS/EOS again), or send string
+                # directly and let vllm tokenize with default settings (compatible)
                 if self._USE_TOKEN_IDS and self._rm_tok is not None:
                     input_payload = [
                         self._rm_tok.encode(t, add_special_tokens=False)
@@ -846,41 +850,41 @@ def make_sia_processor(
                     input_payload = formatted_texts
                 t_tokenize = time.perf_counter() if pf_on else 0.0
 
-            # ==== Step 3: HTTP 调用 ====
-            # **关键**: vllm 0.19 /classify schema 的字段名是 `use_activation` (不是
-            # `activation`)。我们之前写错字段名, 该 key 被 Pydantic 静默忽略, 默认
-            # `None`→`True` ⇒ vllm 端 sigmoid 永远开启。表现为 RM scores 被压到
-            # [0,1] 范围, sigmoid(x)→1 for x>16 时甚至触底 (float32 ULP 限制),
-            # 需要 EPS-clamp 反 sigmoid 还原 — 但该还原对 |x|>13.82 全部饱和。
-            # 2026-06-03 dual-VM 验证: `use_activation=False` 直接拿到 raw logit
-            # (range ~[-15,+50]), sigmoid 饱和问题完全消失。
+            # ==== Step 3: HTTP call ====
+            # **Key**: vllm 0.19 /classify schema field name is `use_activation` (not `activation`).
+            # The previous wrong field name was silently ignored by Pydantic, defaulting
+            # `None`->True => vllm-side sigmoid always on. This compressed RM scores to [0,1] range;
+            # sigmoid(x)->1 for x>16 even saturates (float32 ULP limit), requiring EPS-clamp
+            # inverse sigmoid to recover — but that recovery saturates entirely for |x|>13.82.
+            # 2026-06-03 dual-VM validation: `use_activation=False` retrieves raw logits
+            # directly (range ~[-15,+50]); sigmoid saturation issue disappears completely.
             resp = self._rm_session.post(
                 f"{self._RM_URL}/classify",
                 json={
                     "model": self._RM_MODEL,
                     "input": input_payload,
-                    "use_activation": False,   # 关键: 关 sigmoid, 拿原始 logit
+                    "use_activation": False,   # Key: disable sigmoid to get raw logit
                 },
                 timeout=120,
             )
             resp.raise_for_status()
             t_http = time.perf_counter() if pf_on else 0.0
 
-            # ==== Step 4: 解析 ====
+            # ==== Step 4: Parse ====
             data = resp.json()["data"]
-            # vLLM 不保证返回顺序, 按 index 排序
+            # vLLM does not guarantee return order; sort by index
             data_sorted = sorted(data, key=lambda x: x.get("index", 0))
-            # `probs` 字段在 use_activation=False 时已是 raw logit (无 sigmoid),
-            # 无需任何后处理, 直接用。
+            # `probs` field is already the raw logit (no sigmoid) when use_activation=False;
+            # no post-processing needed, use directly.
             scores = [d["probs"][0] for d in data_sorted]
             result = torch.tensor(scores, dtype=torch.float32)
             t_parse = time.perf_counter() if pf_on else 0.0
 
             # ==== Step 5 (optional): Dual-VM logging hook ====
-            # 当 SIA_DUAL_VM_URL 环境变量被设置时, 把同样的 token_ids payload (path A 才有)
-            # 也发给一个独立的 PyTorch 官方 VM server, 把两套 scores side-by-side
-            # 写到 SIA_DUAL_VM_LOG (JSONL)。仅用于离线 dual-VM validation,
-            # 不影响 SIA 实际干预 (intervention 用 vllm 这一路 scores)。
+            # When SIA_DUAL_VM_URL env var is set, the same token_ids payload (path A only)
+            # is also forwarded to a standalone PyTorch official VM server, writing both sets
+            # of scores side-by-side to SIA_DUAL_VM_LOG (JSONL). For offline dual-VM validation only;
+            # does not affect SIA intervention (intervention uses the vllm scores).
             if self._DUAL_VM_URL and self._same_tokenizer and isinstance(input_payload, list) and input_payload and isinstance(input_payload[0], list):
                 try:
                     self._dual_vm_call_count += 1
@@ -918,14 +922,14 @@ def make_sia_processor(
             return result
 
         # ----------------------------------------------------------------
-        # response_so_far 增量解码
+        # response_so_far incremental decoding
         # ----------------------------------------------------------------
         def _get_response_so_far(self, req_idx: int, output_ids: list) -> str:
-            """每步只 decode 新增的 tail，结果与全量 decode 等价但 O(1) per step。
+            """Decodes only the newly added tail each step; result is equivalent to full re-decode but O(1) per step.
 
-            BPE 边界保护：若 tail 末尾有 \\ufffd（多字节 UTF-8 未闭合），本步
-            不提交 cache，让后续 token 与未闭合字节一起重新 decode，保证 RM
-            收到的文本与一次性 decode 在字节层等价。
+            BPE boundary protection: if the tail ends with \\ufffd (unclosed multi-byte UTF-8),
+            do not commit the cache this step; let subsequent tokens decode together with the
+            unclosed bytes, ensuring the text sent to the RM is byte-equivalent to a one-shot decode.
             """
             last_n = self._decoded_token_count.get(req_idx, 0)
             cached = self._decoded_text.get(req_idx, "")
@@ -942,20 +946,20 @@ def make_sia_processor(
             return response
 
         # ----------------------------------------------------------------
-        # apply：每个 token 生成前被 vllm 调用一次
+        # apply: called by vllm once before each token is generated
         # ----------------------------------------------------------------
         def apply(self, logits: torch.Tensor) -> torch.Tensor:
-            # === per-token profiling 起点 ===
+            # === per-token profiling start ===
             pf_on = self._PROFILE_DETAIL
             t_apply_start = time.perf_counter() if pf_on else 0.0
 
             batch_size = logits.shape[0]
 
-            # ==== Batch-wide topk + entropy（一次提交所有 GPU 工作）====
-            # 原实现在 for-loop 里逐个 .item()，每个 batch item 都会
-            # 触发一次 GPU→CPU sync，阻塞 LLM forward pipeline。
-            # 这里改成在 loop 外面整体算 + 一次性 sync，把 batch_size 次
-            # sync 压成 1 次。
+            # ==== Batch-wide topk + entropy (submit all GPU work at once) ====
+            # The original implementation called .item() per batch item inside a for-loop,
+            # triggering a GPU->CPU sync for each one and blocking the LLM forward pipeline.
+            # Changed to compute everything outside the loop with a single sync, collapsing
+            # batch_size syncs into 1.
             # Per-request effective topk (may differ per request if sia_topk was set).
             # Use the batch maximum so a single torch.topk covers all requests.
             if self._topk_per_req:
@@ -979,18 +983,18 @@ def make_sia_processor(
                 else entropy_topk_result
             )
 
-            # 注: 上面 GPU work 还没 sync, 真正 sync 在下面 .cpu().tolist()。
-            # 拆分 timer: t_after_gpu_dispatch = topk+entropy "Python dispatch" 完成
-            # (但 GPU 还在算); t_after_sync = .cpu() 触发的 GPU pipeline wait 完成
+            # Note: the above GPU work has not synced yet; actual sync happens below at .cpu().tolist().
+            # Split timer: t_after_gpu_dispatch = topk+entropy "Python dispatch" complete
+            # (but GPU still running); t_after_sync = GPU pipeline wait complete triggered by .cpu()
             t_after_gpu_dispatch = time.perf_counter() if pf_on else 0.0
 
-            # 一次性 GPU→CPU sync（取代原代码中 per-item 的 .item()）
+            # Single GPU->CPU sync (replaces per-item .item() in the original code)
             # ===== SIA DEBUG HISTOGRAM START =====
-            # 开 SIA_DEBUG_HIST=1 时, 把 entropy + top1/top2 gap 合并到一次 sync 里
-            # (避免引入额外的 CUDA sync round-trip)。
+            # When SIA_DEBUG_HIST=1, merge entropy + top1/top2 gap into a single sync
+            # (avoids introducing an extra CUDA sync round-trip).
             if self._DEBUG_HIST:
                 gap_tensor = entropy_topk_result.values[:, 0] - entropy_topk_result.values[:, 1]  # (batch,)
-                # 一次性同步 entropy + gap, 比独立 .cpu() 省一次 round-trip
+                # Sync entropy + gap together in one call; saves one round-trip vs separate .cpu() calls
                 combined = torch.stack([entropies, gap_tensor], dim=1)  # (batch, 2)
                 combined_cpu = combined.cpu().tolist()
                 entropy_values = [m[0] for m in combined_cpu]
@@ -1002,10 +1006,10 @@ def make_sia_processor(
             t_after_sync = time.perf_counter() if pf_on else 0.0
 
             # ===== SIA DEBUG HISTOGRAM START =====
-            # 桶化 (在 entropy_values 已 sync 到 CPU 后做, 不引入新 sync)
+            # Bucketing (done after entropy_values are synced to CPU; no new sync introduced)
             if self._DEBUG_HIST:
                 for bi in range(batch_size):
-                    # 推进 <think> / </think> 状态: 看当前已生成的最后一个 token
+                    # Advance <think> / </think> state by checking the last generated token
                     out_ids = self._output_ids.get(bi, [])
                     if out_ids:
                         last_tok = out_ids[-1]
@@ -1027,7 +1031,7 @@ def make_sia_processor(
                         self._dbg_entropy_hist_outthink.setdefault(bi, [0]*16)[eb] += 1
             # ===== SIA DEBUG HISTOGRAM END =====
 
-            # 在 CPU 上做 SKIP/INTERVENE 决策（不再触发 sync）
+            # Make SKIP/INTERVENE decisions on CPU (no further sync triggered)
             if self._ENTROPY_THRESHOLD is not None:
                 intervene_flags = [
                     e >= self._ENTROPY_THRESHOLD for e in entropy_values
@@ -1041,9 +1045,9 @@ def make_sia_processor(
                         thr = self._entropy_per_req[i]
                         intervene_flags[i] = (thr is None) or (entropy_values[i] >= thr)
 
-            # 至少有一个要 INTERVENE 才把 topk_indices 拉到 CPU；纯 SKIP 省 sync。
-            # A-2: 不再需要 topk_values_lists — flip 检测改走 GPU argmax 路径,
-            #      verbose log 的 pre_top1/post_top1 只需要 topk_indices_lists。
+            # Only pull topk_indices to CPU if at least one request will INTERVENE; pure SKIP saves a sync.
+            # A-2: topk_values_lists no longer needed — flip detection uses GPU argmax path;
+            #      verbose log pre_top1/post_top1 only needs topk_indices_lists.
             verbose = self._LOG_LEVEL == "verbose"
             if any(intervene_flags):
                 topk_indices_lists = scoring_topk_result.indices.cpu().tolist()
@@ -1117,14 +1121,14 @@ def make_sia_processor(
                         # _score_candidates_b2() normally for each request.
             # ==== end b2 batch pre-scoring =====================================
 
-            # ==== Per-item loop，循环体里不再有 .item() / .tolist() sync ====
+            # ==== Per-item loop: no more .item() / .tolist() syncs inside the loop body ====
             #
-            # SKIP path Python 清理 (2026-06-02):
-            # 把 output_ids 的 list copy O(N) 和 user_content dict access 移到
-            # INTERVENE 分支内 — SKIP path 不读这两个值, 原来每个 token 都做
-            # 是无用功 (output_ids 长度累积到 700+ token, list copy 不是免费的).
-            # _total_steps 仍每 token 更新 (统计需要); req_step 只在 verbose 时取
-            # 用于 log, 推迟到 SKIP/INTERVENE 各自的 print 分支内。
+            # SKIP path Python cleanup (2026-06-02):
+            # Moved output_ids list copy O(N) and user_content dict access into the INTERVENE branch
+            # — the SKIP path does not read these values; doing it on every token was wasted work
+            # (output_ids grows to 700+ tokens, list copy is not free).
+            # _total_steps is still updated every token (needed for stats); req_step is only fetched
+            # in verbose mode for logging, deferred to each SKIP/INTERVENE print branch.
             for i in range(batch_size):
                 self._total_steps[i] = self._total_steps.get(i, 0) + 1
 
@@ -1141,10 +1145,10 @@ def make_sia_processor(
                         )
                     continue
 
-                # === INTERVENE path 计时起点 ===
+                # === INTERVENE path timing start ===
                 t_intv_start = time.perf_counter() if pf_on else 0.0
 
-                # INTERVENE path 才需要的状态: 推迟到这里取, SKIP 不付。
+                # State only needed on the INTERVENE path: deferred until here; SKIP doesn't pay.
                 output_ids = list(self._output_ids.get(i, []))
                 user_content = self._prompt_user.get(i, "")
                 req_step = self._total_steps[i]
@@ -1156,7 +1160,7 @@ def make_sia_processor(
                     continue
 
                 topk_indices_i = topk_indices_lists[i]            # list[int] (CPU)
-                topk_indices_gpu = scoring_topk_result.indices[i]  # GPU view，用于索引 logits
+                topk_indices_gpu = scoring_topk_result.indices[i]  # GPU view, for indexing logits
                 # Per-request topk override: slice both CPU and GPU views
                 if effective_topks is not None:
                     eff_k = effective_topks[i]
@@ -1178,7 +1182,7 @@ def make_sia_processor(
                             output_ids,
                         )
                     except Exception as e:
-                        # RM error 始终打印 (rare 且重要, 不受 LOG_LEVEL 影响)
+                        # RM errors are always printed (rare but important; not affected by LOG_LEVEL)
                         print(
                             f"[SIA] {time.strftime('%H:%M:%S')}.{int(time.time() % 1 * 1_000_000):06d} "
                             f"step={req_step:3d} req={i} RM error: {e}",
@@ -1186,34 +1190,34 @@ def make_sia_processor(
                         )
                         continue
 
-                # Fix #4 (2026-06-03): 去掉 mean-norm, 严格匹配官方公式
+                # Fix #4 (2026-06-03): remove mean-norm; strictly match the official formula
                 #   combined[top-k] = orig_logits + rm_scores * weight
-                # 官方 src/sia.py:313 是 `combined_scores = rewards * weight + orig_scores`,
-                # 不做归一化。我们之前的 `(rm_scores - mean) * weight` 虽然在 -inf mask +
-                # softmax 下理论 shift-invariant, 但**改变了 RM 信号相对于 orig_logits
-                # 的混合 scale** — raw_rm magnitude 大时 RM 主导, 归一化后被 stdev
-                # 缩到统一尺度, 不利于跨样本一致性。
+                # Official src/sia.py:313 is `combined_scores = rewards * weight + orig_scores`,
+                # with no normalization. Our previous `(rm_scores - mean) * weight`, while theoretically
+                # shift-invariant under -inf mask + softmax, **changed the mixing scale of RM signal
+                # relative to orig_logits** — when raw_rm magnitude is large RM dominates; after normalization
+                # it is scaled to a uniform stdev, hurting cross-sample consistency.
                 #
-                # CRITICAL: 不能用 `logits[i, idx].add_(...)` — advanced indexing
-                #     (tensor index) 返回副本而非 view, .add_ 改副本不会写回 logits,
-                #     等于 SIA 干预完全失效但 silent 不报错。
-                # === apply_logits 计时起点 (RM call 之后) ===
+                # CRITICAL: cannot use `logits[i, idx].add_(...)` — advanced indexing
+                #     (tensor index) returns a copy not a view; .add_ on the copy does not write back to logits,
+                #     meaning SIA intervention silently has no effect.
+                # === apply_logits timing start (after RM call) ===
                 t_intv_apply_start = time.perf_counter() if pf_on else 0.0
 
-                # B-1: rm_scores 在 inproc 模式下是 GPU bfloat16 (score head 输出
-                # dtype); legacy 模式下是 CPU float32 (read_rewards 已 cast)。
-                # 统一 cast 到 logits 的 device + dtype, 否则后续 op 会因为
-                # source/self dtype 不同 raise (e.g. self=float, source=bfloat16)。
+                # B-1: rm_scores is GPU bfloat16 in inproc mode (score head output dtype);
+                # CPU float32 in legacy mode (read_rewards already cast).
+                # Uniformly cast to logits' device + dtype; otherwise subsequent ops raise
+                # due to source/self dtype mismatch (e.g. self=float, source=bfloat16).
                 if rm_scores.device != logits.device or rm_scores.dtype != logits.dtype:
                     rm_scores = rm_scores.to(logits.device, dtype=logits.dtype)
                 rm_deltas = rm_scores * effective_weight
 
-                # === 2026-06-02: 跟官方/论文 baseline 严格对齐 ===
-                # 官方 src/sia.py:286-313 的语义:
-                #   rewards = -inf 处处, 仅 top-k 位置 = raw RM logits
+                # === 2026-06-02: strictly align with official / paper baseline ===
+                # Official src/sia.py:286-313 semantics:
+                #   rewards = -inf everywhere, only top-k positions = raw RM logits
                 #   combined = rewards * weight + orig_logits
-                #   → 非 top-k 位置永远是 -inf, softmax 后 prob=0, sampling 只能从 top-k 选
-                # Fix: 把所有非 top-k 位置 set 到 -inf, 跟官方等价。
+                #   -> non-top-k positions are always -inf; after softmax prob=0; sampling only picks from top-k
+                # Fix: set all non-top-k positions to -inf, equivalent to official.
                 topk_vals_i = (scoring_topk_result.values[i] if effective_topks is None
                                else scoring_topk_result.values[i, :effective_topks[i]])
                 modified_topk = topk_vals_i + rm_deltas
@@ -1222,11 +1226,12 @@ def make_sia_processor(
 
                 self._intervened_steps[i] = self._intervened_steps.get(i, 0) + 1
 
-                # top-1 flip 检测（保留统计, 不受 LOG_LEVEL 影响）：
-                # 干预前 top-1 = topk_indices_i[0]（已按 logit 降序）；
-                # 干预后 top-1 取 topk 内的 argmax（SIA 加权幅度远小于 topk 内 logit gap，
-                # argmax 极少跳到 topk 外，topk 内排序足够代表实际选中变化）。
-                # A-3: 改走 GPU argmax 路径, 1 次 int sync 取代原来 5 元素 .tolist() + Python max。
+                # top-1 flip detection (stats retained; unaffected by LOG_LEVEL):
+                # pre-intervention top-1 = topk_indices_i[0] (already sorted by logit descending);
+                # post-intervention top-1 = argmax within the topk (SIA weight magnitude is much smaller
+                # than the logit gap within topk; argmax rarely jumps outside topk; intra-topk ordering
+                # sufficiently represents actual selection change).
+                # A-3: use GPU argmax path; 1 int sync replaces the previous 5-element .tolist() + Python max.
                 modified_topk_vals = topk_vals_i + rm_deltas
                 post_top1_local = int(modified_topk_vals.argmax().item())
                 pre_top1 = topk_indices_i[0]
@@ -1236,8 +1241,8 @@ def make_sia_processor(
                     self._flipped_steps[i] = self._flipped_steps.get(i, 0) + 1
 
                 if verbose:
-                    # rm_scores.min()/.max() 在 GPU tensor 上是 reduction,
-                    # 触发 2 次 sync, 但 verbose 默认 quiet, 不影响 hot path。
+                    # rm_scores.min()/.max() on a GPU tensor is a reduction,
+                    # triggering 2 syncs, but verbose defaults to quiet so this doesn't affect the hot path.
                     print(
                         f"[SIA] {time.strftime('%H:%M:%S')}.{int(time.time() % 1 * 1_000_000):06d} "
                         f"step={req_step:3d} req={i} INTERVENE "
@@ -1249,7 +1254,7 @@ def make_sia_processor(
                         flush=True,
                     )
 
-                # === intv_apply_logits 结束计时 ===
+                # === intv_apply_logits timing end ===
                 if pf_on:
                     t_intv_apply_end = time.perf_counter()
                     self._pf_record("intv_prepare",
@@ -1257,7 +1262,7 @@ def make_sia_processor(
                     self._pf_record("intv_apply_logits",
                                     (t_intv_apply_end - t_intv_apply_start) * 1000)
 
-            # === apply() 出口: 记录整体 + SKIP/INTERVENE 路径区分 ===
+            # === apply() exit: record overall timing + distinguish SKIP/INTERVENE paths ===
             if pf_on:
                 t_apply_end = time.perf_counter()
                 self._pf_record("apply_total",
@@ -1266,14 +1271,15 @@ def make_sia_processor(
                                 (t_after_gpu_dispatch - t_apply_start) * 1000)
                 self._pf_record("apply_cpu_sync",
                                 (t_after_sync - t_after_gpu_dispatch) * 1000)
-                # 如果这一步是纯 SKIP (没人 intervene), 记 skip_step (apply() 总耗时)
+                # If this step was a pure SKIP (nobody intervened), record skip_step (apply() total time)
                 if not any(intervene_flags):
                     self._pf_record("skip_step",
                                     (t_apply_end - t_apply_start) * 1000)
                 self._pf_apply_calls += 1
-                # apply 比 INTERVENE 多 ~3x (干预率 33%), 等 INTERVENE-driven
-                # summary 触发即可: 那时 apply 已经累计 300+ 次, SKIP 数据足够
-                # 收敛。新 phase (apply_*, intv_*, skip_step) 自然被 summary 一并打。
+                # apply is called ~3x more often than INTERVENE (33% intervention rate);
+                # just wait for the INTERVENE-driven summary trigger: by then apply has accumulated
+                # 300+ calls and SKIP data has converged. New phases (apply_*, intv_*, skip_step)
+                # are naturally included in the summary output.
 
             return logits
 
@@ -1281,7 +1287,7 @@ def make_sia_processor(
             return False
 
         # ----------------------------------------------------------------
-        # update_state
+        # update_state: called by vllm to inform the processor of batch changes
         # ----------------------------------------------------------------
         def update_state(self, batch_update: Optional[BatchUpdate]) -> None:
             if batch_update is None:
@@ -1307,7 +1313,7 @@ def make_sia_processor(
                     eh_out = self._dbg_entropy_hist_outthink.pop(idx, None)
                     self._dbg_in_think.pop(idx, None)
                     if eh and total > 0:
-                        # 计算 >= threshold 的 step 比例, 跟 ratio 对账
+                        # Compute fraction of steps with entropy >= threshold, for cross-checking against ratio
                         thr = self._ENTROPY_THRESHOLD or 1.0
                         thr_bin = min(int(thr * 10), 15)
                         ge_thr = sum(eh[thr_bin:])
@@ -1333,7 +1339,7 @@ def make_sia_processor(
                 self._chat_prefix_per_req.pop(idx, None)
                 self._chat_suffix_per_req.pop(idx, None)
                 self._manual_prefix_ids_per_req.pop(idx, None)
-                # b2: 释放 RM session
+                # b2: release RM session
                 if self._rm is not None:
                     sid = self._b2_sessions.pop(idx, None)
                     self._b2_chat_prefix_len.pop(idx, None)
@@ -1485,13 +1491,14 @@ def make_sia_processor(
                 if "sia_entropy_threshold" in extra:
                     self._entropy_per_req[idx] = extra["sia_entropy_threshold"]
                 # ===== SIA DEBUG HISTOGRAM START =====
-                # 新请求进 slot, 清除前一个请求残留的 dbg state (兜底, 正常 removed 已清)
+                # New request entering slot; clear any residual dbg state from the previous request
+                # (safety net; normally cleared by removed handler)
                 if self._DEBUG_HIST:
                     self._dbg_entropy_hist.pop(idx, None)
                     self._dbg_gap_hist.pop(idx, None)
                     self._dbg_entropy_hist_inthink.pop(idx, None)
                     self._dbg_entropy_hist_outthink.pop(idx, None)
-                    self._dbg_in_think[idx] = True   # 默认在 think 内 (chat template 开头有 <think>)
+                    self._dbg_in_think[idx] = True   # default: inside think block (chat template starts with <think>)
                 # ===== SIA DEBUG HISTOGRAM END =====
 
     return SIALogitsProcessor
@@ -1502,21 +1509,21 @@ def make_sia_processor(
 # ---------------------------------------------------------------------------
 
 def parse_args():
-    p = argparse.ArgumentParser(description="SIA vllm 干预（HTTP RM Server 版本）")
-    p.add_argument("--llm",       required=True,  help="LLM 模型路径")
+    p = argparse.ArgumentParser(description="SIA vllm intervention (HTTP RM Server version)")
+    p.add_argument("--llm",       required=True,  help="LLM model path")
     p.add_argument("--rm_url",    default="http://localhost:8001",
-                   help="RM server 地址（默认 http://localhost:8001）")
+                   help="RM server address (default http://localhost:8001)")
     p.add_argument("--rm_backend",
                    choices=["pytorch", "vllm", "b2"],
                    default="pytorch",
-                   help="RM 后端：pytorch=自定义 /score；vllm=vllm serve 的 /classify；"
-                        "b2=in-process RMClient (跟 LLM 同进程, 无 HTTP 开销)")
+                   help="RM backend: pytorch=custom /score; vllm=vllm serve /classify; "
+                        "b2=in-process RMClient (same process as LLM, no HTTP overhead)")
     p.add_argument("--rm_model",  default=None,
-                   help="rm_backend ∈ {vllm, b2} 时必填: RM 模型路径")
+                   help="required when rm_backend in {vllm, b2}: RM model path")
     p.add_argument("--rm_b2_gpu_mem", type=float, default=0.3,
-                   help="b2 backend 下 RM vLLM 实例的 gpu_memory_utilization (默认 0.3)")
+                   help="gpu_memory_utilization for the RM vLLM instance under b2 backend (default 0.3)")
     p.add_argument("--llm_gpu_mem", type=float, default=0.5,
-                   help="vllm gpu_memory_utilization（默认 0.5）")
+                   help="vllm gpu_memory_utilization (default 0.5)")
     p.add_argument("--topk",      type=int,   default=10)
     p.add_argument("--weight",    type=float, default=1.0)
     p.add_argument("--max_tokens", type=int,  default=128)

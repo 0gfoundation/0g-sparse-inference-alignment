@@ -1,12 +1,12 @@
 """
-M2 step 1 验证: sia_rm.qwen3_with_score 跑 5 candidate, 对比 BF16 baseline.
+M2 step 1 verification: sia_rm.qwen3_with_score runs 5 candidates, compared against BF16 baseline.
 
-通过 /dev/shm 文件 channel 跨越 vLLM EngineCore subprocess 边界.
+Uses a /dev/shm file channel to cross the vLLM EngineCore subprocess boundary.
 
-PASS 条件 (跟 M1b 一致):
+PASS criteria (same as M1b):
   Pearson > 0.99 + Top-1 match + max|Δ| < 0.5
 
-跑法 (在 SIA 仓库根目录):
+Run (from SIA repo root):
   python scripts/verify_m2_step1.py
 """
 import json
@@ -16,7 +16,7 @@ import sys
 import time
 import uuid
 
-# 把 src/ 放到 sys.path + PYTHONPATH (后者给 vLLM subprocess)
+# Add src/ to sys.path + PYTHONPATH (the latter is for the vLLM subprocess)
 _ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 _SRC = os.path.join(_ROOT, "src")
 sys.path.insert(0, _SRC)
@@ -24,7 +24,7 @@ _pp = os.environ.get("PYTHONPATH", "")
 if _SRC not in _pp.split(":"):
     os.environ["PYTHONPATH"] = (_SRC + ":" + _pp) if _pp else _SRC
 
-# 给 reward file 设唯一 id, 避免和其他 RMClient 实例冲突
+# Set a unique id for the reward file to avoid conflicts with other RMClient instances
 _FID = f"verify_{uuid.uuid4().hex[:8]}"
 os.environ["SIA_REWARD_FILE_ID"] = _FID
 print(f"[verify] PYTHONPATH = {os.environ['PYTHONPATH']}", flush=True)
@@ -60,7 +60,7 @@ def build_candidates(tok):
 def run_vllm(prompts):
     from vllm import LLM, SamplingParams
 
-    # 清旧 reward file
+    # Clear old reward file
     truncate_rewards()
 
     print(f"[vLLM] Loading VM with Qwen3WithScoreForCausalLM ...", flush=True)
@@ -83,25 +83,25 @@ def run_vllm(prompts):
     # batch generate 5 prompts
     print(f"[vLLM] Generating reward for {len(prompts)} candidates...",
           flush=True)
-    truncate_rewards()  # 清掉 vLLM 启动期间的 warmup record
+    truncate_rewards()  # clear warmup records from vLLM startup
     _ = llm.generate(prompts, sp, use_tqdm=False)
 
-    # 看所有 compute_logits 调用 (debug 多次 forward 问题)
+    # View all compute_logits calls (debug multiple forward calls issue)
     records = read_all_rewards()
-    print(f"  compute_logits 被调用 {len(records)} 次:")
+    print(f"  compute_logits called {len(records)} times:")
     for i, r in enumerate(records):
         print(f"    record #{i}: shape={tuple(r.shape)} values={r.tolist()}")
 
-    rewards = read_rewards()  # concat 所有 record
+    rewards = read_rewards()  # concat all records
     if rewards is None or rewards.numel() != len(prompts):
-        print(f"  ⚠️ 拿到 {0 if rewards is None else rewards.numel()} 个 reward, "
-              f"期望 {len(prompts)} 个")
+        print(f"  ⚠️ Got {0 if rewards is None else rewards.numel()} rewards, "
+              f"expected {len(prompts)}")
         if rewards is None:
             return None, None
     print(f"  read_rewards (concat): shape={tuple(rewards.shape)}: "
           f"{rewards.tolist()}", flush=True)
 
-    # 稳态延迟
+    # Steady-state latency
     for _ in range(3):
         _ = llm.generate(prompts, sp, use_tqdm=False)
     timings = []
@@ -114,7 +114,7 @@ def run_vllm(prompts):
 
     del llm
     torch.cuda.empty_cache()
-    # 返回完整的 reward list (5 个); 后续比较 BF16
+    # Return the full reward list (5 items); subsequent comparison with BF16
     return rewards.tolist() if rewards is not None else None, p50
 
 
@@ -146,19 +146,19 @@ def main():
     print(f"\n[1/2] vLLM (Qwen3WithScoreForCausalLM)")
     vllm_rewards, vllm_latency = run_vllm(prompts)
     if vllm_rewards is None:
-        print(f"\n❌ FAIL: reward channel 不工作")
+        print(f"\n❌ FAIL: reward channel not working")
         sys.exit(1)
     if len(vllm_rewards) != 5:
-        print(f"\n⚠️ vLLM 拿到 {len(vllm_rewards)} 个 reward (期望 5)")
-        print(f"  说明 vLLM batched 5 prompts 没在一次 compute_logits 给齐 5 row")
-        print(f"  继续 partial 比较 (前 {len(vllm_rewards)} 个)")
+        print(f"\n⚠️ vLLM got {len(vllm_rewards)} rewards (expected 5)")
+        print(f"  This means vLLM batched 5 prompts did not yield all 5 rows in one compute_logits call")
+        print(f"  Continuing with partial comparison (first {len(vllm_rewards)})")
 
     print(f"\n[2/2] BF16 transformers baseline")
     bf16_rewards = run_bf16(prompts)
 
-    # 对比 (只对齐 min(len_vllm, len_bf16) 个)
+    # Compare (align to min(len_vllm, len_bf16))
     n_compare = min(len(vllm_rewards), len(bf16_rewards))
-    print(f"\n=== 数值对比 (前 {n_compare} 个) ===")
+    print(f"\n=== Numerical comparison (first {n_compare}) ===")
     print(f"  candidate  vLLM        BF16        |Δ|")
     diffs = []
     for i in range(n_compare):
@@ -171,7 +171,7 @@ def main():
     mean_d = sum(diffs) / len(diffs)
     print(f"  mean |Δ|: {mean_d:.4f}, max |Δ|: {max_d:.4f}")
 
-    # Pearson + Top-1 (在前 n_compare 个上)
+    # Pearson + Top-1 (over first n_compare)
     v_sub = vllm_rewards[:n_compare]
     b_sub = bf16_rewards[:n_compare]
     try:
@@ -193,20 +193,20 @@ def main():
           f"BF16='{candidates_text[bf16_top1].strip()}' "
           f"{'✅' if top1_ok else '❌'}")
 
-    print(f"\n=== M2 step 1 验收 ===")
+    print(f"\n=== M2 step 1 acceptance ===")
     pass_corr = r > 0.99
     pass_diff = max_d < 0.5
     if pass_corr and top1_ok and pass_diff:
         print(f"  ✅ PASS")
-        print(f"  ModelRegistry + custom class + /dev/shm channel 全部 work,"
-              f" 数值与 BF16 等价")
-        print(f"  → 进 step 2: 写 RMClient (session 管理 + fix_a_token API)")
+        print(f"  ModelRegistry + custom class + /dev/shm channel all work,"
+              f" values equivalent to BF16")
+        print(f"  → Proceed to step 2: write RMClient (session management + fix_a_token API)")
     else:
         print(f"  ❌ FAIL: Pearson={r:.4f} (need>0.99), "
               f"Top-1 {'OK' if top1_ok else 'BAD'}, "
               f"max|Δ|={max_d:.3f} (need<0.5)")
 
-    # 清理 reward file
+    # Clean up reward file
     p = f"/dev/shm/sia_reward_{_FID}.bin"
     if os.path.exists(p):
         os.remove(p)

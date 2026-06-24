@@ -1,14 +1,15 @@
 """
-诊断 M1b 的 7× scaling 问题 — 同一 prompt 分别从 vLLM 和 HF 取 hidden_state, 对比数值。
+Diagnose the M1b 7x scaling issue — extract hidden_state from the same prompt via
+both vLLM and HF, then compare the numerical values.
 
-策略:
-  1. 用 1 个 prompt 跑 vLLM patched 路径，hook 写出 hidden_state tensor 到 /tmp/b2_dump_vllm.pt
-  2. 用同 prompt 跑 HF Qwen3Model.forward (没有 score head, 纯 backbone)，
-     dump last token 的 hidden_state 到 /tmp/b2_dump_hf.pt
-  3. 加载两份 dump，对比 norm/mean/std/前几个元素，以及 score(hidden) 的差
-  4. 同时对比 input_ids 末尾 几个 token，确认采样位置一致
+Strategy:
+  1. Run the vLLM patched path with 1 prompt, hook writes hidden_state tensor to /tmp/b2_dump_vllm.pt
+  2. Run the same prompt through HF Qwen3Model.forward (no score head, pure backbone),
+     dump the last token's hidden_state to /tmp/b2_dump_hf.pt
+  3. Load both dumps and compare norm/mean/std/first few elements, and score(hidden) difference
+  4. Also compare the last few tokens of input_ids to confirm the sampling position is consistent
 
-新增 patch (在 compute_logits) 写一份 hidden_state tensor 到 dump 文件。
+New patch (in compute_logits) writes a hidden_state tensor to a dump file.
 """
 import os
 import time
@@ -19,8 +20,8 @@ DUMP_VLLM = "/tmp/b2_dump_vllm.pt"
 DUMP_HF = "/tmp/b2_dump_hf.pt"
 DUMP_IDS = "/tmp/b2_dump_ids.pt"
 
-# 重要：vLLM 也必须用 VM 模型 (merged LoRA + score head),
-# 否则 hidden_state 跟 HF 的 VM 不在同一个 backbone 上
+# Important: vLLM must also use the VM model (merged LoRA + score head),
+# otherwise hidden_state is not on the same backbone as HF's VM
 MODEL_VLLM = "/workspace/SIA/models/VM-Qwen3-4B-merged-for-vllm"
 MODEL_VM = "/workspace/SIA/models/VM-Qwen3-4B-merged-for-vllm"
 
@@ -61,7 +62,7 @@ def run_vllm(prompt):
     out = llm.generate([prompt], sp, use_tqdm=False)
     print(f"[vLLM] generated first token id = {out[0].outputs[0].token_ids}",
           flush=True)
-    # 关键：dump vLLM 实际看到的 prompt_token_ids
+    # Key: dump the prompt_token_ids actually seen by vLLM
     vllm_prompt_ids = list(out[0].prompt_token_ids)
     print(f"[vLLM] prompt_token_ids len={len(vllm_prompt_ids)} "
           f"last 10 = {vllm_prompt_ids[-10:]}", flush=True)
@@ -89,7 +90,7 @@ def run_hf(prompt):
     # last_hidden_state shape (1, seq_len, hidden)
     last_hidden = out.last_hidden_state[0, -1]  # (hidden,) — last token
     torch.save(last_hidden.cpu(), DUMP_HF)
-    # 同时 dump 全序列 (1, 24, 2560) 用来找 vLLM 对应位置
+    # Also dump the full sequence (1, 24, 2560) to locate the corresponding vLLM position
     torch.save(out.last_hidden_state[0].cpu(), "/tmp/b2_dump_hf_full.pt")
     print(f"[HF] saved last-token hidden_state ({tuple(last_hidden.shape)}, "
           f"dtype={last_hidden.dtype})", flush=True)
@@ -97,7 +98,7 @@ def run_hf(prompt):
           f"std={last_hidden.float().std():.4f} "
           f"norm={last_hidden.float().norm():.4f}", flush=True)
 
-    # 同时跑 SequenceClassification + score head 验证 reward
+    # Also run SequenceClassification + score head to verify reward
     del backbone
     torch.cuda.empty_cache()
     cls = AutoModelForSequenceClassification.from_pretrained(
@@ -107,7 +108,7 @@ def run_hf(prompt):
         cls_out = cls(ids)
     print(f"[HF] SequenceClassification reward = {cls_out.logits.float().item():.4f}",
           flush=True)
-    # 拿 score head weight 出来
+    # Extract score head weights
     sw = cls.score.weight.detach().cpu()
     torch.save(sw, "/tmp/b2_dump_score_w.pt")
     print(f"[HF] score head weight shape = {tuple(sw.shape)} "
@@ -118,13 +119,13 @@ def run_hf(prompt):
 
 def compare():
     print("\n" + "=" * 60)
-    print("对比 vLLM dump vs HF dump")
+    print("Compare vLLM dump vs HF dump")
     print("=" * 60)
 
     if not os.path.exists(DUMP_VLLM):
-        print(f"❌ vLLM dump 不存在 {DUMP_VLLM} — patch 未生效")
+        print(f"vLLM dump does not exist {DUMP_VLLM} — patch did not take effect")
         return
-    # 先对比 input_ids
+    # First compare input_ids
     if os.path.exists("/tmp/b2_dump_vllm_ids.pt") and os.path.exists(DUMP_IDS):
         vllm_ids = torch.load("/tmp/b2_dump_vllm_ids.pt").tolist()
         hf_ids = torch.load(DUMP_IDS).squeeze(0).tolist()
@@ -132,9 +133,9 @@ def compare():
         print(f"  vLLM last 10: {vllm_ids[-10:]}")
         print(f"  HF   last 10: {hf_ids[-10:]}")
         if vllm_ids == hf_ids:
-            print(f"  ✅ token ids 完全相同")
+            print(f"  token ids are identical")
         else:
-            print(f"  ❌ token ids 不同！这就是 hidden_state 差异的根因")
+            print(f"  token ids differ — this is the root cause of the hidden_state discrepancy")
     v = torch.load(DUMP_VLLM)
     h = torch.load(DUMP_HF)
     print(f"vLLM  : shape={tuple(v.shape)} dtype={v.dtype} "
@@ -144,22 +145,22 @@ def compare():
           f"mean={h.float().mean():.4f} std={h.float().std():.4f} "
           f"norm={h.float().norm():.4f}")
 
-    # 维度对齐: vLLM 可能 (n_samples, hidden), HF 是 (hidden,)
+    # Dimension alignment: vLLM may be (n_samples, hidden), HF is (hidden,)
     if v.dim() == 2:
         v_last = v[-1]
     else:
         v_last = v
-    print(f"\n前 8 元素:")
+    print(f"\nFirst 8 elements:")
     print(f"  vLLM: {v_last.float()[:8].tolist()}")
     print(f"  HF  : {h.float()[:8].tolist()}")
 
-    # cos 相似度
+    # cosine similarity
     cos = torch.nn.functional.cosine_similarity(
         v_last.float().unsqueeze(0), h.float().unsqueeze(0)
     ).item()
     print(f"\ncos similarity (vLLM_last, HF_last) = {cos:.6f}")
 
-    # 找 vLLM_last 对应 HF 序列中哪个位置 cos 最大
+    # Find which HF sequence position has the highest cosine similarity to vLLM_last
     if os.path.exists("/tmp/b2_dump_hf_full.pt"):
         hf_full = torch.load("/tmp/b2_dump_hf_full.pt").float()  # (seq, hidden)
         v_norm = v_last.float() / v_last.float().norm()
@@ -167,13 +168,13 @@ def compare():
         sims = (h_norm @ v_norm).tolist()
         print(f"\nvLLM_last vs HF[i] for each position i:")
         for i, s in enumerate(sims):
-            mark = " ←最高" if s == max(sims) else ""
+            mark = " <- highest" if s == max(sims) else ""
             print(f"  pos {i:2d}: cos={s:+.4f}{mark}")
     diff_norm = (v_last.float() - h.float()).norm().item()
     print(f"||vLLM - HF|| = {diff_norm:.4f}")
     print(f"||vLLM|| / ||HF|| = {v_last.float().norm() / h.float().norm():.4f}")
 
-    # 用 HF score head 各自打 score
+    # Score each with the HF score head
     if os.path.exists("/tmp/b2_dump_score_w.pt"):
         sw = torch.load("/tmp/b2_dump_score_w.pt")
         sv = (v_last.float() @ sw.float().T).item()
@@ -185,7 +186,7 @@ def compare():
 
 def main():
     print("=" * 60)
-    print("M1b 诊断: vLLM 与 HF 路径 hidden_state 差异")
+    print("M1b Diagnosis: hidden_state discrepancy between vLLM and HF paths")
     print("=" * 60)
 
     tok = AutoTokenizer.from_pretrained(MODEL_VM, trust_remote_code=True)
@@ -195,16 +196,16 @@ def main():
     print(f"\ntokenized last 10 ids: "
           f"{tok(prompt).input_ids[-10:]}")
 
-    # 1) vLLM 路径
-    print(f"\n[1/3] 跑 vLLM (会触发 patched compute_logits + dump)")
+    # 1) vLLM path
+    print(f"\n[1/3] Run vLLM (triggers patched compute_logits + dump)")
     run_vllm(prompt)
 
     # 2) HF backbone + score head
-    print(f"\n[2/3] 跑 HF backbone + SequenceClassification")
+    print(f"\n[2/3] Run HF backbone + SequenceClassification")
     run_hf(prompt)
 
     # 3) compare
-    print(f"\n[3/3] 对比")
+    print(f"\n[3/3] Compare")
     compare()
 
 

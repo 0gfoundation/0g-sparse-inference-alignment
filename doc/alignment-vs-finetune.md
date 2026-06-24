@@ -1,92 +1,92 @@
-# Alignment 与 Value Model 的作用：为什么不直接 Fine-tune 基础模型？
+# Alignment and Value Model Roles: Why Not Fine-tune the Base Model Directly?
 
 ---
 
-## 一、Alignment 是什么？
+## 1. What is Alignment?
 
-Alignment（对齐）是让 LLM 的输出符合人类期望的过程，通常指让模型更**有帮助（Helpful）**、更**无害（Harmless）**、更**诚实（Honest）**。
+Alignment is the process of making an LLM's outputs conform to human expectations — typically making the model more **Helpful**, more **Harmless**, and more **Honest**.
 
-预训练的基础模型只学会了"生成自然的文本"，不一定"生成对用户有帮助的文本"。Alignment 就是在基础能力之上，加一层方向性引导，让模型在多个候选方向中倾向于选择更符合人类价值观的那个。
-
----
-
-## 二、Value Model 在 SIA 中的作用
-
-Value Model 是一个经过专门训练的小模型，它的任务不是"生成文本"，而是"评估文本片段的好坏"——具体来说，在每个 token 的生成节点上，给出"如果选这个 token，后续回答的质量会有多高"的估分。
-
-这与 Reward Model（RM）的区别在于：
-- 传统 RM：只能对**完整回答**打分，无法指导生成中途的每一步
-- Value Model：能对**部分序列**打分，支持 token 级别的干预
-
-SIA 的 Value Model 基于 Qwen3-4B-Base 加上 LoRA，在 UltraFeedback（Helpfulness）和 WildGuardMix（Harmlessness）数据上训练，训练目标是让它学会"哪个方向更符合人类偏好"。
+A pre-trained base model only learns to "generate natural text," not necessarily to "generate text that is helpful to users." Alignment is a layer of directional guidance built on top of base capabilities, steering the model to prefer outputs that align with human values among multiple candidate directions.
 
 ---
 
-## 三、相比直接 Fine-tune 基础模型，有哪些优点？
+## 2. The Role of Value Model in SIA
 
-### 优点 1：训练数据量大幅减少（论文作者亲口确认的核心优势）
+The Value Model is a specially trained small model whose job is not to "generate text" but to "evaluate the quality of text fragments" — specifically, at each token generation step, it estimates "how high the quality of the subsequent response would be if this token were chosen."
 
-论文作者指出：**训练 Value Model 所需的数据量，远远小于 fine-tune 基础模型达到相同效果提升所需的数据量。**
+The difference from a Reward Model (RM) is:
+- Traditional RM: can only score **complete responses**, cannot guide each intermediate step during generation
+- Value Model: can score **partial sequences**, supporting token-level intervention
 
-原因在于两者的训练目标本质不同：
-
-- Fine-tune 基础模型：需要让模型**改变内部表示**，让权重本身记住"什么是好的回答"。这要求大量覆盖全面的示例，才能稳定地改变一个有着数百亿参数的模型的行为。
-- 训练 Value Model：基础模型的能力和知识已经具备，Value Model 只需要学会**在基础模型的分布空间里辨别方向**——哪个 token 走向更好，哪个走向更差。这是一个相对低维的判别任务，偏好数据的信噪比高，少量数据即可有效训练。
-
-类比：教一个已经很会下棋的棋手"优先考虑安全防守"，比从零教他所有棋理，需要的例子少得多。
-
-### 优点 2：不影响基础模型的通用能力（无 Alignment Tax）
-
-Fine-tune 基础模型（尤其是 RLHF 类方法）常导致"对齐税"（Alignment Tax）——对准了目标方向，但损害了与对齐目标无关的能力，即灾难性遗忘（Catastrophic Forgetting）。
-
-SIA 的 Value Model 完全不修改基础模型权重。MMLU 回归测试证实：SIA 开启后，在与 Value Model 训练目标无关的知识问答任务上，accuracy 无显著变化（83.48% vs 82.13%，差值在统计误差内）。基础模型的通用能力被完整保留。
-
-### 优点 3：模块化，即插即用
-
-基础模型一旦 fine-tune，行为就固化了。Value Model 是独立模块：
-
-- 可以随时切换目标：换一个在安全数据上训练的 Value Model，同一个基础模型就变成了偏重 Harmlessness 的版本
-- 可以在线热切换（SIA 服务的 `/reload` 端点支持不重启 vLLM 直接替换 Value Model）
-- 可以按场景调节权重（`--weight` 参数），甚至设为 0 完全关闭干预，退化为原始 vLLM 推理
-
-Fine-tune 的基础模型不具备这种灵活性——要换目标就要重新训练。
-
-### 优点 4：Weak-to-Strong 泛化
-
-论文实验表明，用 **Qwen3-4B** 训练的 Value Model，能够有效引导 **Qwen3-14B** 这个比它大 3.5 倍的模型。
-
-这个结论很关键：Value Model 不需要和被引导的 LLM 一样强，它只需要在关键决策点上有足够的"方向感"。用小模型引导大模型，训练成本进一步降低。
-
-### 优点 5：推理时对齐，部署更灵活
-
-Fine-tune 是一次性的离线成本，但其结果是固定的。SIA 的 Value Model 是推理时组件，意味着：
-
-- 同一套基础模型可以同时服务多个不同 alignment 目标的用户（不同请求使用不同 Value Model）
-- 对齐目标更新时，只需重新训练小的 Value Model，不触碰已经部署的大模型
+SIA's Value Model is based on Qwen3-4B-Base with LoRA, trained on UltraFeedback (Helpfulness) and WildGuardMix (Harmlessness) data. The training objective is to teach it "which direction better aligns with human preferences."
 
 ---
 
-## 四、Value Model 方案的局限性
+## 3. What are the Advantages over Directly Fine-tuning the Base Model?
 
-客观地说，Value Model + 推理时干预也有局限：
+### Advantage 1: Much smaller training data requirement (core advantage explicitly confirmed by paper authors)
 
-1. **增加推理延迟**：每次干预需要额外的 Value Model forward pass（即使 batch forward 优化后，有干预步骤仍约 119 ms vs 无干预的 15 ms）。Fine-tune 基础模型后推理速度不变。
+The paper authors state: **the amount of data needed to train a Value Model is far less than the data needed to fine-tune a base model to achieve the same improvement.**
 
-2. **低熵错误无法纠正**：如果模型对错误答案非常确定（低熵），SIA 不触发，Value Model 从不介入。Fine-tune 可以直接修改模型的"先验知识"，从根本上减少这类错误。
+The reason lies in the fundamentally different training objectives:
 
-3. **Value Model 的知识边界**：Value Model 只能引导"有帮助、无害"等风格性目标，无法弥补基础模型的知识缺口（比如某个领域的专业知识不足）。这类问题需要在基础模型训练阶段解决。
+- Fine-tuning the base model: requires the model to **change its internal representations**, so that the weights themselves memorize "what constitutes a good response." This requires a large number of comprehensive examples to stably change the behavior of a model with tens of billions of parameters.
+- Training a Value Model: the base model's capabilities and knowledge are already present; the Value Model only needs to learn to **distinguish direction within the base model's distribution space** — which token leads toward better outcomes, which toward worse. This is a relatively low-dimensional discriminative task with high signal-to-noise ratio in preference data; a small amount of data is sufficient for effective training.
+
+Analogy: teaching an already skilled chess player to "prioritize safe defense" requires far fewer examples than teaching all chess theory from scratch.
+
+### Advantage 2: Does not affect the base model's general capabilities (no Alignment Tax)
+
+Fine-tuning the base model (especially RLHF-type methods) often causes "Alignment Tax" — the model aligns with the target direction but damages capabilities unrelated to the alignment target, i.e., Catastrophic Forgetting.
+
+SIA's Value Model does not modify the base model weights at all. MMLU regression testing confirms: with SIA enabled, accuracy on knowledge Q&A tasks unrelated to the Value Model's training objective shows no significant change (83.48% vs 82.13%, difference within statistical error). The base model's general capabilities are fully preserved.
+
+### Advantage 3: Modular, plug-and-play
+
+Once a base model is fine-tuned, its behavior is fixed. The Value Model is an independent module:
+
+- Target can be switched at any time: swap in a Value Model trained on safety data, and the same base model becomes a version prioritizing Harmlessness
+- Can be hot-swapped online (SIA service's `/reload` endpoint supports replacing the Value Model without restarting vLLM)
+- Weight can be adjusted per scenario (`--weight` parameter), even set to 0 to completely disable intervention and fall back to plain vLLM inference
+
+Fine-tuned base models do not have this flexibility — changing the target requires retraining.
+
+### Advantage 4: Weak-to-Strong Generalization
+
+Paper experiments show that a Value Model trained on **Qwen3-4B** can effectively guide **Qwen3-14B**, a model 3.5× larger than it.
+
+This conclusion is significant: the Value Model does not need to be as strong as the LLM it guides; it only needs sufficient "sense of direction" at critical decision points. Using a small model to guide a large one further reduces training cost.
+
+### Advantage 5: Inference-time alignment, more flexible deployment
+
+Fine-tuning is a one-time offline cost, but its result is fixed. SIA's Value Model is an inference-time component, which means:
+
+- The same base model can simultaneously serve users with different alignment objectives (different requests use different Value Models)
+- When alignment objectives are updated, only the small Value Model needs to be retrained, without touching the already-deployed large model
 
 ---
 
-## 五、结论
+## 4. Limitations of the Value Model Approach
 
-| 维度 | Fine-tune 基础模型 | Value Model + SIA |
+Objectively, Value Model + inference-time intervention also has limitations:
+
+1. **Increased inference latency**: each intervention requires an additional Value Model forward pass (even after batch forward optimization, intervention steps still take approximately 119 ms vs 15 ms for non-intervention steps). Fine-tuning the base model does not change inference speed.
+
+2. **Cannot correct low-entropy errors**: if the model is very confident about a wrong answer (low entropy), SIA does not trigger and the Value Model never intervenes. Fine-tuning can directly modify the model's "prior knowledge," fundamentally reducing such errors.
+
+3. **Knowledge boundary of the Value Model**: the Value Model can only guide stylistic objectives like "helpful, harmless," and cannot compensate for knowledge gaps in the base model (e.g., insufficient domain expertise). These issues need to be addressed at the base model training stage.
+
+---
+
+## 5. Conclusion
+
+| Dimension | Fine-tune base model | Value Model + SIA |
 |------|-------------------|-------------------|
-| 训练数据量 | 大（需要覆盖全面） | **小（高信噪比偏好数据）** |
-| 通用能力影响 | 存在 Alignment Tax 风险 | **不影响基础模型** |
-| 目标灵活性 | 固化，换目标须重训 | **即插即用，热切换** |
-| 推理延迟 | 不变 | 有额外开销（干预步骤约 119 ms） |
-| 低熵错误 | 可通过训练数据修正 | **无法纠正** |
-| 部署复杂度 | 低（单模型） | 需维护两个模型 |
+| Training data volume | Large (needs comprehensive coverage) | **Small (high signal-to-noise preference data)** |
+| Impact on general capabilities | Alignment Tax risk present | **Does not affect base model** |
+| Target flexibility | Fixed, retraining required to change target | **Plug-and-play, hot-swappable** |
+| Inference latency | Unchanged | Extra overhead (intervention steps ~119 ms) |
+| Low-entropy errors | Correctable via training data | **Cannot correct** |
+| Deployment complexity | Low (single model) | Requires maintaining two models |
 
-**核心结论**：Value Model 方案的本质优势是"用极小的训练成本，将对齐目标从模型权重中解耦出来"。它不是 fine-tune 的完全替代，而是在"需要灵活、低成本、不破坏基础能力"的场景下，比 fine-tune 更合适的选择。
+**Core conclusion**: The fundamental advantage of the Value Model approach is "decoupling the alignment objective from model weights at extremely low training cost." It is not a complete replacement for fine-tuning, but is a better choice than fine-tuning in scenarios that require flexibility, low cost, and preservation of base capabilities.

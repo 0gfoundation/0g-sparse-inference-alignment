@@ -1,49 +1,49 @@
-# 0GM-35B SIA 在 Docker 里跑通 — 完整部署指南
+# 0GM-35B SIA Running in Docker — Complete Deployment Guide
 
-**最后更新**: 2026-06-10  
-**适用 docker image**: `pytorch/pytorch:2.11.0-cuda12.8-cudnn9-devel`  
-**适用配置**: 0GM-1.0-35B-A3B-0427 SIA b2 inproc 加速路径 (vllm 0.18.0, [`requirements/0gm35b-b2-inproc.txt`](../requirements/0gm35b-b2-inproc.txt))
+**Last updated**: 2026-06-10  
+**Target docker image**: `pytorch/pytorch:2.11.0-cuda12.8-cudnn9-devel`  
+**Target configuration**: 0GM-1.0-35B-A3B-0427 SIA b2 inproc accelerated path (vllm 0.18.0, [`requirements/0gm35b-b2-inproc.txt`](../requirements/0gm35b-b2-inproc.txt))
 
-> 本 doc 覆盖 3 条部署路径 (临时跑 / Dockerfile build / **生产 compose**), 每条都包含: **构建 image** → **启动 server** → **smoke test** → **停止 / 重启 / 清理**。生产部署推荐直接看 [Path C](#path-c--docker-compose--生产推荐)。
+> This doc covers 3 deployment paths (quick run / Dockerfile build / **production compose**), each including: **build image** → **start server** → **smoke test** → **stop / restart / cleanup**. For production deployment, go directly to [Path C](#path-c--docker-compose--production-recommended).
 
 ---
 
-## 与 VL-30B 部署的关键差异
+## Key Differences from VL-30B Deployment
 
-| 维度 | VL-30B ([doc](docker-install-vl30b-20260606.md)) | **0GM-35B (本 doc)** |
+| Dimension | VL-30B ([doc](docker-install-vl30b-20260606.md)) | **0GM-35B (this doc)** |
 |---|---|---|
-| vllm 版本 | 0.17.1 | **0.18.0** |
+| vllm version | 0.17.1 | **0.18.0** |
 | requirements | `vl30b-b2-inproc.txt` | **`0gm35b-b2-inproc.txt`** |
 | image tag | `sia-vl30b:0.17.1` | **`sia-0gm35b:0.18.0`** |
 | Dockerfile | `Dockerfile` | **`Dockerfile.0gm35b`** |
-| compose 文件 | `docker-compose.yml` | **`docker-compose.0gm35b.yml`** |
-| venv 路径 | `/opt/venv-vl30b` | **`/opt/venv-0gm35b`** |
-| 主 LLM arch | `Qwen3VLMoe` | **`Qwen3_5MoeForConditionalGeneration`** |
-| LLM CUDA graph | `SIA_LLM_CUDAGRAPH=piecewise` | **不设置**（默认 FULL_AND_PIECEWISE，快 ~2×） |
-| RM CUDA graph | `SIA_RM_CUDAGRAPH=piecewise` | **`SIA_RM_CUDAGRAPH=none`**（必须 eager，否则 RuntimeError） |
+| compose file | `docker-compose.yml` | **`docker-compose.0gm35b.yml`** |
+| venv path | `/opt/venv-vl30b` | **`/opt/venv-0gm35b`** |
+| Main LLM arch | `Qwen3VLMoe` | **`Qwen3_5MoeForConditionalGeneration`** |
+| LLM CUDA graph | `SIA_LLM_CUDAGRAPH=piecewise` | **not set** (default FULL_AND_PIECEWISE, ~2× faster) |
+| RM CUDA graph | `SIA_RM_CUDAGRAPH=piecewise` | **`SIA_RM_CUDAGRAPH=none`** (must be eager; otherwise RuntimeError) |
 | `--max_model_len` | 4096 | **2048** |
-| GPU 最低要求 | 80 GB (H100/H200) | **140 GB+ (H200)** — 35B 权重 ~70 GB，80 GB 不够 |
+| Minimum GPU | 80 GB (H100/H200) | **140 GB+ (H200)** — 35B weights ~70 GB; 80 GB is insufficient |
 
-> **为什么 vllm 必须是 0.18.0？** 0.17.x 不支持 `Qwen3_5MoeForConditionalGeneration` arch（0GM-35B 无法加载）；0.19.x 的 PIECEWISE 改为 runtime capture，与 b2 inproc 100% 冲突（穷举所有配置均失败）。0.18.0 是唯一可用版本，详见 [`doc/0gm-35b-b2-inproc-speedup-20260609.md`](0gm-35b-b2-inproc-speedup-20260609.md)。
+> **Why must vllm be 0.18.0?** 0.17.x does not support the `Qwen3_5MoeForConditionalGeneration` arch (0GM-35B cannot load); 0.19.x changed PIECEWISE to runtime capture, which conflicts 100% with b2 inproc (all configurations exhausted and failed). 0.18.0 is the only viable version; see [`doc/0gm-35b-b2-inproc-speedup-20260609.md`](0gm-35b-b2-inproc-speedup-20260609.md) for details.
 
 ---
 
-## 前提
+## Prerequisites
 
-### 1. 主机硬件 + NVIDIA 驱动
+### 1. Host Hardware + NVIDIA Driver
 
-- **NVIDIA H200（141 GB）或更大显存的 GPU**（0GM-35B 权重 ~70 GB，A100/H100 80 GB 单卡不足）
-- NVIDIA 驱动已装：`nvidia-smi` 应当可以正常运行
+- **NVIDIA H200 (141 GB) or larger GPU** (0GM-35B weights ~70 GB; A100/H100 80 GB single card is insufficient)
+- NVIDIA driver installed: `nvidia-smi` should run without errors
 
 ### 2. nvidia-container-toolkit
 
-让 Docker 容器能访问 GPU。先检查是否已装：
+Allows Docker containers to access the GPU. First check if already installed:
 
 ```bash
 docker run --rm --gpus all ubuntu:22.04 nvidia-smi
 ```
 
-如果报错 (`could not select device driver "nvidia"`) 说明还没装，按以下步骤装 (Ubuntu/Debian)：
+If you get an error (`could not select device driver "nvidia"`), it is not installed yet. Follow these steps to install (Ubuntu/Debian):
 
 ```bash
 curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey \
@@ -53,31 +53,31 @@ curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-contai
   | sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
 sudo apt-get update && sudo apt-get install -y nvidia-container-toolkit
 sudo systemctl restart docker
-# 验证
+# Verify
 docker run --rm --gpus all ubuntu:22.04 nvidia-smi
 ```
 
-### 3. Docker + Compose 版本
+### 3. Docker + Compose Version
 
-Docker Compose V2+ 即可（`docker compose` 而非 `docker-compose`）。验证：
+Docker Compose V2+ is sufficient (`docker compose`, not `docker-compose`). Verify:
 
 ```bash
 docker compose version
 ```
 
-### 4. 目录结构
+### 4. Directory Structure
 
-Path B/C 把整个 `/dstack/persistent/SIA` 挂载到容器 `/workspace`，需要提前建好这个结构：
+Path B/C mounts the entire `/dstack/persistent/SIA` into the container at `/workspace`. Create this structure in advance:
 
 ```
 /dstack/persistent/SIA/
 ├── models/
-│   ├── 0GM-1.0-35B-A3B-0427/                    ← 主 LLM，~70 GB  (§5.2)
-│   ├── Qwen3-4B-Base/                       ← RM convert 原料，~8 GB   (§5.3，仅选项 B)
-│   ├── SIA-checkpoints/                     ← LoRA checkpoints，~3 GB  (§5.3，仅选项 B)
-│   └── VM-Qwen3-4B-merged-for-vllm/        ← RM 最终 checkpoint，~11 GB (§5.4)
+│   ├── 0GM-1.0-35B-A3B-0427/                    ← main LLM, ~70 GB  (§5.2)
+│   ├── Qwen3-4B-Base/                       ← RM convert source, ~8 GB   (§5.3, option B only)
+│   ├── SIA-checkpoints/                     ← LoRA checkpoints, ~3 GB  (§5.3, option B only)
+│   └── VM-Qwen3-4B-merged-for-vllm/        ← final RM checkpoint, ~11 GB (§5.4)
 └── sia-repo/
-    └── 0g-sparse-inference-alignment/       ← 本仓库 (§5.1)
+    └── 0g-sparse-inference-alignment/       ← this repo (§5.1)
 ```
 
 ```bash
@@ -85,67 +85,67 @@ mkdir -p /dstack/persistent/SIA/models
 mkdir -p /dstack/persistent/SIA/sia-repo
 ```
 
-### 5. 仓库 + 模型权重 (~81 GB 最少；含 convert 原料共 ~92 GB)
+### 5. Repo + Model Weights (~81 GB minimum; ~92 GB including convert source)
 
-> 需要 `huggingface-cli`：`pip install huggingface-hub`
+> Requires `huggingface-cli`: `pip install huggingface-hub`
 
-#### 5.1 Clone 仓库
+#### 5.1 Clone the Repo
 
 ```bash
 git clone <your-repo-url> \
   /dstack/persistent/SIA/sia-repo/0g-sparse-inference-alignment
 ```
 
-#### 5.2 主 LLM — 0GM-1.0-35B-A3B-0427 (~70 GB)
+#### 5.2 Main LLM — 0GM-1.0-35B-A3B-0427 (~70 GB)
 
-0GM 是 0G Foundation 的内部模型，下载方式请联系模型管理员获取具体路径或 HuggingFace 仓库名。示例：
+0GM is an internal model from 0G Foundation. Contact the model admin for the specific path or HuggingFace repo name. Example:
 
 ```bash
-# 替换 <ORG>/<REPO> 为实际仓库名
+# Replace <ORG>/<REPO> with the actual repo name
 huggingface-cli download <ORG>/0GM-1.0-35B-A3B-0427 \
   --local-dir /dstack/persistent/SIA/models/0GM-1.0-35B-A3B-0427
 ```
 
-或从已有存储直接 rsync/copy：
+Or copy directly from existing storage via rsync:
 
 ```bash
 rsync -av /path/to/existing/0GM-1.0-35B-A3B-0427/ \
   /dstack/persistent/SIA/models/0GM-1.0-35B-A3B-0427/
 ```
 
-验证：
+Verify:
 ```bash
 ls /dstack/persistent/SIA/models/0GM-1.0-35B-A3B-0427/
-# 预期看到: config.json  model-*.safetensors  tokenizer*.json  ...
+# Expected: config.json  model-*.safetensors  tokenizer*.json  ...
 ```
 
-#### 5.3 RM 原料 — Qwen3-4B-Base + VM-Qwen3-4B-Base LoRA (~11 GB)（仅 §5.4 选项 B 需要）
+#### 5.3 RM Source — Qwen3-4B-Base + VM-Qwen3-4B-Base LoRA (~11 GB) (only needed for §5.4 option B)
 
 ```bash
-# Qwen3-4B-Base: RM 的基础模型 (~8 GB)
+# Qwen3-4B-Base: base model for RM (~8 GB)
 huggingface-cli download Qwen/Qwen3-4B-Base \
   --local-dir /dstack/persistent/SIA/models/Qwen3-4B-Base
 
-# VM-Qwen3-4B-Base: 论文作者提供的 LoRA checkpoint (~3 GB)
+# VM-Qwen3-4B-Base: LoRA checkpoint from the paper authors (~3 GB)
 huggingface-cli download Runyi-Hu/SIA \
   --local-dir /dstack/persistent/SIA/models/SIA-checkpoints
 ```
 
-下载完后 LoRA 路径为 `/dstack/persistent/SIA/models/SIA-checkpoints/VM-Qwen3-4B-Base/`。
+After download, the LoRA path is `/dstack/persistent/SIA/models/SIA-checkpoints/VM-Qwen3-4B-Base/`.
 
-#### 5.4 获取 VM-Qwen3-4B-merged-for-vllm
+#### 5.4 Obtain VM-Qwen3-4B-merged-for-vllm
 
-**选项 A：直接下载（推荐，已融合好的版本）**
+**Option A: Direct download (recommended — pre-merged version)**
 
 ```bash
 huggingface-cli download TengGao/VM-Qwen3-4B-merged-for-vllm_public \
   --local-dir /dstack/persistent/SIA/models/VM-Qwen3-4B-merged-for-vllm
 ```
 
-**选项 B：自行 convert（换了别的 RM / LoRA 时用这个）**
+**Option B: Self-convert (use this when switching to a different RM / LoRA)**
 
 ```bash
-# 在宿主机 Python 环境里跑（不依赖 vllm venv，只需要 transformers + peft）
+# Run in a host Python environment (does not depend on the vllm venv; only needs transformers + peft)
 pip install transformers peft safetensors
 
 python /dstack/persistent/SIA/sia-repo/0g-sparse-inference-alignment/scripts/convert_rm_for_vllm.py \
@@ -154,40 +154,40 @@ python /dstack/persistent/SIA/sia-repo/0g-sparse-inference-alignment/scripts/con
   --output  /dstack/persistent/SIA/models/VM-Qwen3-4B-merged-for-vllm
 ```
 
-预计耗时 2-5 分钟，输出 ~11 GB。
+Estimated time: 2-5 minutes, output ~11 GB.
 
-验证（无论选项 A 还是 B）：
+Verify (regardless of option A or B):
 
 ```bash
 ls /dstack/persistent/SIA/models/VM-Qwen3-4B-merged-for-vllm/
-# 预期看到: config.json  model.safetensors  tokenizer*.json  ...
+# Expected: config.json  model.safetensors  tokenizer*.json  ...
 ```
 
-完成后确认必要模型到位：
+Confirm the required models are in place:
 
 ```bash
 ls /dstack/persistent/SIA/models/
-# 选项 A: 0GM-1.0-35B-A3B-0427  VM-Qwen3-4B-merged-for-vllm
-# 选项 B: 0GM-1.0-35B-A3B-0427  Qwen3-4B-Base  SIA-checkpoints  VM-Qwen3-4B-merged-for-vllm
+# Option A: 0GM-1.0-35B-A3B-0427  VM-Qwen3-4B-merged-for-vllm
+# Option B: 0GM-1.0-35B-A3B-0427  Qwen3-4B-Base  SIA-checkpoints  VM-Qwen3-4B-merged-for-vllm
 ```
 
-**以上前提全部满足后，再进入下面的三条路径。**
+**Once all prerequisites above are satisfied, proceed to one of the three paths below.**
 
 ---
 
-## 三条路径选一条
+## Choose One of Three Paths
 
-| 路径 | 适用场景 | 步骤 |
+| Path | Best for | Steps |
 |---|---|---|
-| **Path A: 命令行装** | 临时想跑一次, 不留持久 image | Step 1 → Step 2 (跑安装脚本) → Step 3 → Step 4 |
-| **Path B: Dockerfile 构建** ⚡ | 跑多次 / 分发给别人; 启动后无依赖安装但仍需手动起 server | Step 1B (build image) → Step 1B' (docker run) → Step 3 → Step 4 |
-| **Path C: docker compose** ⭐ **生产推荐** | 生产部署 / 自动重启 / 健康检查; **server 完全自动起** | Step 1C (`docker compose -f docker-compose.0gm35b.yml up -d`) → Step 4 |
+| **Path A: Command-line install** | One-time quick run, no persistent image | Step 1 → Step 2 (run install script) → Step 3 → Step 4 |
+| **Path B: Dockerfile build** ⚡ | Multiple runs / sharing with others; no dep install on startup but server must be started manually | Step 1B (build image) → Step 1B' (docker run) → Step 3 → Step 4 |
+| **Path C: docker compose** ⭐ **Production recommended** | Production deployment / auto-restart / health checks; **server starts automatically** | Step 1C (`docker compose -f docker-compose.0gm35b.yml up -d`) → Step 4 |
 
 ---
 
-## Path A — 命令行装
+## Path A — Command-line Install
 
-### Step 1 — 启动 docker container
+### Step 1 — Start docker container
 
 ```bash
 docker run -it --rm \
@@ -200,32 +200,32 @@ docker run -it --rm \
   bash
 ```
 
-如果还没 clone repo，在**容器里**再 clone（pytorch image 默认没装 git，必须先装）：
+If the repo has not been cloned yet, clone it **inside the container** (the pytorch image does not include git by default; install it first):
 ```bash
 apt-get update && apt-get install -y --no-install-recommends git ca-certificates
 mkdir -p /workspace/sia-repo
 cd /workspace/sia-repo && git clone <your-repo-url> 0g-sparse-inference-alignment
 ```
 
-> 推荐做法：在**主机上**先按前提 §5 clone 好再用 `-v /dstack/persistent/SIA:/workspace` 挂进来，容器内就不用装 git 了。
+> Recommended: clone the repo on the **host** following prerequisite §5, then mount with `-v /dstack/persistent/SIA:/workspace` — no need to install git inside the container.
 
-### Step 2 — 跑安装脚本 (容器内)
+### Step 2 — Run install script (inside container)
 
 ```bash
 cd /workspace/sia-repo/0g-sparse-inference-alignment
 bash scripts/docker_install_0gm35b.sh
 ```
 
-脚本按顺序做的事:
-1. **apt 依赖** — 检查 + 自动装缺失的：`git ca-certificates curl` + `python${ver}-venv`
-2. `python3 -m venv /opt/venv-0gm35b`（与 docker 预装的 conda torch 2.11 隔离）
-3. `pip install -r requirements/0gm35b-b2-inproc.txt`（装 vllm 0.18.0 + torch 2.10.0 + 全部依赖）
-4. `pip install -e .`（注册 `sia_rm` vllm 插件）
-5. **自检**：import vllm/torch，验证 CUDA 可用，验证 `Qwen3_5MoeForConditionalGeneration` arch 注册，验证 `unlock_workspace` API，验证 sia_rm 插件可发现
+What the script does in order:
+1. **apt dependencies** — check + auto-install missing: `git ca-certificates curl` + `python${ver}-venv`
+2. `python3 -m venv /opt/venv-0gm35b` (isolated from the conda torch 2.11 pre-installed in docker)
+3. `pip install -r requirements/0gm35b-b2-inproc.txt` (installs vllm 0.18.0 + torch 2.10.0 + all dependencies)
+4. `pip install -e .` (registers the `sia_rm` vllm plugin)
+5. **Self-check**: import vllm/torch, verify CUDA available, verify `Qwen3_5MoeForConditionalGeneration` arch registered, verify `unlock_workspace` API, verify sia_rm plugin discoverable
 
-预计耗时：**5-10 分钟**（主要是 vllm 0.18.0 wheel 下载，~250 MB）。
+Estimated time: **5-10 minutes** (mainly the vllm 0.18.0 wheel download, ~250 MB).
 
-成功后会打印类似：
+On success, output will resemble:
 ```
 python: 3.12.x  (/opt/venv-0gm35b/bin/python3)
 vllm  : 0.18.0
@@ -239,25 +239,25 @@ sia_rm plugin       : ✓ (['sia_rm'])
 
 ---
 
-## Path B — Dockerfile 构建 (推荐, 跑多次或分发用)
+## Path B — Dockerfile Build (recommended for repeated runs or sharing)
 
-仓库 + 模型仍然走 bind-mount，不进 image（image 维持小巧 ~10 GB）。
+Repo + models still use bind-mount — not baked into the image (image stays small ~10 GB).
 
-### Step 1B — 构建 image (一次性, ~5-10 min)
+### Step 1B — Build image (one-time, ~5-10 min)
 
-在主机上，`cd` 到仓库根（含 `Dockerfile.0gm35b`）：
+On the host, `cd` to the repo root (containing `Dockerfile.0gm35b`):
 ```bash
 cd /dstack/persistent/SIA/sia-repo/0g-sparse-inference-alignment
 docker build -f Dockerfile.0gm35b -t sia-0gm35b:0.18.0 .
 ```
 
-构建过程做的事（跟 Path A 的 install 脚本对应）：
+What the build does (mirrors the Path A install script):
 1. `apt-get install python3.12-venv ca-certificates curl`
 2. `python3 -m venv /opt/venv-0gm35b`
-3. `pip install -r requirements/0gm35b-b2-inproc.txt`（vllm 0.18.0 + 全部 Python 依赖）
-4. COPY entrypoint 脚本进 image，容器启动时自动 `pip install -e <mounted-repo>` 注册 sia_rm 插件（1-2 秒）
+3. `pip install -r requirements/0gm35b-b2-inproc.txt` (vllm 0.18.0 + all Python dependencies)
+4. COPY entrypoint script into the image; on container startup it auto-runs `pip install -e <mounted-repo>` to register the sia_rm plugin (1-2 seconds)
 
-### Step 1B' — 启动 container
+### Step 1B' — Start container
 
 ```bash
 docker run -it --rm \
@@ -270,15 +270,15 @@ docker run -it --rm \
   bash
 ```
 
-进容器后看到：
+Inside the container you will see:
 ```
 [entrypoint] registering sia_rm vllm plugin (pip install -e /workspace/sia-repo/0g-sparse-inference-alignment)
 root@xxxx:/workspace/sia-repo/0g-sparse-inference-alignment#
 ```
 
-venv 已在 `$PATH`，直接 `python --version` 就能看到 venv 的 python。**跳过 Step 2 整段，直接走 Step 3 启 server**。
+The venv is already in `$PATH`; run `python --version` directly to confirm the venv Python. **Skip Step 2 entirely and proceed to Step 3 to start the server**.
 
-### (可选) 验证 image 内的依赖都齐了
+### (Optional) Verify all dependencies are present in the image
 
 ```bash
 python -c "
@@ -289,41 +289,41 @@ print('torch:', torch.__version__, 'CUDA available:', torch.cuda.is_available())
 print('sia_rm plugin:', [e.name for e in entry_points(group='vllm.general_plugins') if 'sia' in e.name])
 "
 ```
-预期：`vllm: 0.18.0`，`torch: 2.10.0+cu128`，`sia_rm plugin: ['sia_rm']`。
+Expected: `vllm: 0.18.0`, `torch: 2.10.0+cu128`, `sia_rm plugin: ['sia_rm']`.
 
 ---
 
-## Path C — docker compose (⭐ 生产推荐)
+## Path C — docker compose (⭐ Production recommended)
 
-把 GPU 资源 / 挂载 / 重启策略 / 健康检查 / 完整 server 启动命令全部写进 [`docker-compose.0gm35b.yml`](../docker-compose.0gm35b.yml)。**一条命令拉起全套**，server 自动起来跑。
+All GPU resources / mounts / restart policies / health checks / complete server startup command are specified in [`docker-compose.0gm35b.yml`](../docker-compose.0gm35b.yml). **One command brings everything up** with the server starting automatically.
 
-### Step 1C — 起服务
+### Step 1C — Start services
 
-在 host 上，cd 到 repo 根（含 `docker-compose.0gm35b.yml`）：
+On the host, cd to the repo root (containing `docker-compose.0gm35b.yml`):
 ```bash
 cd /dstack/persistent/SIA/sia-repo/0g-sparse-inference-alignment
-docker compose -f docker-compose.0gm35b.yml up -d --build   # 首次: build image (~5-10 min) + 后台起 container
+docker compose -f docker-compose.0gm35b.yml up -d --build   # First time: build image (~5-10 min) + start container in background
 ```
 
-之后日常运维：
+Day-to-day operations:
 ```bash
 docker compose -f docker-compose.0gm35b.yml logs -f sia-0gm35b   # tail server log
-docker compose -f docker-compose.0gm35b.yml ps                    # 看健康状态
-docker compose -f docker-compose.0gm35b.yml restart sia-0gm35b   # 重启 server
-docker compose -f docker-compose.0gm35b.yml down                  # 停 + 移除 container
+docker compose -f docker-compose.0gm35b.yml ps                    # check health status
+docker compose -f docker-compose.0gm35b.yml restart sia-0gm35b   # restart server
+docker compose -f docker-compose.0gm35b.yml down                  # stop + remove container
 ```
 
-### 跳过 Step 2 / Step 3，直接到 Step 4
+### Skip Step 2 / Step 3, go directly to Step 4
 
-Path C 之下，**server 在 `docker compose up -d` 后已经在自动启动**，不需要 Step 2（装 deps）和 Step 3（手动启 server）。等 `docker compose -f docker-compose.0gm35b.yml ps` 显示 `(healthy)` 状态（大约 20-25 分钟首次启动，包括 35B 权重加载 + cudagraph capture；后续重启 ~5-8 分钟）后，直接跳到 Step 4 smoke test。
+Under Path C, **the server starts automatically after `docker compose up -d`** — Step 2 (install deps) and Step 3 (manual server start) are not needed. Wait until `docker compose -f docker-compose.0gm35b.yml ps` shows `(healthy)` status (approximately 20-25 minutes on first startup, including 35B weight loading + cudagraph capture; subsequent restarts ~5-8 minutes), then skip to Step 4 smoke test.
 
 ---
 
-## Step 3 — 启 SIA server (主 LLM + Value Model 同进程) — Path A / B 手动启动
+## Step 3 — Start SIA server (main LLM + Value Model in same process) — Path A / B manual start
 
-> **谁需要看这一步**：Path A 用户（Step 2 装完依赖后），Path B 用户（Step 1B' 进容器后）。**Path C 用户跳过**——server 已经被 compose 自动启起来了。
+> **Who needs this step**: Path A users (after Step 2 installs dependencies), Path B users (after entering container via Step 1B'). **Path C users skip** — the server is already started automatically by compose.
 
-> ℹ️ **b2 inproc 是单进程拓扑**：主 LLM（0GM-35B）+ Value Model（Qwen3-4B）在**同一个 Python 进程里嵌套跑**，RM 调用是直接 Python 函数调用而非 HTTP，**不需要再单独开一个 RM server**。
+> ℹ️ **b2 inproc is a single-process topology**: the main LLM (0GM-35B) + Value Model (Qwen3-4B) run **nested in the same Python process**, RM calls are direct Python function calls rather than HTTP — **no separate RM server needs to be started**.
 
 ```bash
 source /opt/venv-0gm35b/bin/activate
@@ -348,49 +348,49 @@ nohup env \
 echo "[launch] pid=$!  (process detached from this shell, log: $LOG)"
 ```
 
-加载过程实时观察（`Ctrl+C` 退出 tail 不影响 server）：
+Watch loading progress in real-time (`Ctrl+C` exits tail without affecting the server):
 ```bash
 tail -f "$LOG"
 ```
 
-参数说明：
+Parameter reference:
 
-| 参数 / 环境变量 | 作用 |
+| Parameter / Env var | Purpose |
 |---|---|
-| `--llm` | **主推理 LLM**（0GM-35B），占 GPU 55% 显存 |
-| `--rm_backend b2` | 嵌套同进程 RM backend（vllm 0.18.0 sweet-spot 路径） |
-| `--rm_model` | **Value Model**（Qwen3-4B），嵌套在主进程内，占 GPU 15% 显存 |
-| `--llm_gpu_mem 0.55 + --rm_b2_gpu_mem 0.15` | 合计 70%，剩 30% 给 cudagraph + KV cache 头空间（H200 141GB 上测试通过） |
-| `--topk 10 --weight 1.0 --entropy_threshold 1.0` | SIA 参数：10 个候选，干预权重 1.0，entropy > 1.0 才介入（≈ 20% 干预率） |
-| `--max_model_len 2048` | 限制最长序列 2048 token，控制 KV cache 占用 |
-| `--mamba_cache_mode align` | 0GM-35B 是 hybrid 模型（full_attention + GatedDeltaNet linear_attention）。默认 `none` 模式下 mamba_block_size=max_model_len=2048，导致 APC lcm_block_size 极大，所有请求 cached_tokens=0。`align` 将 mamba_block_size 对齐到注意力 block_size（~1056 token），prompt ≥ 1056 token 的请求可在第二次请求时外报 cached_tokens > 0，满足 V7 provider-admission 要求 |
-| `SIA_RM_CUDAGRAPH=none` | RM 用 eager 模式（**必须**，否则 vllm 0.18.0 推理时抛 RuntimeError） |
-| `SIA_RM_MULTIPROCESS=0` | RM 与主 LLM 同进程，不走 subprocess |
-| `SIA_LLM_CUDAGRAPH` | **不设置**，主 LLM 默认走 FULL_AND_PIECEWISE（比强制 piecewise 快 ~2×） |
+| `--llm` | **Main inference LLM** (0GM-35B), uses 55% of GPU memory |
+| `--rm_backend b2` | Nested in-process RM backend (vllm 0.18.0 sweet-spot path) |
+| `--rm_model` | **Value Model** (Qwen3-4B), nested inside the main process, uses 15% of GPU memory |
+| `--llm_gpu_mem 0.55 + --rm_b2_gpu_mem 0.15` | Total 70%, leaving 30% for cudagraph + KV cache headroom (tested on H200 141GB) |
+| `--topk 10 --weight 1.0 --entropy_threshold 1.0` | SIA parameters: 10 candidates, intervention weight 1.0, intervene only when entropy > 1.0 (≈ 20% intervention rate) |
+| `--max_model_len 2048` | Limit max sequence length to 2048 tokens to control KV cache usage |
+| `--mamba_cache_mode align` | 0GM-35B is a hybrid model (full_attention + GatedDeltaNet linear_attention). In default `none` mode, mamba_block_size=max_model_len=2048, causing APC lcm_block_size to be very large with cached_tokens=0 for all requests. `align` aligns mamba_block_size to the attention block_size (~1056 tokens), allowing requests with prompt ≥ 1056 tokens to report cached_tokens > 0 on second request, meeting V7 provider-admission requirements |
+| `SIA_RM_CUDAGRAPH=none` | RM uses eager mode (**required**; otherwise vllm 0.18.0 throws RuntimeError during inference) |
+| `SIA_RM_MULTIPROCESS=0` | RM runs in the same process as the main LLM, not as a subprocess |
+| `SIA_LLM_CUDAGRAPH` | **Not set** — main LLM defaults to FULL_AND_PIECEWISE (~2× faster than forcing piecewise) |
 
-等待启动（35B 权重加载 ~15 min on H200，cudagraph capture ~3-5 min，RM 加载 ~1 min），直到日志出现：
+Wait for startup (35B weight loading ~15 min on H200, cudagraph capture ~3-5 min, RM loading ~1 min) until the log shows:
 ```
 INFO:     Application startup complete.
 INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
 ```
 
-检查 server 是否还活：
+Check if the server is still alive:
 ```bash
 pgrep -af sia_vllm_server
 ```
 
-停掉 server：
+Stop the server:
 ```bash
 pkill -f sia_vllm_server.py
 ```
 
 ---
 
-## Step 4 — Smoke test (验证 server 真活)
+## Step 4 — Smoke test (verify server is truly running)
 
-Server 已 ready（Path A/B 看到 "Uvicorn running on http://0.0.0.0:8000"，Path C 看到 `(healthy)` 状态）后，跑一个 chat completion 验证端到端工作。
+Once the server is ready (Path A/B sees "Uvicorn running on http://0.0.0.0:8000", Path C shows `(healthy)` status), run a chat completion to verify end-to-end functionality.
 
-### 4.1 用 curl (最简单)
+### 4.1 Using curl (simplest)
 
 ```bash
 curl -s -X POST http://localhost:8000/v1/chat/completions \
@@ -403,7 +403,7 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
   }' | python3 -m json.tool
 ```
 
-### 4.2 用 OpenAI Python SDK
+### 4.2 Using OpenAI Python SDK
 
 ```bash
 pip install openai
@@ -420,7 +420,7 @@ print(resp.choices[0].message.content)
 print("usage:", resp.usage)
 ```
 
-### 4.3 Path C 用户从容器内测
+### 4.3 Path C users testing from inside the container
 
 ```bash
 docker compose -f docker-compose.0gm35b.yml exec sia-0gm35b bash -c \
@@ -429,30 +429,30 @@ docker compose -f docker-compose.0gm35b.yml exec sia-0gm35b bash -c \
      -d "{\"model\":\"/workspace/models/0GM-1.0-35B-A3B-0427\",\"messages\":[{\"role\":\"user\",\"content\":\"hi\"}],\"max_tokens\":50}"'
 ```
 
-### 验证 SIA 真的在干预
+### Verify SIA is truly intervening
 
-预期 response 是正常 JSON，同时 server 日志会打印：
+Expected response is normal JSON, and server logs will print:
 ```
 [SIA] req=0 DONE  intervened=N/M  ratio=X%  top1_flip=K/N (Y%)
 ```
 
-健康指标：
+Health indicators:
 
-| 指标 | 健康范围 | 红灯 |
+| Metric | Healthy range | Red flag |
 |---|---|---|
-| intervention ratio | 15–30%（entropy_threshold=1.0 下约 20%） | **0%** → RM 死了，SIA 退化为 no-op |
+| intervention ratio | 15–30% (approximately 20% with entropy_threshold=1.0) | **0%** → RM is dead; SIA degraded to no-op |
 | top1 flip rate | 50–80% | 0% / 100% → bug |
-| RM error 日志 | 0 | >0 → RM forward 失败（检查 `SIA_RM_CUDAGRAPH=none` 是否生效） |
+| RM error log entries | 0 | >0 → RM forward failed (check whether `SIA_RM_CUDAGRAPH=none` is in effect) |
 
-看日志方法：
-- **Path A/B**：`tail -f "$LOG"`
-- **Path C**：`docker compose -f docker-compose.0gm35b.yml logs -f sia-0gm35b`
+How to view logs:
+- **Path A/B**: `tail -f "$LOG"`
+- **Path C**: `docker compose -f docker-compose.0gm35b.yml logs -f sia-0gm35b`
 
-### 4.4 Per-request SIA 参数测试
+### 4.4 Per-request SIA parameter testing
 
-SIA 支持在单次 request 里覆盖全局参数（`sia_weight` / `sia_topk` / `sia_entropy_threshold`），无需重启 server。
+SIA supports overriding global parameters per request (`sia_weight` / `sia_topk` / `sia_entropy_threshold`) without restarting the server.
 
-#### 关闭 SIA 干预 (`sia_weight=0`)
+#### Disable SIA intervention (`sia_weight=0`)
 
 ```bash
 curl -s -X POST http://localhost:8000/v1/chat/completions \
@@ -466,9 +466,9 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
   }' | python3 -m json.tool
 ```
 
-预期 server 日志：`ratio=0.0%`——RM 完全不调用，退化为纯 vLLM 推理。
+Expected server log: `ratio=0.0%` — RM is never called; degrades to pure vLLM inference.
 
-#### 强制每 token 都干预 (`sia_entropy_threshold=0`)
+#### Force intervention on every token (`sia_entropy_threshold=0`)
 
 ```bash
 curl -s -X POST http://localhost:8000/v1/chat/completions \
@@ -482,11 +482,11 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
   }' | python3 -m json.tool
 ```
 
-预期 server 日志：`ratio=100%`——所有 token 都经过 RM 评分。
+Expected server log: `ratio=100%` — all tokens are scored by RM.
 
-### 4.5 多模态输入（图像 + 文本）smoke test
+### 4.5 Multimodal input (image + text) smoke test
 
-0GM-1.0-35B 是 Vision-Language 模型，支持图像输入。Qwen3-4B 是纯文本模型，不能对图像上下文打分，因此 **server 检测到图像后会自动将 `sia_weight` 强制设为 `0.0`**，跳过 VM 直接用原始模型推理。
+0GM-1.0-35B is a Vision-Language model that supports image input. Qwen3-4B is a text-only model that cannot score image context, so **the server automatically forces `sia_weight` to `0.0` when an image is detected**, bypassing the VM and using the base model directly.
 
 ```bash
 curl -s -X POST http://localhost:8000/v1/chat/completions \
@@ -503,104 +503,104 @@ curl -s -X POST http://localhost:8000/v1/chat/completions \
               "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAIAAAD8GO2jAAAAKklEQVR4nO3NsQ0AAAjDsF7L/x/AE3SzlDnOTqp17wAAAAAAAAAAAOCxA0O5lEwRQVLnAAAAAElFTkSuQmCC"
             }
           },
-          {"type": "text", "text": "这张图片里是什么颜色？"}
+          {"type": "text", "text": "What color is in this image?"}
         ]
       }
     ]
   }' | python3 -m json.tool
 ```
 
-预期 server 日志（`docker compose -f docker-compose.0gm35b.yml logs -f sia-0gm35b`）：
+Expected server log (`docker compose -f docker-compose.0gm35b.yml logs -f sia-0gm35b`):
 ```
 [SIA] multimodal request detected — SIA bypassed (VM is text-only)
 (EngineCore pid=...) [SIA] req=0 DONE  intervened=0/N  ratio=0.0%  top1_flip=0/0 (0.0%)
 ```
 
-`ratio=0.0%` 确认 VM 完全跳过。模型应正确描述图像内容（示例图为橙色方块）。
+`ratio=0.0%` confirms the VM is fully bypassed. The model should correctly describe the image content (the example image is an orange square).
 
 ---
 
-## Step 5 — 停止 / 重启 / 清理 (per path)
+## Step 5 — Stop / Restart / Cleanup (per path)
 
-### Path A / B (手动起 docker run)
+### Path A / B (manual docker run)
 
-| 操作 | 命令 |
+| Operation | Command |
 |---|---|
-| 停 server（进程级） | `pkill -f sia_vllm_server.py` |
-| 看 server 是否还在跑 | `pgrep -af sia_vllm_server` |
-| 重启 server | 重新跑 Step 3 的 nohup 命令 |
-| 退出 container（server 也会被 kill） | 在容器里 `exit` |
+| Stop server (process level) | `pkill -f sia_vllm_server.py` |
+| Check if server is still running | `pgrep -af sia_vllm_server` |
+| Restart server | Re-run the nohup command from Step 3 |
+| Exit container (server will also be killed) | `exit` inside the container |
 
-### Path C (docker compose) — 生产推荐
+### Path C (docker compose) — Production recommended
 
-| 操作 | 命令 |
+| Operation | Command |
 |---|---|
-| 停 server + 移除 container（保留 named volumes） | `docker compose -f docker-compose.0gm35b.yml down` |
-| 停 server + 移除 container + 清理 volumes | `docker compose -f docker-compose.0gm35b.yml down -v` |
-| 仅重启 server，不重 build | `docker compose -f docker-compose.0gm35b.yml restart sia-0gm35b` |
-| 改了源码后重启（源码是 bind-mount，直接 restart 即可） | `docker compose -f docker-compose.0gm35b.yml restart sia-0gm35b` |
-| 改了 `requirements/0gm35b-b2-inproc.txt` 后重 build | `docker compose -f docker-compose.0gm35b.yml up -d --build` |
-| 查看资源占用 | `docker stats sia-0gm35b-server` |
-| 直接进容器 debug（server 仍在跑） | `docker compose -f docker-compose.0gm35b.yml exec sia-0gm35b bash` |
+| Stop server + remove container (preserve named volumes) | `docker compose -f docker-compose.0gm35b.yml down` |
+| Stop server + remove container + clean up volumes | `docker compose -f docker-compose.0gm35b.yml down -v` |
+| Restart server only, no rebuild | `docker compose -f docker-compose.0gm35b.yml restart sia-0gm35b` |
+| Restart after source code change (bind-mount; restart is sufficient) | `docker compose -f docker-compose.0gm35b.yml restart sia-0gm35b` |
+| Rebuild after changing `requirements/0gm35b-b2-inproc.txt` | `docker compose -f docker-compose.0gm35b.yml up -d --build` |
+| View resource usage | `docker stats sia-0gm35b-server` |
+| Enter container for debugging (server still running) | `docker compose -f docker-compose.0gm35b.yml exec sia-0gm35b bash` |
 
-> **GPU 显存释放**：container 停掉后 GPU 显存通常几秒内自动释放。若 `nvidia-smi` 还显示占用，用 `pkill -9 -f sia_vllm_server.py` 强杀。
+> **GPU memory release**: After stopping the container, GPU memory is typically released within a few seconds. If `nvidia-smi` still shows usage, force-kill with `pkill -9 -f sia_vllm_server.py`.
 
 ---
 
-## 关键陷阱 / 注意事项
+## Key Pitfalls / Notes
 
-| 陷阱 | 解决 |
+| Pitfall | Solution |
 |---|---|
-| 用了 vllm 0.17.x | 0.17.x 不支持 `Qwen3_5MoeForConditionalGeneration`，0GM-35B 无法加载。**必须 vllm 0.18.0** |
-| 用了 vllm 0.19.x | 0.19.x PIECEWISE 改为 runtime capture，与 b2 inproc 100% 冲突，所有配置均失败。**必须 vllm 0.18.0** |
-| 设置了 `SIA_RM_CUDAGRAPH=piecewise`（或 `full`） | vllm 0.18.0 RM 在推理时遇到新 batch_descriptor 触发 runtime capture，抛 `RuntimeError: CUDA graph capturing detected at an inappropriate time`。**必须 `SIA_RM_CUDAGRAPH=none`** |
-| 设置了 `SIA_LLM_CUDAGRAPH=piecewise` | 主 LLM 被锁定在 PIECEWISE-only 模式，noSIA 从 ~107 tok/s 降至 ~57 tok/s（慢 ~2×）。**不要设置**，让 vllm 默认走 FULL_AND_PIECEWISE |
-| 用 A100 / H100（80 GB）单卡 | 0GM-35B 权重约 70 GB，80 GB GPU 无法同时容纳 LLM（55%）+ RM（15%）+ KV cache。**需要 H200（141 GB）或更大显存** |
-| Docker image 自带 PyTorch 2.11（conda 里），跟 vllm 0.18.0 需要的 torch 2.10.0 冲突 | 用 `python3 -m venv` 创建隔离 venv（脚本已处理），**不要直接 pip install vllm 到 conda env** |
-| `--shm-size=16g --ipc=host` 未加 | vllm 用大量共享内存做 KV cache，默认 docker 的 64 MB 不够 |
-| `--max_model_len` 未限制 | 不设置时 vllm 会按模型最大支持序列长度分配 KV cache，容易 OOM。**建议 `--max_model_len 2048`** |
-| Path C 首次启动看到 `(unhealthy)` | `start_period=25m`，给 35B 权重加载 + cudagraph capture 留余地。25 min 内的 unhealthy 是正常的，之后还 unhealthy 才是真问题 |
-| 生产长跑日志撑满磁盘 | 在 `docker-compose.0gm35b.yml` 的 service 下加：`logging: {driver: "json-file", options: {max-size: "500m", max-file: "5"}}` |
+| Using vllm 0.17.x | 0.17.x does not support `Qwen3_5MoeForConditionalGeneration`; 0GM-35B cannot load. **Must use vllm 0.18.0** |
+| Using vllm 0.19.x | 0.19.x PIECEWISE changed to runtime capture, which conflicts 100% with b2 inproc; all configurations fail. **Must use vllm 0.18.0** |
+| Setting `SIA_RM_CUDAGRAPH=piecewise` (or `full`) | vllm 0.18.0 RM encounters a new batch_descriptor during inference and triggers runtime capture, throwing `RuntimeError: CUDA graph capturing detected at an inappropriate time`. **Must set `SIA_RM_CUDAGRAPH=none`** |
+| Setting `SIA_LLM_CUDAGRAPH=piecewise` | Main LLM is locked to PIECEWISE-only mode; noSIA drops from ~107 tok/s to ~57 tok/s (~2× slower). **Do not set this** — let vllm default to FULL_AND_PIECEWISE |
+| Using A100 / H100 (80 GB) single card | 0GM-35B weights are ~70 GB; an 80 GB GPU cannot fit LLM (55%) + RM (15%) + KV cache simultaneously. **Requires H200 (141 GB) or larger** |
+| Docker image ships with PyTorch 2.11 (in conda), conflicting with torch 2.10.0 required by vllm 0.18.0 | Use `python3 -m venv` to create an isolated venv (the script handles this); **do not pip install vllm directly into the conda env** |
+| Missing `--shm-size=16g --ipc=host` | vllm uses large amounts of shared memory for KV cache; the default docker 64 MB is insufficient |
+| `--max_model_len` not limited | Without this, vllm allocates KV cache based on the model's max supported sequence length, which easily causes OOM. **Recommended: `--max_model_len 2048`** |
+| Path C shows `(unhealthy)` on first startup | `start_period=25m` provides buffer for 35B weight loading + cudagraph capture. Unhealthy within 25 min is normal; unhealthy after that is a real problem |
+| Production long-run logs filling up the disk | Add under the service in `docker-compose.0gm35b.yml`: `logging: {driver: "json-file", options: {max-size: "500m", max-file: "5"}}` |
 
 ---
 
-## 显存预算 — 其他进程占用 GPU 时如何调
+## GPU Memory Budget — How to Adjust When Other Processes Occupy the GPU
 
-如果 GPU 上还有别的进程，用 `nvidia-smi --query-gpu=memory.total,memory.used --format=csv,noheader` 算出 free 显存，然后调小 `--llm_gpu_mem` 和 `--rm_b2_gpu_mem`（vllm 把它们当作**总显存**的百分比，不是 free 显存）。
+If other processes are using the GPU, run `nvidia-smi --query-gpu=memory.total,memory.used --format=csv,noheader` to compute free memory, then reduce `--llm_gpu_mem` and `--rm_b2_gpu_mem` (vllm treats these as percentages of **total** GPU memory, not free memory).
 
-同时建议加 `--max_model_len 1024`（从 2048 降一半）减少 KV cache 需求。
+Also recommended: add `--max_model_len 1024` (halved from 2048) to reduce KV cache requirements.
 
-如果 Path C 也想适配，改 `docker-compose.0gm35b.yml` 的 `command:` 字段即可，不用重 build image。
+For Path C, change the `command:` field in `docker-compose.0gm35b.yml` — no image rebuild needed.
 
 ---
 
-## AlpacaEval 评测 — SIA vs noSIA (Skywork 打分)
+## AlpacaEval Evaluation — SIA vs noSIA (Skywork scoring)
 
-在 docker 容器内复用 SIA server 跑 AlpacaEval 效果评测。两个 arm 共用同一个运行中的 server，通过 per-request `sia_weight=0` 区分，无需切换服务。
+Reuse the SIA server running inside the docker container to run AlpacaEval quality evaluation. Both arms share the same running server, distinguished by per-request `sia_weight=0` — no service switching required.
 
-**参考实测结果**（2026-06-10，H200，AlpacaEval 200Q，topk=10，entropy_threshold=1.0）：
+**Reference results** (2026-06-10, H200, AlpacaEval 200Q, topk=10, entropy_threshold=1.0):
 
-| 配置 | 吞吐 | SkyWork 均分 | 干预率 | flip rate |
+| Config | Throughput | SkyWork mean | Intervention rate | flip rate |
 |---|---|---|---|---|
 | noSIA | ~107 tok/s | 24.01 | — | — |
-| **SIA（b2 inproc + stable prefix）** | **~65 tok/s** | **29.36（+22.3%）** | **20.1%** | **65.1%** |
+| **SIA (b2 inproc + stable prefix)** | **~65 tok/s** | **29.36 (+22.3%)** | **20.1%** | **65.1%** |
 
-### 前提
+### Prerequisites
 
 ```bash
-# 确认 Skywork 评分模型
+# Confirm Skywork scoring model (adjust path to actual location)
 ls /dstack/persistent/SIA/models/Skywork-Reward-V2-Llama-3.1-8B/
-# 若未下载:
+# If not yet downloaded:
 # huggingface-cli download Skywork/Skywork-Reward-V2-Llama-3.1-8B \
 #   --local-dir /dstack/persistent/SIA/models/Skywork-Reward-V2-Llama-3.1-8B
 
-# 确认 AlpacaEval 数据集
+# Confirm AlpacaEval dataset (included in repo; confirm file exists)
 ls /dstack/persistent/SIA/sia-repo/0g-sparse-inference-alignment/data/alpaca_eval/alpaca_eval.json
 ```
 
-### Phase 1 — Generation（server 正常运行，无需停机）
+### Phase 1 — Generation (server running normally, no downtime needed)
 
-进入容器：
+Enter the container:
 ```bash
 docker compose -f docker-compose.0gm35b.yml exec sia-0gm35b bash
 cd /workspace/sia-repo/0g-sparse-inference-alignment
@@ -608,7 +608,7 @@ MODEL=/workspace/models/0GM-1.0-35B-A3B-0427
 mkdir -p /workspace/exp
 ```
 
-**SIA arm**（server 默认参数：topk=10, weight=1.0, entropy_threshold=1.0）：
+**SIA arm** (server default parameters: topk=10, weight=1.0, entropy_threshold=1.0):
 ```bash
 nohup python -u eval/alpaca_eval.py \
   --base_url http://localhost:8000/v1 \
@@ -620,7 +620,7 @@ nohup python -u eval/alpaca_eval.py \
 echo "SIA arm PID=$!"
 ```
 
-**noSIA arm**（`--sia_weight 0` 关掉 RM 干预）：
+**noSIA arm** (`--sia_weight 0` disables RM intervention):
 ```bash
 nohup python -u eval/alpaca_eval.py \
   --base_url http://localhost:8000/v1 \
@@ -633,14 +633,14 @@ nohup python -u eval/alpaca_eval.py \
 echo "noSIA arm PID=$!"
 ```
 
-> SIA arm 约 50-60 min（~65 tok/s）；noSIA arm 约 15 min（~107 tok/s）。
+> SIA arm approximately 50-60 min (~65 tok/s); noSIA arm approximately 15 min (~107 tok/s).
 
-### Phase 2 — Skywork 打分（server 无需停机）
+### Phase 2 — Skywork scoring (no server downtime needed)
 
-H200（141GB）上默认配置（`llm_gpu_mem=0.55 + rm_b2_gpu_mem=0.15`）占用约 99GB，剩余 ~42GB，足够加载 Skywork 8B BF16（~16GB）。**无需停掉 SIA server**，直接进容器跑打分即可。
+On H200 (141GB), the default configuration (`llm_gpu_mem=0.55 + rm_b2_gpu_mem=0.15`) uses approximately 99GB, leaving ~42GB — enough to load Skywork 8B BF16 (~16GB). **No need to stop the SIA server** — run scoring directly inside the container.
 
 ```bash
-# 进入正在运行的容器
+# Enter the running container
 docker compose -f docker-compose.0gm35b.yml exec sia-0gm35b bash
 cd /workspace/sia-repo/0g-sparse-inference-alignment
 RM=/workspace/models/Skywork-Reward-V2-Llama-3.1-8B
@@ -656,11 +656,11 @@ python scripts/measure_alpaca_reward.py \
   --rm "$RM" --device cuda:0 --strip_think
 ```
 
-各约 3-5 min（Skywork 8B BF16，~2.5 题/s）。
+Each takes approximately 3-5 min (Skywork 8B BF16, ~2.5 questions/s).
 
-> 如果 GPU 剩余显存不足 20GB（例如有其他进程额外占用），才需要先停 server：`docker compose -f docker-compose.0gm35b.yml stop sia-0gm35b`，打分后再 `start`。
+> If remaining GPU memory is less than 20GB (e.g., other processes are occupying extra memory), stop the server first: `docker compose -f docker-compose.0gm35b.yml stop sia-0gm35b`, then `start` after scoring.
 
-### Phase 3 — 对比结果
+### Phase 3 — Compare results
 
 ```bash
 python - <<'EOF'
@@ -682,22 +682,22 @@ print(f"Δ      {delta_abs:+.4f}  ({delta_rel:+.2f}%)")
 EOF
 ```
 
-打分完退出容器：
+After scoring, exit the container:
 ```bash
 exit
 ```
 
 ---
 
-## 相关 doc
+## Related Docs
 
-- [`docker-install-vl30b-20260606.md`](docker-install-vl30b-20260606.md) — VL-30B 同类型部署文档（结构与本文一致）
-- [`0gm-35b-b2-inproc-speedup-20260609.md`](0gm-35b-b2-inproc-speedup-20260609.md) — 为什么 vllm 0.18.0 是 sweet spot（穷举失败配置 + 根因分析）
-- [`0gm-35b-sia-perf-breakdown-20260609.md`](0gm-35b-sia-perf-breakdown-20260609.md) — 完整性能优化历程（含 stable prefix 优化 + AlpacaEval 200Q 结果）
-- [`sia-speedup-summary-20260610.md`](sia-speedup-summary-20260610.md) — 两个模型优化汇总（原理 + 数据对比）
-- [`../docker-compose.0gm35b.yml`](../docker-compose.0gm35b.yml) — Path C 生产 compose 文件
-- [`../Dockerfile.0gm35b`](../Dockerfile.0gm35b) — Path B / C 共用的 Dockerfile
-- [`../scripts/docker_entrypoint_0gm35b.sh`](../scripts/docker_entrypoint_0gm35b.sh) — Path B / C 共用 entrypoint
-- [`../scripts/docker_install_0gm35b.sh`](../scripts/docker_install_0gm35b.sh) — Path A 安装脚本
-- [`../requirements/0gm35b-b2-inproc.txt`](../requirements/0gm35b-b2-inproc.txt) — pip 依赖清单
-- [`../CLAUDE.md`](../CLAUDE.md) — 整体 venv 矩阵
+- [`docker-install-vl30b-20260606.md`](docker-install-vl30b-20260606.md) — VL-30B equivalent deployment doc (same structure as this one)
+- [`0gm-35b-b2-inproc-speedup-20260609.md`](0gm-35b-b2-inproc-speedup-20260609.md) — Why vllm 0.18.0 is the sweet spot (exhaustive failed configurations + root cause analysis)
+- [`0gm-35b-sia-perf-breakdown-20260609.md`](0gm-35b-sia-perf-breakdown-20260609.md) — Complete performance optimization history (including stable prefix optimization + AlpacaEval 200Q results)
+- [`sia-speedup-summary-20260610.md`](sia-speedup-summary-20260610.md) — Optimization summary for both models (principles + data comparison)
+- [`../docker-compose.0gm35b.yml`](../docker-compose.0gm35b.yml) — Path C production compose file
+- [`../Dockerfile.0gm35b`](../Dockerfile.0gm35b) — Dockerfile shared by Path B / C
+- [`../scripts/docker_entrypoint_0gm35b.sh`](../scripts/docker_entrypoint_0gm35b.sh) — Entrypoint shared by Path B / C
+- [`../scripts/docker_install_0gm35b.sh`](../scripts/docker_install_0gm35b.sh) — Path A install script
+- [`../requirements/0gm35b-b2-inproc.txt`](../requirements/0gm35b-b2-inproc.txt) — pip dependency list
+- [`../CLAUDE.md`](../CLAUDE.md) — Overall venv matrix
