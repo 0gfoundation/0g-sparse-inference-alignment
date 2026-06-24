@@ -165,7 +165,7 @@ vllm classify runner（7–8× 更慢，APC 不工作）和 transformers + Dynam
 
 > **完成后收益**：VM 实际调用率从当前 ~20%（熵门控）降至 ~5%（block-wise 叠加），每 token 摊销的 VM 调用开销降低约 75%（per-call p50 延迟 ~30ms 不变，调用次数降至原来 1/4），conc=16 吞吐从 369 tok/s 预计升至 ~500+ tok/s。
 
-- **理论依据**：减少 VM 调用次数至 1/B 直接降低 VM 累计开销，是工程上的显然推论，无需单独引用。具体加速比以 SIA A/B 实测为准；**注意**：参考文献表中 2503.02368 与本任务的挂钩有误（该论文实际内容是 value function 导引解码的分布差距问题，不涉及 block-wise RM scoring），该引用已从本任务移除
+- **理论依据**：减少 VM 调用次数至 1/B 直接降低 VM 累计开销，是工程上的显然推论，无需单独引用。具体加速比以 SIA A/B 实测为准。
 - **实现方案选择**：
   - **固定 block（简单）**：只在位置 4/8/12/… 检查熵，实现简单，但关键 token 若落在 block 前三位会被机械跳过。
   - **cooldown window（推荐）**：每次干预触发后，抑制接下来 N 个 token 的检查（`cooldown_remaining` 计数器递减）；无干预时恢复正常熵检查。优势：刚校正过的位置附近风险低，可跳过；关键 junction 不会因固定步长错过。实现同样简单（在 `apply()` 中加一个 per-request 计数器），效果损失预期优于固定 block。两种方案均纳入 Month 1 A/B 对比。
@@ -685,8 +685,7 @@ CMU 的 DSPA（arxiv 2603.21461）用稀疏自编码器在 LLM 激活空间直�
 | RSD: Reward-guided Speculative Decoding ([arxiv 2501.19324](https://arxiv.org/abs/2501.19324)) | 任务 2.3 两阶段过滤 / 任务 4.2 | **ICML 2025** ✅ |
 | SSS: Stepwise Speculative Search ([arxiv 2508.15044](https://arxiv.org/abs/2508.15044)) | 任务 2.3 两阶段过滤依据 | **EMNLP 2025** ✅ |
 | GSI: Generative Speculative Inference ([arxiv 2506.04118](https://arxiv.org/abs/2506.04118)) | 任务 2.3 两阶段过滤依据 | **ICLR 2026** ✅ |
-| Iterative Value Function Optimization ([arxiv 2503.02368](https://arxiv.org/abs/2503.02368)) | ~~任务 1.1 block-wise scoring~~（**引用有误**：该论文内容为 value function 导引解码的分布差距，不涉及 block-wise RM scoring）| 2025 preprint |
-| EASD: Entropy-Aware Speculative Decoding ([arxiv 2512.23765](https://arxiv.org/abs/2512.23765)) | 背景参考（speculative decoding 双熵机制；**不适用**于 SIA 的 reward model 场景，已从任务 1.2 移除）| 2025 preprint |
+| EASD: Entropy-Aware Speculative Decoding ([arxiv 2512.23765](https://arxiv.org/abs/2512.23765)) | 背景参考（speculative decoding 双熵机制；**不适用**于 SIA 的 reward model 场景）| 2025 preprint |
 | TARo: Token-level Adaptive Routing ([arxiv 2603.18411](https://arxiv.org/abs/2603.18411)) | 任务 1.2 自适应路由参考 | 2026 preprint |
 | LLMdoctor: Product-of-Distributions Fusion ([arxiv 2601.10416](https://arxiv.org/abs/2601.10416)) | 任务 3.3 乘积式融合 A/B | 2026 preprint |
 | TITA: Token-level Inference-Time Alignment ([arxiv 2510.21794](https://arxiv.org/abs/2510.21794)) | 任务 6.2 DPO 蒸馏参考 | 2025 preprint |
@@ -710,7 +709,7 @@ CMU 的 DSPA（arxiv 2603.21461）用稀疏自编码器在 LLM 激活空间直�
 | Low-Rank RM Parametrization ([arxiv 2407.04615](https://arxiv.org/abs/2407.04615)) | 任务 2.2 VM scoring 加速 | **TMLR 2025** ✅ |
 | From r to Q*: LLM as Q-Function ([arxiv 2404.12358](https://arxiv.org/abs/2404.12358)) | 任务 2.2 VM 冷启动理论支撑（DPO ≡ Q-learning，log-prob 差值编码隐含奖励，SIA 推导延伸） | **COLM 2024** ✅ |
 | Hydragen: High-Throughput Shared-Prefix Inference ([arxiv 2402.05099](https://arxiv.org/abs/2402.05099)) | 任务 Month 3 备选 / T 系统优化 | **ICLR 2025** ✅ |
-| AsyncSpade: Asynchronous Sparse Decoding ([arxiv 2510.07486](https://arxiv.org/abs/2510.07486)) | ~~任务 Month 3 备选 / 异步 VM 调用~~ **引用有误**：论文核心是异步稀疏 KV cache，与 VM 异步调用无关 | 2025 preprint ❌ |
+| AsyncSpade: Asynchronous Sparse Decoding ([arxiv 2510.07486](https://arxiv.org/abs/2510.07486)) | 背景参考（异步稀疏 KV cache；**不适用**于 VM 异步调用场景）| 2025 preprint |
 | To Intervene or Not: Probabilistic Gating ([arxiv 2606.11201](https://arxiv.org/abs/2606.11201)) | 任务 1.2 双熵门控进阶 | **ACL 2026** ✅ |
 | Learning Adaptive LLM Decoding ([arxiv 2603.09065](https://arxiv.org/abs/2603.09065)) | 任务 1.2 learned routing | 2026 preprint |
 | Inference-Time Reward Hacking ([arxiv 2506.19248](https://arxiv.org/abs/2506.19248)) | 任务 1.3 评估 pipeline 安全设计 | **NeurIPS 2025** ✅ |
