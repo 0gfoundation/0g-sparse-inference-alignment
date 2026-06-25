@@ -24,7 +24,7 @@ except ImportError:
 
 URL_DEFAULT = "http://localhost:8000"
 CONCURRENCY = 16
-MAX_TOKENS_SIA = 200
+MAX_TOKENS_SIA = 1024
 MAX_TOKENS_JUDGE = 60
 PASS_THRESHOLD = 14   # out of CONCURRENCY
 
@@ -52,10 +52,13 @@ PROMPTS = [
 JUDGE_SYSTEM = (
     "You are a response quality checker. "
     "You will be shown a user question and an AI-generated answer. "
+    "Note: the answer may begin with a thinking/reasoning section before the final answer — "
+    "this is normal for reasoning models; evaluate the overall response including the final answer.\n"
     "Decide whether the answer is acceptable:\n"
-    "  - PASS if the answer is coherent, addresses the question, contains no "
-    "garbled characters or random symbols, and does not loop/repeat endlessly.\n"
-    "  - FAIL otherwise.\n"
+    "  - PASS if the response is coherent, the final answer addresses the question, "
+    "contains no garbled characters or random symbols, and does not loop/repeat endlessly.\n"
+    "  - FAIL if the response is completely cut off before any answer is given, "
+    "is entirely off-topic, or contains obvious corruption.\n"
     "Reply with exactly one word on the first line: PASS or FAIL. "
     "Then optionally add a short reason on the second line."
 )
