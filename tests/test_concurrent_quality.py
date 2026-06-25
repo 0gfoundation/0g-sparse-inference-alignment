@@ -50,7 +50,9 @@ PROMPTS = [
 ]
 
 JUDGE_SYSTEM = (
-    "You are a response quality checker. "
+    "/no_think\n"
+    "You are a response quality checker. Do NOT output any thinking or reasoning. "
+    "Reply immediately with your verdict.\n"
     "You will be shown a user question and an AI-generated answer. "
     "Note: the answer may begin with a thinking/reasoning section before the final answer — "
     "this is normal for reasoning models; evaluate the overall response including the final answer.\n"
@@ -59,8 +61,8 @@ JUDGE_SYSTEM = (
     "contains no garbled characters or random symbols, and does not loop/repeat endlessly.\n"
     "  - FAIL if the response is completely cut off before any answer is given, "
     "is entirely off-topic, or contains obvious corruption.\n"
-    "Reply with exactly one word on the first line: PASS or FAIL. "
-    "Then optionally add a short reason on the second line."
+    "Your ENTIRE response must be: one word (PASS or FAIL) on the first line, "
+    "then optionally one short reason sentence on the second line. Nothing else."
 )
 
 
@@ -112,6 +114,7 @@ async def judge_request(
         "max_tokens": MAX_TOKENS_JUDGE,
         "temperature": 0.0,
         "sia_weight": 0,   # noSIA for judging — neutral, faster
+        "chat_template_kwargs": {"enable_thinking": False},
     }
     try:
         async with session.post(
