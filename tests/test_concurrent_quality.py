@@ -25,7 +25,7 @@ except ImportError:
 URL_DEFAULT = "http://localhost:8000"
 CONCURRENCY = 16
 MAX_TOKENS_SIA = 1024
-MAX_TOKENS_JUDGE = 60
+MAX_TOKENS_JUDGE = 512   # thinking model needs room to reason before outputting PASS/FAIL
 PASS_THRESHOLD = 14   # out of CONCURRENCY
 
 # Diverse prompts — different topics, styles, and expected answer shapes.
@@ -123,9 +123,21 @@ async def judge_request(
                 return False, f"judge HTTP {resp.status}"
             data = await resp.json()
             verdict = (data.get("choices") or [{}])[0].get("message", {}).get("content", "").strip()
-            first_line = verdict.split("\n")[0].strip().upper()
-            reason = verdict.split("\n")[1].strip() if "\n" in verdict else ""
-            passed = first_line.startswith("PASS")
+            # The judge model (0GM-35B) may emit a thinking section before its
+            # verdict. Scan all lines for the first one that starts with PASS or
+            # FAIL rather than only checking the first line.
+            passed = False
+            reason = ""
+            for line in verdict.split("\n"):
+                word = line.strip().upper()
+                if word.startswith("PASS"):
+                    passed = True
+                    reason = line.strip()
+                    break
+                if word.startswith("FAIL"):
+                    passed = False
+                    reason = line.strip()
+                    break
             return passed, reason
     except Exception as e:
         return False, f"judge error: {e}"
