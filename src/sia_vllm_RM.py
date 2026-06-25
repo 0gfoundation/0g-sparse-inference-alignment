@@ -204,6 +204,13 @@ def make_sia_processor(
         _RM_MAX_MODEL_LEN = rm_max_model_len
         _ENABLE_THINKING = enable_thinking   # None / True / False
 
+        # Maximum number of sessions per score_candidates_batch() call (b2 backend).
+        # Prevents RM KV-cache OOM at high concurrency: a single apply() with
+        # batch_size=128 and topk=10 would otherwise submit 1280 prompts at once,
+        # exhausting the RM's pre-allocated KV block pool.
+        # Set SIA_RM_BATCH_CHUNK=0 to disable chunking (original unlimited behavior).
+        _B2_BATCH_CHUNK: int = int(os.environ.get("SIA_RM_BATCH_CHUNK", "8"))
+
         # SIA client-side profiling (distinct from the RM_PROFILE server-side profiling)
         _PROFILE_DETAIL: bool = os.environ.get("SIA_PROFILE", "1") == "1"
         _PF_STATS_INTERVAL: int = int(os.environ.get("SIA_PF_INTERVAL", "100"))
@@ -1098,12 +1105,26 @@ def make_sia_processor(
 
                 if _b2_reqs:
                     _t_batch = time.perf_counter() if pf_on else 0.0
+                    # Chunk size: SIA_RM_BATCH_CHUNK sessions per call.
+                    # Prevents RM KV-cache OOM when batch_size×topk is large
+                    # (e.g. 128 sessions × 10 candidates = 1280 prompts).
+                    # Each chunk submits at most _B2_BATCH_CHUNK×topk prompts,
+                    # keeping peak RM block usage within the pre-allocated pool.
+                    # Chunk=0 disables chunking (original unlimited behavior).
+                    _chunk_sz = self._B2_BATCH_CHUNK
+                    _use_chunks = _chunk_sz > 0 and len(_b2_reqs) > _chunk_sz
+                    _chunks = (
+                        [_b2_reqs[_s:_s + _chunk_sz]
+                         for _s in range(0, len(_b2_reqs), _chunk_sz)]
+                        if _use_chunks else [_b2_reqs]
+                    )
                     try:
-                        _scores_list = self._rm.score_candidates_batch(
-                            [(_sid, _cands) for (_, _sid, _cands) in _b2_reqs]
-                        )
-                        for (_req_i, _, _), _s in zip(_b2_reqs, _scores_list):
-                            b2_batch_scores[_req_i] = _s
+                        for _chunk in _chunks:
+                            _chunk_scores = self._rm.score_candidates_batch(
+                                [(_sid, _cands) for (_, _sid, _cands) in _chunk]
+                            )
+                            for (_req_i, _, _), _s in zip(_chunk, _chunk_scores):
+                                b2_batch_scores[_req_i] = _s
                         if pf_on:
                             # Divide by N so b2_score_call stays per-request amortized,
                             # comparable to the sequential fallback path's values.
