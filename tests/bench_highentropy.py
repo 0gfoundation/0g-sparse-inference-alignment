@@ -266,6 +266,9 @@ async def do_stress_test(
           f" 或 失败率>{_STRESS_ERROR_THRESHOLD:.0%} 或 服务崩溃\n")
 
     while True:
+        if conc > max_conc:
+            stop_reason = f"已达上限 conc={max_conc}（可用 --stress-max-conc 调整）"
+            break
         total_reqs = conc * rounds
         print(f"  conc={conc:>4}  ({total_reqs} 请求)...", end=" ", flush=True)
 
