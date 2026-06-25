@@ -79,6 +79,43 @@ def make_prompt(target_input_tokens: int, reserve_output: int = 0) -> str:
     return _PHRASE * reps + "Summarize the above text in one sentence."
 
 
+# Realistic reading-comprehension prompt (~460 content tokens) used for the
+# concurrency sweep and stress test.  The phrase-repetition prompt produces
+# near-zero entropy at every token step; this passage requires genuine analysis
+# and yields a much higher SIA intervention rate.
+REALISTIC_PROMPT = (
+    "Antibiotics transformed medicine in the twentieth century. When Alexander Fleming "
+    "identified penicillin in 1928 and Howard Florey's team developed it into a clinical "
+    "treatment during World War II, bacterial infections that had killed millions—pneumonia, "
+    "sepsis, scarlet fever—became manageable with a short course of medication. By the 1950s, "
+    "pharmaceutical companies were competing to produce new antibiotic classes, and mortality "
+    "from infectious disease fell sharply across industrialized nations.\n\n"
+    "Yet the very success of antibiotics contained a long-term vulnerability. Bacteria reproduce "
+    "rapidly and mutate continuously. When a bacterial population is exposed to an antibiotic, "
+    "most individuals die, but those carrying mutations that confer resistance survive and "
+    "multiply. Over successive generations, resistant strains come to dominate. This evolutionary "
+    "process operates independently of human intent, and resistance genes spread laterally between "
+    "bacterial species and persist in soil, water, and livestock populations long after clinical "
+    "use has ended.\n\n"
+    "Agricultural practices have accelerated the problem considerably. Approximately seventy "
+    "percent of global antibiotic consumption occurs in livestock farming, frequently at "
+    "sub-therapeutic doses intended to promote growth rather than to treat active infections. "
+    "These conditions favor the selection and spread of resistant strains, which then enter food "
+    "systems, waterways, and human gut microbiomes. Regulatory responses have varied widely: the "
+    "European Union prohibited growth-promotion use in 2006, while enforcement in many "
+    "lower-income countries remains limited.\n\n"
+    "Meanwhile, the pipeline for new antibiotics has contracted sharply. Developing a novel "
+    "compound requires roughly a decade of clinical trials and approximately one billion dollars "
+    "in capital, yet the resulting drug must be used sparingly to preserve its effectiveness—"
+    "making the financial returns unattractive. Most large pharmaceutical companies withdrew from "
+    "antibiotic research between the 1980s and 2000s, leaving the field to academic laboratories "
+    "and small biotechnology firms with limited resources.\n\n"
+    "Based on the passage above, analyze what factors make antibiotic resistance particularly "
+    "difficult to address through standard market incentives and clinical guidelines alone. "
+    "Support your answer with specific evidence from the text."
+)
+
+
 def pct(data: list, p: float) -> float:
     if not data:
         return 0.0
@@ -270,7 +307,7 @@ def print_table(rows: list, title: str):
 
 async def do_concurrency_sweep(url: str, rounds: int, no_sia: bool):
     label = "noSIA" if no_sia else "SIA"
-    prompt = make_prompt(CONC_SWEEP_INPUT_TOKENS, CONC_SWEEP_OUTPUT_TOKENS)
+    prompt = REALISTIC_PROMPT
     rows = []
     print(f"\n[{label}] Concurrency Sweep — 进行中...")
     for conc in CONC_SWEEP_CONCURRENCIES:
@@ -292,7 +329,7 @@ async def do_concurrency_sweep(url: str, rounds: int, no_sia: bool):
     print_table(
         rows,
         f"Concurrency Sweep [{label}]  "
-        f"(target_input={CONC_SWEEP_INPUT_TOKENS}, max_out={CONC_SWEEP_OUTPUT_TOKENS})"
+        f"(realistic-prompt, max_out={CONC_SWEEP_OUTPUT_TOKENS})"
     )
 
 
@@ -386,7 +423,7 @@ async def do_stress_test(
     fail_fast: bool = False,
 ):
     label = "noSIA" if no_sia else "SIA"
-    prompt = make_prompt(CONC_SWEEP_INPUT_TOKENS, CONC_SWEEP_OUTPUT_TOKENS)
+    prompt = REALISTIC_PROMPT
     rows: list = []
 
     peak_tps   = 0.0
@@ -395,7 +432,7 @@ async def do_stress_test(
     conc = start_conc
 
     print(f"\n[{label}] Stress Test — 从 conc={conc} 开始，每档 {rounds} 轮，上限 conc={max_conc}")
-    print(f"  输入 ≈{CONC_SWEEP_INPUT_TOKENS} tokens，max_out={CONC_SWEEP_OUTPUT_TOKENS}")
+    print(f"  realistic-prompt，max_out={CONC_SWEEP_OUTPUT_TOKENS}")
     print(f"  停止条件：tok/s < 峰值×{_STRESS_DROP_THRESHOLD:.0%}（连续{_STRESS_DROP_CONSECUTIVE}档）"
           f" 或 失败率>{_STRESS_ERROR_THRESHOLD:.0%} 或 服务崩溃 或 conc>{max_conc}\n")
 
@@ -483,7 +520,7 @@ async def do_stress_test(
     print_table(
         rows,
         f"Stress Test [{label}]  "
-        f"(input≈{CONC_SWEEP_INPUT_TOKENS}, max_out={CONC_SWEEP_OUTPUT_TOKENS})"
+        f"(realistic-prompt, max_out={CONC_SWEEP_OUTPUT_TOKENS})"
     )
 
     # 找出峰值行
