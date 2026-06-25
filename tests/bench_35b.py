@@ -383,6 +383,7 @@ async def do_stress_test(
     max_conc: int,
     rounds: int,
     no_sia: bool,
+    fail_fast: bool = False,
 ):
     label = "noSIA" if no_sia else "SIA"
     prompt = make_prompt(CONC_SWEEP_INPUT_TOKENS, CONC_SWEEP_OUTPUT_TOKENS)
@@ -441,9 +442,10 @@ async def do_stress_test(
                          "skip": True, "reason": stop_reason})
             break
 
-        if fail_rate > _STRESS_ERROR_THRESHOLD:
+        err_threshold = 0.0 if fail_fast else _STRESS_ERROR_THRESHOLD
+        if fail_rate > err_threshold:
             print(f"FAIL (失败率 {fail_rate:.0%}，ok={len(ok)}/{total_reqs})")
-            stop_reason = f"失败率 {fail_rate:.0%} > {_STRESS_ERROR_THRESHOLD:.0%}"
+            stop_reason = f"失败率 {fail_rate:.0%} > {err_threshold:.0%}"
             rows.append({"conc": conc, "target": CONC_SWEEP_INPUT_TOKENS,
                          "skip": True, "reason": stop_reason})
             break
@@ -516,6 +518,8 @@ async def main():
                         help="每档重复轮数（默认 2，比常规压测少以加快探索）")
     parser.add_argument("--stress-max-conc", type=int, default=512,
                         help="压测并发上限，防止 KV cache OOM（默认 512）")
+    parser.add_argument("--fail-fast", action="store_true",
+                        help="任意请求失败立即停止（便于调试崩溃原因）")
     args = parser.parse_args()
 
     print(f"目标服务: {args.url}")
@@ -534,6 +538,7 @@ async def main():
                 max_conc=args.stress_max_conc,
                 rounds=args.stress_rounds,
                 no_sia=no_sia,
+                fail_fast=args.fail_fast,
             )
         print("\n压测完成。")
         return
