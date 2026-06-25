@@ -943,9 +943,23 @@ def make_sia_processor(
             n = len(output_ids)
             if n <= last_n:
                 return cached
-            tail_text = self._llm_tok.decode(
-                output_ids[last_n:], skip_special_tokens=True
-            )
+            tail_ids = output_ids[last_n:]
+            try:
+                tail_text = self._llm_tok.decode(tail_ids, skip_special_tokens=True)
+            except (OverflowError, ValueError) as _dec_err:
+                # Rare: vLLM may produce a token ID outside [0, vocab_size) under
+                # certain CUDA graph / sampling edge cases at high concurrency.
+                # Filter and log so we can identify the root cause without crashing.
+                vocab_size = self._llm_tok.vocab_size
+                bad = [t for t in tail_ids if not (isinstance(t, int) and 0 <= t < vocab_size)]
+                print(
+                    f"[SIA] WARNING req={req_idx}: token decode error ({_dec_err}); "
+                    f"bad ids={bad[:5]} (first 5 of {len(bad)}), tail_len={len(tail_ids)}. "
+                    f"Filtering and retrying.",
+                    flush=True,
+                )
+                safe_ids = [int(t) for t in tail_ids if isinstance(t, int) and 0 <= t < vocab_size]
+                tail_text = self._llm_tok.decode(safe_ids, skip_special_tokens=True)
             response = cached + tail_text
             if not tail_text.endswith("�"):
                 self._decoded_text[req_idx] = response
