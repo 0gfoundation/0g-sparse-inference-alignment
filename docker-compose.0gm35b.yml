@@ -41,6 +41,10 @@ services:
       # attempts runtime capture when it encounters a new batch_descriptor, triggering RuntimeError
       SIA_RM_CUDAGRAPH: "none"
       SIA_RM_MULTIPROCESS: "0"
+      # Chunk b2 RM scoring into groups of this many sessions per call to prevent
+      # RM KV-cache OOM at high concurrency (128+ sessions × topk=10 = 1280 prompts at once).
+      # Set to 0 to disable chunking (original behavior).
+      SIA_RM_BATCH_CHUNK: "8"
 
     command: >
       python src/sia_vllm_server.py

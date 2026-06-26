@@ -330,9 +330,15 @@ class RMClient:
                 # keeping every previous APC block's hash unchanged across steps.
                 stable = cached_ids
                 for i in range(delta):
-                    new_text = self._llm_tok.decode(
-                        [prefix[cached_len + i]], skip_special_tokens=False
-                    )
+                    tok_id = prefix[cached_len + i]
+                    try:
+                        new_text = self._llm_tok.decode(
+                            [tok_id], skip_special_tokens=False
+                        )
+                    except (OverflowError, ValueError) as _e:
+                        print(f"[RMClient] WARNING: prefix decode failed for token {tok_id} ({_e})",
+                              flush=True)
+                        new_text = ""
                     new_rm_ids = self._rm_tok.encode(
                         new_text, add_special_tokens=False
                     )
@@ -340,7 +346,15 @@ class RMClient:
                 self._rm_prefix_cache[sid] = (cur_len, stable)
                 return stable
         # First call for this session, or unexpected negative delta — full re-encode.
-        prefix_text = self._llm_tok.decode(prefix, skip_special_tokens=False)
+        try:
+            prefix_text = self._llm_tok.decode(prefix, skip_special_tokens=False)
+        except (OverflowError, ValueError) as _e:
+            vocab_size = self._llm_tok.vocab_size
+            bad = [t for t in prefix if not (isinstance(t, int) and 0 <= t < vocab_size)]
+            print(f"[RMClient] WARNING: full prefix decode failed ({_e}); bad ids={bad[:5]}, "
+                  f"filtering {len(bad)} of {len(prefix)} tokens", flush=True)
+            safe_prefix = [t for t in prefix if isinstance(t, int) and 0 <= t < vocab_size]
+            prefix_text = self._llm_tok.decode(safe_prefix, skip_special_tokens=False)
         stable = self._rm_tok.encode(prefix_text, add_special_tokens=False)
         self._rm_prefix_cache[sid] = (cur_len, stable)
         return stable
@@ -388,7 +402,14 @@ class RMClient:
             stable_rm_prefix_ids = self._get_stable_rm_prefix(sid, prefix)
             prompts = []
             for c in candidate_token_ids:
-                cand_text = self._llm_tok.decode([c], skip_special_tokens=False)
+                try:
+                    cand_text = self._llm_tok.decode([c], skip_special_tokens=False)
+                except (OverflowError, ValueError) as _e:
+                    # Invalid candidate token ID (out of u32 range or similar edge case).
+                    # Log for diagnosis; fall back to empty text to keep prompt count aligned.
+                    print(f"[RMClient] WARNING: decode failed for candidate {c} ({_e})",
+                          flush=True)
+                    cand_text = ""
                 cand_rm_ids = self._rm_tok.encode(
                     cand_text, add_special_tokens=False
                 )
@@ -477,7 +498,12 @@ class RMClient:
                 # with incremental cross-step caching — see score_candidates().
                 stable_rm_prefix_ids = self._get_stable_rm_prefix(sid, prefix)
                 for c in candidate_token_ids:
-                    cand_text = self._llm_tok.decode([c], skip_special_tokens=False)
+                    try:
+                        cand_text = self._llm_tok.decode([c], skip_special_tokens=False)
+                    except (OverflowError, ValueError) as _e:
+                        print(f"[RMClient] WARNING: decode failed for candidate {c} ({_e})",
+                              flush=True)
+                        cand_text = ""
                     cand_rm_ids = self._rm_tok.encode(
                         cand_text, add_special_tokens=False
                     )
