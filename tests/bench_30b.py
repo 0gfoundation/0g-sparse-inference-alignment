@@ -5,7 +5,11 @@
   1. Concurrency Sweep: input≈512 tokens, max_out=128, 并发 1/2/4/8/16
   2. Input-Length Sweep: 变化 input 长度，超过 max_model_len=4096 的组跳过
 
-指标：TTFT均值/p99, ITL均值, Req Latency均值, Output tok/s, Req/s
+极限压力模式：
+  3. Stress Test: 从 conc=1 起按 ~1.5× 梯度递增，直到吞吐严重下滑
+     或服务崩溃为止，测出最大可承载并发数。
+
+指标：TTFT均值/p99, ITL均值, Req Latency均值, Output tok/s, Req/s, TPM
 
 依赖：aiohttp（pip install aiohttp）
 
@@ -16,6 +20,11 @@
     python tests/bench_30b.py --only-concurrency  # 只跑并发扫描
     python tests/bench_30b.py --only-input        # 只跑输入长度扫描
     python tests/bench_30b.py --rounds 3          # 每档重复轮数（默认 3）
+    python tests/bench_30b.py --stress            # 极限并发压测（自动递增至崩溃）
+    python tests/bench_30b.py --stress --no-sia   # noSIA 极限压测
+    python tests/bench_30b.py --stress --stress-start 32   # 从 conc=32 开始
+    python tests/bench_30b.py --stress --stress-rounds 1   # 每档只跑 1 轮（更快）
+    python tests/bench_30b.py --fail-fast         # 任意请求失败立即停止
 """
 import argparse
 import asyncio
@@ -66,6 +75,43 @@ def make_prompt(target_input_tokens: int, reserve_output: int = 0) -> str:
         effective = max(1, target_input_tokens - _TEMPLATE_OVERHEAD)
     reps = max(1, int(effective / _PHRASE_TOKENS))
     return _PHRASE * reps + "Summarize the above text in one sentence."
+
+
+# Realistic reading-comprehension prompt (~460 content tokens) used for the
+# concurrency sweep and stress test.  The phrase-repetition prompt produces
+# near-zero entropy at every token step; this passage requires genuine analysis
+# and yields a much higher SIA intervention rate.
+REALISTIC_PROMPT = (
+    "Antibiotics transformed medicine in the twentieth century. When Alexander Fleming "
+    "identified penicillin in 1928 and Howard Florey's team developed it into a clinical "
+    "treatment during World War II, bacterial infections that had killed millions—pneumonia, "
+    "sepsis, scarlet fever—became manageable with a short course of medication. By the 1950s, "
+    "pharmaceutical companies were competing to produce new antibiotic classes, and mortality "
+    "from infectious disease fell sharply across industrialized nations.\n\n"
+    "Yet the very success of antibiotics contained a long-term vulnerability. Bacteria reproduce "
+    "rapidly and mutate continuously. When a bacterial population is exposed to an antibiotic, "
+    "most individuals die, but those carrying mutations that confer resistance survive and "
+    "multiply. Over successive generations, resistant strains come to dominate. This evolutionary "
+    "process operates independently of human intent, and resistance genes spread laterally between "
+    "bacterial species and persist in soil, water, and livestock populations long after clinical "
+    "use has ended.\n\n"
+    "Agricultural practices have accelerated the problem considerably. Approximately seventy "
+    "percent of global antibiotic consumption occurs in livestock farming, frequently at "
+    "sub-therapeutic doses intended to promote growth rather than to treat active infections. "
+    "These conditions favor the selection and spread of resistant strains, which then enter food "
+    "systems, waterways, and human gut microbiomes. Regulatory responses have varied widely: the "
+    "European Union prohibited growth-promotion use in 2006, while enforcement in many "
+    "lower-income countries remains limited.\n\n"
+    "Meanwhile, the pipeline for new antibiotics has contracted sharply. Developing a novel "
+    "compound requires roughly a decade of clinical trials and approximately one billion dollars "
+    "in capital, yet the resulting drug must be used sparingly to preserve its effectiveness—"
+    "making the financial returns unattractive. Most large pharmaceutical companies withdrew from "
+    "antibiotic research between the 1980s and 2000s, leaving the field to academic laboratories "
+    "and small biotechnology firms with limited resources.\n\n"
+    "Based on the passage above, analyze what factors make antibiotic resistance particularly "
+    "difficult to address through standard market incentives and clinical guidelines alone. "
+    "Support your answer with specific evidence from the text."
+)
 
 
 def pct(data: list, p: float) -> float:
@@ -147,7 +193,8 @@ async def one_request(
         error = str(exc)
 
     if not token_times:
-        return {"status": status or 0, "error": error or "no tokens received"}
+        # No tokens received → count as failure regardless of HTTP status.
+        return {"status": 0, "error": f"no tokens received (http={status})"}
 
     t_end = time.perf_counter()
     ttft_ms = (token_times[0] - t0) * 1000
@@ -206,8 +253,8 @@ def compute_metrics(ok: list, wall_s: float) -> dict:
     ttfts = [r["ttft_ms"] for r in ok if r.get("ttft_ms")]
     itls  = [r["itl_ms"]  for r in ok if r.get("itl_ms") and r["itl_ms"] > 0]
     lats  = [r["latency_ms"] for r in ok if r.get("latency_ms")]
-    pts   = [r["prompt_tokens"] for r in ok]
-    cts   = [r["completion_tokens"] for r in ok]
+    pts   = [r.get("prompt_tokens", 0) for r in ok]
+    cts   = [r.get("completion_tokens", 0) for r in ok]
     return {
         "n":          len(ok),
         "input_mean": int(statistics.mean(pts)) if pts else 0,
@@ -221,10 +268,10 @@ def compute_metrics(ok: list, wall_s: float) -> dict:
     }
 
 
-_COL = "  {conc:>4}  {inp:>7}  {out:>6}  {ttft_m:>10}  {ttft_p99:>9}  {itl:>9}  {lat:>9}  {tps:>10}  {rps:>6}"
-_HDR = "  {:>4}  {:>7}  {:>6}  {:>10}  {:>9}  {:>9}  {:>9}  {:>10}  {:>6}".format(
+_COL = "  {conc:>4}  {inp:>7}  {out:>6}  {ttft_m:>10}  {ttft_p99:>9}  {itl:>9}  {lat:>9}  {tps:>10}  {rps:>6}  {tpm:>7}"
+_HDR = "  {:>4}  {:>7}  {:>6}  {:>10}  {:>9}  {:>9}  {:>9}  {:>10}  {:>6}  {:>7}".format(
     "Conc", "Input", "Output", "TTFT mean", "TTFT p99", "ITL mean",
-    "Req Lat", "Out tok/s", "Req/s"
+    "Req Lat", "Out tok/s", "Req/s", "TPM"
 )
 _SEP = "  " + "─" * (len(_HDR) - 2)
 
@@ -251,13 +298,14 @@ def print_table(rows: list, title: str):
                 lat=f"{m['lat_mean']:.0f}ms",
                 tps=f"{m['out_tps']:.1f}",
                 rps=f"{m['req_s']:.2f}",
+                tpm=f"{m['out_tps']*60:.0f}",
             ))
     print(_SEP)
 
 
 async def do_concurrency_sweep(url: str, rounds: int, no_sia: bool):
     label = "noSIA" if no_sia else "SIA"
-    prompt = make_prompt(CONC_SWEEP_INPUT_TOKENS, CONC_SWEEP_OUTPUT_TOKENS)
+    prompt = REALISTIC_PROMPT
     rows = []
     print(f"\n[{label}] Concurrency Sweep — 进行中...")
     for conc in CONC_SWEEP_CONCURRENCIES:
@@ -279,7 +327,7 @@ async def do_concurrency_sweep(url: str, rounds: int, no_sia: bool):
     print_table(
         rows,
         f"Concurrency Sweep [{label}]  "
-        f"(target_input={CONC_SWEEP_INPUT_TOKENS}, max_out={CONC_SWEEP_OUTPUT_TOKENS})"
+        f"(realistic-prompt, max_out={CONC_SWEEP_OUTPUT_TOKENS})"
     )
 
 
@@ -326,6 +374,159 @@ async def check_health(url: str) -> bool:
         return False
 
 
+# ── Stress Test ────────────────────────────────────────────────────────────
+
+_STRESS_DROP_THRESHOLD   = 0.60
+_STRESS_DROP_CONSECUTIVE = 2
+_STRESS_ERROR_THRESHOLD  = 0.50
+_STRESS_OOM_KEYWORDS     = ("cuda out of memory", "oom", "out of memory",
+                             "cuDAError", "device-side assert")
+
+
+def _next_conc(conc: int) -> int:
+    """递增策略：
+    conc < 16  → 2×（1→2→4→8→16，覆盖低并发基线）
+    conc >= 16 → ~1.5×，凑整到 4 的倍数（<100）或 16 的倍数（≥100）
+    """
+    if conc < 16:
+        return conc * 2
+    raw = conc * 1.5
+    if raw < 100:
+        return max(conc + 1, int(round(raw / 4) * 4))
+    return max(conc + 1, int(round(raw / 16) * 16))
+
+
+def _is_oom(results: list) -> bool:
+    for r in results:
+        err = r.get("error", "") or ""
+        if any(kw in err.lower() for kw in _STRESS_OOM_KEYWORDS):
+            return True
+    return False
+
+
+def _is_server_down(results: list) -> bool:
+    if not results:
+        return True
+    return all(r.get("status", 0) == 0 for r in results)
+
+
+async def do_stress_test(
+    url: str,
+    start_conc: int,
+    max_conc: int,
+    rounds: int,
+    no_sia: bool,
+    fail_fast: bool = False,
+):
+    label = "noSIA" if no_sia else "SIA"
+    prompt = REALISTIC_PROMPT
+    rows: list = []
+
+    peak_tps   = 0.0
+    drop_count = 0
+    stop_reason = ""
+    conc = start_conc
+
+    print(f"\n[{label}] Stress Test — 从 conc={conc} 开始，每档 {rounds} 轮，上限 conc={max_conc}")
+    print(f"  realistic-prompt，max_out={CONC_SWEEP_OUTPUT_TOKENS}")
+    print(f"  停止条件：tok/s < 峰值×{_STRESS_DROP_THRESHOLD:.0%}（连续{_STRESS_DROP_CONSECUTIVE}档）"
+          f" 或 失败率>{_STRESS_ERROR_THRESHOLD:.0%} 或 服务崩溃 或 conc>{max_conc}\n")
+
+    while True:
+        total_reqs = conc * rounds
+        print(f"  conc={conc:>4}  ({total_reqs} 请求)...", end=" ", flush=True)
+
+        try:
+            all_results: list = []
+            async with aiohttp.ClientSession() as session:
+                t_start = time.perf_counter()
+                for _ in range(rounds):
+                    batch = await asyncio.gather(
+                        *[one_request(session, url, prompt,
+                                      CONC_SWEEP_OUTPUT_TOKENS, no_sia)
+                          for _ in range(conc)]
+                    )
+                    all_results.extend(batch)
+                wall_s = time.perf_counter() - t_start
+        except Exception as exc:
+            print(f"CRASH ({exc})")
+            stop_reason = f"异常崩溃: {exc}"
+            rows.append({"conc": conc, "target": CONC_SWEEP_INPUT_TOKENS,
+                         "skip": True, "reason": stop_reason})
+            break
+
+        ok = [r for r in all_results if r.get("status") == 200]
+        fail_rate = 1.0 - len(ok) / max(len(all_results), 1)
+
+        if _is_server_down(all_results):
+            print("CRASH (服务不可达)")
+            stop_reason = "服务崩溃/不可达"
+            rows.append({"conc": conc, "target": CONC_SWEEP_INPUT_TOKENS,
+                         "skip": True, "reason": stop_reason})
+            break
+
+        if _is_oom(all_results):
+            print("OOM")
+            stop_reason = "CUDA OOM"
+            rows.append({"conc": conc, "target": CONC_SWEEP_INPUT_TOKENS,
+                         "skip": True, "reason": stop_reason})
+            break
+
+        err_threshold = 0.0 if fail_fast else _STRESS_ERROR_THRESHOLD
+        if fail_rate > err_threshold:
+            print(f"FAIL (失败率 {fail_rate:.0%}，ok={len(ok)}/{total_reqs})")
+            stop_reason = f"失败率 {fail_rate:.0%} > {err_threshold:.0%}"
+            rows.append({"conc": conc, "target": CONC_SWEEP_INPUT_TOKENS,
+                         "skip": True, "reason": stop_reason})
+            break
+
+        m = compute_metrics(ok, wall_s)
+        tps = m.get("out_tps", 0.0)
+        rows.append({"conc": conc, "target": CONC_SWEEP_INPUT_TOKENS, "m": m,
+                     "fail_rate": fail_rate})
+
+        peak_tps = max(peak_tps, tps)
+        drop_flag = (peak_tps > 0 and tps < peak_tps * _STRESS_DROP_THRESHOLD)
+        drop_count = drop_count + 1 if drop_flag else 0
+
+        status_tag = f"↓{tps/peak_tps:.0%}" if drop_flag else "✓"
+        print(f"ok={len(ok)}/{total_reqs}  ITL={m['itl_mean']:.1f}ms  "
+              f"tok/s={tps:.1f}  TPM={tps*60:.0f}  {status_tag}  "
+              f"(fail={fail_rate:.0%})")
+
+        if drop_count >= _STRESS_DROP_CONSECUTIVE:
+            stop_reason = (f"tok/s={tps:.1f} < 峰值{peak_tps:.1f}×{_STRESS_DROP_THRESHOLD:.0%}"
+                           f"，连续 {drop_count} 档")
+            break
+
+        next_c = _next_conc(conc)
+        if next_c <= conc:
+            next_c = conc + max(4, conc // 4)
+        if next_c > max_conc:
+            stop_reason = f"已达上限 conc={max_conc}（可用 --stress-max-conc 调整）"
+            break
+        conc = next_c
+
+    print_table(
+        rows,
+        f"Stress Test [{label}]  "
+        f"(realistic-prompt, max_out={CONC_SWEEP_OUTPUT_TOKENS})"
+    )
+
+    best = max(
+        (r for r in rows if not r.get("skip")),
+        key=lambda r: r["m"].get("out_tps", 0),
+        default=None,
+    )
+    if best:
+        bm = best["m"]
+        print(f"\n  🏆 峰值吞吐：conc={best['conc']}  tok/s={bm['out_tps']:.1f}"
+              f"  ITL={bm['itl_mean']:.1f}ms"
+              f"  input={bm['input_mean']}tok  output={bm['out_mean']}tok")
+    if stop_reason:
+        print(f"  🛑 停止原因：{stop_reason}\n")
+
+
 async def main():
     parser = argparse.ArgumentParser(description="30B SIA 压测")
     parser.add_argument("--url", default=URL_DEFAULT)
@@ -334,6 +535,17 @@ async def main():
     parser.add_argument("--compare", action="store_true", help="SIA vs noSIA 对比")
     parser.add_argument("--only-concurrency", action="store_true", help="只跑并发扫描")
     parser.add_argument("--only-input", action="store_true", help="只跑输入长度扫描")
+    # ── 极限压测 ──────────────────────────────────────────────────────────────
+    parser.add_argument("--stress", action="store_true",
+                        help="极限并发压测：从 --stress-start 开始自动递增到崩溃")
+    parser.add_argument("--stress-start", type=int, default=1,
+                        help="压测起始并发数（默认 1）")
+    parser.add_argument("--stress-rounds", type=int, default=2,
+                        help="每档重复轮数（默认 2）")
+    parser.add_argument("--stress-max-conc", type=int, default=512,
+                        help="压测并发上限，防止 KV cache OOM（默认 512）")
+    parser.add_argument("--fail-fast", action="store_true",
+                        help="任意请求失败立即停止（便于调试崩溃原因）")
     args = parser.parse_args()
 
     print(f"目标服务: {args.url}")
@@ -342,6 +554,22 @@ async def main():
         sys.exit(1)
     print("✅ /health OK")
 
+    # ── 极限压测模式 ──────────────────────────────────────────────────────────
+    if args.stress:
+        modes = [False, True] if args.compare else [args.no_sia]
+        for no_sia in modes:
+            await do_stress_test(
+                args.url,
+                start_conc=args.stress_start,
+                max_conc=args.stress_max_conc,
+                rounds=args.stress_rounds,
+                no_sia=no_sia,
+                fail_fast=args.fail_fast,
+            )
+        print("\n压测完成。")
+        return
+
+    # ── 普通扫描模式 ──────────────────────────────────────────────────────────
     run_conc  = not args.only_input
     run_input = not args.only_concurrency
     modes     = [False, True] if args.compare else [args.no_sia]

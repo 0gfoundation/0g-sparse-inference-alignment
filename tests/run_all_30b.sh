@@ -4,12 +4,15 @@
 # 用法：
 #   bash tests/run_all_30b.sh                          # 默认 http://localhost:8000
 #   bash tests/run_all_30b.sh http://localhost:8000
-#   bash tests/run_all_30b.sh http://host:8000 --skip-vision
+#   bash tests/run_all_30b.sh http://host:8000 --skip-vision    # 跳过 vision（模型不支持时）
+#   bash tests/run_all_30b.sh http://host:8000 --skip-quality   # 跳过并发质量测试（耗时较长）
 
 URL="${1:-http://localhost:8000}"
 SKIP_VISION=0
+SKIP_QUALITY=0
 for arg in "$@"; do
-    [ "$arg" = "--skip-vision" ] && SKIP_VISION=1
+    [ "$arg" = "--skip-vision" ]  && SKIP_VISION=1
+    [ "$arg" = "--skip-quality" ] && SKIP_QUALITY=1
 done
 
 PASS=0
@@ -57,6 +60,11 @@ run "V8b 空 messages → 400"         tests/test_30b_v8b.py
 run "V8c context 超长 → 400"        tests/test_30b_v8c.py
 run "    /v1/models 字段"           tests/test_30b_model_id.py
 run "    长上下文（max_model_len）"  tests/test_30b_long_context.py
+if [ "$SKIP_QUALITY" -eq 1 ]; then
+    skip "并发质量（conc=16 SIA+noSIA judge）"
+else
+    run "并发质量（conc=16 SIA+noSIA judge）" tests/test_concurrent_quality.py
+fi
 
 TOTAL=$((PASS + FAIL + SKIP))
 echo "════════════════════════════════════════════"
