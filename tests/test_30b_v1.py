@@ -1,7 +1,7 @@
 """
 V1  OpenAI 兼容接口（30B）
 
-PASS: HTTP 200, choices[0].message.content 非空, finish_reason 非 null
+PASS: HTTP 200, choices[0].message.content 非空, finish_reason 合法（stop/length）
 """
 import argparse, sys
 import requests
@@ -31,11 +31,11 @@ def check(url: str) -> bool:
     content = choices[0].get("message", {}).get("content", "") if ok_choices else ""
     finish = choices[0].get("finish_reason") if ok_choices else None
     ok_content = bool(content)
-    ok_finish = finish is not None
+    ok_finish = finish in ("stop", "length")
 
     print(f"  choices        : {len(choices)}  {'✅' if ok_choices else '❌'}")
     print(f"  content        : {content[:60]!r}  {'✅' if ok_content else '❌'}")
-    print(f"  finish_reason  : {finish!r}  {'✅' if ok_finish else '❌'}")
+    print(f"  finish_reason  : {finish!r}  {'✅' if ok_finish else '❌ 期望 stop/length'}")
     return ok_choices and ok_content and ok_finish
 
 
