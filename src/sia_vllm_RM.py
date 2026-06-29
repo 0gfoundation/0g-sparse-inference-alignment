@@ -323,6 +323,8 @@ def make_sia_processor(
                 # b2 backend phases (RMClient call internals — within one INTERVENE call)
                 "b2_prefix_adv":    [],   # _prepare_b2_session (session init + fix_a_token)
                 "b2_score_call":    [],   # RMClient.score_candidates end-to-end (amortized per-request)
+                "b2_batch_wall_abs":[],   # score_candidates_batch() absolute wall (not amortized; per INTERVENE step)
+                "intv_batch_size":  [],   # number of sessions batched per INTERVENE step (len(_b2_reqs))
                 "total":            [],   # one INTERVENE call end-to-end
 
                 # === apply() sub-phases (per-token) — added 2026-06-01 ===
@@ -332,11 +334,13 @@ def make_sia_processor(
                 "apply_cpu_sync":   [],   # entropy.cpu().tolist() (GPU->CPU sync wait)
                 "skip_step":        [],   # SKIP path only (from sync completion to apply return)
                 # Additional sub-phases for INTERVENE path only (subset of apply() time):
+                "apply_intv_step":  [],   # apply() total wall on steps where ≥1 request intervenes
                 "intv_prepare":     [],   # topk_indices.cpu().tolist() + output_ids/user_content retrieval
                 "intv_apply_logits":[],   # mean-norm + .to(gpu) + index_add_ + flip
             }
             self._pf_intervene_calls: int = 0
-            self._pf_apply_calls: int = 0  # incremented on every apply call (used to set per-token level interval)
+            self._pf_apply_calls: int = 0    # incremented on every apply call (used to set per-token level interval)
+            self._pf_total_req_steps: int = 0  # sum of batch_size across all apply() calls (denominator for rate)
 
             # Dual-VM log counter (used to rate-limit error messages)
             self._dual_vm_call_count: int = 0
@@ -629,6 +633,22 @@ def make_sia_processor(
             self._pf_intervene_calls += 1
             if self._pf_intervene_calls % self._PF_STATS_INTERVAL != 0:
                 return
+            # Rate header: intervention rate and average batch size per step
+            intv_rate = (
+                self._pf_intervene_calls / self._pf_total_req_steps * 100
+                if self._pf_total_req_steps > 0 else 0.0
+            )
+            bs_arr = self._pf_stats.get("intv_batch_size", [])
+            avg_batch = sum(bs_arr) / len(bs_arr) if bs_arr else 0.0
+            print(
+                f"[SIA-pf-rate @{self._pf_intervene_calls}] "
+                f"intv_calls={self._pf_intervene_calls} "
+                f"apply_steps={self._pf_apply_calls} "
+                f"req_slots={self._pf_total_req_steps} "
+                f"intv_rate={intv_rate:.1f}% "
+                f"avg_intv_batch={avg_batch:.2f}",
+                flush=True,
+            )
             parts = []
             for phase, arr in self._pf_stats.items():
                 if not arr:
@@ -1140,9 +1160,12 @@ def make_sia_processor(
                             for (_req_i, _, _), _s in zip(_chunk, _chunk_scores):
                                 b2_batch_scores[_req_i] = _s
                         if pf_on:
-                            # Divide by N so b2_score_call stays per-request amortized,
-                            # comparable to the sequential fallback path's values.
-                            _amortized_ms = (time.perf_counter() - _t_batch) * 1000 / len(_b2_reqs)
+                            _batch_wall_ms = (time.perf_counter() - _t_batch) * 1000
+                            # Absolute batch wall (one record per INTERVENE step, regardless of N)
+                            self._pf_record("b2_batch_wall_abs", _batch_wall_ms)
+                            self._pf_record("intv_batch_size", float(len(_b2_reqs)))
+                            # Per-request amortized (divide by N so it's comparable to sequential path)
+                            _amortized_ms = _batch_wall_ms / len(_b2_reqs)
                             for _ in _b2_reqs:
                                 self._pf_record("b2_score_call", _amortized_ms)
                                 self._pf_summary_if_due()
@@ -1300,17 +1323,19 @@ def make_sia_processor(
             # === apply() exit: record overall timing + distinguish SKIP/INTERVENE paths ===
             if pf_on:
                 t_apply_end = time.perf_counter()
-                self._pf_record("apply_total",
-                                (t_apply_end - t_apply_start) * 1000)
+                _apply_ms = (t_apply_end - t_apply_start) * 1000
+                self._pf_record("apply_total", _apply_ms)
                 self._pf_record("apply_topk_ent",
                                 (t_after_gpu_dispatch - t_apply_start) * 1000)
                 self._pf_record("apply_cpu_sync",
                                 (t_after_sync - t_after_gpu_dispatch) * 1000)
-                # If this step was a pure SKIP (nobody intervened), record skip_step (apply() total time)
-                if not any(intervene_flags):
-                    self._pf_record("skip_step",
-                                    (t_apply_end - t_apply_start) * 1000)
+                _any_intv = any(intervene_flags)
+                if _any_intv:
+                    self._pf_record("apply_intv_step", _apply_ms)
+                else:
+                    self._pf_record("skip_step", _apply_ms)
                 self._pf_apply_calls += 1
+                self._pf_total_req_steps += batch_size
                 # apply is called ~3x more often than INTERVENE (33% intervention rate);
                 # just wait for the INTERVENE-driven summary trigger: by then apply has accumulated
                 # 300+ calls and SKIP data has converged. New phases (apply_*, intv_*, skip_step)
