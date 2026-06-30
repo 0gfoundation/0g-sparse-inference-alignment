@@ -427,3 +427,189 @@ the highest-leverage option.
 **If dual-gating quality holds**: consider smaller VM only after measuring its quality impact.
 The engineering cost (retraining) is high and the throughput gain (~50-60% vs 34% baseline)
 is substantially less than dual-gating (~91%).
+
+---
+
+## 10. Eager VM Prefill Experiment (2026-06-30)
+
+### 10.1 Motivation and Idea
+
+At each decode step, before `apply()` returns, we know the "next predicted token" for every
+active request:
+- **Intervening requests**: the post-intervention best token (`post_top1`, highest weighted score)
+- **Skip requests**: the top-1 raw logit token
+
+The hypothesis: if we immediately call `VM.generate([prefix + predicted_tok])` for all 16
+sessions in a single batched call after each decode step, vLLM's APC will cache the KV blocks
+for that prefix. At the **next** intervention step, scoring queries `[prefix + predicted_tok + candidate_j]`,
+and if `predicted_tok == actual_sampled_tok` (APC hit), the VM only needs to compute `candidate_j`'s
+KV — eliminating the full prefix prefill latency.
+
+This was proposed as a way to convert "prefill cost at INTERVENE time" into "small decode cost
+spread across all steps," with the expectation that APC would make subsequent scoring nearly free.
+
+### 10.2 Implementation
+
+Three files were modified (commit `6692eb1`):
+
+**`src/sia_rm/client.py`** — added `eager_prefill_batch()`:
+```python
+def eager_prefill_batch(self, requests: list) -> None:
+    if self._cross_tokenizer:
+        return
+    prompts = [TokensPrompt(prompt_token_ids=self._sessions[sid] + [int(tok)])
+               for sid, tok in requests if sid in self._sessions]
+    if not prompts:
+        return
+    if not self._multiprocessing:
+        clear_inproc_rewards(self._fid)
+    self.llm.generate(prompts, self._sp, use_tqdm=False)
+    if not self._multiprocessing:
+        take_inproc_rewards(self._fid)  # discard scores; only wanted the KV cache
+```
+Key: `_sessions[sid]` is NOT modified (no `fix_a_token` on predicted token), so the
+session state remains valid for the next real scoring call.
+
+**`src/sia_vllm_RM.py`** — after the per-item loop and logit modification, added:
+```python
+if self._RM_BACKEND == "b2" and self._EAGER_VM_PREFILL:
+    # Advance session state with any tokens sampled since last fix_a_token
+    for _i in range(batch_size):
+        _out[_n_vm:]  →  fix_a_token for each
+    # Collect predicted token per request
+    _pred = _eager_intv_best[_i]   # intervening: post-intervention top-1
+          / topk_indices[_i][0]    # skip at intervene step: raw top-1
+          / argmax_all[_i]         # pure skip step
+    eager_prefill_batch(_eager_reqs)
+    _pf_record("b2_eager_wall", elapsed_ms)
+```
+The eager block runs at **every** `apply()` call, not just INTERVENE steps, so skip-step
+tokens also accumulate in the VM cache.
+
+**`docker-compose.yml`** — added `--eager_vm_prefill` flag (commit `65a9357`).
+
+### 10.3 Deployment Bug: `docker compose restart` vs `docker compose up -d`
+
+First benchmark after commit showed no improvement and `b2_eager_wall` completely absent
+from pf-summary. Investigation:
+
+1. `grep 'b2_eager_wall' docker logs` → 0 matches
+2. Added diagnostic print: `[SIA] __init__ _EAGER_VM_PREFILL=False _RM_BACKEND=b2`
+3. Banner confirmed: `eager_vm_prefill=False`
+
+Root cause: **`docker compose restart` reuses the existing container's CMD** (the command
+baked at container creation time). It does NOT re-read `docker-compose.yml`. Since the
+container was originally created before commit `65a9357` added `--eager_vm_prefill`, the
+flag was never passed to the server despite being in the YAML.
+
+Fix: `docker compose up -d` detects that the command changed and recreates the container.
+After this, `eager_vm_prefill=True` appeared in the banner and `_EAGER_VM_PREFILL=True`
+in the EngineCore subprocess.
+
+**Lesson**: for command-line changes in `docker-compose.yml`, always use `docker compose up -d`,
+never `docker compose restart`.
+
+### 10.4 Experimental Results
+
+All runs: conc=16, `--stress-start 16 --stress-rounds 1 --stress-max-conc 16`,
+realistic-prompt, max_out=128, `--topk 10 --weight 1.0 --entropy_threshold 1.0 --logit_gap_threshold 3.0`.
+
+**Baseline (without `--eager_vm_prefill`)**:
+
+```
+Conc=16: ITL=58.9ms  tok/s=256.3
+
+[SIA-pf-summary @300]
+b2_batch_wall_abs: p50=35.29  p95=81.37   ms
+apply_cpu_sync:    p50=16.94  p95=20.26   ms
+skip_step:         p50=12.37  p95=20.33   ms
+apply_intv_step:   p50=61.19  p95=114.58  ms
+(b2_eager_wall: absent)
+```
+
+**With `--eager_vm_prefill`**:
+
+```
+Conc=16: ITL=60.2ms  tok/s=229.6
+
+[SIA-pf-summary @300]
+b2_eager_wall:     p50=20.87  p95=27.85   ms   ← new overhead
+b2_batch_wall_abs: p50=28.22  p95=72.81   ms   ← improved (APC working)
+apply_cpu_sync:    p50=7.66   p95=15.38   ms   ← improved
+skip_step:         p50=14.61  p95=44.54   ms   ← worsened
+apply_intv_step:   p50=62.41  p95=106.99  ms   ← same
+```
+
+### 10.5 Analysis
+
+**APC is working, but the benefit is small:**
+
+| Metric | Without eager | With eager | Delta |
+|--------|--------------|------------|-------|
+| `b2_batch_wall_abs` (scoring) | 35ms | 28ms | −7ms ✓ |
+| `b2_eager_wall` (new overhead) | 0ms | 21ms | +21ms ✗ |
+| `apply_cpu_sync` | 17ms | 8ms | −9ms ✓ |
+| `skip_step` | 12ms | 15ms | +3ms ✗ |
+| `apply_intv_step` | 61ms | 62ms | +1ms ✗ |
+| ITL | 58.9ms | 60.2ms | +1.3ms ✗ |
+
+APC reduced scoring from 35ms to 28ms (−7ms), confirming the hypothesis works at the
+caching layer. The `apply_cpu_sync` improvement (−9ms) is a beneficial side-effect:
+the eager prefill "fills" the GPU pipeline so the main LLM's topk computation has less
+contention with residual VM computation from the previous step.
+
+**Why the net result is still negative:**
+
+The eager prefill costs **21ms on every single apply() call**, regardless of whether
+that step intervenes or not. At conc=16 with 95% step intervention rate, this translates to:
+
+```
+Savings:  7ms (scoring APC) × ~5% effective + 9ms (cpu_sync) ≈ 9.35ms per step
+Cost:    21ms (eager prefill) × 100% of steps           = 21ms per step
+Net:     −11.65ms (slower overall)
+```
+
+**Root cause — VM is memory-bandwidth bound:**
+
+The `b2_eager_wall: p50=21ms` for 16 single-token prompts (with APC hitting on all
+prefix blocks) reveals the minimum floor. With perfect APC, the VM still needs to
+**load all 4B model weights** from HBM every forward pass. At ~2TB/s GPU bandwidth,
+loading 8GB (4B params × bfloat16) alone takes ~4ms, and with PIECEWISE CUDA graph
+overhead and 16-session decode step, the irreducible minimum is ~21ms regardless of
+token count.
+
+APC saves attention computation but **not weight loading**. Since weight loading
+dominates (the model is memory-bandwidth bound, not compute-bound), APC gives only
+marginal scoring speedup (~7ms out of 35ms total).
+
+The eager prefill would only be net-positive if it ran infrequently relative to the
+scoring savings. At the observed intervention rate (~5% per request per step), an
+eager prefill every N=4 steps would break even — but that is equivalent to simply
+reducing VM call frequency with block-wise scoring, which avoids the eager overhead
+entirely.
+
+**Comparison with the intervention rate context:**
+
+| Metric | Value |
+|--------|-------|
+| VM forward pass (min, with full APC) | ~21ms |
+| Scoring call improvement from APC    | −7ms (35→28ms) |
+| Steps between interventions (avg)    | ~1/0.05 = 20 steps |
+| Eager calls to recoup 1 scoring save | 21ms / 7ms = 3× |
+| Required: eager every N steps        | N ≥ 3 for break-even |
+| Actual: eager every step             | N = 1 → always net negative |
+
+### 10.6 Conclusion
+
+**Eager VM prefill does not improve throughput for VL-30B + VM-Qwen3-4B.**
+
+The mechanism is sound (APC reduces scoring latency by 7ms) but the economics are unfavorable:
+the eager call runs at every step and costs 21ms, while scoring benefits only on intervene
+steps (~5% of request-steps). The VM model's memory-bandwidth-bound nature means the
+minimum eager cost (weight loading) cannot be eliminated even with perfect APC.
+
+The feature has been removed from `docker-compose.yml`. The code implementation
+(`--eager_vm_prefill` flag and `eager_prefill_batch()`) is retained in the codebase for
+reference — it would become beneficial only in a configuration where VM calls are
+infrequent (e.g., combined with block-wise scoring reducing intervention rate to <5%
+of steps, making the eager overhead amortized across many scoring saves).
