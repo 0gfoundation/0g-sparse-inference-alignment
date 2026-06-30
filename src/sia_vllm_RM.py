@@ -159,6 +159,7 @@ def make_sia_processor(
     topk: int = 10,
     weight: float = 1.0,
     entropy_threshold: Optional[float] = None,
+    logit_gap_threshold: Optional[float] = None,
     rm_backend: str = "pytorch",       # "pytorch" / "vllm" / "b2"
     rm_model: Optional[str] = None,    # required when rm_backend ∈ {"vllm","b2"}: RM model path
     use_token_ids: bool = False,       # C2: client pre-tokenizes and sends token_ids directly to RM
@@ -199,6 +200,7 @@ def make_sia_processor(
         _TOPK = topk
         _WEIGHT = weight
         _ENTROPY_THRESHOLD = entropy_threshold
+        _GAP_THRESHOLD = logit_gap_threshold   # second gate: SKIP when top1-top2 logit gap >= this
         _USE_TOKEN_IDS = use_token_ids
         _RM_B2_GPU_MEM = rm_b2_gpu_mem
         _RM_MAX_MODEL_LEN = rm_max_model_len
@@ -1029,11 +1031,13 @@ def make_sia_processor(
             # (but GPU still running); t_after_sync = GPU pipeline wait complete triggered by .cpu()
             t_after_gpu_dispatch = time.perf_counter() if pf_on else 0.0
 
-            # Single GPU->CPU sync (replaces per-item .item() in the original code)
-            # ===== SIA DEBUG HISTOGRAM START =====
-            # When SIA_DEBUG_HIST=1, merge entropy + top1/top2 gap into a single sync
-            # (avoids introducing an extra CUDA sync round-trip).
-            if self._DEBUG_HIST:
+            # Single GPU->CPU sync (replaces per-item .item() in the original code).
+            # Merge entropy + logit gap into one sync when either dual-gating or DEBUG_HIST
+            # needs the gap — avoids a second GPU→CPU round-trip.
+            # logit gap = top1_logit - top2_logit (raw logit space; equivalent to log-prob ratio).
+            # ===== SIA DEBUG HISTOGRAM START (gap_values also used by dual-gating below) =====
+            _need_gap = (self._GAP_THRESHOLD is not None) or self._DEBUG_HIST
+            if _need_gap:
                 gap_tensor = entropy_topk_result.values[:, 0] - entropy_topk_result.values[:, 1]  # (batch,)
                 # Sync entropy + gap together in one call; saves one round-trip vs separate .cpu() calls
                 combined = torch.stack([entropies, gap_tensor], dim=1)  # (batch, 2)
@@ -1072,19 +1076,40 @@ def make_sia_processor(
                         self._dbg_entropy_hist_outthink.setdefault(bi, [0]*16)[eb] += 1
             # ===== SIA DEBUG HISTOGRAM END =====
 
-            # Make SKIP/INTERVENE decisions on CPU (no further sync triggered)
+            # Make SKIP/INTERVENE decisions on CPU (no further sync triggered).
+            # Dual-gating: INTERVENE only when entropy gate passes AND gap gate passes.
+            #   entropy gate: entropy >= _ENTROPY_THRESHOLD  (or no threshold → always pass)
+            #   gap gate:     logit_gap < _GAP_THRESHOLD     (or no threshold → always pass)
+            # Either gate can be disabled independently (set to None).
+            _gap_thr = self._GAP_THRESHOLD
             if self._ENTROPY_THRESHOLD is not None:
-                intervene_flags = [
-                    e >= self._ENTROPY_THRESHOLD for e in entropy_values
-                ]
+                if _gap_thr is not None:
+                    intervene_flags = [
+                        e >= self._ENTROPY_THRESHOLD and g < _gap_thr
+                        for e, g in zip(entropy_values, gap_values)
+                    ]
+                else:
+                    intervene_flags = [
+                        e >= self._ENTROPY_THRESHOLD for e in entropy_values
+                    ]
             else:
-                intervene_flags = [True] * batch_size
-            # Override per-request entropy threshold where set
+                if _gap_thr is not None:
+                    intervene_flags = [g < _gap_thr for g in gap_values]
+                else:
+                    intervene_flags = [True] * batch_size
+            # Override per-request entropy threshold where set.
+            # Per-request thr=None means "force intervene" — bypasses both gates.
+            # Per-request thr=value applies entropy gate; gap gate still applies.
             if self._entropy_per_req:
                 for i in range(batch_size):
                     if i in self._entropy_per_req:
                         thr = self._entropy_per_req[i]
-                        intervene_flags[i] = (thr is None) or (entropy_values[i] >= thr)
+                        if thr is None:
+                            intervene_flags[i] = True  # force: bypass both gates
+                        else:
+                            entropy_ok = entropy_values[i] >= thr
+                            gap_ok = (_gap_thr is None) or (gap_values[i] < _gap_thr)
+                            intervene_flags[i] = entropy_ok and gap_ok
 
             # Only pull topk_indices to CPU if at least one request will INTERVENE; pure SKIP saves a sync.
             # A-2: topk_values_lists no longer needed — flip detection uses GPU argmax path;
@@ -1195,10 +1220,17 @@ def make_sia_processor(
                 if not intervene_flags[i]:
                     if verbose:
                         req_step = self._total_steps[i]
+                        gap_val = gap_values[i] if gap_values is not None else None
+                        if self._ENTROPY_THRESHOLD is not None and entropy < self._ENTROPY_THRESHOLD:
+                            skip_reason = f"entropy={entropy:.3f} < {self._ENTROPY_THRESHOLD}"
+                        elif gap_val is not None and self._GAP_THRESHOLD is not None and gap_val >= self._GAP_THRESHOLD:
+                            skip_reason = f"gap={gap_val:.3f} >= {self._GAP_THRESHOLD}"
+                        else:
+                            skip_reason = f"entropy={entropy:.3f}"
                         print(
                             f"[SIA] {time.strftime('%H:%M:%S')}.{int(time.time() % 1 * 1_000_000):06d} "
                             f"step={req_step:3d} req={i} "
-                            f"SKIP (entropy={entropy:.3f} < {self._ENTROPY_THRESHOLD})",
+                            f"SKIP ({skip_reason})",
                             flush=True,
                         )
                     continue
@@ -1589,6 +1621,11 @@ def parse_args():
     p.add_argument("--max_tokens", type=int,  default=128)
     p.add_argument("--temperature", type=float, default=0.7)
     p.add_argument("--entropy_threshold", type=float, default=None)
+    p.add_argument("--logit_gap_threshold", type=float, default=None,
+                   help="Dual-gate: skip VM scoring when top1-top2 logit gap >= this value "
+                        "(None=disabled; 0 would skip everything since gap is always>=0). "
+                        "Reduces intervention rate. Requires AlpacaEval A/B validation before "
+                        "production use.")
     p.add_argument("--prompt", type=str,
                    default="Human:\nTell me a joke.\nAssistant:\n")
     p.add_argument("--max_model_len", type=int, default=2048)
@@ -1602,7 +1639,8 @@ def main():
     print(f"LLM      : {args.llm}")
     print(f"RM URL   : {args.rm_url}")
     print(f"topk={args.topk}  weight={args.weight}  "
-          f"entropy_threshold={args.entropy_threshold}")
+          f"entropy_threshold={args.entropy_threshold}  "
+          f"logit_gap_threshold={args.logit_gap_threshold}")
     print("=" * 60)
 
     SIAProcessor = make_sia_processor(
@@ -1610,6 +1648,7 @@ def main():
         topk=args.topk,
         weight=args.weight,
         entropy_threshold=args.entropy_threshold,
+        logit_gap_threshold=args.logit_gap_threshold,
         rm_backend=args.rm_backend,
         rm_model=args.rm_model,
         rm_b2_gpu_mem=args.rm_b2_gpu_mem,

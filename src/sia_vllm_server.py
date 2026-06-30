@@ -635,6 +635,10 @@ def parse_args():
     p.add_argument("--topk",      type=int,   default=10)
     p.add_argument("--weight",    type=float, default=1.0)
     p.add_argument("--entropy_threshold", type=float, default=None)
+    p.add_argument("--logit_gap_threshold", type=float, default=None,
+                   help="Dual-gate: skip VM scoring when top1-top2 logit gap >= this value "
+                        "(None=disabled). Reduces intervention rate without extra GPU sync. "
+                        "Validate with AlpacaEval A/B before enabling in production.")
     p.add_argument("--use_token_ids", action="store_true",
                    help="When rm_backend=vllm: pre-tokenize on the client and send token_ids to RM, "
                         "saving server-side re-tokenize (~3-5ms/call). Requires RM server to be "
@@ -698,6 +702,7 @@ def main():
           + (f"  model={_args.rm_model}" if _args.rm_backend == "vllm" else ""))
     print(f"topk={_args.topk}  weight={_args.weight}  "
           f"entropy_threshold={_args.entropy_threshold}  "
+          f"logit_gap_threshold={_args.logit_gap_threshold}  "
           f"use_token_ids={_args.use_token_ids}")
     print(f"Server   : http://{_args.host}:{_args.port}")
     print("=" * 60)
@@ -723,6 +728,7 @@ def main():
             topk=_args.topk,
             weight=_args.weight,
             entropy_threshold=_args.entropy_threshold,
+            logit_gap_threshold=_args.logit_gap_threshold,
             rm_backend=_args.rm_backend,
             rm_model=_args.rm_model,
             use_token_ids=_args.use_token_ids,
