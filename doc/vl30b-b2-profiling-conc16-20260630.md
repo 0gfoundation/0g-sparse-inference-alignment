@@ -318,3 +318,112 @@ AlpacaEval 200Q:
 
 Recommended tuning order: start at `gap_threshold=5.0`, verify quality, then tighten to
 3.0, then 1.5. Stop at the largest threshold that passes the paired t-test.
+
+---
+
+## 9. Batch Debug Experiment — Linear Scaling Hypothesis Disproven (2026-06-30)
+
+### 9.1 Background
+
+Section 4 proposed that the VM's linear batch scaling (9ms/session) was caused by vLLM
+internally splitting N×K prompts into N separate `compute_logits` calls — one per session —
+because the PIECEWISE CUDA graph only captures `batch_size=K=10`.
+
+To verify, `SIA_RM_BATCH_DEBUG=1` instrumentation was added to `score_candidates_batch()`:
+after `llm.generate()` returns, the code reads `_REWARD_BUFFERS[fid]` (populated by one
+entry per `compute_logits` call) and prints the call count and per-call sample sizes.
+
+### 9.2 Raw Debug Output
+
+```
+(EngineCore_DP0 pid=76) [RM-batch-debug] sessions=8 total_prompts=80 compute_logits_calls=1 samples_per_call=[80]
+(EngineCore_DP0 pid=76) [RM-batch-debug] sessions=4 total_prompts=40 compute_logits_calls=1 samples_per_call=[40]
+(EngineCore_DP0 pid=76) [RM-batch-debug] sessions=4 total_prompts=40 compute_logits_calls=1 samples_per_call=[40]
+(EngineCore_DP0 pid=76) [RM-batch-debug] sessions=7 total_prompts=70 compute_logits_calls=1 samples_per_call=[70]
+(EngineCore_DP0 pid=76) [RM-batch-debug] sessions=8 total_prompts=80 compute_logits_calls=1 samples_per_call=[80]
+(EngineCore_DP0 pid=76) [RM-batch-debug] sessions=5 total_prompts=50 compute_logits_calls=1 samples_per_call=[50]
+(EngineCore_DP0 pid=76) [RM-batch-debug] sessions=7 total_prompts=70 compute_logits_calls=1 samples_per_call=[70]
+(EngineCore_DP0 pid=76) [RM-batch-debug] sessions=6 total_prompts=60 compute_logits_calls=1 samples_per_call=[60]
+(EngineCore_DP0 pid=76) [RM-batch-debug] sessions=2 total_prompts=20 compute_logits_calls=1 samples_per_call=[20]
+(EngineCore_DP0 pid=76) [RM-batch-debug] sessions=3 total_prompts=30 compute_logits_calls=1 samples_per_call=[30]
+(EngineCore_DP0 pid=76) [RM-batch-debug] sessions=2 total_prompts=20 compute_logits_calls=1 samples_per_call=[20]
+(EngineCore_DP0 pid=76) [RM-batch-debug] sessions=3 total_prompts=30 compute_logits_calls=1 samples_per_call=[30]
+(EngineCore_DP0 pid=76) [RM-batch-debug] sessions=8 total_prompts=80 compute_logits_calls=1 samples_per_call=[80]
+(EngineCore_DP0 pid=76) [RM-batch-debug] sessions=3 total_prompts=30 compute_logits_calls=1 samples_per_call=[30]
+(EngineCore_DP0 pid=76) [RM-batch-debug] sessions=4 total_prompts=40 compute_logits_calls=1 samples_per_call=[40]
+(EngineCore_DP0 pid=76) [RM-batch-debug] sessions=8 total_prompts=80 compute_logits_calls=1 samples_per_call=[80]
+(EngineCore_DP0 pid=76) [RM-batch-debug] sessions=3 total_prompts=30 compute_logits_calls=1 samples_per_call=[30]
+(EngineCore_DP0 pid=76) [RM-batch-debug] sessions=2 total_prompts=20 compute_logits_calls=1 samples_per_call=[20]
+(EngineCore_DP0 pid=76) [RM-batch-debug] sessions=2 total_prompts=20 compute_logits_calls=1 samples_per_call=[20]
+```
+
+Side note: the `(EngineCore_DP0 pid=76)` prefix reveals that `score_candidates_batch()` runs
+inside vLLM's EngineCore subprocess, not the main FastAPI process. This explains why earlier
+grep attempts (before proper container restart) found no output — the subprocess stdout is
+prefixed and logged separately.
+
+### 9.3 Result: `compute_logits_calls=1` in Every Case
+
+**`compute_logits_calls=1` without exception, across all observed batch sizes (20–80 prompts).**
+
+vLLM already merges all N×K prompts into a single forward pass. The hypothesis from Section 4
+(that PIECEWISE CUDA graph forces N separate calls of batch=K) is wrong.
+
+The Section 4 statement:
+> "The batch size (30 prompts) does not hit a pre-captured CUDA graph bucket — PIECEWISE
+> captures fixed decode batch sizes; a dynamic batch of 30 falls back to eager mode"
+
+is disproven. vLLM handles variable batch sizes in a single call regardless of CUDA graph
+capture granularity.
+
+### 9.4 Revised Root Cause
+
+The 29ms VM wall time is the **true GPU compute cost** of one forward pass of the 4B dense
+VM model on a batch of N×K prompts. It is not a batching or CUDA graph artifact. This is
+consistent with the GPU being memory-bandwidth bound when loading 4B model weights:
+adding more prompts to the batch does not proportionally increase time (weights are loaded
+once, amortized across all prompts in the batch), but the absolute cost is still ~29ms
+regardless of whether N=1 or N=8.
+
+Concretely, the 3× throughput slowdown is explained entirely by this 29ms blocking call:
+
+```
+LLM step time (noSIA) ≈ 13ms   (derived: 11ms ITL × 16 conc → per-step time)
+VM call time          ≈ 29ms   (measured)
+P(any intervene)      = 95.2%  (1 - 0.841^16)
+
+SIA per-step time ≈ 13 + 0.952 × 29 ≈ 40.6ms
+SIA/noSIA         ≈ 13 / 40.6 = 32%   ← matches observed ~34%
+```
+
+### 9.5 Revised Optimization Estimates
+
+Section 5's estimates assumed linear per-session scaling (9ms/session), which is now known
+to be an emergent property of the fixed 29ms/call cost, not a per-prompt effect. The estimates
+for dual-gating (Section 5.1) were based on reducing the number of VM **calls** per unit time
+(via lower intervention rate), which remains valid — fewer decode steps trigger the VM,
+regardless of how it scales internally.
+
+**Updated optimization table** (estimates revised for clarity):
+
+| Option | Mechanism | SIA/noSIA (conc=16) | Effort |
+|--------|-----------|---------------------|--------|
+| Current baseline | — | 34% | — |
+| Dual-gating (intv_rate → ~5%) | fewer VM calls | ~91% | Low |
+| Smaller VM (4B → 1.7B) | faster VM forward pass | ~50–60% | High (retraining) |
+| topk 10 → 5 | smaller batch per call | ~50% | Trivial |
+| Dual-gating + 1.7B VM | both | ~97% | High |
+
+Key revision: "smaller VM" and "topk reduction" have a **modest** effect because the 29ms
+cost is dominated by weight-loading (memory bandwidth), not compute. Halving topk may only
+reduce VM time by 20–30%, not 50%. The dual-gating path (reducing call frequency) remains
+the highest-leverage option.
+
+### 9.6 Next Steps (Revised)
+
+**Immediate**: implement dual-gating and measure actual quality delta on AlpacaEval 200Q
+(see Section 8.5). This is the only high-leverage, low-effort path confirmed by the data.
+
+**If dual-gating quality holds**: consider smaller VM only after measuring its quality impact.
+The engineering cost (retraining) is high and the throughput gain (~50-60% vs 34% baseline)
+is substantially less than dual-gating (~91%).
