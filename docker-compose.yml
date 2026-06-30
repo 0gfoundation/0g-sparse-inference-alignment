@@ -64,6 +64,7 @@ services:
       # Safe on vllm 0.17.1 (AOT capture); see doc/0gm-35b-sia-perf-breakdown-20260609.md §6
       SIA_RM_CUDAGRAPH: piecewise
       SIA_RM_MULTIPROCESS: "0"
+      SIA_RM_BATCH_DEBUG: "1"
 
     # ------ Launch command (overrides Dockerfile CMD) -----------------------
     # No nohup needed inside a container — docker manages PID 1 lifecycle.
