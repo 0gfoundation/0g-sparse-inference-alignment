@@ -707,7 +707,8 @@ def main():
     print(f"topk={_args.topk}  weight={_args.weight}  "
           f"entropy_threshold={_args.entropy_threshold}  "
           f"logit_gap_threshold={_args.logit_gap_threshold}  "
-          f"use_token_ids={_args.use_token_ids}")
+          f"use_token_ids={_args.use_token_ids}  "
+          f"eager_vm_prefill={_args.eager_vm_prefill}")
     print(f"Server   : http://{_args.host}:{_args.port}")
     print("=" * 60)
 

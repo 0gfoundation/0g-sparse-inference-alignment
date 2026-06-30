@@ -255,6 +255,7 @@ def make_sia_processor(
         def __init__(self, vllm_config, device: torch.device,
                      is_pin_memory: bool) -> None:
             self._llm_device = device
+            print(f"[SIA] __init__ _EAGER_VM_PREFILL={self._EAGER_VM_PREFILL} _RM_BACKEND={self._RM_BACKEND}", flush=True)
 
             # LLM tokenizer (for decoding candidate tokens and extracting user content)
             llm_model_path = vllm_config.model_config.model
