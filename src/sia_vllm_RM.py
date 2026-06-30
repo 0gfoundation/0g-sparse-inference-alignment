@@ -169,6 +169,10 @@ def make_sia_processor(
                                               # 100% consistent with what the LLM actually sees (None=not passed)
     eager_vm_prefill: bool = False,    # b2 backend: after each decode step, prefill predicted next token
                                        # into VM KV cache so the next INTERVENE finds warm prefix (no tail prefill)
+    vm_topk: Optional[int] = None,     # limit candidates sent to VM (None = same as topk).
+                                       # Useful for FaRMA proxy benchmarking: keep topk=10 for entropy
+                                       # gate (preserving intervention rate) but send only vm_topk=1
+                                       # candidates to VM, reducing VM batch from N×topk to N×1.
 ):
     """
     Returns a SIALogitsProcessor class (not an instance).
@@ -208,6 +212,7 @@ def make_sia_processor(
         _RM_MAX_MODEL_LEN = rm_max_model_len
         _ENABLE_THINKING = enable_thinking   # None / True / False
         _EAGER_VM_PREFILL = eager_vm_prefill
+        _VM_TOPK: Optional[int] = vm_topk   # None = use _TOPK; int = limit VM candidates per request
 
         # Maximum number of sessions per score_candidates_batch() call (b2 backend).
         # Prevents RM KV-cache OOM at high concurrency: a single apply() with
@@ -1153,6 +1158,8 @@ def make_sia_processor(
                         _eff_k = effective_topks[_i]
                         if _eff_k < max_topk:
                             _cands = _cands[:_eff_k]
+                    if self._VM_TOPK is not None and self._VM_TOPK < len(_cands):
+                        _cands = _cands[:self._VM_TOPK]
                     _t_prep = time.perf_counter() if pf_on else 0.0
                     try:
                         _sid = self._prepare_b2_session(_i, _user, _out_ids)
@@ -1319,6 +1326,12 @@ def make_sia_processor(
                 # Fix: set all non-top-k positions to -inf, equivalent to official.
                 topk_vals_i = (scoring_topk_result.values[i] if effective_topks is None
                                else scoring_topk_result.values[i, :effective_topks[i]])
+                # vm_topk: rm_scores may cover fewer candidates than topk; trim GPU views to match
+                # so index_copy_ and the logit fill are consistent.
+                _n_vm = rm_scores.shape[0]
+                if _n_vm < topk_vals_i.shape[0]:
+                    topk_vals_i = topk_vals_i[:_n_vm]
+                    topk_indices_gpu = topk_indices_gpu[:_n_vm]
                 modified_topk = topk_vals_i + rm_deltas
                 logits[i].fill_(float('-inf'))
                 logits[i].index_copy_(0, topk_indices_gpu, modified_topk)
@@ -1673,6 +1686,11 @@ def parse_args():
     p.add_argument("--llm_gpu_mem", type=float, default=0.5,
                    help="vllm gpu_memory_utilization (default 0.5)")
     p.add_argument("--topk",      type=int,   default=10)
+    p.add_argument("--vm_topk",   type=int,   default=None,
+                   help="Limit candidates sent to VM (default: same as --topk). "
+                        "Keeps --topk for entropy gate so intervention rate is unchanged; "
+                        "sends only vm_topk candidates to VM, reducing VM batch size. "
+                        "Used for FaRMA proxy benchmarking.")
     p.add_argument("--weight",    type=float, default=1.0)
     p.add_argument("--max_tokens", type=int,  default=128)
     p.add_argument("--temperature", type=float, default=0.7)

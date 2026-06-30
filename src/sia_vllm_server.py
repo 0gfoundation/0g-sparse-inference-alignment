@@ -643,6 +643,11 @@ def parse_args():
                    help="b2 backend: after each decode step pre-warm the VM KV cache with the "
                         "predicted next token for all active sessions. Reduces tail prefill "
                         "cost at the next INTERVENE step.")
+    p.add_argument("--vm_topk", type=int, default=None,
+                   help="Limit candidates sent to VM per request (default: same as --topk). "
+                        "Keeps --topk for entropy gate so intervention rate is unchanged. "
+                        "Used for FaRMA proxy benchmarking: --topk 10 --vm_topk 1 reduces "
+                        "VM batch from N×10 to N×1 while preserving the intervention rate.")
     p.add_argument("--use_token_ids", action="store_true",
                    help="When rm_backend=vllm: pre-tokenize on the client and send token_ids to RM, "
                         "saving server-side re-tokenize (~3-5ms/call). Requires RM server to be "
@@ -741,6 +746,7 @@ def main():
             rm_max_model_len=_args.max_model_len,
             enable_thinking=_enable_thinking,
             eager_vm_prefill=_args.eager_vm_prefill,
+            vm_topk=_args.vm_topk,
         )
 
     print("Loading vLLM AsyncLLMEngine...")
