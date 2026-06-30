@@ -211,3 +211,110 @@ New fields in `[SIA-pf-summary]` and new `[SIA-pf-rate]` line:
 
 Previously only `b2_score_call` (amortized per-request) existed, which masked the true
 per-step VM cost at high concurrency and made chunking behavior invisible.
+
+---
+
+## 8. Dual-Gating: Design, Implementation, and Caveats
+
+### 8.1 Concept
+
+The current single gate skips VM scoring when **entropy < threshold** (model is confident
+across the top-K distribution). Dual-gating adds a second independent gate:
+
+> **If `logit_gap = top1_logit − top2_logit > gap_threshold` → also SKIP**,
+> regardless of entropy.
+
+A large logit gap means the model assigns a much higher probability to its top-1 token than
+to any alternative. Even if the VM disagrees, the bonus it can add to tokens #2–10 is
+unlikely to overcome a large gap and flip the final sample. Skipping VM scoring in this
+regime wastes compute without changing outcomes.
+
+### 8.2 Implementation (~20 LOC)
+
+The logit gap tensor is already computed in the `SIA_DEBUG_HIST=1` code path. For the
+production path, the change is:
+
+**Step 1 — compute gap and merge with entropy into a single GPU→CPU sync** (avoids adding
+an extra round-trip):
+
+```python
+# In apply(), replace the entropy-only sync:
+#   entropy_values = entropies.cpu().tolist()
+# With a combined sync:
+gap_tensor = entropy_topk_result.values[:, 0] - entropy_topk_result.values[:, 1]
+combined = torch.stack([entropies, gap_tensor], dim=1)   # (batch, 2)
+combined_cpu = combined.cpu().tolist()
+entropy_values = [m[0] for m in combined_cpu]
+gap_values     = [m[1] for m in combined_cpu]
+```
+
+**Step 2 — new CLI parameter**:
+
+```python
+parser.add_argument("--logit_gap_threshold", type=float, default=0.0,
+    help="Skip VM scoring when top1−top2 logit gap exceeds this value (0=disabled).")
+```
+
+**Step 3 — modify intervene_flags**:
+
+```python
+# Before (single gate):
+intervene_flags[i] = entropy_values[i] >= self._ENTROPY_THRESHOLD
+
+# After (dual gate):
+intervene_flags[i] = (entropy_values[i] >= self._ENTROPY_THRESHOLD) \
+                 and (gap_values[i] < self._GAP_THRESHOLD)
+```
+
+When `--logit_gap_threshold 0` (default), the second condition is always True and behavior
+is identical to the current single-gate code — fully backward compatible.
+
+### 8.3 Expected Throughput Impact
+
+Threshold tuning guide (empirical estimates, to be calibrated per model):
+
+| `--logit_gap_threshold` | Expected intv_rate | Expected ITL (conc=16) | SIA/noSIA |
+|-------------------------|--------------------|------------------------|-----------|
+| — (disabled, current)  | 15.9%              | ~34ms                  | ~34%      |
+| 5.0 (conservative)     | ~10%               | ~19ms                  | ~58%      |
+| 3.0 (moderate)         | ~7%                | ~15ms                  | ~73%      |
+| 1.5 (aggressive)       | ~5%                | ~12ms                  | ~91%      |
+
+### 8.4 Literature Basis and Caveats
+
+**What is validated by prior work:**
+
+- **Entropy-based sparse intervention** (first gate): the SIA paper
+  ("Inference-time Alignment via Sparse Junction Steering") directly validates that
+  intervening only at high-entropy "junctions" achieves equal or better alignment than
+  dense intervention, at 20–80% of steps. The first gate is on solid footing.
+
+- **Logit gap / margin as a confidence measure**: a standard concept in classification
+  literature ("margin classifier"). Used in LLM contexts for speculative decoding and
+  early-exit research, though not specifically for RM-based intervention.
+
+**What is NOT validated by prior work:**
+
+The specific combination of **entropy + logit gap dual-gating for RM intervention quality**
+has no direct published validation. The assumption that "large-gap steps are safe to skip"
+is logically sound but empirically unverified on this model pair (VL-30B + VM-Qwen3-4B).
+
+**Key risk**: the VM and LLM are two different models with different "opinions." At steps
+where the LLM has a large gap, the VM could still strongly prefer a different token — and
+skipping VM scoring would miss those corrections. How often this happens depends on the
+degree of LLM/VM alignment, which must be measured empirically.
+
+### 8.5 Required Validation Before Shipping
+
+```
+AlpacaEval 200Q:
+  Arm A: SIA (entropy_threshold=1.0, logit_gap_threshold=disabled)   ← current
+  Arm B: SIA (entropy_threshold=1.0, logit_gap_threshold=3.0)        ← dual-gate
+  
+  Paired t-test on Skywork reward scores:
+    p > 0.05 and |Δmean| < 0.5  →  quality holds, safe to ship
+    p < 0.05 or |Δmean| ≥ 0.5  →  threshold too aggressive, increase gap_threshold
+```
+
+Recommended tuning order: start at `gap_threshold=5.0`, verify quality, then tighten to
+3.0, then 1.5. Stop at the largest threshold that passes the paired t-test.
