@@ -79,6 +79,7 @@ services:
         --rm_b2_gpu_mem  0.08
         --topk 10 --weight 1.0 --entropy_threshold 1.0
         --logit_gap_threshold 3.0
+        --eager_vm_prefill
         --max_model_len 4096
         --enable_prefix_caching
         --host 0.0.0.0
