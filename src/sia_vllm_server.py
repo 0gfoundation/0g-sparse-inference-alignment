@@ -709,7 +709,7 @@ def main():
     print(f"RM URL   : {_args.rm_url}")
     print(f"RM mode  : {_args.rm_backend}"
           + (f"  model={_args.rm_model}" if _args.rm_backend == "vllm" else ""))
-    print(f"topk={_args.topk}  weight={_args.weight}  "
+    print(f"topk={_args.topk}  vm_topk={_args.vm_topk}  weight={_args.weight}  "
           f"entropy_threshold={_args.entropy_threshold}  "
           f"logit_gap_threshold={_args.logit_gap_threshold}  "
           f"use_token_ids={_args.use_token_ids}  "

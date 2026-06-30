@@ -260,7 +260,7 @@ def make_sia_processor(
         def __init__(self, vllm_config, device: torch.device,
                      is_pin_memory: bool) -> None:
             self._llm_device = device
-            print(f"[SIA] __init__ _EAGER_VM_PREFILL={self._EAGER_VM_PREFILL} _RM_BACKEND={self._RM_BACKEND}", flush=True)
+            print(f"[SIA] __init__ _EAGER_VM_PREFILL={self._EAGER_VM_PREFILL} _VM_TOPK={self._VM_TOPK} _RM_BACKEND={self._RM_BACKEND}", flush=True)
 
             # LLM tokenizer (for decoding candidate tokens and extracting user content)
             llm_model_path = vllm_config.model_config.model
@@ -1201,6 +1201,8 @@ def make_sia_processor(
                             # Absolute batch wall (one record per INTERVENE step, regardless of N)
                             self._pf_record("b2_batch_wall_abs", _batch_wall_ms)
                             self._pf_record("intv_batch_size", float(len(_b2_reqs)))
+                            _total_cands = sum(len(_c) for (_, _, _c) in _b2_reqs)
+                            self._pf_record("vm_cands_per_step", float(_total_cands))
                             # Per-request amortized (divide by N so it's comparable to sequential path)
                             _amortized_ms = _batch_wall_ms / len(_b2_reqs)
                             for _ in _b2_reqs:
