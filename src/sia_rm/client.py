@@ -48,6 +48,7 @@ from .qwen3_with_score import (
     set_inproc_reward_mode,
     clear_inproc_rewards,
     take_inproc_rewards,
+    _REWARD_BUFFERS,
 )
 
 
@@ -528,6 +529,21 @@ class RMClient:
         if self._multiprocessing:
             all_rewards = read_rewards()
         else:
+            # SIA_RM_BATCH_DEBUG=1: print how many compute_logits calls vLLM
+            # made internally and the sample count of each — directly reveals
+            # whether N sessions are batched as one call (n_calls=1, samples=N×K)
+            # or serialized (n_calls=N, samples=K each).
+            if os.environ.get("SIA_RM_BATCH_DEBUG", "0") == "1":
+                raw = _REWARD_BUFFERS.get(self._fid, [])
+                shapes = [int(t.numel()) for t in raw]
+                n_sessions = len(requests)
+                print(
+                    f"[RM-batch-debug] sessions={n_sessions} "
+                    f"total_prompts={n_total} "
+                    f"compute_logits_calls={len(shapes)} "
+                    f"samples_per_call={shapes}",
+                    flush=True,
+                )
             all_rewards = take_inproc_rewards(self._fid)
 
         if all_rewards is None or all_rewards.numel() != n_total:
