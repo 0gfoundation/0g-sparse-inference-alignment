@@ -477,6 +477,8 @@ class RMClient:
         """
         if not requests:
             return []
+        # Diagnostic: always print entry so we know the function is reached.
+        print(f"[RM-diag] score_candidates_batch n={len(requests)}", flush=True)
         # Single-request fast-path: delegate to the existing method so all
         # its error-handling and edge cases remain in one place.
         if len(requests) == 1:
