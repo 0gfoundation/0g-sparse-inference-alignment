@@ -639,6 +639,10 @@ def parse_args():
                    help="Dual-gate: skip VM scoring when top1-top2 logit gap >= this value "
                         "(None=disabled). Reduces intervention rate without extra GPU sync. "
                         "Validate with AlpacaEval A/B before enabling in production.")
+    p.add_argument("--eager_vm_prefill", action="store_true", default=False,
+                   help="b2 backend: after each decode step pre-warm the VM KV cache with the "
+                        "predicted next token for all active sessions. Reduces tail prefill "
+                        "cost at the next INTERVENE step.")
     p.add_argument("--use_token_ids", action="store_true",
                    help="When rm_backend=vllm: pre-tokenize on the client and send token_ids to RM, "
                         "saving server-side re-tokenize (~3-5ms/call). Requires RM server to be "
@@ -735,6 +739,7 @@ def main():
             rm_b2_gpu_mem=_args.rm_b2_gpu_mem,
             rm_max_model_len=_args.max_model_len,
             enable_thinking=_enable_thinking,
+            eager_vm_prefill=_args.eager_vm_prefill,
         )
 
     print("Loading vLLM AsyncLLMEngine...")

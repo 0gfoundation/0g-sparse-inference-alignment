@@ -167,6 +167,8 @@ def make_sia_processor(
     rm_max_model_len: int = 4096,      # b2 backend: max_model_len for the RM vLLM instance
     enable_thinking: Optional[bool] = None,   # chat_template enable_thinking forwarded to RM prefix construction,
                                               # 100% consistent with what the LLM actually sees (None=not passed)
+    eager_vm_prefill: bool = False,    # b2 backend: after each decode step, prefill predicted next token
+                                       # into VM KV cache so the next INTERVENE finds warm prefix (no tail prefill)
 ):
     """
     Returns a SIALogitsProcessor class (not an instance).
@@ -205,6 +207,7 @@ def make_sia_processor(
         _RM_B2_GPU_MEM = rm_b2_gpu_mem
         _RM_MAX_MODEL_LEN = rm_max_model_len
         _ENABLE_THINKING = enable_thinking   # None / True / False
+        _EAGER_VM_PREFILL = eager_vm_prefill
 
         # Maximum number of sessions per score_candidates_batch() call (b2 backend).
         # Prevents RM KV-cache OOM at high concurrency: a single apply() with
@@ -327,6 +330,7 @@ def make_sia_processor(
                 "b2_score_call":    [],   # RMClient.score_candidates end-to-end (amortized per-request)
                 "b2_batch_wall_abs":[],   # score_candidates_batch() absolute wall (not amortized; per INTERVENE step)
                 "intv_batch_size":  [],   # number of sessions batched per INTERVENE step (len(_b2_reqs))
+                "b2_eager_wall":    [],   # eager_prefill_batch() wall per apply() call (only when --eager_vm_prefill)
                 "total":            [],   # one INTERVENE call end-to-end
 
                 # === apply() sub-phases (per-token) — added 2026-06-01 ===
@@ -1204,6 +1208,10 @@ def make_sia_processor(
                         # _score_candidates_b2() normally for each request.
             # ==== end b2 batch pre-scoring =====================================
 
+            # Predicted next token per intervening request (for eager VM prefill).
+            # Populated inside the INTERVENE branch; consumed after the loop.
+            _eager_intv_best: dict = {}   # req_idx -> post_top1 token
+
             # ==== Per-item loop: no more .item() / .tolist() syncs inside the loop body ====
             #
             # SKIP path Python cleanup (2026-06-02):
@@ -1327,6 +1335,8 @@ def make_sia_processor(
                 pre_top1 = topk_indices_i[0]
                 post_top1 = topk_indices_i[post_top1_local]
                 flipped = pre_top1 != post_top1
+                if self._EAGER_VM_PREFILL:
+                    _eager_intv_best[i] = post_top1
                 if flipped:
                     self._flipped_steps[i] = self._flipped_steps.get(i, 0) + 1
 
@@ -1351,6 +1361,51 @@ def make_sia_processor(
                                     (t_intv_prepare_end - t_intv_start) * 1000)
                     self._pf_record("intv_apply_logits",
                                     (t_intv_apply_end - t_intv_apply_start) * 1000)
+
+            # ==== b2 eager VM prefill =====================================================
+            # Pre-warm the VM KV cache with predicted next tokens for every active request.
+            # Predicted token: post_top1 (highest logit+VM_score) for intervening requests,
+            # top-1 raw logit for skip requests.  At the NEXT intervention the APC hits the
+            # warmed prefix and only needs to compute the candidate tokens (no tail prefill).
+            #
+            # Runs at every apply() call (not just INTERVENE steps) so that even skip-step
+            # tokens accumulate in the VM cache.  For pure-skip steps where topk_indices_lists
+            # is None, one batch argmax is synced to CPU (cheap: 16 scalars vs 16×10 topk).
+            #
+            # Only warms sessions that are already initialized (_b2_sessions[i] != None);
+            # first-intervention requests still pay full prefill cost.
+            if self._RM_BACKEND == "b2" and self._EAGER_VM_PREFILL:
+                _t_eager = time.perf_counter() if pf_on else 0.0
+                # For pure skip steps, batch-sync argmax once (avoids 16 separate .item() calls).
+                _argmax_all: list = (
+                    logits.argmax(dim=-1).cpu().tolist()
+                    if topk_indices_lists is None else []
+                )
+                _eager_reqs: list = []
+                for _i in range(batch_size):
+                    _sid = self._b2_sessions.get(_i)
+                    if _sid is None:
+                        continue  # session not yet initialized; first intervene will do full prefill
+                    # Advance VM session with any tokens generated since the last fix_a_token call.
+                    _out = self._output_ids.get(_i, [])
+                    _n_vm = max(0, self._rm.session_length(_sid)
+                                   - self._b2_chat_prefix_len.get(_i, 0))
+                    for _tid in _out[_n_vm:]:
+                        self._rm.fix_a_token(_sid, int(_tid))
+                    # Predicted next token for this request.
+                    if _i in _eager_intv_best:
+                        _pred = _eager_intv_best[_i]      # intervening: post-intervention best
+                    elif topk_indices_lists is not None:
+                        _pred = topk_indices_lists[_i][0]  # skip at intervene step: top-1 raw logit
+                    else:
+                        _pred = _argmax_all[_i]            # pure skip step: batch argmax
+                    _eager_reqs.append((_sid, _pred))
+                if _eager_reqs:
+                    self._rm.eager_prefill_batch(_eager_reqs)
+                if pf_on:
+                    self._pf_record("b2_eager_wall",
+                                    (time.perf_counter() - _t_eager) * 1000)
+            # ==== end b2 eager VM prefill ================================================
 
             # === apply() exit: record overall timing + distinguish SKIP/INTERVENE paths ===
             if pf_on:
@@ -1626,6 +1681,10 @@ def parse_args():
                         "(None=disabled; 0 would skip everything since gap is always>=0). "
                         "Reduces intervention rate. Requires AlpacaEval A/B validation before "
                         "production use.")
+    p.add_argument("--eager_vm_prefill", action="store_true", default=False,
+                   help="b2 backend: after each decode step pre-warm the VM KV cache with the "
+                        "predicted next token for all active requests, so the next INTERVENE "
+                        "finds a warm prefix and only needs to compute candidate tokens.")
     p.add_argument("--prompt", type=str,
                    default="Human:\nTell me a joke.\nAssistant:\n")
     p.add_argument("--max_model_len", type=int, default=2048)
@@ -1652,6 +1711,7 @@ def main():
         rm_backend=args.rm_backend,
         rm_model=args.rm_model,
         rm_b2_gpu_mem=args.rm_b2_gpu_mem,
+        eager_vm_prefill=args.eager_vm_prefill,
     )
 
     print("Loading vllm LLM...")

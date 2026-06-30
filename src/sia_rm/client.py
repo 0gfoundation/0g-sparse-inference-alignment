@@ -575,6 +575,32 @@ class RMClient:
         # reorders.
         return [all_rewards[start:end] for (start, end) in offsets]
 
+    def eager_prefill_batch(self, requests: list) -> None:
+        """Warm the VM KV cache with predicted next tokens. Scores are discarded.
+
+        Args:
+            requests: list of (sid, predicted_next_token) pairs.
+                      _sessions[sid] must already be advanced to the current decode
+                      position via fix_a_token before calling this method.
+
+        This is a no-op for the cross-tokenizer path (same-vocab assumption required).
+        """
+        if self._cross_tokenizer:
+            return  # cross-tokenizer eager prefill not implemented
+        TP = self._TokensPrompt
+        prompts = [
+            TP(prompt_token_ids=self._sessions[sid] + [int(tok)])
+            for sid, tok in requests
+            if sid in self._sessions
+        ]
+        if not prompts:
+            return
+        if not self._multiprocessing:
+            clear_inproc_rewards(self._fid)
+        self.llm.generate(prompts, self._sp, use_tqdm=False)
+        if not self._multiprocessing:
+            take_inproc_rewards(self._fid)  # discard scores; we only wanted the KV cache
+
     # ---- bench / introspection ----
 
     def time_score_candidates(
