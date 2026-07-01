@@ -73,74 +73,129 @@ intv_prepare:       p50=0.04  p95=0.08  max=0.15
 intv_apply_logits:  p50=0.22  p95=0.53  max=1.03
 ```
 
-### 4.3 Comparison vs topk=10 baseline
+### 4.3 Clean topk=10 baseline (bench_30b.py, same date)
 
-| Metric | topk=10 baseline | vm_topk=1 (this run) | Δ |
-|--------|-----------------|----------------------|---|
-| conc=16 ITL p50 | ~58–60ms | **20.2ms** | **−3×** |
-| conc=16 tok/s | ~370 | **759.8** | **+105%** |
-| conc=16 / noSIA ratio | 35% | **73%** | +38pp |
-| b2_batch_wall_abs p50 | ~28ms | **9.74ms** | **−2.9×** |
-| apply_intv_step p50 | ~38ms | **17.12ms** | **−2.2×** |
-| apply_cpu_sync p50 | ~7.7ms | 4.55ms | −1.7× |
+Run after vm_topk=1, with `--vm_topk` removed and all other parameters identical.
+This is the apple-to-apple control group.
+
+| Conc | ITL mean | Out tok/s | Req Lat |
+|------|----------|-----------|---------|
+| 1    | 9.6ms    | 78.0      | 1640ms  |
+| 2    | 12.7ms   | 155.1     | 1649ms  |
+| 4    | 18.1ms   | 217.6     | 2347ms  |
+| 8    | 23.8ms   | 327.2     | 3111ms  |
+| 16   | 48.9ms   | 322.3     | 6333ms  |
+
+pf-summary for topk=10 (@ step 1800):
+
+```
+b2_score_call:      p50=11.01 p95=18.63 max=68.04
+b2_batch_wall_abs:  p50=22.04 p95=61.51 max=137.31
+intv_batch_size:    p50=2.00  p95=6.00  max=15.00
+apply_cpu_sync:     p50=4.60  p95=17.14 max=20.46
+apply_intv_step:    p50=29.15 p95=83.77 max=148.15
+intv_apply_logits:  p50=0.40  p95=2.41  max=2.75
+```
+
+### 4.4 Head-to-head comparison
+
+| Metric | topk=10 (clean) | vm_topk=1 | Speedup |
+|--------|----------------|-----------|---------|
+| conc=16 ITL | 48.9ms | **20.2ms** | **2.4×** |
+| conc=16 tok/s | 322.3 | **759.8** | **2.36×** |
+| conc=16 / noSIA ratio | 31% | **73%** | +42pp |
+| b2_batch_wall_abs p50 | 22.04ms | **9.74ms** | **2.26×** |
+| apply_intv_step p50 | 29.15ms | **17.12ms** | 1.70× |
+| apply_intv_step p95 | 83.77ms | **22.91ms** | **3.65×** |
+| intv_batch_size p50 | 2.00 | 1.00 | — |
 
 noSIA reference (conc=16): ~1040 tok/s, ITL ~13.6ms.
 
 ## 5. Analysis
 
-### 5.1 Why the gain was larger than predicted
+### 5.1 Why the gain was larger than the pre-experiment prediction
 
-Prior analysis assumed VM batch size at each intervention step was `num_sessions × topk = 16 × 10 = 160`.
-The pf-summary reveals the actual picture:
+Prior theoretical analysis assumed VM batch size at each intervention step was
+`num_sessions × topk = 16 × 10 = 160`, predicting only ~1.1–1.2× improvement
+(VM is memory-bandwidth bound; weight loading cost is roughly fixed regardless of batch size).
 
-**`intv_batch_size p50=1.00`**
+The actual picture, from the clean topk=10 baseline pf-summary:
 
-At the median intervention step, only **1 session** is at a high-entropy token simultaneously.
-This is consistent with an intervention rate of ~5% per session: with 16 concurrent sessions,
-the expected number of intervening sessions per step is 0.8, so the median is 1 (or 0).
+**`intv_batch_size p50=2.00`** for topk=10; **`intv_batch_size p50=1.00`** for vm_topk=1.
 
-Therefore the actual reduction was:
-- topk=10 baseline: **1 session × 10 candidates = 10 sequences** per typical VM call
-- vm_topk=1 (this run): **1 session × 1 candidate = 1 sequence** per typical VM call
+At the median intervention step, only **1–2 sessions** are at a high-entropy token simultaneously
+(not all 16). With a per-session intervention rate of ~5% and 16 sessions, the expected number
+of co-intervening sessions per step is 0.8, so the median is 1–2, not 16.
 
-A 10× reduction in VM workload per call — not the 160→16 (10×) I had predicted at the batch level,
-but through the same 10× factor for a different reason (intervention sparsity rather than session count).
+The actual candidate counts per VM call:
+- topk=10: **2 sessions × 10 candidates = ~20 sequences** at median intervention step
+- vm_topk=1: **1 session × 1 candidate = ~1 sequence** at median intervention step
 
-`b2_batch_wall_abs` dropped from ~28ms to ~9.74ms (2.9×), confirming that the VM is not purely
-memory-bandwidth bound at this small batch size. At batch_size=1–10, compute and dispatch overhead
-scale with batch size, making the reduction meaningful.
+A ~20× reduction in per-call VM workload (not 10×), which maps to the observed
+`b2_batch_wall_abs` drop: 22ms → 9.74ms (2.26×). The sub-linear ratio (20× workload
+reduction → 2.26× time) confirms the VM has a fixed per-call overhead (CUDA graph dispatch,
+kernel launch) that dominates at very small batch sizes.
 
-### 5.2 Remaining gap from noSIA
+### 5.2 The intv_batch_size difference is self-reinforcing
 
-At conc=16: ITL 20.2ms vs noSIA 13.6ms — the system is now **1.5× slower than noSIA**, down from
-4.3× before. The remaining 6.6ms overhead per step is the irreducible cost of:
+The `intv_batch_size` difference between the two runs (p50=2 vs p50=1) is not a configuration
+artifact — it is a **consequence of VM call duration**:
 
-- VM call itself (9.74ms amortized across all steps, weighted by ~5% intervention rate ≈ ~0.5ms avg)
-- CPU sync (`apply_cpu_sync` p50=4.55ms): GPU→CPU sync for topk values, the new dominant cost
+- topk=10: VM call takes ~22ms. During these 22ms, more sessions accumulate pending
+  interventions → next call receives a larger batch → stays slow (vicious cycle).
+- vm_topk=1: VM call takes ~9.74ms. Fewer sessions accumulate → next batch stays small
+  → stays fast (virtuous cycle).
 
-`apply_cpu_sync` (GPU→CPU sync for topk values) is now the **largest single overhead**
-at 4.55ms, overtaking the VM call time (which is now smaller due to vm_topk=1).
-This is a different bottleneck than before and worth investigating separately.
+This self-reinforcing dynamic explains why the tail latency improvement is even larger than
+the median: `apply_intv_step p95` went from 83.77ms to 22.91ms (3.65×), because large
+accumulated batches (p95 = 6 sessions × 10 candidates = 60 sequences) are the worst case
+for topk=10, but only 6 sequences for vm_topk=1.
+
+### 5.3 Throughput saturation at conc=16 for topk=10
+
+```
+topk=10:  conc=8 → 327 tok/s,  conc=16 → 322 tok/s  (plateau — VM is the bottleneck)
+vm_topk=1: conc=8 → 475 tok/s, conc=16 → 760 tok/s  (continues scaling linearly)
+```
+
+With topk=10, adding concurrency beyond 8 does not increase throughput because the VM
+cannot keep up. With vm_topk=1, the system scales correctly up to conc=16.
+
+### 5.4 Remaining gap from noSIA
+
+At conc=16: vm_topk=1 achieves ITL 20.2ms vs noSIA 13.6ms — **1.5× overhead**, down from
+3.6× (topk=10 clean: 48.9ms / 13.6ms). The remaining 6.6ms gap is the irreducible cost of:
+
+- `apply_cpu_sync` p50=4.55ms: GPU→CPU sync to read topk candidate indices. Now the
+  **dominant overhead**, overtaking VM call time. Unchanged between vm_topk=1 and topk=10
+  (4.55ms vs 4.60ms), so it is independent of VM workload.
+- VM call amortized: 9.74ms × ~5% intervention rate ≈ 0.5ms average per step.
+
+The new bottleneck is `apply_cpu_sync`, not the VM itself.
 
 ## 6. Conclusion
 
 ### 6.1 FaRMA is strongly motivated
 
-This experiment directly validates the value of training a FaRMA-style VM (vocabulary-wide
-scoring head). The key finding:
+The clean A/B experiment (same date, same docker config, only `--vm_topk` toggled) gives
+a definitive result:
 
-- Reducing VM candidates from 10 to 1 per request yields **~3× throughput improvement** at conc=16
-- FaRMA achieves the same throughput reduction by running 1 forward on the prefix and reading all
-  K=10 scores from the vocab-wide output vector — **same speed as vm_topk=1, full quality of topk=10**
+| | topk=10 | vm_topk=1 | FaRMA (expected) |
+|---|---|---|---|
+| conc=16 tok/s | 322 | 760 | **~760** |
+| conc=16 / noSIA | 31% | 73% | **~73%** |
+| Quality | full | degraded (1 candidate) | **full (10 candidates)** |
 
-The proxy experiment gives a concrete, empirically measured target: training a FaRMA VM should
-recover the ~3× throughput gain while restoring alignment quality.
+FaRMA achieves the same throughput as vm_topk=1 by running 1 VM forward on the prefix and
+reading all K=10 scores from the vocab-wide output vector. It gets the throughput of vm_topk=1
+with the quality of topk=10.
 
 ### 6.2 Updated priority
 
 P-1 (vocabulary-wide scoring head) is **confirmed as the highest-priority item** with strong
-empirical backing. Prior estimate of 1.1–1.2× was based on a wrong assumption about batch size;
-actual gain is ~3×, raising conc=16 throughput from 35% to 73% of noSIA.
+empirical backing. The prior estimate of 1.1–1.2× was based on a wrong assumption (VM batch
+always 160); actual measured gain with the clean baseline is **2.36× throughput, 2.4× ITL**,
+raising conc=16 throughput from 31% to 73% of noSIA.
 
 ### 6.3 New bottleneck: apply_cpu_sync
 
