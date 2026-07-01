@@ -22,16 +22,26 @@ Priority ordering for the promising section weighs three factors together:
 
 **Source**: FaRMA, arxiv 2502.04517, ICML 2025  
 **Type**: VM architecture change (requires retraining)  
-**Estimated speedup**: 6× measured / 10× theoretical on VM per-call latency
+**Estimated speedup**: **2.36× system throughput (conc=16), confirmed by proxy experiment**
 
 Current approach scores K=10 candidates with K separate forward passes, even when batched.
 FaRMA changes the reward head from `[hidden → scalar]` to `[hidden → vocab_size]`:
 the VM does one forward on the current prefix and reads off the reward for every candidate
 from the output vector in one shot — K forwards → 1 forward.
 
-Theoretical speedup = K (topk=10 → 10×); measured ≈ 6–6.5× because the larger head output
-partially offsets the call-count reduction. At current VM p50=28ms, a 6× improvement → ≈5ms.
-That would bring VM latency below the main LLM step latency and largely resolve the bottleneck.
+**Proxy experiment result (2026-06-30)**: Using `--vm_topk 1` to send 1 candidate per request
+to the VM (same entropy gate / intervention rate as `topk=10`) measured directly on VL-30B:
+
+| Metric | topk=10 baseline | vm_topk=1 proxy | FaRMA (expected) |
+|--------|-----------------|-----------------|-----------------|
+| conc=16 tok/s | 322 | 760 | **~760** |
+| % of noSIA (1339 tok/s) | 24% | 57% | **~57%** |
+| b2_batch_wall_abs p50 | 22.04ms | 9.74ms | ~9.74ms |
+| ITL overhead vs noSIA | 4.41× | 1.82× | **~1.82×** |
+
+FaRMA achieves the throughput of `vm_topk=1` while preserving full alignment quality
+(10 candidates scored, not 1). The proxy underestimates FaRMA quality but matches throughput.
+See `doc/farma-proxy-vm-topk1-20260630.md` for full analysis.
 
 **When to implement**: during the Month 2 vocab-aligned VM retraining (see P-2).
 The architecture decision must be locked before training starts; the code change is minimal
@@ -393,5 +403,21 @@ requires a second physical GPU and cannot be approximated on a single card.
 
 ---
 
-*Last updated: 2026-06-30*
+---
+
+### R-9 · K=10候选共享Prefix KV Cache ❌ Already Implemented via APC
+
+**Idea**: K=10个候选在同一干预步中共享相同的前缀（prompt + 已生成response），如果b2 inproc没有复用这段prefix的KV cache，则每个候选都会重新encode全量前缀，浪费大量计算。
+
+**Result**: APC已经自动处理了这个问题。`vl30b-b2-profiling-conc16-20260630.md` §4明确记录：
+
+> "APC hits correctly — each set of 10 candidates shares the per-request prefix, so only **1+10 token-worth of computation is needed per session**."
+
+即每次干预步，10个候选只需encode 1个新token（共享prefix KV通过APC命中），不是10个完整序列。这个优化不是新的优化空间，vLLM APC已经在做了。
+
+**Why this appeared in the survey**: 文献调研中RAD（EMNLP 2023）提出用causal RM实现prefix KV复用，当时未确认b2 inproc是否已实现。确认后：该方案已被APC覆盖，无需额外工程投入。
+
+---
+
+*Last updated: 2026-07-01*
 *VL-30B configuration: b2 inproc, vllm 0.17.1, VM-Qwen3-4B, PIECEWISE CUDA graph, SIA_RM_MULTIPROCESS=0*
