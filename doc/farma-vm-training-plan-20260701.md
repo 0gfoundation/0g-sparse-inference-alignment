@@ -48,14 +48,56 @@ FaRMA + ARM training are complementary and should be implemented together.
 
 ### 2.1 Datasets — all public, no author contact needed
 
-| Dataset | Samples | Source |
-|---------|---------|--------|
-| WildGuardMix | 37,976 pairs | HuggingFace: `allenai/wildguardmix` |
-| UltraFeedback (ShareGPT subset) | 19,949 instructions | HuggingFace: `openbmb/UltraFeedback` |
-| UltraFeedback (UltraChat subset) | 9,929 instructions | HuggingFace: `openbmb/UltraFeedback` |
+| Dataset | Instructions | Pairs | HuggingFace |
+|---------|-------------|-------|-------------|
+| WildGuardMix | 37,976 | 37,976 × 1 = **37,976** | `allenai/wildguardmix` (gated) |
+| UltraFeedback (ShareGPT subset) | 19,949 | 19,949 × 4 = **79,796** | `openbmb/UltraFeedback` |
+| UltraFeedback (UltraChat subset) | 9,929 | 9,929 × 4 = **39,716** | `openbmb/UltraFeedback` |
+| **Total** | | **≈ 157,488 ≈ 157k** | |
 
-Note: the SIA paper states ~157k total pairs; actual dataset counts add to ~68k. The discrepancy
-is unexplained in the paper. The three datasets above are what the preprocessing scripts support.
+The 157k figure matches the paper exactly. UltraFeedback has 4 completions per instruction
+(from 17 different LLMs); each completion becomes a separate training pair.
+
+Downloaded raw data lives at `/workspace/git-gaoteng/vm-training-data/`.
+
+### 2.2 Dataset Field Details
+
+**WildGuardMix** (safety/harmlessness dataset):
+
+| Field | Used by train pipeline? | Content |
+|-------|------------------------|---------|
+| `prompt` | ✅ yes | User instruction (may contain harmful requests) |
+| `response` | ✅ yes | Model response |
+| `adversarial` | ❌ ignored | Whether prompt is adversarially constructed |
+| `prompt_harm_label` | ❌ ignored | harmful / unharmful |
+| `response_refusal_label` | ❌ ignored | refusal / compliance |
+| `response_harm_label` | ❌ ignored (but used as filter) | harmful / unharmful / None |
+| `subcategory` | ❌ ignored | benign / violence / hate_speech / … |
+
+Only `prompt` and `response` are passed to `preprocess.py`; all other fields are discarded.
+Harmful responses are NOT filtered — they enter training with low teacher RM scores,
+which teaches the VM to assign them low token rewards.
+
+**WildGuardMix filter (86,759 → 37,976):**
+The `wildguardtrain` config has 86,759 rows total, but 48,783 have `response_harm_label=None`
+(prompt-only entries with no response). Filtering to rows where `response_harm_label is not None`
+yields exactly 37,976 pairs, matching the paper.
+
+**UltraFeedback** (helpfulness/honesty dataset):
+
+| Field | Used? | Content |
+|-------|-------|---------|
+| `instruction` | ✅ yes | User prompt |
+| `completions` | ✅ yes (iterates all 4) | List of 4 dicts, each with `response` + annotations |
+| `source` | used for filtering only | sharegpt / ultrachat / evol_instruct / … |
+| `models` | ❌ ignored | Names of 4 LLMs that generated completions |
+| `correct_answers` / `incorrect_answers` | ❌ ignored | GT labels (some tasks) |
+
+Each `completion` dict also contains `annotations`, `overall_score`, `fine-grained_score`,
+`principle`, `critique` — all ignored by `preprocess.py`, which only reads `completion["response"]`.
+
+Completion counts (verified): ShareGPT 19,948/19,949 have exactly 4 (1 has 0, skipped);
+UltraChat all 9,929 have exactly 4.
 
 ### 2.2 Teacher reward model
 
@@ -133,6 +175,29 @@ done
 This step is compute-intensive (runs the 8B teacher RM on every sample). Can be parallelized
 across multiple GPUs by splitting the data files.
 
+**How the RM input is assembled** (`measure_reward.py` + `utils.py`):
+
+```
+preprocess.py output:
+  prompt = "Human:\n{instruction}\nAssistant:\n"
+  result = "{response}"
+
+measure_reward.py reassembles:
+  text = prompt + result
+       = "Human:\n{instruction}\nAssistant:\n{response}"
+
+ConversationProcessor.parse_conversation_to_format(text) splits on (Human|Assistant):
+  → [{"role": "user",      "content": "{instruction}"},
+     {"role": "assistant", "content": "{response}"}]
+
+tokenizer.apply_chat_template(conversations) applies Qwen3 chat template:
+  → "<|im_start|>user\n{instruction}<|im_end|>\n<|im_start|>assistant\n{response}<|im_end|>"
+
+This string is tokenized and fed to Skywork-Reward-V2-Qwen3-8B.
+The RM outputs logits[0][0] (scalar) as the reward score.
+Samples with tokenized length ≥ 2048 are skipped.
+```
+
 ### Step 3 — Train
 
 ```bash
@@ -154,7 +219,7 @@ Sourced from `scripts/train_vm.sh` defaults, `src/value_model/train.py`, and the
 
 | Parameter | Value | Source |
 |-----------|-------|--------|
-| Base model | Qwen3-4B-Base | adapter_config.json |
+| Base model | **Qwen3-4B-Base** (paper) / **Skywork-Reward-V2-Qwen3-4B** (code) — see note | paper App.C.1 / train_vm.sh |
 | Optimizer | AdamW | train.py:796 |
 | Learning rate | 1e-4 | train_vm.sh |
 | Weight decay | 1e-4 | train_vm.sh |
@@ -169,6 +234,14 @@ Sourced from `scripts/train_vm.sh` defaults, `src/value_model/train.py`, and the
 | Training duration (paper) | "within a few hours" | paper §4 |
 
 Achieved val R² = **0.9486** on best epoch (epoch 3) for existing VM-Qwen3-4B checkpoint.
+
+**Note — Base model discrepancy (must confirm with authors):**
+- Paper Appendix C.1: "VM-Qwen3-4B is initialized from **Qwen3-4B-Base**"
+- `scripts/train_vm.sh` line 8, `README.md` line 192, `train.py` help text: all use **Skywork-Reward-V2-Qwen3-4B**
+- The two differ: Skywork-Reward-V2-Qwen3-4B has been fine-tuned on 26M preference pairs;
+  Qwen3-4B-Base has not. The transformer backbone weights are different.
+- Both HF models exist: `Qwen/Qwen3-4B-Base` and `Skywork/Skywork-Reward-V2-Qwen3-4B`.
+- Pending author confirmation (see also: teacher RM discrepancy in `farma-vm-training-data-20260701.md`).
 
 ### LoRA configuration (from adapter_config.json)
 
@@ -191,11 +264,42 @@ ORM distillation with MSE (paper Eq. 6):
 L(θ) = E[(1/T Σ_t V_θ(x, y≤t) − R(x, y))²]
 ```
 
-Implementation in `train.py` (lines 241–261):
-1. Forward the full sequence (prompt + response) through the VM
-2. At each masked position, read the scalar score from `token_reward_head`
-3. Compute a weighted average over masked positions → `avg_prediction`
-4. `loss = MSE(avg_prediction, target_reward)`
+**Step-by-step training mechanism** (`train.py` lines 225–261):
+
+**Step 1 — Assemble input sequence**
+```python
+input_ids = rm_prompt_ids + generated_ids
+# [P P P P P P R R R R R R R]
+#  ← prompt →  ← response →
+
+full_mask = [0]*len(rm_prompt_ids) + [1]*len(generated_ids)
+# [0 0 0 0 0 0 1 1 1 1 1 1 1]   ← 1 = participates in loss
+```
+
+**Step 2 — VM forward: scalar reward at every token position**
+```python
+outputs = model(input_ids)
+token_rewards = outputs.token_rewards  # shape: (batch, seq_len)
+# [* * * * * * v1 v2 v3 v4 v5 v6 v7]
+#               ↑ only these are used
+```
+
+**Step 3 — Average masked positions**
+```python
+masked_predictions = token_rewards[mask_positions]  # response tokens only
+avg_prediction = masked_predictions.mean()
+# ≈ average reward the VM predicts for the full response
+```
+
+**Step 4 — MSE against teacher RM score**
+```python
+loss = MSELoss(avg_prediction, target_reward)
+# target_reward = score Skywork-Reward-V2-Qwen3-8B gave the full response
+```
+
+The training objective pushes the VM to distribute the trajectory-level reward evenly across
+all response tokens, so that at inference time any prefix can be scored by averaging its
+token rewards — without needing the full response.
 
 For FaRMA (vocab-wide head), the forward changes to indexing:
 
@@ -299,8 +403,9 @@ head shape.
 
 ## 8. Open Questions
 
-1. **Dataset size discrepancy**: paper claims ~157k pairs, scripts cover ~68k. Worth clarifying
-   whether additional data sources (e.g., more UltraFeedback subsets) are needed to match paper quality.
+1. ~~**Dataset size discrepancy**~~: **Resolved.** 157k = 37,976 (WildGuardMix × 1) +
+   19,949 × 4 + 9,929 × 4 = 157,488. Each UltraFeedback instruction has 4 completions;
+   `preprocess.py` already iterates all 4. No additional data sources needed.
 
 2. **LR scheduler**: train.py currently uses no scheduler (constant LR). A cosine decay schedule
    may help convergence for the larger vocab head output.
@@ -399,3 +504,107 @@ loss = mse(loss_accum / mask.sum(), target_reward)
 With chunk=64, peak `vocab_rewards` drops from 2.32 GB to **148 MB**
 (4 × 64 × 151936 × 2 bytes), reducing total training memory to ~**13 GB** (batch=4).
 This enables 16 GB GPUs. Requires modifying the loss loop in `train.py`.
+
+---
+
+## 10. Complete Command Lines
+
+Assumed models (best guess — see §4 discrepancy notes):
+
+| Role | Model |
+|------|-------|
+| Teacher RM | `Skywork/Skywork-Reward-V2-Qwen3-8B` (paper text wins over stale shell script) |
+| VM base | `Skywork/Skywork-Reward-V2-Qwen3-4B` (code/README/scripts all consistent) |
+
+### 10.0 Path variables
+
+```bash
+VM_BASE=/path/to/Skywork-Reward-V2-Qwen3-4B
+TEACHER_RM=/path/to/Skywork-Reward-V2-Qwen3-8B
+HF_TOKEN=hf_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx  # placeholder — real token was invalidated after being exposed in git history
+
+SIA=/workspace/SIA/raw_SIA/SIA
+RAW=/workspace/git-gaoteng/vm-training-data
+PROC=/workspace/git-gaoteng/vm-training-data/processed
+CKPT=/workspace/git-gaoteng/vm-checkpoints
+
+mkdir -p $PROC $CKPT
+```
+
+### 10.1 Step 1 — Preprocess (tokenize, no scoring yet)
+
+```bash
+cd $SIA
+
+# WildGuardMix（从 HuggingFace 加载；内部 None response 行会被自动跳过 → ~37,976 条）
+HUGGING_FACE_HUB_TOKEN=$HF_TOKEN \
+python3 src/value_model/preprocess.py wildguardmix \
+    --dataset_path allenai/wildguardmix \
+    --split wildguardtrain \
+    --tokenizer_path $VM_BASE \
+    --output_path $PROC/wildguardmix.json
+
+# UltraFeedback — ShareGPT subset（已下载的 JSONL）
+python3 src/value_model/preprocess.py ultrafeedback \
+    --dataset_path $RAW/ultrafeedback-sharegpt/sharegpt.jsonl \
+    --tokenizer_path $VM_BASE \
+    --output_path $PROC/sharegpt.json
+
+# UltraFeedback — UltraChat subset
+python3 src/value_model/preprocess.py ultrafeedback \
+    --dataset_path $RAW/ultrafeedback-ultrachat/ultrachat.jsonl \
+    --tokenizer_path $VM_BASE \
+    --output_path $PROC/ultrachat.json
+```
+
+产物：每个 JSON 含 `rm_prompt_tokens_ids` / `generated_tokens_ids` / `rm_guided_tokens_mask`，尚无 `reward` 字段。
+
+### 10.2 Step 2 — Teacher RM scoring（写入 `reward` 字段）
+
+```bash
+cd $SIA
+
+for SPLIT in wildguardmix sharegpt ultrachat; do
+    python3 src/measure_reward.py \
+        --input_file  $PROC/${SPLIT}.json \
+        --output_file $PROC/${SPLIT}_scored.json \
+        --rm $TEACHER_RM \
+        --device cuda:0
+done
+```
+
+注：8B 模型逐条打分，~157k 条在单卡约需数小时，可并行到多卡（分别指定 `--device cuda:1` 等）。
+
+### 10.3 Step 3 — Train VM
+
+```bash
+cd $SIA
+
+bash scripts/train_vm.sh \
+    --data_file \
+        $PROC/wildguardmix_scored.json \
+        $PROC/sharegpt_scored.json \
+        $PROC/ultrachat_scored.json \
+    --base_model_path $VM_BASE \
+    --output_dir $CKPT/VM-Qwen3-4B \
+    --batch_size 8 \
+    --gradient_accumulation_steps 2 \
+    --learning_rate 1e-4 \
+    --num_epochs 3 \
+    --device cuda:0 \
+    --lora_r 16 \
+    --lora_alpha 32 \
+    --save_interval_steps 5000
+```
+
+默认参数（与论文一致）：batch=8，grad_accum=2，lr=1e-4，epochs=3，max_len=1024，LoRA r=16 α=32。
+
+### 10.4 预期产物
+
+```
+$CKPT/VM-Qwen3-4B/
+├── lora_weights/          ← PEFT LoRA adapter（接 --rm_lora 使用）
+├── token_reward_head.pt   ← Linear(hidden_size, 1) 权重
+├── model_config.json      ← 配置与最优 val R²
+└── training_curves.png    ← loss / R² 曲线
+```
