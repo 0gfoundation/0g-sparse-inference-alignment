@@ -219,7 +219,7 @@ Sourced from `scripts/train_vm.sh` defaults, `src/value_model/train.py`, and the
 
 | Parameter | Value | Source |
 |-----------|-------|--------|
-| Base model | **Qwen3-4B-Base** (paper) / **Skywork-Reward-V2-Qwen3-4B** (code) — see note | paper App.C.1 / train_vm.sh |
+| Base model | **Qwen3-4B-Base** (author confirmed) | paper App.C.1 + author |
 | Optimizer | AdamW | train.py:796 |
 | Learning rate | 1e-4 | train_vm.sh |
 | Weight decay | 1e-4 | train_vm.sh |
@@ -235,13 +235,11 @@ Sourced from `scripts/train_vm.sh` defaults, `src/value_model/train.py`, and the
 
 Achieved val R² = **0.9486** on best epoch (epoch 3) for existing VM-Qwen3-4B checkpoint.
 
-**Note — Base model discrepancy (must confirm with authors):**
-- Paper Appendix C.1: "VM-Qwen3-4B is initialized from **Qwen3-4B-Base**"
-- `scripts/train_vm.sh` line 8, `README.md` line 192, `train.py` help text: all use **Skywork-Reward-V2-Qwen3-4B**
-- The two differ: Skywork-Reward-V2-Qwen3-4B has been fine-tuned on 26M preference pairs;
-  Qwen3-4B-Base has not. The transformer backbone weights are different.
-- Both HF models exist: `Qwen/Qwen3-4B-Base` and `Skywork/Skywork-Reward-V2-Qwen3-4B`.
-- Pending author confirmation (see also: teacher RM discrepancy in `farma-vm-training-data-20260701.md`).
+**Note — Base model discrepancy (RESOLVED via author confirmation):**
+- Paper Appendix C.1: "VM-Qwen3-4B is initialized from **Qwen3-4B-Base**" ✓
+- `scripts/train_vm.sh` / `README.md` train.py example: show **Skywork-Reward-V2-Qwen3-4B** ✗ (stale)
+- Author confirmed (2026-07-02): both were tested; **Qwen3-4B-Base performed slightly better**,
+  so final training used Qwen3-4B-Base. The script default was never updated.
 
 ### LoRA configuration (from adapter_config.json)
 
@@ -509,17 +507,17 @@ This enables 16 GB GPUs. Requires modifying the loss loop in `train.py`.
 
 ## 10. Complete Command Lines
 
-Assumed models (best guess — see §4 discrepancy notes):
+Models (both confirmed — see §4):
 
-| Role | Model |
-|------|-------|
-| Teacher RM | `Skywork/Skywork-Reward-V2-Qwen3-8B` (paper text wins over stale shell script) |
-| VM base | `Skywork/Skywork-Reward-V2-Qwen3-4B` (code/README/scripts all consistent) |
+| Role | Model | Confirmed by |
+|------|-------|-------------|
+| Teacher RM | `Skywork/Skywork-Reward-V2-Qwen3-8B` | paper §4.2.2 + README |
+| VM base | `Qwen/Qwen3-4B-Base` | paper App.C.1 + author (2026-07-02) |
 
 ### 10.0 Path variables
 
 ```bash
-VM_BASE=/path/to/Skywork-Reward-V2-Qwen3-4B
+VM_BASE=/path/to/Qwen3-4B-Base
 TEACHER_RM=/path/to/Skywork-Reward-V2-Qwen3-8B
 HF_TOKEN=hf_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx  # placeholder — real token was invalidated after being exposed in git history
 
