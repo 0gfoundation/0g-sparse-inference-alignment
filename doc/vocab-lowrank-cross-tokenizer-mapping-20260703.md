@@ -116,7 +116,23 @@ prefix 仍需走 Qwen3 token 空间（VM embedding 层只有 151936 槽位）。
 
 ### 2.6 实现位置
 
-- `scripts/build_token_mapping.py`：离线建表工具（已写，见该文件）
+**离线建表（只需跑一次，纯 CPU，不影响训练进程）：**
+
+```bash
+# 需要在有 0GM-35B 模型文件的机器上运行
+# 若该机器上没有 Qwen3-4B-Base，可把 tokenizer 目录（仅 tokenizer*.json 等小文件）拷过来
+python scripts/build_token_mapping.py \
+  --src_model /workspace/SIA/models/0GM-1.0-35B-A3B-0427 \
+  --tgt_model /workspace/sia-repo/models/Qwen3-4B-Base \
+  --output /workspace/sia-repo/0g-sparse-inference-alignment/token_mapping_ogm35b_to_qwen3_4b
+```
+
+输出两个文件（~1 MB 合计）：
+- `token_mapping_ogm35b_to_qwen3_4b.npy` — int32 array shape `(248320,)`，`arr[ogm_id]=qwen3_id`，unmapped 为 `-1`
+- `token_mapping_ogm35b_to_qwen3_4b.json` — 覆盖率统计
+
+**后续代码改动：**
+
 - `src/sia_rm/client.py`：`RMClient.__init__` 加载映射表；修复 `set_vocab_head_mode` 调用时序；`score_with_vocab_head_batch` 添加映射翻译逻辑
 
 ---
