@@ -79,7 +79,7 @@ services:
         --rm_model   /workspace/sia-repo/models/VM-Qwen3-4B-vocab-lowrank-merged
         --vm_head_type vocab_lowrank
         --vm_head_rank 64
-        --llm_gpu_mem    0.49
+        --llm_gpu_mem    0.50
         --rm_b2_gpu_mem  0.08
         --topk 10 --weight 1.0 --entropy_threshold 1.0
         --max_model_len 4096

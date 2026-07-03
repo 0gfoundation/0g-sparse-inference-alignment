@@ -377,8 +377,8 @@ class Qwen3WithScoreForCausalLM(Qwen3ForCausalLM):
             if self._sia_head_type == "vocab_lowrank" and _VOCAB_HEAD_MODE:
                 # FaRMA vocab head: one prefix forward gives (N, vocab_size) reward scores.
                 # Only inproc mode is supported — vocab tensors are too large for /dev/shm IPC.
-                h_r = self.score_A(hidden_states.float())   # (N, rank)
-                vocab_scores = self.score_B(h_r)             # (N, vocab_size)
+                h_r = self.score_A(hidden_states)   # (N, rank)
+                vocab_scores = self.score_B(h_r)    # (N, vocab_size)
                 if _PROFILE_ENABLED:
                     score_end.record()
                     torch.cuda.synchronize()
