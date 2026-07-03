@@ -4,12 +4,20 @@ Build a token ID mapping from a source tokenizer (e.g. 0GM-35B) to a target
 tokenizer (e.g. Qwen3-4B-Base) using the text-round-trip method:
 
     source_token_id  →  decode to text  →  encode with target tokenizer
-    If result is exactly 1 target token: record mapping.
-    Otherwise: mark as unmapped (-1).
+
+Mapping strategy:
+    1 target token  → exact 1-to-1 mapping  (arr[src_id] = tgt_id)
+    N target tokens → approximate: arr[src_id] = tgt_ids[0]  (first token)
+    0 target tokens → unmapped: arr[src_id] = -1  (special/empty token only)
+
+For multi-token cases, using the first target token as a proxy is sound because
+(a) 0GM merged the substring into one token precisely because it appears as a
+    unit; the VM score for tgt_ids[0] carries most of the signal, and
+(b) any approximation beats the fallback of score=0 (no VM intervention).
 
 Output files:
   <output>.npy   — int32 numpy array of shape (source_vocab_size,)
-                   arr[src_id] = tgt_id  (or -1 if unmapped)
+                   arr[src_id] = tgt_id  (or -1 only for empty/error tokens)
   <output>.json  — metadata (vocab sizes, coverage stats, model paths)
 
 Usage:
@@ -62,10 +70,10 @@ def main():
     print(f"[3/4] Building mapping ({src_vocab_size} source tokens) ...")
     mapping = np.full(src_vocab_size, -1, dtype=np.int32)
 
-    mapped = 0
-    multi_token = 0  # src token decodes to text that tgt tokenizer splits into >1 tokens
-    empty = 0        # decode produced empty string → encode gives []
-    errors = 0       # exceptions (rare byte-level edge cases)
+    exact = 0         # 1-to-1 exact match
+    approx = 0        # multi-token → first token approximation
+    empty = 0         # decode produced empty string → encode gives [] → -1
+    errors = 0        # exceptions (rare byte-level edge cases)
 
     t0 = time.perf_counter()
 
@@ -78,13 +86,19 @@ def main():
                 tgt_id = int(tgt_ids[0])
                 if 0 <= tgt_id < tgt_vocab_size:
                     mapping[src_id] = tgt_id
-                    mapped += 1
+                    exact += 1
                 else:
-                    errors += 1           # tgt_id out of range (shouldn't happen)
-            elif len(tgt_ids) == 0:
-                empty += 1               # empty text (special token with no text repr)
+                    errors += 1
+            elif len(tgt_ids) > 1:
+                # Approximate: use first target token as proxy score
+                tgt_id = int(tgt_ids[0])
+                if 0 <= tgt_id < tgt_vocab_size:
+                    mapping[src_id] = tgt_id
+                    approx += 1
+                else:
+                    errors += 1
             else:
-                multi_token += 1         # text maps to multiple tgt tokens → no 1-to-1
+                empty += 1               # truly empty (special token with no text repr)
 
         except Exception:
             errors += 1
@@ -93,21 +107,26 @@ def main():
             elapsed = time.perf_counter() - t0
             pct = (src_id + 1) / src_vocab_size * 100
             eta = elapsed / (src_id + 1) * (src_vocab_size - src_id - 1)
+            mapped = exact + approx
             print(
                 f"  {src_id+1:>7}/{src_vocab_size}  {pct:5.1f}%  "
-                f"mapped={mapped}  multi={multi_token}  empty={empty}  err={errors}  "
+                f"exact={exact}  approx={approx}  empty={empty}  err={errors}  "
                 f"elapsed={elapsed:.0f}s  eta={eta:.0f}s",
                 flush=True,
             )
 
     elapsed_total = time.perf_counter() - t0
+    mapped = exact + approx
     coverage_pct = mapped / src_vocab_size * 100
+    exact_pct = exact / src_vocab_size * 100
+    approx_pct = approx / src_vocab_size * 100
 
     print(f"\n  Done in {elapsed_total:.1f}s")
-    print(f"  mapped:      {mapped:>7}  ({coverage_pct:.2f}%)")
-    print(f"  multi-token: {multi_token:>7}  ({multi_token/src_vocab_size*100:.2f}%)")
-    print(f"  empty:       {empty:>7}  ({empty/src_vocab_size*100:.2f}%)")
-    print(f"  errors:      {errors:>7}")
+    print(f"  exact (1-to-1):  {exact:>7}  ({exact_pct:.2f}%)")
+    print(f"  approx (first):  {approx:>7}  ({approx_pct:.2f}%)")
+    print(f"  total mapped:    {mapped:>7}  ({coverage_pct:.2f}%)")
+    print(f"  empty (unmapped):{empty:>7}  ({empty/src_vocab_size*100:.2f}%)")
+    print(f"  errors:          {errors:>7}")
 
     # ---- Save ----
     print(f"\n[4/4] Saving ...")
@@ -119,15 +138,19 @@ def main():
     print(f"  mapping array → {npy_path}  ({size_kb:.0f} KB)")
 
     meta = {
-        "src_model":       args.src_model,
-        "tgt_model":       args.tgt_model,
-        "src_vocab_size":  src_vocab_size,
-        "tgt_vocab_size":  tgt_vocab_size,
-        "mapped_count":    mapped,
-        "multi_token_count": multi_token,
-        "empty_count":     empty,
-        "error_count":     errors,
-        "coverage_pct":    round(coverage_pct, 4),
+        "src_model":        args.src_model,
+        "tgt_model":        args.tgt_model,
+        "src_vocab_size":   src_vocab_size,
+        "tgt_vocab_size":   tgt_vocab_size,
+        "exact_count":      exact,
+        "approx_count":     approx,
+        "mapped_count":     mapped,
+        "empty_count":      empty,
+        "error_count":      errors,
+        "exact_pct":        round(exact_pct, 4),
+        "approx_pct":       round(approx_pct, 4),
+        "coverage_pct":     round(coverage_pct, 4),
+        "mapping_strategy": "first-token-approximation",
     }
     with open(json_path, "w") as f:
         json.dump(meta, f, indent=2)
@@ -147,21 +170,22 @@ def main():
         if shown >= 10:
             break
 
-    # Also show a few unmapped examples
-    print("\nSample unmapped tokens (multi-token in target):")
+    # Show a few approximate-mapped examples
+    print("\nSample approximate-mapped tokens (multi-token, first used as proxy):")
     shown = 0
     for src_id in range(src_vocab_size):
-        if mapping[src_id] >= 0:
+        if mapping[src_id] < 0:
             continue
         try:
             src_text = src_tok.decode([src_id], skip_special_tokens=False)
             tgt_ids  = tgt_tok.encode(src_text, add_special_tokens=False)
             if len(tgt_ids) > 1:
-                print(f"  src[{src_id:6d}]={repr(src_text):30s}  →  {len(tgt_ids)} tgt tokens: {tgt_ids[:5]}")
+                proxy_text = tgt_tok.decode([int(tgt_ids[0])], skip_special_tokens=False)
+                print(f"  ~ src[{src_id:6d}]={repr(src_text):30s}  →  {len(tgt_ids)} tgt tokens {tgt_ids[:4]}  proxy={repr(proxy_text)}")
                 shown += 1
         except Exception:
             pass
-        if shown >= 5:
+        if shown >= 10:
             break
 
     print("\nDone.")
