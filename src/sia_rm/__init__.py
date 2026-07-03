@@ -20,6 +20,9 @@ from .qwen3_with_score import (
     truncate_rewards,
     read_all_timings,
     truncate_timings,
+    set_vocab_head_mode,
+    clear_inproc_vocab_rewards,
+    take_inproc_vocab_rewards,
 )
 from .client import RMClient
 
@@ -32,4 +35,7 @@ __all__ = [
     "truncate_rewards",
     "read_all_timings",
     "truncate_timings",
+    "set_vocab_head_mode",
+    "clear_inproc_vocab_rewards",
+    "take_inproc_vocab_rewards",
 ]

@@ -643,6 +643,14 @@ def parse_args():
                    help="b2 backend: after each decode step pre-warm the VM KV cache with the "
                         "predicted next token for all active sessions. Reduces tail prefill "
                         "cost at the next INTERVENE step.")
+    p.add_argument("--vm_head_type", default="scalar",
+                   choices=["scalar", "vocab_lowrank"],
+                   help="b2 backend: VM reward head type. "
+                        "'scalar' (default): K RM forwards per INTERVENE step. "
+                        "'vocab_lowrank': 1 RM forward per step (FaRMA, ~K× speedup). "
+                        "Requires checkpoint converted with convert_rm_for_vllm.py --head_type vocab_lowrank.")
+    p.add_argument("--vm_head_rank", type=int, default=64,
+                   help="Rank for vocab_lowrank head (default 64, ignored for scalar head).")
     p.add_argument("--vm_topk", type=int, default=None,
                    help="Limit candidates sent to VM per request (default: same as --topk). "
                         "Keeps --topk for entropy gate so intervention rate is unchanged. "
@@ -747,6 +755,8 @@ def main():
             enable_thinking=_enable_thinking,
             eager_vm_prefill=_args.eager_vm_prefill,
             vm_topk=_args.vm_topk,
+            vm_head_type=_args.vm_head_type,
+            vm_head_rank=_args.vm_head_rank,
         )
 
     print("Loading vLLM AsyncLLMEngine...")

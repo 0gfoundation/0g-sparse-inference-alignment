@@ -173,6 +173,10 @@ def make_sia_processor(
                                        # Useful for FaRMA proxy benchmarking: keep topk=10 for entropy
                                        # gate (preserving intervention rate) but send only vm_topk=1
                                        # candidates to VM, reducing VM batch from N×topk to N×1.
+    vm_head_type: str = "scalar",      # b2 backend: VM reward head architecture.
+                                       # "scalar" (default): K forwards per step (original)
+                                       # "vocab_lowrank": 1 forward per step + vocab indexing (FaRMA)
+    vm_head_rank: int = 64,            # b2 backend: rank for vocab_lowrank head
 ):
     """
     Returns a SIALogitsProcessor class (not an instance).
@@ -213,6 +217,8 @@ def make_sia_processor(
         _ENABLE_THINKING = enable_thinking   # None / True / False
         _EAGER_VM_PREFILL = eager_vm_prefill
         _VM_TOPK: Optional[int] = vm_topk   # None = use _TOPK; int = limit VM candidates per request
+        _VM_HEAD_TYPE: str = vm_head_type   # "scalar" or "vocab_lowrank"
+        _VM_HEAD_RANK: int = vm_head_rank
 
         # Maximum number of sessions per score_candidates_batch() call (b2 backend).
         # Prevents RM KV-cache OOM at high concurrency: a single apply() with
@@ -423,6 +429,8 @@ def make_sia_processor(
                     max_model_len=self._RM_MAX_MODEL_LEN,
                     multiprocessing=rm_mp,
                     llm_tokenizer=self._llm_tok,
+                    head_type=self._VM_HEAD_TYPE,
+                    head_rank=self._VM_HEAD_RANK,
                 )
                 print(f"[SIA-b2] RMClient ready", flush=True)
 
@@ -1176,6 +1184,9 @@ def make_sia_processor(
 
                 if _b2_reqs:
                     _t_batch = time.perf_counter() if pf_on else 0.0
+                    # vocab_lowrank head: one prefix forward per chunk → N forwards instead of N×K.
+                    # Falls back to N×K inside score_with_vocab_head_batch for cross-tokenizer sessions.
+                    _use_vocab_head = (self._VM_HEAD_TYPE == "vocab_lowrank")
                     # Chunk size: SIA_RM_BATCH_CHUNK sessions per call.
                     # Prevents RM KV-cache OOM when batch_size×topk is large
                     # (e.g. 128 sessions × 10 candidates = 1280 prompts).
@@ -1191,9 +1202,11 @@ def make_sia_processor(
                     )
                     try:
                         for _chunk in _chunks:
-                            _chunk_scores = self._rm.score_candidates_batch(
-                                [(_sid, _cands) for (_, _sid, _cands) in _chunk]
-                            )
+                            _payload = [(_sid, _cands) for (_, _sid, _cands) in _chunk]
+                            if _use_vocab_head:
+                                _chunk_scores = self._rm.score_with_vocab_head_batch(_payload)
+                            else:
+                                _chunk_scores = self._rm.score_candidates_batch(_payload)
                             for (_req_i, _, _), _s in zip(_chunk, _chunk_scores):
                                 b2_batch_scores[_req_i] = _s
                         if pf_on:
@@ -1706,6 +1719,14 @@ def parse_args():
                    help="b2 backend: after each decode step pre-warm the VM KV cache with the "
                         "predicted next token for all active requests, so the next INTERVENE "
                         "finds a warm prefix and only needs to compute candidate tokens.")
+    p.add_argument("--vm_head_type", default="scalar",
+                   choices=["scalar", "vocab_lowrank"],
+                   help="b2 backend: VM reward head type. "
+                        "'scalar' (default): K RM forwards per INTERVENE step (original). "
+                        "'vocab_lowrank': 1 RM forward per step + vocab indexing (FaRMA, ~K× speedup). "
+                        "Requires a checkpoint converted with convert_rm_for_vllm.py --head_type vocab_lowrank.")
+    p.add_argument("--vm_head_rank", type=int, default=64,
+                   help="Rank for vocab_lowrank head (default 64, ignored for scalar head).")
     p.add_argument("--prompt", type=str,
                    default="Human:\nTell me a joke.\nAssistant:\n")
     p.add_argument("--max_model_len", type=int, default=2048)
@@ -1733,6 +1754,8 @@ def main():
         rm_model=args.rm_model,
         rm_b2_gpu_mem=args.rm_b2_gpu_mem,
         eager_vm_prefill=args.eager_vm_prefill,
+        vm_head_type=args.vm_head_type,
+        vm_head_rank=args.vm_head_rank,
     )
 
     print("Loading vllm LLM...")

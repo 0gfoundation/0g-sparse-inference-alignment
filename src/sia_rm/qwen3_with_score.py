@@ -128,6 +128,39 @@ def truncate_rewards() -> None:
 _REWARD_BUFFERS: dict[str, list[torch.Tensor]] = {}
 _INPROC_REWARD_MODE: bool = False
 
+# --- Vocab head buffer (FaRMA-style 1-forward-per-step inference) ---
+# When _VOCAB_HEAD_MODE is True, compute_logits stores (N, vocab_size) tensors
+# instead of (N,) scalars.  RMClient calls set_vocab_head_mode(True) before
+# LLM(…) is constructed so cudagraph capture already uses the vocab path.
+_VOCAB_REWARD_BUFFERS: dict[str, list[torch.Tensor]] = {}
+_VOCAB_HEAD_MODE: bool = False
+
+
+def set_vocab_head_mode(enabled: bool) -> None:
+    global _VOCAB_HEAD_MODE
+    _VOCAB_HEAD_MODE = enabled
+
+
+def _append_inproc_vocab_reward(fid: str, vocab_scores: torch.Tensor) -> None:
+    _VOCAB_REWARD_BUFFERS.setdefault(fid, []).append(vocab_scores)
+
+
+def clear_inproc_vocab_rewards(fid: str) -> None:
+    buf = _VOCAB_REWARD_BUFFERS.get(fid)
+    if buf:
+        buf.clear()
+
+
+def take_inproc_vocab_rewards(fid: str) -> Optional[torch.Tensor]:
+    """Return concatenated (N, vocab_size) tensor and clear buffer."""
+    buf = _VOCAB_REWARD_BUFFERS.get(fid)
+    if not buf:
+        return None
+    # vLLM may split a single generate(N) into multiple forward passes; cat along dim-0.
+    out = buf[0] if len(buf) == 1 else torch.cat(buf, dim=0)
+    buf.clear()
+    return out
+
 
 def set_inproc_reward_mode(enabled: bool) -> None:
     """Toggle reward channel. RMClient.__init__ must call this BEFORE
@@ -230,13 +263,30 @@ def truncate_timings() -> None:
 
 
 class Qwen3WithScoreForCausalLM(Qwen3ForCausalLM):
-    """Qwen3ForCausalLM + external score head, used as B2 RM backbone."""
+    """Qwen3ForCausalLM + external score head, used as B2 RM backbone.
+
+    Supports two head variants selected via env var SIA_RM_HEAD_TYPE:
+      "scalar"       (default): self.score = Linear(hidden, 1) — original path
+      "vocab_lowrank": self.score_A = Linear(hidden, rank),
+                       self.score_B = Linear(rank, vocab_size)
+                       FaRMA-style: one prefix forward scores all vocab tokens.
+                       rank is set via SIA_RM_HEAD_RANK (default 64).
+    """
 
     def __init__(self, *, vllm_config, prefix: str = ""):
         super().__init__(vllm_config=vllm_config, prefix=prefix)
         hidden = vllm_config.model_config.hf_config.hidden_size
-        # plain nn.Linear — single-card SIA workload, no TP needed
-        self.score = nn.Linear(hidden, 1, bias=False)
+        _head_type = os.environ.get("SIA_RM_HEAD_TYPE", "scalar")
+        self._sia_head_type = _head_type
+        if _head_type == "vocab_lowrank":
+            _rank = int(os.environ.get("SIA_RM_HEAD_RANK", "64"))
+            vocab_size = vllm_config.model_config.hf_config.vocab_size
+            # Weight names match the keys saved by convert_rm_for_vllm.py --head_type vocab_lowrank
+            self.score_A = nn.Linear(hidden, _rank, bias=False)
+            self.score_B = nn.Linear(_rank, vocab_size, bias=False)
+        else:
+            # plain nn.Linear — single-card SIA workload, no TP needed
+            self.score = nn.Linear(hidden, 1, bias=False)
         # Profile-mode state. Allocated even if disabled (cheap) so we
         # don't branch on every call.
         self._sia_prof_fwd_start: Optional[torch.cuda.Event] = None
@@ -287,37 +337,38 @@ class Qwen3WithScoreForCausalLM(Qwen3ForCausalLM):
             score_start.record()
 
         try:
-            sw = self.score.weight  # shape (1, hidden), bf16
-            rewards = (hidden_states @ sw.T).squeeze(-1)
-            if _PROFILE_ENABLED:
-                score_end.record()
-                # Block until both forward and score events recorded; this
-                # synchronization is the cost of accurate measurement and
-                # is only paid in profile mode.
-                torch.cuda.synchronize()
-                fwd_ms = 0.0
-                if self._sia_prof_fwd_start is not None:
-                    fwd_ms = self._sia_prof_fwd_start.elapsed_time(
-                        self._sia_prof_fwd_end)
-                score_ms = score_start.elapsed_time(score_end)
-                _write_timing(fwd_ms, score_ms,
-                              self._sia_prof_n_input,
-                              int(hidden_states.shape[0]))
-            # B-1: dual reward channel.
-            if _INPROC_REWARD_MODE:
-                # In-process path: detach() shares storage with the matmul
-                # output (no copy). Safe because (h @ w.T) allocates a new
-                # tensor each call (out-of-place). Float32 not required —
-                # apply() will cast on-demand if needed.
-                #
-                # If a future cudagraph version reuses this allocation, the
-                # buffer reference could see overwritten data; switch to
-                # `.detach().clone()` if reward values come back wrong.
-                fid = os.environ.get("SIA_REWARD_FILE_ID", "default")
-                _append_inproc_reward(fid, rewards.detach())
+            fid = os.environ.get("SIA_REWARD_FILE_ID", "default")
+
+            if self._sia_head_type == "vocab_lowrank" and _VOCAB_HEAD_MODE:
+                # FaRMA vocab head: one prefix forward gives (N, vocab_size) reward scores.
+                # Only inproc mode is supported — vocab tensors are too large for /dev/shm IPC.
+                h_r = self.score_A(hidden_states.float())   # (N, rank)
+                vocab_scores = self.score_B(h_r)             # (N, vocab_size)
+                if _PROFILE_ENABLED:
+                    score_end.record()
+                    torch.cuda.synchronize()
+                    fwd_ms = (self._sia_prof_fwd_start.elapsed_time(self._sia_prof_fwd_end)
+                              if self._sia_prof_fwd_start is not None else 0.0)
+                    score_ms = score_start.elapsed_time(score_end)
+                    _write_timing(fwd_ms, score_ms,
+                                  self._sia_prof_n_input, int(hidden_states.shape[0]))
+                _append_inproc_vocab_reward(fid, vocab_scores.detach())
             else:
-                # Legacy /dev/shm path (multiprocessing=True or fallback).
-                _write_rewards(rewards.detach().to("cpu", torch.float32))
+                sw = self.score.weight  # shape (1, hidden), bf16
+                rewards = (hidden_states @ sw.T).squeeze(-1)
+                if _PROFILE_ENABLED:
+                    score_end.record()
+                    torch.cuda.synchronize()
+                    fwd_ms = (self._sia_prof_fwd_start.elapsed_time(self._sia_prof_fwd_end)
+                              if self._sia_prof_fwd_start is not None else 0.0)
+                    score_ms = score_start.elapsed_time(score_end)
+                    _write_timing(fwd_ms, score_ms,
+                                  self._sia_prof_n_input, int(hidden_states.shape[0]))
+                # B-1: dual reward channel.
+                if _INPROC_REWARD_MODE:
+                    _append_inproc_reward(fid, rewards.detach())
+                else:
+                    _write_rewards(rewards.detach().to("cpu", torch.float32))
         except Exception:
             # Don't crash decode if reward/timing write fails — RMClient
             # will see stale or None and can decide what to do

@@ -48,6 +48,9 @@ from .qwen3_with_score import (
     set_inproc_reward_mode,
     clear_inproc_rewards,
     take_inproc_rewards,
+    set_vocab_head_mode,
+    clear_inproc_vocab_rewards,
+    take_inproc_vocab_rewards,
     _REWARD_BUFFERS,
 )
 
@@ -63,6 +66,8 @@ class RMClient:
         multiprocessing: bool = False,
         llm_tokenizer=None,
         max_num_batched_tokens: Optional[int] = None,
+        head_type: str = "scalar",
+        head_rank: int = 64,
     ):
         """
         cuda_graph_sizes: optional list of batch sizes to capture in the
@@ -107,6 +112,18 @@ class RMClient:
         # capture invokes compute_logits with dummy inputs at every cuda
         # graph batch size; those calls must already see the correct flag.
         set_inproc_reward_mode(not multiprocessing)
+
+        # Vocab head (FaRMA): set head type env vars so Qwen3WithScoreForCausalLM
+        # initialises with the right architecture during cudagraph capture.
+        self._head_type = head_type
+        if head_type == "vocab_lowrank":
+            os.environ["SIA_RM_HEAD_TYPE"] = "vocab_lowrank"
+            os.environ["SIA_RM_HEAD_RANK"] = str(head_rank)
+            if not multiprocessing:
+                set_vocab_head_mode(True)
+        else:
+            os.environ.pop("SIA_RM_HEAD_TYPE", None)
+            os.environ.pop("SIA_RM_HEAD_RANK", None)
 
         from vllm import LLM, SamplingParams, TokensPrompt
 
@@ -244,6 +261,8 @@ class RMClient:
         # memory until the first real score_candidates() call.
         if not multiprocessing:
             clear_inproc_rewards(self._fid)
+            if head_type == "vocab_lowrank":
+                clear_inproc_vocab_rewards(self._fid)
 
         # vllm 0.18.0 CUDAGraph 跨实例清除修复:
         # gpu_model_runner.py 在 profiling 阶段结束时调用
@@ -574,6 +593,63 @@ class RMClient:
         # NOT ordering errors — a silent wrong-score bug would result if vLLM ever
         # reorders.
         return [all_rewards[start:end] for (start, end) in offsets]
+
+    def score_with_vocab_head_batch(
+        self,
+        requests: list,
+    ) -> list:
+        """FaRMA vocab head scoring: one prefix forward per session, then index by candidate IDs.
+
+        Instead of sending N×K prompts (prefix + [candidate_i]), sends N prefix prompts and reads
+        the (N, vocab_size) reward tensor, then indexes each row by that session's candidate IDs.
+        Reduces RM forward calls from N×K to N — approximately K× wall-clock speedup.
+
+        Args:
+            requests: list of (sid, candidate_token_ids).  fix_a_token must already have been called
+                      for all new output tokens (same contract as score_candidates).
+
+        Returns:
+            list of Tensor, one per request, each shape (K_i,) — same contract as score_candidates_batch.
+            Same device as the RM (GPU tensor in inproc mode).
+
+        Falls back to score_candidates_batch when _cross_tokenizer is True (candidate IDs from the LLM
+        vocab can't be used to index into the RM vocab space).
+        """
+        if not requests:
+            return []
+        if self._cross_tokenizer:
+            # Cross-vocab: LLM token IDs != RM token IDs; vocab indexing is invalid.
+            # Fall back to N×K forward approach with text decode/encode bridge.
+            return self.score_candidates_batch(requests)
+        if self._head_type != "vocab_lowrank":
+            # Scalar head doesn't produce vocab vectors; fall back.
+            return self.score_candidates_batch(requests)
+
+        TP = self._TokensPrompt
+        # Build one prompt per session (prefix only, no candidate appended).
+        prompts = []
+        for sid, _ in requests:
+            if sid not in self._sessions:
+                raise ValueError(f"Unknown session id {sid}")
+            prompts.append(TP(prompt_token_ids=self._sessions[sid]))
+
+        clear_inproc_vocab_rewards(self._fid)
+        _ = self.llm.generate(prompts, self._sp, use_tqdm=False)
+        vocab_rewards = take_inproc_vocab_rewards(self._fid)  # (N, vocab_size) GPU tensor
+
+        if vocab_rewards is None or vocab_rewards.shape[0] != len(requests):
+            n_got = 0 if vocab_rewards is None else int(vocab_rewards.shape[0])
+            raise RuntimeError(
+                f"vocab reward buffer returned {n_got} rows, expected {len(requests)}. "
+                f"Likely SIA_REWARD_FILE_ID mismatch or vocab head mode not active."
+            )
+
+        results = []
+        for row_idx, (sid, candidate_token_ids) in enumerate(requests):
+            cand_t = torch.tensor(candidate_token_ids, dtype=torch.long,
+                                  device=vocab_rewards.device)
+            results.append(vocab_rewards[row_idx, cand_t])  # (K_i,)
+        return results
 
     def eager_prefill_batch(self, requests: list) -> None:
         """Warm the VM KV cache with predicted next tokens. Scores are discarded.
