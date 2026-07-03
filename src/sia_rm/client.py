@@ -604,6 +604,11 @@ class RMClient:
         the (N, vocab_size) reward tensor, then indexes each row by that session's candidate IDs.
         Reduces RM forward calls from N×K to N — approximately K× wall-clock speedup.
 
+        Cross-tokenizer mode: prefixes are re-encoded with the RM tokenizer (_get_stable_rm_prefix),
+        and candidate LLM token IDs are mapped to RM token IDs via text decode/re-encode (first-token
+        approximation for multi-token mappings).  This preserves the N-forward advantage even when
+        the LLM and RM have different vocabularies (e.g. 0GM-35B 248K + VM-Qwen3-4B 151K).
+
         Args:
             requests: list of (sid, candidate_token_ids).  fix_a_token must already have been called
                       for all new output tokens (same contract as score_candidates).
@@ -611,27 +616,25 @@ class RMClient:
         Returns:
             list of Tensor, one per request, each shape (K_i,) — same contract as score_candidates_batch.
             Same device as the RM (GPU tensor in inproc mode).
-
-        Falls back to score_candidates_batch when _cross_tokenizer is True (candidate IDs from the LLM
-        vocab can't be used to index into the RM vocab space).
         """
         if not requests:
             return []
-        if self._cross_tokenizer:
-            # Cross-vocab: LLM token IDs != RM token IDs; vocab indexing is invalid.
-            # Fall back to N×K forward approach with text decode/encode bridge.
-            return self.score_candidates_batch(requests)
         if self._head_type != "vocab_lowrank":
             # Scalar head doesn't produce vocab vectors; fall back.
             return self.score_candidates_batch(requests)
 
         TP = self._TokensPrompt
         # Build one prompt per session (prefix only, no candidate appended).
+        # Cross-tokenizer: re-encode prefix with RM tokenizer.
         prompts = []
         for sid, _ in requests:
             if sid not in self._sessions:
                 raise ValueError(f"Unknown session id {sid}")
-            prompts.append(TP(prompt_token_ids=self._sessions[sid]))
+            if self._cross_tokenizer:
+                prefix = self._get_stable_rm_prefix(sid, self._sessions[sid])
+            else:
+                prefix = self._sessions[sid]
+            prompts.append(TP(prompt_token_ids=prefix))
 
         clear_inproc_vocab_rewards(self._fid)
         _ = self.llm.generate(prompts, self._sp, use_tqdm=False)
@@ -644,10 +647,28 @@ class RMClient:
                 f"Likely SIA_REWARD_FILE_ID mismatch or vocab head mode not active."
             )
 
+        rm_vocab_size = vocab_rewards.shape[1]
         results = []
         for row_idx, (sid, candidate_token_ids) in enumerate(requests):
-            cand_t = torch.tensor(candidate_token_ids, dtype=torch.long,
-                                  device=vocab_rewards.device)
+            if self._cross_tokenizer:
+                # Map each LLM token ID to an RM token ID via text decode → RM encode.
+                # Multi-RM-token mappings use the first RM token as an approximation
+                # (same strategy as token_mapping_ogm35b_to_qwen3_4b.npy).
+                rm_ids = []
+                for c in candidate_token_ids:
+                    try:
+                        text = self._llm_tok.decode([c], skip_special_tokens=False)
+                    except (OverflowError, ValueError):
+                        text = ""
+                    ids = self._rm_tok.encode(text, add_special_tokens=False)
+                    # ids may be empty for whitespace-only or unmappable tokens; fall back to 0.
+                    rm_id = ids[0] if ids else 0
+                    # Clamp to RM vocab range (handles LLM special tokens beyond RM vocab).
+                    rm_ids.append(min(rm_id, rm_vocab_size - 1))
+                cand_t = torch.tensor(rm_ids, dtype=torch.long, device=vocab_rewards.device)
+            else:
+                cand_t = torch.tensor(candidate_token_ids, dtype=torch.long,
+                                      device=vocab_rewards.device)
             results.append(vocab_rewards[row_idx, cand_t])  # (K_i,)
         return results
 

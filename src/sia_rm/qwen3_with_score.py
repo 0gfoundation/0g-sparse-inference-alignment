@@ -5,9 +5,9 @@ Replaces the PoC source patch of vllm/.../qwen3.py with a subclass that vLLM
 dispatches to when the model config has
 `architectures=["Qwen3WithScoreForCausalLM"]` (forced via hf_overrides).
 
-Score head loading: VM checkpoint has `score.weight` (shape (1, hidden)),
-vLLM's AutoWeightsLoader auto-routes it to `self.score.weight` because the
-module name matches.
+Score head loading: a custom load_weights() override sieves out score.weight /
+score_A.weight / score_B.weight and routes them based on SIA_RM_HEAD_TYPE,
+bypassing AutoWeightsLoader which doesn't know about the vocab_lowrank head.
 
 Reward channel: vLLM v1's EngineCore runs in a child subprocess (NOT a fork
 — spawned via `python -m`), so threading.local() / module globals cannot
@@ -292,6 +292,41 @@ class Qwen3WithScoreForCausalLM(Qwen3ForCausalLM):
         self._sia_prof_fwd_start: Optional[torch.cuda.Event] = None
         self._sia_prof_fwd_end: Optional[torch.cuda.Event] = None
         self._sia_prof_n_input: int = 0
+
+    def load_weights(self, weights):
+        # The safetensors checkpoint produced by convert_rm_for_vllm.py for
+        # vocab_lowrank mode contains score.weight (from base Qwen3ForSequenceClassification),
+        # score_A.weight, and score_B.weight.  AutoWeightsLoader would fail on
+        # score.weight (no self.score in vocab_lowrank mode) or on score_A/score_B
+        # (not known to the parent class).  We intercept all three and route manually.
+        _SCORE_KEYS = {"score.weight", "score_A.weight", "score_B.weight"}
+        score_ckpt: dict = {}
+
+        def _filtered(it):
+            for name, tensor in it:
+                if name in _SCORE_KEYS:
+                    score_ckpt[name] = tensor
+                else:
+                    yield name, tensor
+
+        loaded = super().load_weights(_filtered(weights))
+
+        if loaded is None:
+            loaded = set()
+
+        if self._sia_head_type == "vocab_lowrank":
+            if "score_A.weight" in score_ckpt:
+                self.score_A.weight.data.copy_(score_ckpt["score_A.weight"])
+                loaded.add("score_A.weight")
+            if "score_B.weight" in score_ckpt:
+                self.score_B.weight.data.copy_(score_ckpt["score_B.weight"])
+                loaded.add("score_B.weight")
+        else:
+            if "score.weight" in score_ckpt:
+                self.score.weight.data.copy_(score_ckpt["score.weight"])
+                loaded.add("score.weight")
+
+        return loaded
 
     def forward(
         self,
