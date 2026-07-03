@@ -76,7 +76,7 @@ services:
         --llm        /workspace/models/Qwen3-VL-30B-A3B-Instruct
         --model_id   Qwen3-VL-30B-A3B-Instruct-SIA
         --rm_backend b2
-        --rm_model   /workspace/models/VM-Qwen3-4B-vocab-lowrank-merged
+        --rm_model   /workspace/sia-repo/models/VM-Qwen3-4B-vocab-lowrank-merged
         --vm_head_type vocab_lowrank
         --vm_head_rank 64
         --llm_gpu_mem    0.49
