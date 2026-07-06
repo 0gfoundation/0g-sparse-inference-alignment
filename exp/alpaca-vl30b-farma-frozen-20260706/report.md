@@ -121,8 +121,12 @@ of) the causal language modelling quality needed for generation.
 **Training design:**
 - LoRA adapter initialized with B=0 → merge is identity → backbone is unchanged
 - Only `token_reward_head.*` parameters (score_A, score_B) are trainable
-- BT loss + TD loss, 3 epochs, ~20k optimizer steps
-- BT accuracy over training: 73.0% → 74.7% → 74.9% (epoch 1→2→3)
+- **Loss: MSE** (`--loss_type mse`, default), 3 epochs, ~20k optimizer steps
+- Data: `wildguardmix-Qwen3-scored.json` + possibly ultrafeedback scored JSONs
+  (scored format with per-sample `reward` field; ~66k samples, 6,654 steps/epoch)
+- MSE R² over training: 0.7305 → 0.7472 → 0.7491 (epoch 1→2→3)
+  *(earlier described as "BT accuracy" in this report — that was incorrect; these are R² values
+  from MSE regression, confirmed from `training_history.json` which records `loss/mae/mse/rmse/r2`)*
 
 **Data:** `exp/alpaca-vl30b-farma-frozen-20260706/`  
 **Generation:** [`sia.json`](sia.json) (200Q, SIA) · [`nosia.json`](nosia.json) (200Q, noSIA via `sia_weight=0`)
@@ -294,8 +298,8 @@ the quality gap comes from the VM's backbone representations or from the head ar
 2. Replace its `score` head (1D scalar) with a randomly-initialized `score_A / score_B`
    vocab_lowrank head.
 
-3. **Freeze the backbone** (LoRA B=0 or no LoRA), train only `token_reward_head.*` using
-   the same BT+TD loss.
+3. **Freeze the backbone** (LoRA B=0 or no LoRA), train only `token_reward_head.*`.
+   Loss type TBD: frozen-20260706 used MSE; the next experiment uses BT+TD for comparison.
 
 **Expected benefit:** The SIA VM backbone encodes reward-relevant hidden representations
 that were shaped by the original RM training pipeline. Attaching a fresh vocab_lowrank head
@@ -309,7 +313,26 @@ or cross-tokenizer mismatch).
 
 **Implementation notes:**
 - `convert_rm_for_vllm.py` already handles vocab_lowrank heads; no changes needed.
-- The frozen-backbone training script (`train_vocab_lowrank_freeze_backbone.py` or
-  equivalent) needs `--rm` pointed at `VM-Qwen3-4B-merged-for-vllm` instead of
-  `Qwen3-4B-Base`.
+- The frozen-backbone training script needs `--base_model_path` pointed at
+  `VM-Qwen3-4B-merged-for-vllm` instead of `Qwen3-4B-Base`.
 - Training cost: same as frozen-20260706 (~2h per epoch on current hardware).
+
+**Status (2026-07-06): training in progress**
+
+```
+python3 src/value_model/train.py \
+    --data_file /workspace/sia-repo/vm-training-data/all-pairs-20260704.json \
+    --base_model_path /workspace/models/VM-Qwen3-4B-merged-for-vllm \
+    --output_dir /workspace/sia-repo/models/VM-Qwen3-4B-vocab-lowrank-sia-backbone-frozen-20260706 \
+    --batch_size 8 --gradient_accumulation_steps 2 --learning_rate 1e-4 \
+    --num_epochs 3 --max_length 1024 \
+    --lora_r 16 --lora_alpha 32 --lora_dropout 0.1 \
+    --head_type vocab_lowrank --head_rank 64 \
+    --loss_type bt --td_weight 0.5 \
+    --freeze_backbone --save_model --save_interval_steps 5000
+```
+
+Note: this run uses **BT+TD** combined loss (not MSE), enabling a direct comparison of loss
+type effect with identical backbone (frozen-20260706 used MSE). Trainable params: 9,887,744
+(0.24% of 4B total — only score_A and score_B).
+Log: `exp/train-sia-backbone-frozen-20260706.log`
