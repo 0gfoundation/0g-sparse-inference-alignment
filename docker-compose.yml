@@ -50,8 +50,8 @@ services:
       # Host path /dstack/persistent/SIA is mounted as /workspace inside the container.
       #   host: /dstack/persistent/SIA/models/Qwen3-VL-30B-A3B-Instruct/
       #      →  container: /workspace/models/Qwen3-VL-30B-A3B-Instruct/
-      #   host: /dstack/persistent/SIA/models/VM-Qwen3-4B-vocab-lowrank-merged/
-      #      →  container: /workspace/models/VM-Qwen3-4B-vocab-lowrank-merged/
+      #   host: /dstack/persistent/SIA/models/VM-Qwen3-4B-vocab-lowrank-armfix-merged/
+      #      →  container: /workspace/models/VM-Qwen3-4B-vocab-lowrank-armfix-merged/
       #   host: /dstack/persistent/SIA/sia-repo/0g-sparse-inference-alignment/
       #      →  container: /workspace/sia-repo/0g-sparse-inference-alignment/
       - /dstack/persistent/SIA:/workspace
@@ -67,6 +67,7 @@ services:
       # Safe on vllm 0.17.1 (AOT capture); see doc/0gm-35b-sia-perf-breakdown-20260609.md §6
       SIA_RM_CUDAGRAPH: piecewise
       SIA_RM_MULTIPROCESS: "0"
+      SIA_DEBUG_HIST: "1"
 
     # ------ Launch command (overrides Dockerfile CMD) -----------------------
     # No nohup needed inside a container — docker manages PID 1 lifecycle.
@@ -76,13 +77,13 @@ services:
         --llm        /workspace/models/Qwen3-VL-30B-A3B-Instruct
         --model_id   Qwen3-VL-30B-A3B-Instruct-SIA
         --rm_backend b2
-        --rm_model   /workspace/sia-repo/models/VM-Qwen3-4B-vocab-lowrank-merged
+        --rm_model   /workspace/sia-repo/models/VM-Qwen3-4B-vocab-lowrank-frozen-20260706-merged
         --vm_head_type vocab_lowrank
         --vm_head_rank 64
         --llm_gpu_mem    0.50
         --rm_b2_gpu_mem  0.08
         --topk 10 --weight 1.0 --entropy_threshold 1.0
-        --max_model_len 4096
+        --max_model_len 2048
         --enable_prefix_caching
         --host 0.0.0.0
         --port 8000

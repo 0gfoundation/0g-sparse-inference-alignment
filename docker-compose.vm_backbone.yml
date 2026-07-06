@@ -1,0 +1,44 @@
+# VM backbone-only generation test — no SIA, no head intervention.
+#
+# Runs vm_backbone_gen.py for each VM sequentially using transformers (not vLLM).
+# No ports exposed — this is a one-shot batch job that writes JSON to /workspace.
+#
+# Output (inside /workspace):
+#   exp/alpaca-vm-backbone-YYYYMMDD/scalar_backbone.json
+#   exp/alpaca-vm-backbone-YYYYMMDD/vocab_backbone.json
+#
+# Start:
+#   docker compose -f docker-compose.vm_backbone.yml up          # watch logs live
+#   docker compose -f docker-compose.vm_backbone.yml up -d       # background
+#   docker compose -f docker-compose.vm_backbone.yml logs -f     # attach
+#
+# After it finishes, run Skywork scoring:
+#   docker compose -f docker-compose.vm_backbone.yml run --rm vm-backbone \
+#     /opt/venv-vl30b/bin/python /workspace/sia-repo/0g-sparse-inference-alignment/scripts/measure_alpaca_reward.py \
+#     --input_file  /workspace/exp/alpaca-vm-backbone-YYYYMMDD/scalar_backbone.json \
+#     --output_file /workspace/exp/alpaca-vm-backbone-YYYYMMDD/scalar_backbone_scored.json \
+#     --rm /workspace/models/Skywork-Reward-V2-Llama-3.1-8B --device cuda:0
+
+services:
+  vm-backbone:
+    image: sia-vl30b:0.17.1
+    container_name: vm-backbone-test
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+    shm_size: 8g
+    ipc: host
+
+    volumes:
+      - /dstack/persistent/SIA:/workspace
+
+    command: bash /workspace/sia-repo/0g-sparse-inference-alignment/scripts/docker_entrypoint_vm_backbone.sh
+
+    # One-shot job — do not restart if it exits successfully.
+    restart: "no"

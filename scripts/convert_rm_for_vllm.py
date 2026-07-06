@@ -228,6 +228,19 @@ def main():
 
     base_model.save_pretrained(args.output, safe_serialization=True)
     tok.save_pretrained(args.output)
+
+    # Older vLLM/transformers (e.g. venv-vl30b 0.17.1) expects extra_special_tokens to be
+    # a dict, but newer transformers (≥5.x) saves it as a list. Normalize to dict.
+    _tok_cfg_path = os.path.join(args.output, "tokenizer_config.json")
+    if os.path.exists(_tok_cfg_path):
+        import json as _json
+        _tok_cfg = _json.load(open(_tok_cfg_path))
+        if isinstance(_tok_cfg.get("extra_special_tokens"), list):
+            _tok_cfg["extra_special_tokens"] = {}
+            with open(_tok_cfg_path, "w") as _f:
+                _json.dump(_tok_cfg, _f, indent=2, ensure_ascii=False)
+            print("[convert] fixed tokenizer_config.json: extra_special_tokens list → {}")
+
     print(f"[convert] Saved model + tokenizer to {args.output}")
 
     if args.skip_verify:

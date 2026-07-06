@@ -1,0 +1,15 @@
+{
+  "src_model": "/workspace/sia-repo/models/0GM-1.0-35B-A3B-tokenizer-only",
+  "tgt_model": "/workspace/sia-repo/models/Qwen3-4B-Base",
+  "src_vocab_size": 248077,
+  "tgt_vocab_size": 151669,
+  "exact_count": 130350,
+  "approx_count": 117727,
+  "mapped_count": 248077,
+  "empty_count": 0,
+  "error_count": 0,
+  "exact_pct": 52.5442,
+  "approx_pct": 47.4558,
+  "coverage_pct": 100.0,
+  "mapping_strategy": "first-token-approximation"
+}

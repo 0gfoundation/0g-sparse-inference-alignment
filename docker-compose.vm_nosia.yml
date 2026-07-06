@@ -1,0 +1,65 @@
+# noSIA baseline — plain vLLM serve on Qwen3-4B-Base, no reward model.
+#
+# Run AFTER docker-compose.vm_sia.yml is stopped (gpu 释放后再启动).
+# Port 8000: OpenAI-compatible /v1/chat/completions (no SIA intervention).
+#
+# Build + start:
+#   docker compose -f docker-compose.vm_nosia.yml up -d
+#   docker compose -f docker-compose.vm_nosia.yml logs -f
+#   docker compose -f docker-compose.vm_nosia.yml down
+
+services:
+  vm-nosia:
+    image: sia-vl30b:0.17.1
+    container_name: vm-nosia-server
+
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+    shm_size: 8g
+    ipc: host
+
+    ports:
+      - "8000:8000"
+
+    volumes:
+      - /dstack/persistent/SIA:/workspace
+      - vllm-nosia-cache:/root/.cache/vllm
+
+    # The image ENTRYPOINT does `pip install -e $REPO; exec "$@"`.
+    # For noSIA we do not need the sia_rm plugin, but it is harmless to register it.
+    # vllm serve with gpu_memory_utilization=0.45 leaves plenty of room for a 4B model.
+    command: >
+      /opt/venv-vl30b/bin/python -m vllm.entrypoints.openai.api_server
+        --model /workspace/sia-repo/models/Qwen3-4B-Base
+        --served-model-name Qwen3-4B-Base-noSIA
+        --gpu-memory-utilization 0.45
+        --max-model-len 2048
+        --enable-prefix-caching
+        --trust-remote-code
+        --host 0.0.0.0
+        --port 8000
+
+    restart: unless-stopped
+
+    # Qwen3-4B-Base starts in ~3 min; 8 min is a safe margin.
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8000/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 8m
+
+    stop_grace_period: 20s
+
+volumes:
+  vllm-nosia-cache:

@@ -1,0 +1,39 @@
+# Lightweight Docker image for VM-only reward scoring (no vLLM, no SIA server).
+#
+# Loads either a scalar-head or vocab_lowrank VM and serves a FastAPI scoring endpoint.
+# Much faster to build than the full sia-vl30b image (~5 min vs ~30 min).
+#
+# Build:
+#   docker build -f Dockerfile.vm_score -t vm-score:latest .
+#
+# Run directly (example):
+#   docker run --rm --gpus all -p 8001:8001 \
+#     -v /dstack/persistent/SIA:/workspace \
+#     vm-score:latest \
+#     python scripts/vm_score_server.py \
+#       --vm_type scalar \
+#       --vm_model /workspace/models/VM-Qwen3-4B-merged-for-vllm \
+#       --port 8001
+#
+# Or use docker-compose.vm_score.yml to start both services at once.
+
+FROM pytorch/pytorch:2.11.0-cuda12.8-cudnn9-devel
+
+RUN apt-get update -qq && \
+    apt-get install -y --no-install-recommends ca-certificates curl && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install only what's needed for VM scoring — no vllm.
+RUN pip install --no-cache-dir \
+    transformers==4.57.6 \
+    safetensors==0.7.0 \
+    fastapi>=0.136 \
+    uvicorn>=0.34 \
+    pydantic>=2.13 \
+    accelerate>=1.10 \
+    scipy>=1.14 \
+    requests>=2.32
+
+WORKDIR /workspace/sia-repo/0g-sparse-inference-alignment
+
+CMD ["python", "scripts/vm_score_server.py", "--help"]

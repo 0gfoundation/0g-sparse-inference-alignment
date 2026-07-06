@@ -1,0 +1,85 @@
+# VM-only scoring services — scalar head and vocab_lowrank, side by side.
+#
+# Both services load on the same GPU (H200 has plenty of room: 2 × 8 GB models on 140 GB).
+# Ports: scalar → 8001, vocab_lowrank → 8002.
+#
+# Build + start:
+#   docker compose -f docker-compose.vm_score.yml up --build -d
+#
+# Watch logs:
+#   docker compose -f docker-compose.vm_score.yml logs -f
+#
+# Stop:
+#   docker compose -f docker-compose.vm_score.yml down
+
+services:
+
+  vm-scalar:
+    image: vm-score:latest
+    container_name: vm-score-scalar
+    build:
+      context: .
+      dockerfile: Dockerfile.vm_score
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    shm_size: 4g
+    ipc: host
+    ports:
+      - "8001:8001"
+    volumes:
+      - /dstack/persistent/SIA:/workspace
+    environment:
+      CUDA_VISIBLE_DEVICES: "0"
+    command: >
+      python scripts/vm_score_server.py
+        --vm_type  scalar
+        --vm_model /workspace/models/VM-Qwen3-4B-merged-for-vllm
+        --device   cuda:0
+        --port     8001
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8001/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 3m
+
+  vm-vocab:
+    image: vm-score:latest
+    container_name: vm-score-vocab
+    build:
+      context: .
+      dockerfile: Dockerfile.vm_score
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    shm_size: 4g
+    ipc: host
+    ports:
+      - "8002:8002"
+    volumes:
+      - /dstack/persistent/SIA:/workspace
+    environment:
+      CUDA_VISIBLE_DEVICES: "0"
+    command: >
+      python scripts/vm_score_server.py
+        --vm_type  vocab_lowrank
+        --vm_model /workspace/sia-repo/models/VM-Qwen3-4B-vocab-lowrank-bt-20260704-merged
+        --device   cuda:0
+        --port     8002
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8002/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 3m

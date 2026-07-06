@@ -398,6 +398,25 @@ def make_sia_processor(
                 )
             # ===== SIA DEBUG HISTOGRAM END =====
 
+            # ===== SIA DETAIL LOG START =====
+            # Per-request accumulators for SIA_LOG_LEVEL=detail diagnostic logging.
+            # Tracks VM score distribution, entropy, and top-2 gap at INTERVENE steps.
+            # Printed per-step (first SIA_DETAIL_STEPS steps) and at request DONE.
+            # Zero-cost when LOG_LEVEL != "detail".
+            self._detail_vm_scores: dict[int, list] = {}       # req -> [vm_score, ...]
+            self._detail_entropy_intv: dict[int, list] = {}    # req -> [entropy, ...]
+            self._detail_gap_intv: dict[int, list] = {}        # req -> [top2_gap, ...]
+            self._detail_intv_count: dict[int, int] = {}       # req -> per-req intervene counter
+            _detail_max_steps: int = int(os.environ.get("SIA_DETAIL_STEPS", "10"))
+            self._detail_max_steps: int = _detail_max_steps
+            if self._LOG_LEVEL == "detail":
+                print(
+                    f"[SIA-detail] SIA_LOG_LEVEL=detail 已启用；每请求前 {_detail_max_steps} 个干预步打印详情，"
+                    f"之后每50步打印摘要（SIA_DETAIL_STEPS={_detail_max_steps}）",
+                    flush=True,
+                )
+            # ===== SIA DETAIL LOG END =====
+
             # B2 backend: in-process RMClient + per-request session table
             # Assumes LLM and RM use the same tokenizer (prerequisite for the B2 path), so token IDs are interchangeable
             self._rm: Optional[object] = None
@@ -1054,7 +1073,7 @@ def make_sia_processor(
             # needs the gap — avoids a second GPU→CPU round-trip.
             # logit gap = top1_logit - top2_logit (raw logit space; equivalent to log-prob ratio).
             # ===== SIA DEBUG HISTOGRAM START (gap_values also used by dual-gating below) =====
-            _need_gap = (self._GAP_THRESHOLD is not None) or self._DEBUG_HIST
+            _need_gap = (self._GAP_THRESHOLD is not None) or self._DEBUG_HIST or (self._LOG_LEVEL == "detail")
             if _need_gap:
                 gap_tensor = entropy_topk_result.values[:, 0] - entropy_topk_result.values[:, 1]  # (batch,)
                 # Sync entropy + gap together in one call; saves one round-trip vs separate .cpu() calls
@@ -1369,6 +1388,92 @@ def make_sia_processor(
                 if flipped:
                     self._flipped_steps[i] = self._flipped_steps.get(i, 0) + 1
 
+                # ===== SIA DETAIL LOG START =====
+                if self._LOG_LEVEL == "detail":
+                    _d_cnt = self._detail_intv_count.get(i, 0) + 1
+                    self._detail_intv_count[i] = _d_cnt
+
+                    # Move rm_scores to CPU once for all detail uses (b2 returns CPU tensor,
+                    # but it may have been cast to GPU dtype by the .to() call above).
+                    _rm_cpu = rm_scores.detach().cpu().tolist()
+                    _n_scores = len(_rm_cpu)
+
+                    # Accumulate for DONE summary (all intervene steps, not just printed ones)
+                    self._detail_vm_scores.setdefault(i, []).extend(_rm_cpu)
+                    self._detail_entropy_intv.setdefault(i, []).append(entropy)
+                    _gap_now = gap_values[i] if gap_values is not None else None
+                    if _gap_now is not None:
+                        self._detail_gap_intv.setdefault(i, []).append(_gap_now)
+
+                    _print_detail = _d_cnt <= self._detail_max_steps
+                    _print_summary = (not _print_detail) and (_d_cnt % 50 == 0)
+
+                    if _print_detail:
+                        # Candidate token IDs and original logits (up to _n_vm)
+                        _cand_ids   = topk_indices_i[:_n_scores]
+                        _orig_logits = topk_vals_i[:_n_scores].detach().cpu().tolist()
+                        _mod_logits  = modified_topk[:_n_scores].detach().cpu().tolist()
+                        _cand_texts  = [
+                            repr(self._llm_tok.decode([tid], skip_special_tokens=False))
+                            for tid in _cand_ids
+                        ]
+                        _vm_mean  = sum(_rm_cpu) / _n_scores
+                        _vm_std   = (_n_scores > 1) and (
+                            sum((s - _vm_mean) ** 2 for s in _rm_cpu) / _n_scores
+                        ) ** 0.5 or 0.0
+                        _pre_txt  = repr(self._llm_tok.decode([pre_top1],  skip_special_tokens=False))
+                        _post_txt = repr(self._llm_tok.decode([post_top1], skip_special_tokens=False))
+                        _gap_str  = f"{_gap_now:.3f}" if _gap_now is not None else "N/A"
+
+                        _lines = [
+                            f"[SIA-detail] {time.strftime('%H:%M:%S')}  step={req_step}  req={i}  干预#{_d_cnt}",
+                            f"  熵={entropy:.4f}  top2差距={_gap_str}  生成长度={len(output_ids)}",
+                            f"  候选词及VM评分（共{_n_scores}个）:",
+                        ]
+                        for _rank, (_tid, _ol, _vs, _ml, _txt) in enumerate(
+                            zip(_cand_ids, _orig_logits, _rm_cpu, _mod_logits, _cand_texts), 1
+                        ):
+                            _marker = ""
+                            if _tid == pre_top1 and _tid == post_top1:
+                                _marker = "  ← top1 未翻转"
+                            elif _tid == pre_top1:
+                                _marker = "  ← 原top1（被翻转）"
+                            elif _tid == post_top1 and flipped:
+                                _marker = "  ← 新top1（翻转后）"
+                            _lines.append(
+                                f"    #{_rank:2d} {_txt:16s}  id={_tid:6d}"
+                                f"  原logit={_ol:+7.3f}  VM={_vs:+7.4f}  合并={_ml:+7.3f}{_marker}"
+                            )
+                        _lines.append(
+                            f"  VM评分统计: 均值={_vm_mean:+.4f}  std={_vm_std:.4f}"
+                            f"  范围=[{min(_rm_cpu):+.4f}, {max(_rm_cpu):+.4f}]"
+                        )
+                        _flip_str = f"是 {_pre_txt} → {_post_txt}" if flipped else f"否（保持 {_pre_txt}）"
+                        _lines.append(f"  top1翻转: {_flip_str}")
+                        print("\n".join(_lines), flush=True)
+
+                    elif _print_summary:
+                        _all_vm  = self._detail_vm_scores.get(i, [])
+                        _all_ent = self._detail_entropy_intv.get(i, [])
+                        _all_gap = self._detail_gap_intv.get(i, [])
+                        _s_mean  = sum(_all_vm) / len(_all_vm) if _all_vm else 0.0
+                        _e_mean  = sum(_all_ent) / len(_all_ent) if _all_ent else 0.0
+                        _g_mean  = sum(_all_gap) / len(_all_gap) if _all_gap else 0.0
+                        _cur_flipped    = self._flipped_steps.get(i, 0)
+                        _cur_intervened = self._intervened_steps.get(i, 0)
+                        _flip_pct = (
+                            f"{_cur_flipped/_cur_intervened*100:.1f}%"
+                            if _cur_intervened else "N/A"
+                        )
+                        print(
+                            f"[SIA-detail] {time.strftime('%H:%M:%S')}  req={i}  进度@干预#{_d_cnt}"
+                            f"  VM均值={_s_mean:+.4f}  平均熵={_e_mean:.4f}"
+                            f"  平均top2差距={_g_mean:.4f}"
+                            f"  翻转率={_cur_flipped}/{_cur_intervened}({_flip_pct})",
+                            flush=True,
+                        )
+                # ===== SIA DETAIL LOG END =====
+
                 if verbose:
                     # rm_scores.min()/.max() on a GPU tensor is a reduction,
                     # triggering 2 syncs, but verbose defaults to quiet so this doesn't affect the hot path.
@@ -1481,6 +1586,33 @@ def make_sia_processor(
                     f"top1_flip={flipped}/{intervened} ({flip_ratio:.1%})",
                     flush=True,
                 )
+                # ===== SIA DETAIL LOG START =====
+                if self._LOG_LEVEL == "detail":
+                    _dv = self._detail_vm_scores.pop(idx, [])
+                    _de = self._detail_entropy_intv.pop(idx, [])
+                    _dg = self._detail_gap_intv.pop(idx, [])
+                    self._detail_intv_count.pop(idx, None)
+                    if _dv:
+                        _dv_mean = sum(_dv) / len(_dv)
+                        _dv_std  = (sum((s - _dv_mean) ** 2 for s in _dv) / len(_dv)) ** 0.5
+                        _de_mean = sum(_de) / len(_de) if _de else 0.0
+                        _dg_mean = sum(_dg) / len(_dg) if _dg else 0.0
+                        _dv_sorted = sorted(_dv)
+                        _dv_p25 = _dv_sorted[len(_dv_sorted) // 4]
+                        _dv_p75 = _dv_sorted[3 * len(_dv_sorted) // 4]
+                        print(
+                            f"[SIA-detail] req={idx} 完成统计\n"
+                            f"  VM评分分布: 均值={_dv_mean:+.4f}  std={_dv_std:.4f}"
+                            f"  min={_dv_sorted[0]:+.4f}  p25={_dv_p25:+.4f}"
+                            f"  p75={_dv_p75:+.4f}  max={_dv_sorted[-1]:+.4f}"
+                            f"  n={len(_dv)}\n"
+                            f"  干预步平均熵={_de_mean:.4f}"
+                            f"  干预步平均top2差距={_dg_mean:.4f}"
+                            f"  top1翻转率={flipped}/{intervened}"
+                            f"({flip_ratio:.1%})",
+                            flush=True,
+                        )
+                # ===== SIA DETAIL LOG END =====
                 # ===== SIA DEBUG HISTOGRAM START =====
                 if self._DEBUG_HIST:
                     eh = self._dbg_entropy_hist.pop(idx, None)
@@ -1541,6 +1673,12 @@ def make_sia_processor(
                 old_manual_prefix = dict(self._manual_prefix_ids_per_req)
                 old_b2_sessions = dict(self._b2_sessions)
                 old_b2_prefix_len = dict(self._b2_chat_prefix_len)
+                # ===== SIA DETAIL LOG START =====
+                old_detail_vm  = dict(self._detail_vm_scores)
+                old_detail_ent = dict(self._detail_entropy_intv)
+                old_detail_gap = dict(self._detail_gap_intv)
+                old_detail_cnt = dict(self._detail_intv_count)
+                # ===== SIA DETAIL LOG END =====
                 for i1, i2, directionality in batch_update.moved:
                     if directionality == MoveDirectionality.UNIDIRECTIONAL:
                         self._output_ids[i2] = old_out.get(i1, [])
@@ -1574,6 +1712,13 @@ def make_sia_processor(
                         # must start a fresh session, not inherit the moved one.
                         self._b2_sessions.pop(i1, None)
                         self._b2_chat_prefix_len.pop(i1, None)
+                        # ===== SIA DETAIL LOG START =====
+                        if i1 in old_detail_vm:
+                            self._detail_vm_scores[i2]      = old_detail_vm[i1]
+                            self._detail_entropy_intv[i2]   = old_detail_ent.get(i1, [])
+                            self._detail_gap_intv[i2]       = old_detail_gap.get(i1, [])
+                            self._detail_intv_count[i2]     = old_detail_cnt.get(i1, 0)
+                        # ===== SIA DETAIL LOG END =====
                     else:  # SWAP
                         self._output_ids[i1] = old_out.get(i2, [])
                         self._output_ids[i2] = old_out.get(i1, [])
@@ -1655,6 +1800,28 @@ def make_sia_processor(
                         else:
                             self._b2_sessions.pop(i2, None)
                             self._b2_chat_prefix_len.pop(i2, None)
+                        # ===== SIA DETAIL LOG START =====  detail accumulators: SWAP
+                        if i2 in old_detail_vm:
+                            self._detail_vm_scores[i1]    = old_detail_vm[i2]
+                            self._detail_entropy_intv[i1] = old_detail_ent.get(i2, [])
+                            self._detail_gap_intv[i1]     = old_detail_gap.get(i2, [])
+                            self._detail_intv_count[i1]   = old_detail_cnt.get(i2, 0)
+                        else:
+                            self._detail_vm_scores.pop(i1, None)
+                            self._detail_entropy_intv.pop(i1, None)
+                            self._detail_gap_intv.pop(i1, None)
+                            self._detail_intv_count.pop(i1, None)
+                        if i1 in old_detail_vm:
+                            self._detail_vm_scores[i2]    = old_detail_vm[i1]
+                            self._detail_entropy_intv[i2] = old_detail_ent.get(i1, [])
+                            self._detail_gap_intv[i2]     = old_detail_gap.get(i1, [])
+                            self._detail_intv_count[i2]   = old_detail_cnt.get(i1, 0)
+                        else:
+                            self._detail_vm_scores.pop(i2, None)
+                            self._detail_entropy_intv.pop(i2, None)
+                            self._detail_gap_intv.pop(i2, None)
+                            self._detail_intv_count.pop(i2, None)
+                        # ===== SIA DETAIL LOG END =====
 
             for idx, params, prompt_ids, output_ids in batch_update.added:
                 self._output_ids[idx] = output_ids
