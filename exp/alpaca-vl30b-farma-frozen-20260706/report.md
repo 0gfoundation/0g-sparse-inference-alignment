@@ -114,6 +114,10 @@ of) the causal language modelling quality needed for generation.
 ### Experiment 4: vocab_lowrank frozen-backbone training (2026-07-06) — THIS EXPERIMENT
 
 **VM:** `VM-Qwen3-4B-vocab-lowrank-frozen-20260706` (frozen backbone, head-only training)  
+**Model paths:**
+- LoRA checkpoint: `/workspace/sia-repo/models/VM-Qwen3-4B-vocab-lowrank-frozen-20260706`
+- Merged (vLLM-ready): `/workspace/sia-repo/models/VM-Qwen3-4B-vocab-lowrank-frozen-20260706-merged`
+
 **Training design:**
 - LoRA adapter initialized with B=0 → merge is identity → backbone is unchanged
 - Only `token_reward_head.*` parameters (score_A, score_B) are trainable
