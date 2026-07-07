@@ -21,6 +21,25 @@ python scripts/convert_rm_for_vllm.py \
 
 输出是标准 `Qwen3ForSequenceClassification` HF checkpoint（~7.6 GB），含 tokenizer。
 
+### 训练 checkpoint vs 推理用 merged 模型的区别
+
+`train.py` 训练结束后保存的是**轻量 checkpoint**，`convert_rm_for_vllm.py` 把它转成**完整的推理模型**。两者是同一模型的不同存储形式：
+
+| | 训练 checkpoint（`step15000/`） | 推理 merged（`*-merged/`） |
+|---|---|---|
+| **大小** | ~56 MB | ~7.6 GB |
+| **内容** | LoRA adapter（46MB）+ `token_reward_head.pt`（38MB）+ `model_config.json` | 单个 `model.safetensors`（backbone + head 合并）+ tokenizer |
+| **依赖** | 必须配合 base model 才能加载 | 独立完整，可直接 `vllm serve` |
+| **用途** | 复现训练、研究、迁移学习 | 生产部署、SIA 推理 |
+
+**convert 做了什么**：
+
+1. 把 LoRA delta `merge_and_unload()` 进 backbone（如果 backbone 是冻结训练的，LoRA B 初始为 0，merge 结果 = backbone 原始权重，backbone 不变）
+2. 把 `token_reward_head.pt` 里的矩阵权重（scalar head 的 `score` / vocab_lowrank head 的 `score_A`+`score_B`）嵌入到 HF checkpoint 的 state_dict
+3. 打包成标准 HF 格式，vLLM 可以直接 `AutoModel.from_pretrained` 加载
+
+**对于 vocab_lowrank head**，convert 后 checkpoint 里含 `score_A.weight`（2560×64）和 `score_B.weight`（64×151936），推理侧通过 `--vm_head_type vocab_lowrank --vm_head_rank 64` 告知 SIA server 使用低秩分解推理路径。
+
 ## 启动（两条流程）
 
 ### 1. RM server（vLLM serve）
