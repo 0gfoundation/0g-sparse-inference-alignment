@@ -1,0 +1,9 @@
+目标服务: http://localhost:8000
+✅ /health OK
+
+[noSIA] Stress Test — 从 conc=1 开始，每档 2 轮，上限 conc=512
+  realistic-prompt，max_out=128
+  停止条件：tok/s < 峰值×60%（连续2档） 或 失败率>50% 或 服务崩溃 或 conc>512
+
+  conc=   1  (2 请求)... ok=2/2  ITL=6.8ms  tok/s=142.5  TPM=8549  ✓  (fail=0%)
+  conc=   2  (4 请求)... 

@@ -1,0 +1,72 @@
+# SIA server — VL-30B + vocab_lowrank VM (sia-backbone-frozen-20260706).
+#
+# Identical to docker-compose.yml except --rm_model points to the new checkpoint:
+#   VM-Qwen3-4B-vocab-lowrank-sia-backbone-frozen-20260706-merged
+# (backbone = official SIA VM, head-only BT+TD training, val R²=0.8159)
+#
+# Start:
+#   docker compose -f docker-compose.sia-backbone-frozen-20260706.yml up -d
+#   docker compose -f docker-compose.sia-backbone-frozen-20260706.yml logs -f
+#   docker compose -f docker-compose.sia-backbone-frozen-20260706.yml down
+
+services:
+  sia-vl30b:
+    image: sia-vl30b:0.17.1
+    container_name: sia-vl30b-sia-backbone-frozen
+
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+    shm_size: 16g
+    ipc: host
+
+    ports:
+      - "8000:8000"
+
+    volumes:
+      - /dstack/persistent/SIA:/workspace
+      - vllm-compile-cache-sia-backbone:/root/.cache/vllm
+
+    environment:
+      SIA_RM_CUDAGRAPH: piecewise
+      SIA_RM_MULTIPROCESS: "0"
+      SIA_DEBUG_HIST: "1"
+
+    command: >
+      python src/sia_vllm_server.py
+        --llm        /workspace/models/Qwen3-VL-30B-A3B-Instruct
+        --model_id   Qwen3-VL-30B-A3B-Instruct-SIA
+        --rm_backend b2
+        --rm_model   /workspace/sia-repo/models/VM-Qwen3-4B-vocab-lowrank-sia-backbone-frozen-20260706-merged
+        --vm_head_type vocab_lowrank
+        --vm_head_rank 64
+        --llm_gpu_mem    0.50
+        --rm_b2_gpu_mem  0.08
+        --topk 10 --weight 1.0 --entropy_threshold 1.0
+        --max_model_len 2048
+        --enable_prefix_caching
+        --host 0.0.0.0
+        --port 8000
+
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20m
+
+    stop_grace_period: 30s
+
+volumes:
+  vllm-compile-cache-sia-backbone:
