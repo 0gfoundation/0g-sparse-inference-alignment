@@ -48,8 +48,7 @@ All figures use **thinking mode** (chain-of-thought enabled), the production con
 ## What Problems It Excels At
 
 - **Open-ended instruction following**: writing, analysis, summarization, explanation, Q&A — any task where response quality is judged by human preference
-- **Complex multi-step reasoning**: problems that benefit from extended thinking, where the model's deliberation is guided toward more accurate and helpful conclusions
-- **Agent workflows**: the sparse intervention design keeps latency manageable while ensuring each generation step is steered toward task-relevant, goal-aligned outputs
+- **Tasks that benefit from extended thinking**: problems where the model's deliberation is guided toward more accurate and helpful conclusions
 - **Quality-critical applications**: scenarios where consistent, high-quality output matters and mediocre responses are unacceptable
 
 ## Throughput
