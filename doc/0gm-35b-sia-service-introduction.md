@@ -4,7 +4,7 @@
 
 0GM-1.0-35B-A3B-0427-SIA is a production serving configuration of the 0GM-1.0-35B-A3B-0427 model, augmented with **SIA (Sparse Inference-time Alignment)**. SIA is a real-time token-level guidance system that steers the model's generation toward higher-quality responses at decode time — with no fine-tuning or retraining of the base model required.
 
-At each generation step, a compact Value Model scores the top candidate tokens against learned human preference signals and biases token selection toward higher-reward choices. Critically, the intervention is **sparse**: it only activates at high-entropy "critical junction" tokens (~17% of decode steps), leaving the model's confident decisions untouched. This preserves the base model's fluency and reasoning depth while systematically improving output quality.
+At each generation step, a compact Value Model scores the top candidate tokens against learned human preference signals and biases token selection toward higher-reward choices. Critically, the intervention is **sparse**: it only activates at high-entropy "critical junction" tokens (typically 10–30% of decode steps), leaving the model's confident decisions untouched. This preserves the base model's fluency and reasoning depth while systematically improving output quality.
 
 ## Base Model Highlights
 
@@ -33,7 +33,7 @@ Each response in the training data is scored by **Skywork-Reward-V2-Qwen3-8B**, 
 
 Unlike RLHF or DPO, SIA applies alignment **at inference time**. The base model is never modified, so there is no risk of catastrophic forgetting, no distribution shift, and the alignment strength can be tuned at serving time by adjusting a single weight parameter.
 
-## Performance
+## Output Quality
 
 All figures use **thinking mode** (chain-of-thought enabled), the production configuration.
 
@@ -43,7 +43,6 @@ All figures use **thinking mode** (chain-of-thought enabled), the production con
 - **noSIA mean reward score: 24.01**
 - **Improvement: Δ = +3.68 points (+15.3% relative)**
 - SIA wins 64% of head-to-head paired comparisons (122 wins / 64 losses / 5 ties)
-- Statistical significance: p < 0.0001 — result is highly certain
 - SIA generates **fewer tokens on average** (1,573 vs 1,736) yet consistently scores higher — more concise and more aligned simultaneously
 
 ## What Problems It Excels At
@@ -53,7 +52,7 @@ All figures use **thinking mode** (chain-of-thought enabled), the production con
 - **Agent workflows**: the sparse intervention design keeps latency manageable while ensuring each generation step is steered toward task-relevant, goal-aligned outputs
 - **Quality-critical applications**: scenarios where consistent, high-quality output matters and mediocre responses are unacceptable
 
-## Performance Reference
+## Throughput
 
 - **SIA: 259 tokens/s** output throughput (thinking mode)
 - **noSIA baseline: 648 tokens/s** output throughput
