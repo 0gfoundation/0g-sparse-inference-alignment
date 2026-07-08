@@ -53,6 +53,4 @@ All figures use **thinking mode** (chain-of-thought enabled), the production con
 
 ## Throughput
 
-- **SIA: 259 tokens/s** output throughput (thinking mode)
-- **noSIA baseline: 648 tokens/s** output throughput
-- SIA overhead is approximately 2.5× — a deliberate trade-off for meaningfully better output quality on every request
+SIA introduces approximately **2.5× throughput overhead** compared to the unaligned baseline — a deliberate trade-off for meaningfully better output quality on every request. For reference, under equivalent concurrent load, the noSIA baseline delivers roughly **650 tokens/s** while SIA delivers roughly **260 tokens/s**.
