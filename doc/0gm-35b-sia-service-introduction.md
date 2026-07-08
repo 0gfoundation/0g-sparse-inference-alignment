@@ -8,7 +8,7 @@ At each generation step, a compact Value Model scores the top candidate tokens a
 
 ## Base Model Highlights
 
-0GM-1.0-35B-A3B is a **35B Mixture-of-Experts model with only 3B active parameters per token**, combining the inference efficiency of a small model with the knowledge capacity of a 35B-scale architecture. The model natively supports extended chain-of-thought reasoning (thinking mode), which is the recommended configuration and the basis for all performance figures below.
+0GM-1.0-35B-A3B is a **35B Mixture-of-Experts model with only 3B active parameters per token**, delivering the per-token compute cost of a 3B model while retaining the knowledge capacity of a 35B-scale architecture. The model natively supports extended chain-of-thought reasoning (thinking mode), which is the recommended configuration and the basis for all performance figures below.
 
 ## Value Model Training
 
@@ -28,7 +28,7 @@ Each response in the training data is scored by **Skywork-Reward-V2-Qwen3-8B**, 
 | Alignment method | Prompt engineering | Offline fine-tuning | **Live inference-time steering** |
 | Updatable without retraining | — | ❌ | ✅ |
 | Risk of catastrophic forgetting | — | ✅ present | ❌ none |
-| Open-ended task quality gain | baseline | +5–15% typical | **+16.9% vs unaligned baseline** |
+| Open-ended task quality gain | baseline | varies | **+15.3% vs unaligned baseline** |
 | Output efficiency | normal | normal | **Fewer tokens, higher scores** |
 
 Unlike RLHF or DPO, SIA applies alignment **at inference time**. The base model is never modified, so there is no risk of catastrophic forgetting, no distribution shift, and the alignment strength can be tuned at serving time by adjusting a single weight parameter.
@@ -41,7 +41,7 @@ All figures use **thinking mode** (chain-of-thought enabled), the production con
 
 - **SIA mean reward score: 27.69**
 - **noSIA mean reward score: 24.01**
-- **Improvement: Δ = +4.05 points (+16.9% relative)**
+- **Improvement: Δ = +3.68 points (+15.3% relative)**
 - SIA wins 64% of head-to-head paired comparisons (122 wins / 64 losses / 5 ties)
 - Statistical significance: p < 0.0001 — result is highly certain
 - SIA generates **fewer tokens on average** (1,573 vs 1,736) yet consistently scores higher — more concise and more aligned simultaneously
