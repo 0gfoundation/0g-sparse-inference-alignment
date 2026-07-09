@@ -56,7 +56,7 @@ ENV SIA_RM_MULTIPROCESS=0
 
 ENTRYPOINT ["/usr/local/bin/sia-entrypoint"]
 CMD ["python", "src/sia_vllm_server.py", \
-     "--llm",              "/workspace/models/0GM-1.0-35B-A3B", \
+     "--llm",              "/workspace/models/0GM-1.0-35B-A3B-0427", \
      "--rm_backend",       "b2", \
      "--rm_model",         "/workspace/models/VM-Qwen3-4B-vocab-lowrank-merged", \
      "--llm_gpu_mem",      "0.75", \

@@ -631,6 +631,10 @@ def parse_args():
                    help="Required when rm_backend is vllm or b2: path to the RM model")
     p.add_argument("--rm_b2_gpu_mem", type=float, default=0.3,
                    help="gpu_memory_utilization for the RM vLLM instance under b2 backend (default 0.3)")
+    p.add_argument("--rm_b2_max_model_len", type=int, default=4096,
+                   help="max_model_len for the RM vLLM instance under b2 backend (default 4096). "
+                        "Must be large enough for prefix + partial response in RM tokenizer tokens. "
+                        "Independent of --max_model_len (the main LLM's context window).")
     p.add_argument("--llm_gpu_mem", type=float, default=0.5)
     p.add_argument("--topk",      type=int,   default=10)
     p.add_argument("--weight",    type=float, default=1.0)
@@ -758,7 +762,7 @@ def main():
             rm_model=_args.rm_model,
             use_token_ids=_args.use_token_ids,
             rm_b2_gpu_mem=_args.rm_b2_gpu_mem,
-            rm_max_model_len=_args.max_model_len,
+            rm_max_model_len=_args.rm_b2_max_model_len,
             enable_thinking=_enable_thinking,
             eager_vm_prefill=_args.eager_vm_prefill,
             vm_topk=_args.vm_topk,

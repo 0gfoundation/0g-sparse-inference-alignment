@@ -125,7 +125,7 @@ python src/sia_vllm_server.py \
   --llm /path/to/0GM-1.0-35B-A3B \
   --rm_backend b2 \
   --rm_model /path/to/VM-Qwen3-4B-vocab-lowrank-merged \
-  --rm_b2_gpu_mem 0.13 --llm_gpu_mem 0.75 \
+  --rm_b2_gpu_mem 0.20 --llm_gpu_mem 0.75 \
   --topk 10 --weight 1.0 --entropy_threshold 1.0 \
   --max_model_len 2048 --mamba_cache_mode align --port 8000 \
   --vm_head_type vocab_lowrank \
