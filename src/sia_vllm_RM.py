@@ -177,6 +177,10 @@ def make_sia_processor(
                                        # "scalar" (default): K forwards per step (original)
                                        # "vocab_lowrank": 1 forward per step + vocab indexing (FaRMA)
     vm_head_rank: int = 64,            # b2 backend: rank for vocab_lowrank head
+    mapping_table: Optional[str] = None,  # b2 backend: path to .npy cross-tokenizer token mapping table.
+                                           # Enables O(1) LLM→RM token ID lookup in score_with_vocab_head_batch
+                                           # (e.g. token_mapping_ogm35b_to_qwen3_4b.npy for 0GM-35B + VM-Qwen3-4B).
+                                           # None (default) → existing decode→encode behavior unchanged.
 ):
     """
     Returns a SIALogitsProcessor class (not an instance).
@@ -219,6 +223,7 @@ def make_sia_processor(
         _VM_TOPK: Optional[int] = vm_topk   # None = use _TOPK; int = limit VM candidates per request
         _VM_HEAD_TYPE: str = vm_head_type   # "scalar" or "vocab_lowrank"
         _VM_HEAD_RANK: int = vm_head_rank
+        _MAPPING_TABLE: Optional[str] = mapping_table  # path to .npy cross-tokenizer mapping table
 
         # Maximum number of sessions per score_candidates_batch() call (b2 backend).
         # Prevents RM KV-cache OOM at high concurrency: a single apply() with
@@ -342,6 +347,7 @@ def make_sia_processor(
                 "b2_score_call":    [],   # RMClient.score_candidates end-to-end (amortized per-request)
                 "b2_batch_wall_abs":[],   # score_candidates_batch() absolute wall (not amortized; per INTERVENE step)
                 "intv_batch_size":  [],   # number of sessions batched per INTERVENE step (len(_b2_reqs))
+                "vm_cands_per_step":[],   # total candidates sent to VM per INTERVENE step
                 "b2_eager_wall":    [],   # eager_prefill_batch() wall per apply() call (only when --eager_vm_prefill)
                 "total":            [],   # one INTERVENE call end-to-end
 
@@ -418,7 +424,8 @@ def make_sia_processor(
             # ===== SIA DETAIL LOG END =====
 
             # B2 backend: in-process RMClient + per-request session table
-            # Assumes LLM and RM use the same tokenizer (prerequisite for the B2 path), so token IDs are interchangeable
+            # Cross-tokenizer is supported: RMClient detects vocab mismatch via llm_tokenizer and
+            # enables the decode→encode bridge (or O(1) mapping table lookup for vocab_lowrank head).
             self._rm: Optional[object] = None
             self._b2_sessions: dict[int, int] = {}        # req_idx -> rm_sid
             self._b2_chat_prefix_len: dict[int, int] = {}  # req_idx -> chat_prefix token count
@@ -450,6 +457,7 @@ def make_sia_processor(
                     llm_tokenizer=self._llm_tok,
                     head_type=self._VM_HEAD_TYPE,
                     head_rank=self._VM_HEAD_RANK,
+                    mapping_table_path=self._MAPPING_TABLE,
                 )
                 print(f"[SIA-b2] RMClient ready", flush=True)
 
@@ -1894,6 +1902,11 @@ def parse_args():
                         "Requires a checkpoint converted with convert_rm_for_vllm.py --head_type vocab_lowrank.")
     p.add_argument("--vm_head_rank", type=int, default=64,
                    help="Rank for vocab_lowrank head (default 64, ignored for scalar head).")
+    p.add_argument("--mapping_table", type=str, default=None,
+                   help="Path to .npy token mapping table for cross-tokenizer vocab_lowrank scoring "
+                        "(e.g. token_mapping_ogm35b_to_qwen3_4b.npy). "
+                        "Only used with --rm_backend b2 --vm_head_type vocab_lowrank when LLM and VM "
+                        "use different tokenizers (e.g. 0GM-35B 248K + VM-Qwen3-4B 151K).")
     p.add_argument("--prompt", type=str,
                    default="Human:\nTell me a joke.\nAssistant:\n")
     p.add_argument("--max_model_len", type=int, default=2048)
@@ -1921,8 +1934,10 @@ def main():
         rm_model=args.rm_model,
         rm_b2_gpu_mem=args.rm_b2_gpu_mem,
         eager_vm_prefill=args.eager_vm_prefill,
+        vm_topk=args.vm_topk,
         vm_head_type=args.vm_head_type,
         vm_head_rank=args.vm_head_rank,
+        mapping_table=args.mapping_table,
     )
 
     print("Loading vllm LLM...")

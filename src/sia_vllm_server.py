@@ -695,6 +695,11 @@ def parse_args():
                         "noop=complete no-op (measure hook overhead); "
                         "sync=perform entropy+cpu sync but no decision (measure sync overhead). "
                         "Default None=use the real SIA processor.")
+    p.add_argument("--mapping_table", type=str, default=None,
+                   help="Path to .npy token mapping table for cross-tokenizer vocab_lowrank scoring "
+                        "(e.g. token_mapping_ogm35b_to_qwen3_4b.npy). "
+                        "Only used with --rm_backend b2 --vm_head_type vocab_lowrank when LLM and VM "
+                        "use different tokenizers (e.g. 0GM-35B 248K + VM-Qwen3-4B 151K).")
     args = p.parse_args()
     if args.rm_backend in ("vllm", "b2") and not args.rm_model:
         p.error(f"--rm_backend {args.rm_backend} requires --rm_model to be specified")
@@ -722,6 +727,8 @@ def main():
           f"logit_gap_threshold={_args.logit_gap_threshold}  "
           f"use_token_ids={_args.use_token_ids}  "
           f"eager_vm_prefill={_args.eager_vm_prefill}")
+    print(f"vm_head={_args.vm_head_type}  vm_head_rank={_args.vm_head_rank}  "
+          f"mapping_table={_args.mapping_table}")
     print(f"Server   : http://{_args.host}:{_args.port}")
     print("=" * 60)
 
@@ -757,6 +764,7 @@ def main():
             vm_topk=_args.vm_topk,
             vm_head_type=_args.vm_head_type,
             vm_head_rank=_args.vm_head_rank,
+            mapping_table=_args.mapping_table,
         )
 
     print("Loading vLLM AsyncLLMEngine...")
