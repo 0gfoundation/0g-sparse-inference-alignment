@@ -274,6 +274,17 @@ class RMClient:
                 flush=True,
             )
 
+        # [SIA-debug] cross-tokenizer candidate mapping diagnostics (score_with_vocab_head_batch).
+        # - vm_map_miss: candidate fell through the O(1) table (unmapped/-1 or out of range) to the
+        #   slower decode->encode fallback, or that fallback produced an empty encode (defaulted to 0).
+        # - vm_map_collide: 2+ candidates *within the same topk set* mapped to the same RM token id,
+        #   meaning SIA cannot rank them apart for that step even if each mapping is individually valid.
+        self._vm_map_miss_total = 0
+        self._vm_map_empty_total = 0
+        self._vm_map_collide_total = 0
+        self._vm_map_candidate_total = 0
+        self._vm_map_calls = 0
+
         # Profile-mode state: how many tokens of each session's prefix have
         # already been pushed through a vLLM forward (thus KV-cached).
         # Used by score_candidates_profiled to know how many new tokens
@@ -690,15 +701,26 @@ class RMClient:
                             rm_ids.append(min(vm_id, rm_vocab_size - 1))
                             continue
                         # vm_id < 0 means unmapped; fall through to decode→encode
+                    # [SIA-debug] reached only when the O(1) table has no valid entry for c
+                    # (no table, out-of-range c, or explicit -1 sentinel).
+                    self._vm_map_miss_total += 1
                     try:
                         text = self._llm_tok.decode([c], skip_special_tokens=False)
                     except (OverflowError, ValueError):
                         text = ""
                     ids = self._rm_tok.encode(text, add_special_tokens=False)
                     # ids may be empty for whitespace-only or unmappable tokens; fall back to 0.
+                    if not ids:
+                        self._vm_map_empty_total += 1
                     rm_id = ids[0] if ids else 0
                     # Clamp to RM vocab range (handles LLM special tokens beyond RM vocab).
                     rm_ids.append(min(rm_id, rm_vocab_size - 1))
+                # [SIA-debug] in-step collision: 2+ of THIS request's candidates landed on the
+                # same RM token id, so SIA cannot distinguish them when ranking this step's topk.
+                n_cand = len(rm_ids)
+                self._vm_map_candidate_total += n_cand
+                if n_cand > 1:
+                    self._vm_map_collide_total += (n_cand - len(set(rm_ids)))
                 cand_t = torch.tensor(rm_ids, dtype=torch.long, device=vocab_rewards.device)
             else:
                 # Same tokenizer: candidate IDs are valid RM indices by construction
@@ -707,6 +729,24 @@ class RMClient:
                 cand_t = torch.tensor(clamped, dtype=torch.long,
                                       device=vocab_rewards.device)
             results.append(vocab_rewards[row_idx, cand_t])  # (K_i,)
+
+        # [SIA-debug] periodic cross-tokenizer mapping-quality summary (every 100 calls to
+        # this method, i.e. every 100 decode steps -- NOT every 100 requests/sessions).
+        if self._cross_tokenizer:
+            self._vm_map_calls += 1
+            if self._vm_map_calls % 100 == 0 and self._vm_map_candidate_total > 0:
+                miss_rate = self._vm_map_miss_total / self._vm_map_candidate_total * 100
+                empty_rate = self._vm_map_empty_total / self._vm_map_candidate_total * 100
+                collide_rate = self._vm_map_collide_total / self._vm_map_candidate_total * 100
+                print(
+                    f"[SIA-debug] vm_map_miss_rate={miss_rate:.2f}%  "
+                    f"vm_map_empty_rate={empty_rate:.2f}%  "
+                    f"vm_map_collision_rate={collide_rate:.2f}%  "
+                    f"(candidates={self._vm_map_candidate_total}, "
+                    f"miss={self._vm_map_miss_total}, empty={self._vm_map_empty_total}, "
+                    f"collide={self._vm_map_collide_total}, calls={self._vm_map_calls})",
+                    flush=True,
+                )
         return results
 
     def eager_prefill_batch(self, requests: list) -> None:
