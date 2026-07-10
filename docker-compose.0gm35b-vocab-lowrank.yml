@@ -41,6 +41,7 @@ services:
       # RM: must use eager mode (no CUDAGraph) for 0GM-35B b2 inproc under vllm 0.18.0.
       SIA_RM_CUDAGRAPH: "none"
       SIA_RM_MULTIPROCESS: "0"
+      SIA_DEBUG_HIST: "1"
       # Chunk b2 RM scoring into groups of 8 sessions per call to prevent
       # RM KV-cache OOM at high concurrency.
       SIA_RM_BATCH_CHUNK: "8"
@@ -50,7 +51,7 @@ services:
         --llm        /workspace/models/0GM-1.0-35B-A3B-0427
         --model_id   0GM-1.0-35B-A3B-SIA-vocab-lowrank
         --rm_backend b2
-        --rm_model   /workspace/models/VM-Qwen3-4B-vocab-lowrank-merged
+        --rm_model   /workspace/models/VM-Qwen3-4B-vocab-lowrank-sia-backbone-frozen-vllm
         --llm_gpu_mem    0.75
         --rm_b2_gpu_mem  0.20
         --topk 10 --weight 1.0 --entropy_threshold 1.0
