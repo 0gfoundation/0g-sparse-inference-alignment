@@ -33,6 +33,7 @@ services:
     volumes:
       - /dstack/persistent/SIA:/workspace
       - vllm-compile-cache-0gm35b:/root/.cache/vllm
+      - flashinfer-cache-0gm35b:/root/.cache/flashinfer
 
     environment:
       # Main LLM: SIA_LLM_CUDAGRAPH not set, defaults to FULL_AND_PIECEWISE
@@ -74,3 +75,4 @@ services:
 
 volumes:
   vllm-compile-cache-0gm35b:
+  flashinfer-cache-0gm35b:
