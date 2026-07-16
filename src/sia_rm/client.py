@@ -32,6 +32,7 @@ the assert in `score_candidates` will catch it.
 """
 from __future__ import annotations
 
+import json
 import os
 import time
 import uuid
@@ -274,6 +275,16 @@ class RMClient:
                 flush=True,
             )
 
+        # Distillation data logging (SIA_DISTILL_LOG=<path>): dumps one JSONL
+        # record per (session, score_candidates[_batch] call) with the RM's
+        # own token-id-space prefix, candidate ids, and scalar-head scores —
+        # used offline to distill the scalar head's per-candidate signal into
+        # a vocab_lowrank head. Default "" = disabled, zero overhead.
+        self._distill_log_path = os.environ.get("SIA_DISTILL_LOG", "").strip()
+        if self._distill_log_path:
+            print(f"[RMClient] SIA_DISTILL_LOG enabled: {self._distill_log_path}",
+                  flush=True)
+
         # [SIA-debug] cross-tokenizer candidate mapping diagnostics (score_with_vocab_head_batch).
         # - vm_map_miss: candidate fell through the O(1) table (unmapped/-1 or out of range) to the
         #   slower decode->encode fallback, or that fallback produced an empty encode (defaulted to 0).
@@ -419,6 +430,33 @@ class RMClient:
 
     # ---- scoring ----
 
+    def _log_distill_record(self, sid, rm_prefix_ids, candidate_token_ids, scores) -> None:
+        """Append one JSONL training record for vocab_lowrank distillation.
+
+        `rm_prefix_ids` / `candidate_token_ids` must already be in the RM
+        tokenizer's own vocab space (not the LLM's) — see the
+        `score_candidates()` / `score_candidates_batch()` call sites for the
+        cross-tokenizer vs. same-tokenizer distinction. No-op (zero overhead)
+        when SIA_DISTILL_LOG is unset.
+
+        `sid` (the SIA session id) is included so training-time dataset
+        splitting can hold out whole prompts/sessions rather than individual
+        records — many records share a prefix-continuum from the same
+        session, so a naive record-level split would leak near-duplicate
+        prefixes into "held out".
+        """
+        if not self._distill_log_path:
+            return
+        rec = {
+            "sid": int(sid),
+            "prefix_ids": [int(t) for t in rm_prefix_ids],
+            "cand_ids": [int(c) for c in candidate_token_ids],
+            "scores": [float(s) for s in scores.tolist()],
+            "n_cand": len(candidate_token_ids),
+        }
+        with open(self._distill_log_path, "a") as f:
+            f.write(json.dumps(rec) + "\n")
+
     def score_candidates(
         self,
         sid: int,
@@ -458,7 +496,12 @@ class RMClient:
             # 近似误差：增量拼接在 BPE 边界处差 1-2 token，但 SIA 只看相对排名，
             # 边界噪声可忽略（与 P-2 的 split 编码误差同性质）。
             stable_rm_prefix_ids = self._get_stable_rm_prefix(sid, prefix)
+            rm_prefix_ids = stable_rm_prefix_ids
             prompts = []
+            rm_cand_ids = []  # first RM token per candidate, for distill logging —
+                               # matches what score_with_vocab_head_batch's mapping
+                               # table / decode-encode fallback gathers against
+                               # (ids[0]), NOT the raw LLM-vocab candidate_token_ids.
             for c in candidate_token_ids:
                 try:
                     cand_text = self._llm_tok.decode([c], skip_special_tokens=False)
@@ -474,10 +517,13 @@ class RMClient:
                 prompts.append(
                     TP(prompt_token_ids=stable_rm_prefix_ids + cand_rm_ids)
                 )
+                rm_cand_ids.append(cand_rm_ids[0] if cand_rm_ids else 0)
         else:
             # Zero-overhead path: tokenizer-compatible (Qwen3-14B + VM-Qwen3-4B).
             # X-5: candidate_token_ids comes from SIA processor topk (list[int]),
             # already Python ints — skip redundant `int(c)` cast.
+            rm_prefix_ids = prefix
+            rm_cand_ids = candidate_token_ids  # same vocab space, no translation needed
             prompts = [
                 TP(prompt_token_ids=prefix + [c])
                 for c in candidate_token_ids
@@ -513,6 +559,7 @@ class RMClient:
                 f"Likely SIA_REWARD_FILE_ID mismatch or vLLM reordered "
                 f"prompts."
             )
+        self._log_distill_record(sid, rm_prefix_ids, rm_cand_ids, rewards)
         return rewards
 
     def score_candidates_batch(
@@ -545,6 +592,8 @@ class RMClient:
         TP = self._TokensPrompt
         all_prompts: list = []
         offsets: list = []   # (start, end) index into all_prompts per request
+        rm_prefixes: list = []  # RM-vocab-space prefix per request, same order as `requests`
+        rm_cands_per_request: list = []  # RM-vocab-space candidate ids per request (for distill logging)
 
         for sid, candidate_token_ids in requests:
             if sid not in self._sessions:
@@ -557,6 +606,8 @@ class RMClient:
                 # P-2 + P-3: stable prefix (same encoding for all K candidates)
                 # with incremental cross-step caching — see score_candidates().
                 stable_rm_prefix_ids = self._get_stable_rm_prefix(sid, prefix)
+                rm_prefixes.append(stable_rm_prefix_ids)
+                rm_cands = []  # first RM token per candidate — see score_candidates()
                 for c in candidate_token_ids:
                     try:
                         cand_text = self._llm_tok.decode([c], skip_special_tokens=False)
@@ -570,7 +621,11 @@ class RMClient:
                     all_prompts.append(
                         TP(prompt_token_ids=stable_rm_prefix_ids + cand_rm_ids)
                     )
+                    rm_cands.append(cand_rm_ids[0] if cand_rm_ids else 0)
+                rm_cands_per_request.append(rm_cands)
             else:
+                rm_prefixes.append(prefix)
+                rm_cands_per_request.append(candidate_token_ids)  # same vocab space
                 for c in candidate_token_ids:
                     all_prompts.append(TP(prompt_token_ids=prefix + [c]))
 
@@ -630,6 +685,13 @@ class RMClient:
         # in a future release).  The numel check above catches count mismatches but
         # NOT ordering errors — a silent wrong-score bug would result if vLLM ever
         # reorders.
+        if self._distill_log_path:
+            for (sid, _), (start, end), rm_prefix_ids, rm_cands in zip(
+                requests, offsets, rm_prefixes, rm_cands_per_request
+            ):
+                self._log_distill_record(
+                    sid, rm_prefix_ids, rm_cands, all_rewards[start:end]
+                )
         return [all_rewards[start:end] for (start, end) in offsets]
 
     def score_with_vocab_head_batch(

@@ -45,6 +45,10 @@ services:
       SIA_RM_CUDAGRAPH: piecewise
       SIA_RM_MULTIPROCESS: "0"
       SIA_DEBUG_HIST: "1"
+      # Fix 1 (distillation) pilot data collection — dumps one JSONL record per
+      # scalar-head intervention step (prefix_ids, cand_ids, scores). See
+      # doc/vocab-lowrank-root-cause-and-fix-plan-20260714.md.
+      SIA_DISTILL_LOG: /workspace/sia-repo/0g-sparse-inference-alignment/exp/distill_pilot_vl30b.jsonl
 
     command: >
       python src/sia_vllm_server.py
