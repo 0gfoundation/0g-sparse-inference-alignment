@@ -1,0 +1,84 @@
+# Training container — Value Model distillation / fine-tuning.
+#
+# Uses the same sia-vl30b:0.17.1 image (has /opt/venv-vl30b with PyTorch,
+# transformers) but does NOT start the SIA server.
+#
+# On startup the container automatically installs training-only deps
+# (scikit-learn, matplotlib, peft) that are absent from the inference image,
+# plus the SIA plugin from the mounted workspace.  After that it sleeps so
+# you can exec in and run training interactively or with nohup.
+#
+# Usage:
+#   # Start (detached) — waits for pip installs to finish, then sleeps:
+#   docker compose -f docker-compose.train.yml up -d
+#
+#   # Confirm deps installed (check logs):
+#   docker logs sia-train
+#
+#   # Enter the container:
+#   docker exec -it sia-train bash
+#
+#   # Run training from inside the container:
+#   cd /workspace/sia-repo/SIA
+#   nohup /opt/venv-vl30b/bin/python3 -u src/value_model/train.py \
+#       --loss_type distill \
+#       --data_file /workspace/sia-repo/0g-sparse-inference-alignment/exp/distill_pilot_vl30b.jsonl \
+#       --base_model_path /workspace/models/VM-Qwen3-4B-merged-for-vllm \
+#       --output_dir /workspace/sia-repo/0g-sparse-inference-alignment/models/VM-Qwen3-4B-vocab-lowrank-distill-full-20260720 \
+#       --head_type vocab_lowrank --head_rank 64 \
+#       --freeze_backbone \
+#       --lora_r 16 --lora_alpha 32 --lora_dropout 0.1 \
+#       --batch_size 8 --gradient_accumulation_steps 2 \
+#       --learning_rate 1e-4 --num_epochs 1 --max_length 2048 \
+#       --lr_warmup_steps 0 \
+#       --train_ratio 0.9 \
+#       --save_interval_steps 10000 \
+#       --mini_val_ratio 0.02 \
+#       --save_model \
+#       --resume_from /workspace/sia-repo/0g-sparse-inference-alignment/models/VM-Qwen3-4B-vocab-lowrank-distill-full-20260720/step250000 \
+#       >/workspace/sia-repo/0g-sparse-inference-alignment/exp/distill_full_train_20260729.log 2>&1 &
+#
+#   # Stop:
+#   docker compose -f docker-compose.train.yml down
+
+services:
+  sia-train:
+    image: sia-vl30b:0.17.1
+
+    container_name: sia-train
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+    # Hard memory cap: other processes use ~63 GB; this limit + those leave ~25 GB
+    # free on the 187.8 GB host. The kernel evicts container page cache before
+    # hitting the ceiling, preventing a host OOM reboot.
+    mem_limit: 90g
+    memswap_limit: 90g   # equal to mem_limit = no swap allowed
+
+    shm_size: 16g
+    ipc: host
+
+    volumes:
+      - /dstack/persistent/SIA:/workspace
+
+    # Install training-only deps missing from the inference image, then sleep.
+    # scikit-learn / matplotlib: used by train.py metrics and plotting.
+    # peft: required for LoRA in training (not needed for b2 inproc inference).
+    # The SIA plugin (-e install) registers sia_rm so vllm can find it.
+    command: >
+      bash -c "
+        set -e &&
+        echo '[setup] installing training deps...' &&
+        /opt/venv-vl30b/bin/pip install --quiet scikit-learn matplotlib 'peft>=0.14' &&
+        /opt/venv-vl30b/bin/pip install --quiet --no-deps -e /workspace/sia-repo/0g-sparse-inference-alignment &&
+        echo '[setup] deps installed, container ready.' &&
+        sleep infinity
+      "
+
+    restart: unless-stopped
