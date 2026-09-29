@@ -1,0 +1,143 @@
+# Build, sign, and release the sia-0gm35b image.
+#
+# What this does, in order: build the image from Dockerfile.0gm35b -> push to
+# ghcr.io -> sign the pushed digest with cosign (keyless, via this workflow's
+# own GitHub OIDC token — no stored signing key) -> verify the signature ->
+# publish a GitHub Release naming the image and its digest.
+#
+# Why: a docker tag (sia-0gm35b:0.18.0) is mutable and, on its own, proves
+# nothing about which commit produced it. Signing the digest from inside CI,
+# with GitHub's OIDC identity, lets anyone who pulls this image verify —
+# without trusting us, using only the public Sigstore transparency log —
+# that a specific 0gfoundation/0g-sparse-inference-alignment Actions run
+# built it. That is the basic requirement; it does not include a separate
+# SLSA provenance attestation (bonus, not asked for here).
+#
+# Prerequisites:
+#   1. This repo must be public — cosign's certificate-identity check below
+#      is only meaningful if anyone can go read the source at the tag it
+#      names.
+#   2. Repo Settings -> Actions -> General -> Workflow permissions must
+#      allow "Read and write permissions" (needed to push to ghcr.io and to
+#      create the Release).
+#
+# Release flow once this is merged: merge to main as usual, then
+#   git tag v0.18.0 && git push --tags
+# CI does the rest — do not hand-build and hand-push this image anymore.
+#
+# IMPORTANT: this only proves who built a given DIGEST. It does not stop
+# someone from later re-pushing a different image under the same tag (tags
+# are mutable; digests are not). Any deploy config that references this
+# image (e.g. docker-compose.0gm35b.yml's `image: sia-0gm35b:0.18.0`) should
+# eventually move to pinning the digest, not the tag — that is a separate,
+# follow-up change, not done here.
+
+name: Build, Sign and Release
+
+on:
+  push:
+    tags: [ 'v*' ]
+
+env:
+  REGISTRY: ghcr.io
+  # Kept as sia-0gm35b (not github.repository) to match the name already
+  # referenced in docker-compose.0gm35b.yml (image: sia-0gm35b:0.18.0).
+  IMAGE_NAME: 0gfoundation/sia-0gm35b
+  DOCKERFILE: Dockerfile.0gm35b
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write   # to create the GitHub Release
+      packages: write   # to push to ghcr.io
+      id-token: write   # cosign's keyless OIDC signing needs this
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+    - name: Log in to Container Registry
+      uses: docker/login-action@4907a6ddec9925e35a0a9e82d7399ccc52663121 # v4.1.0
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Install cosign
+      uses: sigstore/cosign-installer@cad07c2e89fa2edd6e2d7bab4c1aa38e53f76003 # v4.1.1
+
+    - name: Build image
+      run: |
+        # Same command as the current local build (README/Dockerfile comment),
+        # just run by CI and tagged with the git tag that triggered this run.
+        docker build -f "${{ env.DOCKERFILE }}" \
+          -t "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}" \
+          .
+
+    - name: Push image to registry
+      id: push
+      run: |
+        REGISTRY_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}"
+
+        docker push "$REGISTRY_IMAGE"
+
+        DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "$REGISTRY_IMAGE" | cut -d'@' -f2)
+        echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
+        echo "image_url=${REGISTRY_IMAGE}" >> "$GITHUB_OUTPUT"
+
+        echo "Pushed: $REGISTRY_IMAGE"
+        echo "Digest: $DIGEST"
+
+    - name: Sign container image with cosign
+      run: |
+        # Keyless: cosign uses this job's own GitHub OIDC token (granted by
+        # `id-token: write` above) to get a short-lived signing cert whose
+        # identity is "this repo, this workflow, this ref/commit" — the
+        # signature and cert are published to the public Sigstore
+        # transparency log. No long-lived signing key exists to leak.
+        cosign sign --yes "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.push.outputs.digest }}"
+
+    - name: Verify signature
+      run: |
+        # Same check anyone consuming this image can run themselves, with no
+        # 0G-issued secret needed.
+        cosign verify \
+          --certificate-identity-regexp="https://github.com/${{ github.repository }}/.*" \
+          --certificate-oidc-issuer="https://token.actions.githubusercontent.com" \
+          "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.push.outputs.digest }}"
+
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v2.3.2
+      with:
+        tag_name: ${{ github.ref_name }}
+        name: Release ${{ github.ref_name }}
+        body: |
+          ## Built Image
+          **Image:** `${{ steps.push.outputs.image_url }}`
+          **Digest:** `${{ steps.push.outputs.digest }}`
+
+          ✅ **Signed with Sigstore cosign**
+
+          🔍 **Verify on Sigstore:** https://search.sigstore.dev/?hash=${{ steps.push.outputs.digest }}
+
+          To verify locally:
+          ```
+          cosign verify \
+            --certificate-identity-regexp="https://github.com/${{ github.repository }}/.*" \
+            --certificate-oidc-issuer="https://token.actions.githubusercontent.com" \
+            ${{ steps.push.outputs.image_url }}
+          ```
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Output build summary
+      run: |
+        {
+          echo "## Published Image"
+          echo "**Tag:** \`${{ github.ref_name }}\`"
+          echo "**Image:** \`${{ steps.push.outputs.image_url }}\`"
+          echo "**Digest:** \`${{ steps.push.outputs.digest }}\`"
+          echo ""
+          echo "✅ **Signed with Sigstore cosign**"
+        } >> "$GITHUB_STEP_SUMMARY"
