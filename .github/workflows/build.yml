@@ -2,21 +2,26 @@
 #
 # What this does, in order: build the image from Dockerfile.0gm35b -> push to
 # ghcr.io -> sign the pushed digest with cosign (keyless, via this workflow's
-# own GitHub OIDC token — no stored signing key) -> verify the signature ->
-# publish a GitHub Release naming the image and its digest.
+# own GitHub OIDC token — no stored signing key) -> emit a SLSA build
+# provenance attestation naming the exact commit -> verify both -> publish a
+# GitHub Release naming the image, digest, and how to verify it.
 #
-# Why: a docker tag (sia-0gm35b:0.18.0) is mutable and, on its own, proves
-# nothing about which commit produced it. Signing the digest from inside CI,
-# with GitHub's OIDC identity, lets anyone who pulls this image verify —
-# without trusting us, using only the public Sigstore transparency log —
-# that a specific 0gfoundation/0g-sparse-inference-alignment Actions run
-# built it. That is the basic requirement; it does not include a separate
-# SLSA provenance attestation (bonus, not asked for here).
+# Why the provenance attestation, specifically: cosign's signature alone
+# proves "this digest was signed by 0gfoundation/0g-sparse-inference-
+# alignment's CI" (via the Fulcio certificate identity), but does NOT by
+# itself give an independently-checkable link to one exact commit — cosign
+# verify only pins the repo + workflow + triggering ref. The provenance
+# attestation is the separate, additionally-signed statement that closes
+# that gap. This mirrors 0g-serving-broker's own documented verification
+# chain (doc/attestation-trust-chain.md, premise N6.4), which spells out two
+# separate `cosign` invocations to get from a content hash to a specific
+# commit — not one. Skipping this step would leave "which commit built this
+# digest" unverifiable by anyone outside 0G, which was the exact gap this CI
+# was added to close.
 #
 # Prerequisites:
-#   1. This repo must be public — cosign's certificate-identity check below
-#      is only meaningful if anyone can go read the source at the tag it
-#      names.
+#   1. This repo must be public — the verification below is only meaningful
+#      if anyone can go read the source at the commit it names.
 #   2. Repo Settings -> Actions -> General -> Workflow permissions must
 #      allow "Read and write permissions" (needed to push to ghcr.io and to
 #      create the Release).
@@ -25,12 +30,12 @@
 #   git tag v0.18.0 && git push --tags
 # CI does the rest — do not hand-build and hand-push this image anymore.
 #
-# IMPORTANT: this only proves who built a given DIGEST. It does not stop
-# someone from later re-pushing a different image under the same tag (tags
-# are mutable; digests are not). Any deploy config that references this
-# image (e.g. docker-compose.0gm35b.yml's `image: sia-0gm35b:0.18.0`) should
-# eventually move to pinning the digest, not the tag — that is a separate,
-# follow-up change, not done here.
+# IMPORTANT: this only proves who built a given DIGEST, from which commit.
+# It does not stop someone from later re-pushing a different image under the
+# same tag (tags are mutable; digests are not). Any deploy config that
+# references this image (e.g. docker-compose.0gm35b.yml's
+# `image: sia-0gm35b:0.18.0`) should eventually move to pinning the digest,
+# not the tag — that is a separate, follow-up change, not done here.
 
 name: Build, Sign and Release
 
@@ -49,9 +54,10 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: write   # to create the GitHub Release
-      packages: write   # to push to ghcr.io
-      id-token: write   # cosign's keyless OIDC signing needs this
+      contents: write       # to create the GitHub Release
+      packages: write       # to push to ghcr.io
+      id-token: write       # cosign's keyless OIDC signing needs this
+      attestations: write   # SLSA build provenance attestation needs this
 
     steps:
     - name: Checkout repository
@@ -93,19 +99,34 @@ jobs:
       run: |
         # Keyless: cosign uses this job's own GitHub OIDC token (granted by
         # `id-token: write` above) to get a short-lived signing cert whose
-        # identity is "this repo, this workflow, this ref/commit" — the
+        # identity is "this repo, this workflow, this triggering ref" — the
         # signature and cert are published to the public Sigstore
-        # transparency log. No long-lived signing key exists to leak.
+        # transparency log. No long-lived signing key exists to leak. This
+        # step alone proves WHO built the digest, not which exact commit —
+        # see the next step for that.
         cosign sign --yes "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.push.outputs.digest }}"
 
-    - name: Verify signature
+    - name: Generate SLSA provenance attestation
+      uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v1.3.0
+      with:
+        subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        subject-digest: ${{ steps.push.outputs.digest }}
+        push-to-registry: true
+
+    - name: Verify signature and provenance
       run: |
-        # Same check anyone consuming this image can run themselves, with no
-        # 0G-issued secret needed.
+        # Two independent checks — both required to go from a content hash to
+        # a specific, publicly-readable commit (see the header comment).
         cosign verify \
           --certificate-identity-regexp="https://github.com/${{ github.repository }}/.*" \
           --certificate-oidc-issuer="https://token.actions.githubusercontent.com" \
           "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.push.outputs.digest }}"
+
+        cosign verify-attestation --type slsaprovenance \
+          --certificate-identity-regexp="https://github.com/${{ github.repository }}/.*" \
+          --certificate-oidc-issuer="https://token.actions.githubusercontent.com" \
+          "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.push.outputs.digest }}" \
+          > /dev/null
 
     - name: Create GitHub Release
       uses: softprops/action-gh-release@b4309332981a82ec1c5618f44dd2e27cc8bfbfda # v2.3.2
@@ -118,12 +139,21 @@ jobs:
           **Digest:** `${{ steps.push.outputs.digest }}`
 
           ✅ **Signed with Sigstore cosign**
+          ✅ **SLSA Build Provenance attached** (names the exact commit this digest was built from)
 
           🔍 **Verify on Sigstore:** https://search.sigstore.dev/?hash=${{ steps.push.outputs.digest }}
 
-          To verify locally:
+          To verify locally — two commands, per 0g-serving-broker's own
+          verification chain (`doc/attestation-trust-chain.md`, N6.4):
           ```
+          # 1. This digest was signed by this repo's CI
           cosign verify \
+            --certificate-identity-regexp="https://github.com/${{ github.repository }}/.*" \
+            --certificate-oidc-issuer="https://token.actions.githubusercontent.com" \
+            ${{ steps.push.outputs.image_url }}
+
+          # 2. Which commit it was built from
+          cosign verify-attestation --type slsaprovenance \
             --certificate-identity-regexp="https://github.com/${{ github.repository }}/.*" \
             --certificate-oidc-issuer="https://token.actions.githubusercontent.com" \
             ${{ steps.push.outputs.image_url }}
@@ -140,4 +170,5 @@ jobs:
           echo "**Digest:** \`${{ steps.push.outputs.digest }}\`"
           echo ""
           echo "✅ **Signed with Sigstore cosign**"
+          echo "✅ **SLSA Build Provenance attached**"
         } >> "$GITHUB_STEP_SUMMARY"
