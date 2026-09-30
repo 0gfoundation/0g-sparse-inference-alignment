@@ -151,7 +151,7 @@ jobs:
           --certificate-oidc-issuer="https://token.actions.githubusercontent.com" \
           "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.push.outputs.digest }}"
 
-        cosign verify-attestation --type slsaprovenance \
+        cosign verify-attestation --type slsaprovenance1 \
           --certificate-identity-regexp="https://github.com/${{ github.repository }}/.*" \
           --certificate-oidc-issuer="https://token.actions.githubusercontent.com" \
           "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.push.outputs.digest }}" \
@@ -182,7 +182,7 @@ jobs:
             ${{ steps.image.outputs.image_url }}
 
           # 2. Which commit it was built from
-          cosign verify-attestation --type slsaprovenance \
+          cosign verify-attestation --type slsaprovenance1 \
             --certificate-identity-regexp="https://github.com/${{ github.repository }}/.*" \
             --certificate-oidc-issuer="https://token.actions.githubusercontent.com" \
             ${{ steps.image.outputs.image_url }}
