@@ -100,27 +100,29 @@ jobs:
     - name: Install cosign
       uses: sigstore/cosign-installer@cad07c2e89fa2edd6e2d7bab4c1aa38e53f76003 # v4.1.1
 
-    - name: Build image
-      run: |
-        # Same command as the current local build (README/Dockerfile comment),
-        # just run by CI and tagged with the git tag that triggered this run.
-        docker build -f "${{ env.DOCKERFILE }}" \
-          -t "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}" \
-          .
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
-    - name: Push image to registry
+    - name: Build and push image
       id: push
-      run: |
-        REGISTRY_IMAGE="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}"
+      uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+      with:
+        context: .
+        file: ${{ env.DOCKERFILE }}
+        push: true
+        tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}
+      # Plain `docker build` + `docker push` hit a known ghcr.io failure mode:
+      # when a layer's content hash happens to already exist under some
+      # unrelated package (cross-repo blob mount, "Mounted from ..."), the
+      # classic push client tries to reuse it rather than re-upload, and if
+      # this token lacks read access to that unrelated package the mount is
+      # refused with "unknown blob" instead of falling back to a real upload.
+      # buildx's push path doesn't hit this. It also gives us the digest
+      # directly as a step output — no more manual `docker inspect` parsing.
 
-        docker push "$REGISTRY_IMAGE"
-
-        DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "$REGISTRY_IMAGE" | cut -d'@' -f2)
-        echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
-        echo "image_url=${REGISTRY_IMAGE}" >> "$GITHUB_OUTPUT"
-
-        echo "Pushed: $REGISTRY_IMAGE"
-        echo "Digest: $DIGEST"
+    - name: Set image_url output
+      id: image
+      run: echo "image_url=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
 
     - name: Sign container image with cosign
       run: |
@@ -162,7 +164,7 @@ jobs:
         name: Release ${{ github.ref_name }}
         body: |
           ## Built Image
-          **Image:** `${{ steps.push.outputs.image_url }}`
+          **Image:** `${{ steps.image.outputs.image_url }}`
           **Digest:** `${{ steps.push.outputs.digest }}`
 
           ✅ **Signed with Sigstore cosign**
@@ -177,13 +179,13 @@ jobs:
           cosign verify \
             --certificate-identity-regexp="https://github.com/${{ github.repository }}/.*" \
             --certificate-oidc-issuer="https://token.actions.githubusercontent.com" \
-            ${{ steps.push.outputs.image_url }}
+            ${{ steps.image.outputs.image_url }}
 
           # 2. Which commit it was built from
           cosign verify-attestation --type slsaprovenance \
             --certificate-identity-regexp="https://github.com/${{ github.repository }}/.*" \
             --certificate-oidc-issuer="https://token.actions.githubusercontent.com" \
-            ${{ steps.push.outputs.image_url }}
+            ${{ steps.image.outputs.image_url }}
           ```
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -193,7 +195,7 @@ jobs:
         {
           echo "## Published Image"
           echo "**Tag:** \`${{ github.ref_name }}\`"
-          echo "**Image:** \`${{ steps.push.outputs.image_url }}\`"
+          echo "**Image:** \`${{ steps.image.outputs.image_url }}\`"
           echo "**Digest:** \`${{ steps.push.outputs.digest }}\`"
           echo ""
           echo "✅ **Signed with Sigstore cosign**"
