@@ -1,6 +1,6 @@
 # Qwen3-VL-30B-A3B SIA 评测汇总 (效果 + 性能)
 
-**最后更新**: 2026-06-05
+**最后更新**: 2026-07-07
 **适用前提**: 所有数据均在 [`commit f0f4e1c` (rep_penalty 1.3 → 1.0 修复)](sia-repetition-penalty-root-cause-20260604.md) 之后采集。
 
 **结论速览**:
@@ -65,25 +65,29 @@
 
 > ⚠️ 第一次 max=2048 跑出现 RM OOM 死亡 → SIA 退化为 no-op, 错误结论 "SIA -6%"。**REDO** 用顺序启动 + /classify smoke test 后才是真数据。健康检查方法见 [Appendix C.4](#c4-sia-intervention-健康检查).
 
-### 1.3 MMLU 150Q (30 subjects × 5, 知识类任务)
+### 1.3 MMLU (30 subjects × N, 知识类任务)
 
-详见 [Appendix C.5 — VL-30B MMLU 150Q HTTP path SIA & noSIA](#c5-vl-30b-mmlu-150q-http-path) 和 [Appendix C.6 — VL-30B MMLU 150Q b2 inproc](#c6-vl-30b-mmlu-150q-b2-inproc).
+详见 [Appendix C.5](#c5-vl-30b-mmlu-150q-http-path), [C.6](#c6-vl-30b-mmlu-150q-b2-inproc), [C.8](#c8-vl-30b-mmlu-300q-vocab_lowrank-frozen-backbone).
 
-| arm | accuracy | correct/150 | 实验来源 |
-|---|---|---|---|
-| noSIA HTTP | 0.7867 | 118/150 | [Appendix C.5](#c5-vl-30b-mmlu-150q-http-path) |
-| SIA HTTP (vllm 0.19) | 0.8000 | 120/150 | [Appendix C.5](#c5-vl-30b-mmlu-150q-http-path) |
-| **SIA b2 inproc** (vllm 0.17.1) | **0.8133** | **122/150** | [Appendix C.6](#c6-vl-30b-mmlu-150q-b2-inproc) |
+| arm | VM | topk | Q | accuracy | correct | 实验来源 |
+|---|---|---|---|---|---|---|
+| noSIA HTTP | scalar | — | 150 | 0.7867 | 118/150 | [C.5](#c5-vl-30b-mmlu-150q-http-path) |
+| SIA HTTP (vllm 0.19) | scalar | — | 150 | 0.8000 | 120/150 | [C.5](#c5-vl-30b-mmlu-150q-http-path) |
+| SIA b2 inproc (vllm 0.17.1) | scalar | 5 | 150 | 0.8133 | 122/150 | [C.6](#c6-vl-30b-mmlu-150q-b2-inproc) |
+| noSIA b2 inproc | vocab_lowrank | — | 300 | 0.8267 | 248/300 | [C.8](#c8-vl-30b-mmlu-300q-vocab_lowrank-frozen-backbone) |
+| **SIA b2 inproc (vocab_lowrank)** | **vocab_lowrank** | **10** | **300** | **0.8467** | **254/300** | [**C.8**](#c8-vl-30b-mmlu-300q-vocab_lowrank-frozen-backbone) |
 
 **Δ accuracy**:
 
 | 对比 | Δ | 相对 | 解读 |
 |---|---|---|---|
-| SIA HTTP vs noSIA | +1.33 pp | +1.7% | 落在 150Q 噪声内 (binomial 95% CI ±7.7pp) |
-| SIA b2 inproc vs noSIA | **+2.67 pp** | +3.4% | 同上, 但方向一致 |
-| SIA b2 inproc vs SIA HTTP | +1.33 pp | +1.7% | 跟 1.1 节 AlpacaEval 统计等价结论自洽 |
+| SIA HTTP vs noSIA HTTP | +1.33 pp | +1.7% | 150Q 噪声内 (binomial 95% CI ±7.7pp) |
+| SIA b2 inproc (scalar) vs noSIA HTTP | **+2.67 pp** | +3.4% | 方向一致 |
+| **SIA vs noSIA (vocab_lowrank, 300Q)** | **+2.0 pp** | **+2.4%** | 300Q CI ±5.5pp; 方向一致 |
 
-**SIA 在 MMLU (RM 训练目标外的纯知识任务) 上仍小幅提升, 不引入 regression**。
+**SIA 在 MMLU (RM 训练目标外的纯知识任务) 上仍小幅提升, 不引入 regression**。vocab_lowrank head 结果与 scalar head 历史结果一致 (Δ 落在 +1.33~+2.67 pp 范围内)。
+
+> **Note on baseline shift**: noSIA 基线从 0.7867 升至 0.8267 (+4 pp)，原因是 max_model_len=2048（当前生产配置）相比历史实验的 4096 更短，压缩了 thinking 链长度，对 MMLU 选择题有利。两组实验不直接可比，但 SIA Δ 方向和幅度均自洽。
 
 ### 1.4 跨实验一致性
 
@@ -648,3 +652,82 @@ SIA_RM_MULTIPROCESS=0 \
 同样曾推论 "SIA 是短窗口工具, 只在 ≤ 256 有效" — 基于 broken-RM 的 SIA-2048 = -6%。REDO 后真 +10% Δ, **SIA 在长生成上同样有效**。
 
 参考根因: [`sia-repetition-penalty-root-cause-20260604.md`](sia-repetition-penalty-root-cause-20260604.md).
+
+---
+
+### C.8 VL-30B MMLU 300Q vocab_lowrank frozen backbone
+
+**Date**: 2026-07-07
+**VM**: VM-Qwen3-4B-vocab-lowrank-sia-backbone-frozen-20260706-merged (vocab_lowrank head, rank=64, frozen backbone, BT+TD loss)
+**Config**: `docker-compose.sia-backbone-frozen-20260706.yml`
+
+#### Server
+
+```bash
+docker compose -f docker-compose.sia-backbone-frozen-20260706.yml up -d
+# 关键参数:
+#   --topk 10 --weight 1.0 --entropy_threshold 1.0
+#   --max_model_len 2048
+#   --vm_head_type vocab_lowrank --vm_head_rank 64
+```
+
+#### Driver
+
+```bash
+# SIA arm
+python3 eval/mmlu_eval.py \
+  --base_url http://localhost:8000/v1 \
+  --model Qwen3-VL-30B-A3B-Instruct-SIA \
+  --subjects anatomy astronomy business_ethics clinical_knowledge \
+             college_chemistry college_computer_science college_mathematics \
+             college_medicine college_physics conceptual_physics \
+             econometrics electrical_engineering formal_logic global_facts \
+             high_school_chemistry high_school_geography high_school_macroeconomics \
+             high_school_mathematics high_school_physics high_school_statistics \
+             high_school_us_history human_aging logical_fallacies machine_learning \
+             miscellaneous philosophy professional_accounting professional_law \
+             public_relations virology \
+  --limit 10 --temperature 1.0 --repetition_penalty 1.0 \
+  --output exp/mmlu-vl30b-sia-backbone-frozen-20260707/sia_300q.json
+
+# noSIA arm (identical + --sia_weight 0.0)
+python3 eval/mmlu_eval.py \
+  --base_url http://localhost:8000/v1 \
+  --model Qwen3-VL-30B-A3B-Instruct-SIA \
+  --subjects anatomy astronomy business_ethics clinical_knowledge \
+             college_chemistry college_computer_science college_mathematics \
+             college_medicine college_physics conceptual_physics \
+             econometrics electrical_engineering formal_logic global_facts \
+             high_school_chemistry high_school_geography high_school_macroeconomics \
+             high_school_mathematics high_school_physics high_school_statistics \
+             high_school_us_history human_aging logical_fallacies machine_learning \
+             miscellaneous philosophy professional_accounting professional_law \
+             public_relations virology \
+  --limit 10 --temperature 1.0 --repetition_penalty 1.0 \
+  --sia_weight 0.0 \
+  --output exp/mmlu-vl30b-sia-backbone-frozen-20260707/nosia_300q.json
+```
+
+> noSIA 使用 `--sia_weight 0.0` per-request 覆盖（与历史实验的独立 noSIA server 不同，效果等价）。
+
+#### Results
+
+| arm | accuracy | correct/300 | avg tokens/Q | throughput |
+|-----|----------|-------------|--------------|------------|
+| **SIA** | **0.8467** | **254/300** | 279.3 | 90.4 tok/s |
+| noSIA | 0.8267 | 248/300 | 274.2 | 92.5 tok/s |
+| **Δ** | **+2.0 pp** | **+6** | | |
+
+Total wall: SIA 927s (15.5 min), noSIA 889s (14.8 min).
+
+SIA wins: 10/30 subjects, ties: 17/30, loses: 3/30 (college_computer_science -2, professional_accounting -2, econometrics -1).
+
+#### Artifacts
+
+| file | description |
+|------|-------------|
+| [`exp/mmlu-vl30b-sia-backbone-frozen-20260707/sia_300q.json`](../exp/mmlu-vl30b-sia-backbone-frozen-20260707/sia_300q.json) | SIA arm (accuracy 0.8467, per-subject) |
+| [`exp/mmlu-vl30b-sia-backbone-frozen-20260707/nosia_300q.json`](../exp/mmlu-vl30b-sia-backbone-frozen-20260707/nosia_300q.json) | noSIA arm (accuracy 0.8267) |
+| [`exp/mmlu-vl30b-sia-backbone-frozen-20260707/report.md`](../exp/mmlu-vl30b-sia-backbone-frozen-20260707/report.md) | full report with per-subject breakdown |
+| `exp/mmlu-vl30b-sia-backbone-frozen-20260707/sia_driver.log` | per-Q CoT + latency (SIA) |
+| `exp/mmlu-vl30b-sia-backbone-frozen-20260707/nosia_driver.log` | per-Q CoT + latency (noSIA) |

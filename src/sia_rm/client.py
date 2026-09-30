@@ -37,6 +37,8 @@ import time
 import uuid
 from typing import Optional
 
+import numpy as np
+
 import torch
 
 from .qwen3_with_score import (
@@ -48,6 +50,10 @@ from .qwen3_with_score import (
     set_inproc_reward_mode,
     clear_inproc_rewards,
     take_inproc_rewards,
+    set_vocab_head_mode,
+    clear_inproc_vocab_rewards,
+    take_inproc_vocab_rewards,
+    _REWARD_BUFFERS,
 )
 
 
@@ -62,6 +68,9 @@ class RMClient:
         multiprocessing: bool = False,
         llm_tokenizer=None,
         max_num_batched_tokens: Optional[int] = None,
+        head_type: str = "scalar",
+        head_rank: int = 64,
+        mapping_table_path: Optional[str] = None,
     ):
         """
         cuda_graph_sizes: optional list of batch sizes to capture in the
@@ -106,6 +115,19 @@ class RMClient:
         # capture invokes compute_logits with dummy inputs at every cuda
         # graph batch size; those calls must already see the correct flag.
         set_inproc_reward_mode(not multiprocessing)
+
+        # Vocab head (FaRMA): set head type env vars so Qwen3WithScoreForCausalLM
+        # initialises with the right architecture during cudagraph capture.
+        self._head_type = head_type
+        if head_type == "vocab_lowrank":
+            os.environ["SIA_RM_HEAD_TYPE"] = "vocab_lowrank"
+            os.environ["SIA_RM_HEAD_RANK"] = str(head_rank)
+            if not multiprocessing:
+                set_vocab_head_mode(True)
+        else:
+            os.environ.pop("SIA_RM_HEAD_TYPE", None)
+            os.environ.pop("SIA_RM_HEAD_RANK", None)
+            set_vocab_head_mode(False)  # clear module global in case a vocab_lowrank client ran earlier
 
         from vllm import LLM, SamplingParams, TokensPrompt
 
@@ -229,6 +251,40 @@ class RMClient:
                     flush=True,
                 )
 
+        # Token mapping table for cross-tokenizer vocab_lowrank scoring (O(1) lookup).
+        # When provided, score_with_vocab_head_batch() maps LLM token IDs → RM token IDs
+        # via array indexing instead of decode→encode text round-trip.
+        # Only meaningful with vocab_lowrank head + cross-tokenizer (e.g. 0GM-35B + VM-Qwen3-4B).
+        # Backward compatible: None → existing decode→encode behavior unchanged.
+        self._mapping_table: Optional[np.ndarray] = None
+        if mapping_table_path is not None:
+            _tbl = np.load(mapping_table_path)
+            if _tbl.ndim != 1:
+                raise ValueError(
+                    f"mapping_table must be a 1-D array, got shape {_tbl.shape}"
+                )
+            if not np.issubdtype(_tbl.dtype, np.signedinteger):
+                raise ValueError(
+                    f"mapping_table dtype must be signed integer (for -1 sentinel), got {_tbl.dtype}"
+                )
+            self._mapping_table = _tbl
+            print(
+                f"[RMClient] mapping_table loaded: {mapping_table_path} "
+                f"shape={self._mapping_table.shape} dtype={self._mapping_table.dtype}",
+                flush=True,
+            )
+
+        # [SIA-debug] cross-tokenizer candidate mapping diagnostics (score_with_vocab_head_batch).
+        # - vm_map_miss: candidate fell through the O(1) table (unmapped/-1 or out of range) to the
+        #   slower decode->encode fallback, or that fallback produced an empty encode (defaulted to 0).
+        # - vm_map_collide: 2+ candidates *within the same topk set* mapped to the same RM token id,
+        #   meaning SIA cannot rank them apart for that step even if each mapping is individually valid.
+        self._vm_map_miss_total = 0
+        self._vm_map_empty_total = 0
+        self._vm_map_collide_total = 0
+        self._vm_map_candidate_total = 0
+        self._vm_map_calls = 0
+
         # Profile-mode state: how many tokens of each session's prefix have
         # already been pushed through a vLLM forward (thus KV-cached).
         # Used by score_candidates_profiled to know how many new tokens
@@ -243,6 +299,8 @@ class RMClient:
         # memory until the first real score_candidates() call.
         if not multiprocessing:
             clear_inproc_rewards(self._fid)
+            if head_type == "vocab_lowrank":
+                clear_inproc_vocab_rewards(self._fid)
 
         # vllm 0.18.0 CUDAGraph 跨实例清除修复:
         # gpu_model_runner.py 在 profiling 阶段结束时调用
@@ -476,6 +534,8 @@ class RMClient:
         """
         if not requests:
             return []
+        # Diagnostic: always print entry so we know the function is reached.
+        print(f"[RM-diag] score_candidates_batch n={len(requests)}", flush=True)
         # Single-request fast-path: delegate to the existing method so all
         # its error-handling and edge cases remain in one place.
         if len(requests) == 1:
@@ -528,6 +588,21 @@ class RMClient:
         if self._multiprocessing:
             all_rewards = read_rewards()
         else:
+            # SIA_RM_BATCH_DEBUG=1: print how many compute_logits calls vLLM
+            # made internally and the sample count of each — directly reveals
+            # whether N sessions are batched as one call (n_calls=1, samples=N×K)
+            # or serialized (n_calls=N, samples=K each).
+            if os.environ.get("SIA_RM_BATCH_DEBUG", "0") == "1":
+                raw = _REWARD_BUFFERS.get(self._fid, [])
+                shapes = [int(t.numel()) for t in raw]
+                n_sessions = len(requests)
+                print(
+                    f"[RM-batch-debug] sessions={n_sessions} "
+                    f"total_prompts={n_total} "
+                    f"compute_logits_calls={len(shapes)} "
+                    f"samples_per_call={shapes}",
+                    flush=True,
+                )
             all_rewards = take_inproc_rewards(self._fid)
 
         if all_rewards is None or all_rewards.numel() != n_total:
@@ -556,6 +631,153 @@ class RMClient:
         # NOT ordering errors — a silent wrong-score bug would result if vLLM ever
         # reorders.
         return [all_rewards[start:end] for (start, end) in offsets]
+
+    def score_with_vocab_head_batch(
+        self,
+        requests: list,
+    ) -> list:
+        """FaRMA vocab head scoring: one prefix forward per session, then index by candidate IDs.
+
+        Instead of sending N×K prompts (prefix + [candidate_i]), sends N prefix prompts and reads
+        the (N, vocab_size) reward tensor, then indexes each row by that session's candidate IDs.
+        Reduces RM forward calls from N×K to N — approximately K× wall-clock speedup.
+
+        Cross-tokenizer mode: prefixes are re-encoded with the RM tokenizer (_get_stable_rm_prefix),
+        and candidate LLM token IDs are mapped to RM token IDs via text decode/re-encode (first-token
+        approximation for multi-token mappings).  This preserves the N-forward advantage even when
+        the LLM and RM have different vocabularies (e.g. 0GM-35B 248K + VM-Qwen3-4B 151K).
+
+        Args:
+            requests: list of (sid, candidate_token_ids).  fix_a_token must already have been called
+                      for all new output tokens (same contract as score_candidates).
+
+        Returns:
+            list of Tensor, one per request, each shape (K_i,) — same contract as score_candidates_batch.
+            Same device as the RM (GPU tensor in inproc mode).
+        """
+        if not requests:
+            return []
+        if self._head_type != "vocab_lowrank":
+            # Scalar head doesn't produce vocab vectors; fall back.
+            return self.score_candidates_batch(requests)
+
+        TP = self._TokensPrompt
+        # Build one prompt per session (prefix only, no candidate appended).
+        # Cross-tokenizer: re-encode prefix with RM tokenizer.
+        prompts = []
+        for sid, _ in requests:
+            if sid not in self._sessions:
+                raise ValueError(f"Unknown session id {sid}")
+            if self._cross_tokenizer:
+                prefix = self._get_stable_rm_prefix(sid, self._sessions[sid])
+            else:
+                prefix = self._sessions[sid]
+            prompts.append(TP(prompt_token_ids=prefix))
+
+        clear_inproc_vocab_rewards(self._fid)
+        _ = self.llm.generate(prompts, self._sp, use_tqdm=False)
+        vocab_rewards = take_inproc_vocab_rewards(self._fid)  # (N, vocab_size) GPU tensor
+
+        if vocab_rewards is None or vocab_rewards.ndim != 2 or vocab_rewards.shape[0] != len(requests):
+            n_got = 0 if vocab_rewards is None else int(vocab_rewards.shape[0])
+            shape_str = "None" if vocab_rewards is None else str(tuple(vocab_rewards.shape))
+            raise RuntimeError(
+                f"vocab reward buffer returned shape {shape_str}, expected ({len(requests)}, vocab_size). "
+                f"Likely SIA_REWARD_FILE_ID mismatch or vocab head mode not active."
+            )
+
+        rm_vocab_size = vocab_rewards.shape[1]
+        results = []
+        for row_idx, (sid, candidate_token_ids) in enumerate(requests):
+            if self._cross_tokenizer:
+                # Map each LLM token ID to an RM token ID.
+                # Fast path: O(1) array lookup via preloaded mapping table.
+                # Fallback: text decode → RM encode (used when no table or token is unmapped).
+                rm_ids = []
+                for c in candidate_token_ids:
+                    if self._mapping_table is not None and 0 <= c < len(self._mapping_table):
+                        vm_id = int(self._mapping_table[c])
+                        if vm_id >= 0:
+                            rm_ids.append(min(vm_id, rm_vocab_size - 1))
+                            continue
+                        # vm_id < 0 means unmapped; fall through to decode→encode
+                    # [SIA-debug] reached only when the O(1) table has no valid entry for c
+                    # (no table, out-of-range c, or explicit -1 sentinel).
+                    self._vm_map_miss_total += 1
+                    try:
+                        text = self._llm_tok.decode([c], skip_special_tokens=False)
+                    except (OverflowError, ValueError):
+                        text = ""
+                    ids = self._rm_tok.encode(text, add_special_tokens=False)
+                    # ids may be empty for whitespace-only or unmappable tokens; fall back to 0.
+                    if not ids:
+                        self._vm_map_empty_total += 1
+                    rm_id = ids[0] if ids else 0
+                    # Clamp to RM vocab range (handles LLM special tokens beyond RM vocab).
+                    rm_ids.append(min(rm_id, rm_vocab_size - 1))
+                # [SIA-debug] in-step collision: 2+ of THIS request's candidates landed on the
+                # same RM token id, so SIA cannot distinguish them when ranking this step's topk.
+                n_cand = len(rm_ids)
+                self._vm_map_candidate_total += n_cand
+                if n_cand > 1:
+                    self._vm_map_collide_total += (n_cand - len(set(rm_ids)))
+                cand_t = torch.tensor(rm_ids, dtype=torch.long, device=vocab_rewards.device)
+            else:
+                # Same tokenizer: candidate IDs are valid RM indices by construction
+                # (vocab sizes verified equal at init), but clamp defensively.
+                clamped = [min(int(c), rm_vocab_size - 1) for c in candidate_token_ids]
+                cand_t = torch.tensor(clamped, dtype=torch.long,
+                                      device=vocab_rewards.device)
+            results.append(vocab_rewards[row_idx, cand_t])  # (K_i,)
+
+        # [SIA-debug] periodic cross-tokenizer mapping-quality summary (every 100 calls to
+        # this method, i.e. every 100 decode steps -- NOT every 100 requests/sessions).
+        if self._cross_tokenizer:
+            self._vm_map_calls += 1
+            if self._vm_map_calls % 100 == 0 and self._vm_map_candidate_total > 0:
+                miss_rate = self._vm_map_miss_total / self._vm_map_candidate_total * 100
+                empty_rate = self._vm_map_empty_total / self._vm_map_candidate_total * 100
+                collide_rate = self._vm_map_collide_total / self._vm_map_candidate_total * 100
+                print(
+                    f"[SIA-debug] vm_map_miss_rate={miss_rate:.2f}%  "
+                    f"vm_map_empty_rate={empty_rate:.2f}%  "
+                    f"vm_map_collision_rate={collide_rate:.2f}%  "
+                    f"(candidates={self._vm_map_candidate_total}, "
+                    f"miss={self._vm_map_miss_total}, empty={self._vm_map_empty_total}, "
+                    f"collide={self._vm_map_collide_total}, calls={self._vm_map_calls})",
+                    flush=True,
+                )
+        return results
+
+    def eager_prefill_batch(self, requests: list) -> None:
+        """Warm the VM KV cache with predicted next tokens. Scores are discarded.
+
+        Args:
+            requests: list of (sid, predicted_next_token) pairs.
+                      _sessions[sid] must already be advanced to the current decode
+                      position via fix_a_token before calling this method.
+
+        This is a no-op for the cross-tokenizer path (same-vocab assumption required).
+        """
+        if self._cross_tokenizer:
+            return  # cross-tokenizer eager prefill not implemented
+        TP = self._TokensPrompt
+        prompts = [
+            TP(prompt_token_ids=self._sessions[sid] + [int(tok)])
+            for sid, tok in requests
+            if sid in self._sessions
+        ]
+        if not prompts:
+            return
+        if not self._multiprocessing:
+            clear_inproc_rewards(self._fid)
+            if self._head_type == "vocab_lowrank":
+                clear_inproc_vocab_rewards(self._fid)
+        self.llm.generate(prompts, self._sp, use_tqdm=False)
+        if not self._multiprocessing:
+            take_inproc_rewards(self._fid)  # discard scores; we only wanted the KV cache
+            if self._head_type == "vocab_lowrank":
+                take_inproc_vocab_rewards(self._fid)  # discard vocab scores too
 
     # ---- bench / introspection ----
 

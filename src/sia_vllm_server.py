@@ -631,10 +631,35 @@ def parse_args():
                    help="Required when rm_backend is vllm or b2: path to the RM model")
     p.add_argument("--rm_b2_gpu_mem", type=float, default=0.3,
                    help="gpu_memory_utilization for the RM vLLM instance under b2 backend (default 0.3)")
+    p.add_argument("--rm_b2_max_model_len", type=int, default=4096,
+                   help="max_model_len for the RM vLLM instance under b2 backend (default 4096). "
+                        "Must be large enough for prefix + partial response in RM tokenizer tokens. "
+                        "Independent of --max_model_len (the main LLM's context window).")
     p.add_argument("--llm_gpu_mem", type=float, default=0.5)
     p.add_argument("--topk",      type=int,   default=10)
     p.add_argument("--weight",    type=float, default=1.0)
     p.add_argument("--entropy_threshold", type=float, default=None)
+    p.add_argument("--logit_gap_threshold", type=float, default=None,
+                   help="Dual-gate: skip VM scoring when top1-top2 logit gap >= this value "
+                        "(None=disabled). Reduces intervention rate without extra GPU sync. "
+                        "Validate with AlpacaEval A/B before enabling in production.")
+    p.add_argument("--eager_vm_prefill", action="store_true", default=False,
+                   help="b2 backend: after each decode step pre-warm the VM KV cache with the "
+                        "predicted next token for all active sessions. Reduces tail prefill "
+                        "cost at the next INTERVENE step.")
+    p.add_argument("--vm_head_type", default="scalar",
+                   choices=["scalar", "vocab_lowrank"],
+                   help="b2 backend: VM reward head type. "
+                        "'scalar' (default): K RM forwards per INTERVENE step. "
+                        "'vocab_lowrank': 1 RM forward per step (FaRMA, ~K× speedup). "
+                        "Requires checkpoint converted with convert_rm_for_vllm.py --head_type vocab_lowrank.")
+    p.add_argument("--vm_head_rank", type=int, default=64,
+                   help="Rank for vocab_lowrank head (default 64, ignored for scalar head).")
+    p.add_argument("--vm_topk", type=int, default=None,
+                   help="Limit candidates sent to VM per request (default: same as --topk). "
+                        "Keeps --topk for entropy gate so intervention rate is unchanged. "
+                        "Used for FaRMA proxy benchmarking: --topk 10 --vm_topk 1 reduces "
+                        "VM batch from N×10 to N×1 while preserving the intervention rate.")
     p.add_argument("--use_token_ids", action="store_true",
                    help="When rm_backend=vllm: pre-tokenize on the client and send token_ids to RM, "
                         "saving server-side re-tokenize (~3-5ms/call). Requires RM server to be "
@@ -674,6 +699,11 @@ def parse_args():
                         "noop=complete no-op (measure hook overhead); "
                         "sync=perform entropy+cpu sync but no decision (measure sync overhead). "
                         "Default None=use the real SIA processor.")
+    p.add_argument("--mapping_table", type=str, default=None,
+                   help="Path to .npy token mapping table for cross-tokenizer vocab_lowrank scoring "
+                        "(e.g. token_mapping_ogm35b_to_qwen3_4b.npy). "
+                        "Only used with --rm_backend b2 --vm_head_type vocab_lowrank when LLM and VM "
+                        "use different tokenizers (e.g. 0GM-35B 248K + VM-Qwen3-4B 151K).")
     args = p.parse_args()
     if args.rm_backend in ("vllm", "b2") and not args.rm_model:
         p.error(f"--rm_backend {args.rm_backend} requires --rm_model to be specified")
@@ -696,9 +726,13 @@ def main():
     print(f"RM URL   : {_args.rm_url}")
     print(f"RM mode  : {_args.rm_backend}"
           + (f"  model={_args.rm_model}" if _args.rm_backend == "vllm" else ""))
-    print(f"topk={_args.topk}  weight={_args.weight}  "
+    print(f"topk={_args.topk}  vm_topk={_args.vm_topk}  weight={_args.weight}  "
           f"entropy_threshold={_args.entropy_threshold}  "
-          f"use_token_ids={_args.use_token_ids}")
+          f"logit_gap_threshold={_args.logit_gap_threshold}  "
+          f"use_token_ids={_args.use_token_ids}  "
+          f"eager_vm_prefill={_args.eager_vm_prefill}")
+    print(f"vm_head={_args.vm_head_type}  vm_head_rank={_args.vm_head_rank}  "
+          f"mapping_table={_args.mapping_table}")
     print(f"Server   : http://{_args.host}:{_args.port}")
     print("=" * 60)
 
@@ -723,12 +757,18 @@ def main():
             topk=_args.topk,
             weight=_args.weight,
             entropy_threshold=_args.entropy_threshold,
+            logit_gap_threshold=_args.logit_gap_threshold,
             rm_backend=_args.rm_backend,
             rm_model=_args.rm_model,
             use_token_ids=_args.use_token_ids,
             rm_b2_gpu_mem=_args.rm_b2_gpu_mem,
-            rm_max_model_len=_args.max_model_len,
+            rm_max_model_len=_args.rm_b2_max_model_len,
             enable_thinking=_enable_thinking,
+            eager_vm_prefill=_args.eager_vm_prefill,
+            vm_topk=_args.vm_topk,
+            vm_head_type=_args.vm_head_type,
+            vm_head_rank=_args.vm_head_rank,
+            mapping_table=_args.mapping_table,
         )
 
     print("Loading vLLM AsyncLLMEngine...")

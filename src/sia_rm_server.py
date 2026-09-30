@@ -22,6 +22,7 @@ Usage:
 """
 
 import argparse
+import json
 import os
 import threading
 import time
@@ -1134,6 +1135,20 @@ def _load_rm_base(rm_path: str, device: str):
 
 def _load_rm_with_lora(rm_path: str, rm_lora_path: str, device: str):
     from peft import PeftModel
+
+    # Detect head_type from checkpoint config before loading any weights.
+    config_path = os.path.join(rm_lora_path, "model_config.json")
+    head_type = "scalar"
+    if os.path.exists(config_path):
+        with open(config_path, encoding="utf-8") as f:
+            ckpt_cfg = json.load(f)
+        head_type = ckpt_cfg.get("head_type", "scalar")
+    if head_type != "scalar":
+        raise ValueError(
+            f"sia_rm_server pytorch backend only supports head_type='scalar'; "
+            f"checkpoint at {rm_lora_path!r} has head_type={head_type!r}. "
+            f"Use --rm_backend b2 or --rm_backend vllm instead."
+        )
 
     print(f"[RM] Loading RM base for LoRA: {rm_path}", flush=True)
     base_model = AutoModelForSequenceClassification.from_pretrained(

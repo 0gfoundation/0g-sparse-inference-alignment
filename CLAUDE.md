@@ -20,6 +20,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 | Qwen3-VL-30B-A3B-Instruct | **vl30b-fast** | **0.17.1** | `--rm_backend b2` (inproc) | Fastest, 1.46× ([doc](doc/vl30b-b2-inproc-speedup-20260605.md)) |
 | Qwen3-VL-30B-A3B-Instruct | 0gm35b-http | 0.19.0 | `--rm_backend vllm` (HTTP) | Fallback |
 | 0GM-1.0-35B-A3B | **0gm35b-b2** | **0.18.0** | `--rm_backend b2` (inproc) | Fastest, ~1.5× vs HTTP ([doc](doc/0gm-35b-b2-inproc-speedup-20260609.md)); requires `SIA_RM_CUDAGRAPH=none` |
+| 0GM-1.0-35B-A3B | **0gm35b-b2** | **0.18.0** | `--rm_backend b2 --vm_head_type vocab_lowrank --mapping_table ...` | Fastest, vocab_lowrank FaRMA (~K× fewer RM forwards); requires converted VM checkpoint |
 | 0GM-1.0-35B-A3B | 0gm35b-http | 0.19.0 | `--rm_backend vllm` (HTTP) | Fallback (b2 fails entirely on 0.19) |
 
 ```bash
@@ -103,8 +104,36 @@ python src/sia_vllm_server.py \
   --rm_model /path/to/VM-Qwen3-4B-merged-for-vllm \
   --rm_b2_gpu_mem 0.13 --llm_gpu_mem 0.75 \
   --topk 10 --weight 1.0 --entropy_threshold 1.0 \
-  --max_model_len 32768 --mamba_cache_mode align --port 8000
+  --max_model_len 2048 --mamba_cache_mode align --port 8000
 ```
+
+**0GM-35B b2 inproc with vocab_lowrank head VM (FaRMA — ~K× fewer RM forwards):**
+
+First, convert the VM checkpoint to include vocab_lowrank heads:
+```bash
+python scripts/convert_rm_for_vllm.py \
+  --rm /path/to/Qwen3-4B-Base \
+  --rm_lora /path/to/VM-Qwen3-4B-vocab-lowrank-checkpoint \
+  --output /path/to/VM-Qwen3-4B-vocab-lowrank-merged
+```
+
+Then start the server (or use `scripts/start_0gm35b_vocab_lowrank.sh`):
+```bash
+SIA_RM_CUDAGRAPH=none \
+SIA_RM_MULTIPROCESS=0 \
+python src/sia_vllm_server.py \
+  --llm /path/to/0GM-1.0-35B-A3B \
+  --rm_backend b2 \
+  --rm_model /path/to/VM-Qwen3-4B-vocab-lowrank-merged \
+  --rm_b2_gpu_mem 0.20 --llm_gpu_mem 0.75 \
+  --topk 10 --weight 1.0 --entropy_threshold 1.0 \
+  --max_model_len 2048 --mamba_cache_mode align --port 8000 \
+  --vm_head_type vocab_lowrank \
+  --mapping_table token_mapping_ogm35b_to_qwen3_4b.npy
+```
+
+> **Important:** `--max_model_len 2048` is required for 0GM-35B SIA. Using 4096 suppresses the intervention rate to near 0%.
+> The token mapping table (`token_mapping_ogm35b_to_qwen3_4b.npy`) is at the repo root and maps 0GM-35B token IDs (vocab 248,320) to Qwen3-4B token IDs (vocab 151,936) for O(1) cross-tokenizer lookup in `score_with_vocab_head_batch()`.
 
 **Testing the server:**
 ```bash

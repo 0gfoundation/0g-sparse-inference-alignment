@@ -1,0 +1,292 @@
+loaded 50 prompts from data/alpaca_eval/alpaca_eval.json
+base_url    : http://localhost:8000/v1
+model       : 0GM-1.0-35B-A3B-0427-SIA
+max_tokens  : 2048
+temperature : 1.0
+top_p / top_k / rep_penalty: 0.95 / 20 / None
+disable_thinking: False
+no_think_prompt : False
+sia_weight / sia_topk / sia_entropy_threshold: 0.0 / None / None
+output      : exp/nosia_50q_oldvm.json
+------------------------------------------------------------
+[1/50] last=19.0s avg=19.0s/q  cum_tps=107.9 tok/s  tokens=2048
+  Q: What are the names of some famous actors that started their careers on Broadway?
+  A: Here's a thinking process:
+
+1.  **Understand User Query**: The user is asking for names of famous actors who started the...
+[2/50] last=19.9s avg=19.4s/q  cum_tps=105.5 tok/s  tokens=2048
+  Q: How did US states get their names?
+  A: Here's a thinking process:
+
+1.  **Understand User Question**: The user asks "How did US states get their names?" This is...
+[3/50] last=20.2s avg=19.7s/q  cum_tps=104.0 tok/s  tokens=2048
+  Q: Hi, my sister and her girlfriends want me to play kickball with them. Can you ex...
+  A: Here's a thinking process:
+
+1.  **Analyze User Input:**
+   - **User:** Wants to play kickball with sister and her girlfr...
+[4/50] last=19.8s avg=19.7s/q  cum_tps=103.9 tok/s  tokens=2048
+  Q: What is some cool music from the 1920s?
+  A: Here's a thinking process:
+
+1.  **Understand User Request:** The user is asking for "cool music from the 1920s." This im...
+[5/50] last=16.6s avg=19.1s/q  cum_tps=103.6 tok/s  tokens=1698
+  Q: How do I wrap a present neatly?
+  A: Here's a thinking process:
+
+1.  **Understand User Request**: The user is asking "How do I wrap a present neatly?" This i...
+[6/50] last=13.8s avg=18.2s/q  cum_tps=103.5 tok/s  tokens=1417
+  Q: How do I dice without slicing my finger
+  A: Here's a thinking process:
+
+1.  **Understand User Query**: The user is asking for advice on how to dice food (likely veg...
+[7/50] last=8.9s avg=16.9s/q  cum_tps=103.4 tok/s  tokens=916
+  Q: Hi, I'm trying to solve a crossword puzzle, but I've never done one of these bef...
+  A: Here's a thinking process:
+
+1.  **Analyze User Input:**
+   - User wants help with a crossword puzzle
+   - First time doi...
+[8/50] last=15.2s avg=16.7s/q  cum_tps=103.6 tok/s  tokens=1595
+  Q: Who is Larry Page?
+  A: Here's a thinking process:
+
+1.  **Identify the User's Question**: The user asks "Who is Larry Page?"
+
+2.  **Key Informat...
+[9/50] last=17.9s avg=16.8s/q  cum_tps=103.5 tok/s  tokens=1843
+  Q: What are different drawers I should have for clothes?
+  A: Here's a thinking process:
+
+1.  **Understand User Query**: The user is asking about "different drawers I should have for...
+[10/50] last=19.6s avg=17.1s/q  cum_tps=103.6 tok/s  tokens=2048
+  Q: I like to host guests at my home from time to time, and I am gathering  recipes ...
+  A: Here's a thinking process:
+
+1.  **Understand User Request:**
+   - User wants to host guests and is gathering recipes
+   ...
+[11/50] last=15.9s avg=17.0s/q  cum_tps=103.5 tok/s  tokens=1628
+  Q: do you think retinoid is effective on removing the acne? because I have a lot of...
+  A: Here's a thinking process:
+
+1.  **Understand User Query:**
+   - User asks: "do you think retinoid is effective on removi...
+[12/50] last=20.3s avg=17.3s/q  cum_tps=103.2 tok/s  tokens=2048
+  Q: I'm trying to teach myself to have nicer handwriting. Can you help?
+  A: Here's a thinking process:
+
+1.  **Understand User Goal**: The user wants to improve their handwriting and is teaching th...
+[13/50] last=20.2s avg=17.5s/q  cum_tps=103.1 tok/s  tokens=2048
+  Q: I like to host guests at my home from time to time, and I am gathering  recipes ...
+  A: Here's a thinking process:
+
+1.  **Analyze User Request:**
+   - **Context:** User hosts guests at home, wants to keep thi...
+[14/50] last=19.6s avg=17.6s/q  cum_tps=103.1 tok/s  tokens=2041
+  Q: What are the best exercises for beginners?
+  A: Here's a thinking process:
+
+1.  **Understand User Query**: The user is asking for "the best exercises for beginners." Th...
+[15/50] last=15.2s avg=17.5s/q  cum_tps=103.2 tok/s  tokens=1579
+  Q: Do you know why turkeys became the official food of thanksgiving?
+  A: Here's a thinking process:
+
+1.  **Understand User Question**: The user is asking about the historical reasons why turkey...
+[16/50] last=19.4s avg=17.6s/q  cum_tps=103.3 tok/s  tokens=2048
+  Q: I want to get better at networking at work
+  A: Here's a thinking process:
+
+1.  **Understand User Goal:** The user wants to improve their networking skills specifically...
+[17/50] last=19.3s avg=17.7s/q  cum_tps=103.5 tok/s  tokens=2048
+  Q: Are there any weird Christmas traditions?
+  A: Here's a thinking process:
+
+1.  **Understand User Query**: The user asks "Are there any weird Christmas traditions?" Thi...
+[18/50] last=20.7s avg=17.9s/q  cum_tps=103.2 tok/s  tokens=2048
+  Q: Hi, I'm interested in learning to play badminton. Can you explain the game to me...
+  A: Here's a thinking process:
+
+1.  **Understand User Request:**
+   - User wants to learn badminton
+   - Asking for an expla...
+[19/50] last=10.3s avg=17.5s/q  cum_tps=103.1 tok/s  tokens=1034
+  Q: Do you know why cats always rub up against your legs?
+  A: Here's a thinking process:
+
+1.  **Understand User Question**: The user is asking why cats rub up against human legs. Thi...
+[20/50] last=20.3s avg=17.6s/q  cum_tps=103.0 tok/s  tokens=2048
+  Q: I am going to try to roast a pig at home for Thanksgiving this year. What equipm...
+  A: Here's a thinking process:
+
+1.  **Understand User Request:**
+   - **Goal:** Roast a whole pig at home for Thanksgiving
+ ...
+[21/50] last=16.4s avg=17.6s/q  cum_tps=103.1 tok/s  tokens=1724
+  Q: Help me find a good rated electric saw.
+  A: Here's a thinking process:
+
+1.  **Understand User Request:** The user is asking for help finding a "good rated electric ...
+[22/50] last=18.8s avg=17.6s/q  cum_tps=103.4 tok/s  tokens=2048
+  Q: What are some artists I might like if I like Billy Joel?
+  A: Here's a thinking process:
+
+1.  **Understand User Query:** The user wants music recommendations similar to Billy Joel. I...
+[23/50] last=9.4s avg=17.3s/q  cum_tps=103.5 tok/s  tokens=1021
+  Q: What type of soil is suitable for cactus?
+  A: Here's a thinking process:
+
+1.  **Understand User Query**: The user asks "What type of soil is suitable for cactus?" Thi...
+[24/50] last=18.9s avg=17.3s/q  cum_tps=103.7 tok/s  tokens=2048
+  Q: How do you become an author?
+  A: Here's a thinking process:
+
+1.  **Understand User Query**: The user asks "How do you become an author?" This is a broad,...
+[25/50] last=8.9s avg=17.0s/q  cum_tps=103.7 tok/s  tokens=917
+  Q: What breed dog is smallest?
+  A: Here's a thinking process:
+
+1.  **Understand User Query**: The user asks "What breed dog is smallest?" This is a straigh...
+[26/50] last=20.9s avg=17.1s/q  cum_tps=103.4 tok/s  tokens=2048
+  Q: What are some species of bears that are now extinct?
+  A: Here's a thinking process:
+
+1.  **Understand User Query**: The user is asking for species of bears that are now extinct....
+[27/50] last=10.7s avg=16.9s/q  cum_tps=103.3 tok/s  tokens=1070
+  Q: What causes the northern lights?
+  A: Here's a thinking process:
+
+1.  **Understand User Question**: The user asks "What causes the northern lights?" This is a...
+[28/50] last=18.9s avg=17.0s/q  cum_tps=103.4 tok/s  tokens=1976
+  Q: What are some good foods to eat when you are sick? I am looking for something to...
+  A: Here's a thinking process:
+
+1.  **Understand User Request:**
+   - **Goal:** Recommend good foods to eat when sick
+   - *...
+[29/50] last=15.0s avg=16.9s/q  cum_tps=103.6 tok/s  tokens=1657
+  Q: Why is kobe beef so damn expensive?
+  A: Here's a thinking process:
+
+1.  **Understand User Query**: The user is asking why Kobe beef is so expensive. The tone is...
+[30/50] last=13.6s avg=16.8s/q  cum_tps=103.7 tok/s  tokens=1465
+  Q: How do I clean my armpits?
+  A: Here's a thinking process:
+
+1.  **Understand User Query**: The user is asking "How do I clean my armpits?" This is a str...
+[31/50] last=19.2s avg=16.9s/q  cum_tps=103.8 tok/s  tokens=2048
+  Q: How do I detail a car?
+  A: Here's a thinking process:
+
+1.  **Understand User Request:** The user is asking "How do I detail a car?" This is a broad...
+[32/50] last=18.9s avg=16.9s/q  cum_tps=103.6 tok/s  tokens=1866
+  Q: I am going to make pumpkin pie for the first time.  Can you help me?
+  A: Here's a thinking process:
+
+1.  **Understand User Request:**
+   - User wants to make pumpkin pie for the first time
+   -...
+[33/50] last=20.5s avg=17.0s/q  cum_tps=103.5 tok/s  tokens=2048
+  Q: What kind of foods do they eat in Thailand
+  A: Here's a thinking process:
+
+1.  **Understand User Query**: The user asks "What kind of foods do they eat in Thailand". T...
+[34/50] last=17.9s avg=17.1s/q  cum_tps=103.5 tok/s  tokens=1873
+  Q: What are some good browser alternatives to Chrome?
+  A: Here's a thinking process:
+
+1.  **Understand User Query**: The user is asking for "good browser alternatives to Chrome."...
+[35/50] last=3.4s avg=16.7s/q  cum_tps=103.6 tok/s  tokens=379
+  Q: Who created the Superman cartoon character?
+  A: Here's a thinking process:
+
+1.  **Identify the core question**: The user asks "Who created the Superman cartoon characte...
+[36/50] last=11.9s avg=16.5s/q  cum_tps=103.7 tok/s  tokens=1300
+  Q: What is Atlantis?
+  A: Here's a thinking process:
+
+1.  **Understand User Query**: The user asks "What is Atlantis?" - a straightforward questio...
+[37/50] last=18.4s avg=16.6s/q  cum_tps=103.8 tok/s  tokens=1998
+  Q: How do I make escargot?
+  A: Here's a thinking process:
+
+1.  **Understand User Request**: The user is asking "How do I make escargot?" This is a culi...
+[38/50] last=14.6s avg=16.5s/q  cum_tps=103.9 tok/s  tokens=1600
+  Q: What exactly causes volcanoes to form?
+  A: Here's a thinking process:
+
+1.  **Understand User Question**: The user asks "What exactly causes volcanoes to form?" Thi...
+[39/50] last=12.9s avg=16.5s/q  cum_tps=104.0 tok/s  tokens=1393
+  Q: Hi, I have some falafel, but no tahini to put on them. Can you give me a recipe ...
+  A: Here's a thinking process:
+
+1.  **Understand User Request**: The user has falafel but no tahini, and wants a recipe for ...
+[40/50] last=18.6s avg=16.5s/q  cum_tps=104.2 tok/s  tokens=2048
+  Q: Should I get my children a nanny? I'm so exhausted.
+  A: Here's a thinking process:
+
+1.  **Analyze User Input:**
+   - **Question:** "Should I get my children a nanny?"
+   - **Co...
+[41/50] last=11.7s avg=16.4s/q  cum_tps=104.2 tok/s  tokens=1239
+  Q: When was Canada colonized?
+  A: Here's a thinking process:
+
+1.  **Understand User Question**: The user asks "When was Canada colonized?" This is a histo...
+[42/50] last=19.2s avg=16.5s/q  cum_tps=104.1 tok/s  tokens=1926
+  Q: How can I  use my phone less?
+  A: Here's a thinking process:
+
+1.  **Understand User Goal:** The user wants to know how to reduce their phone usage. This i...
+[43/50] last=20.0s avg=16.5s/q  cum_tps=104.1 tok/s  tokens=2048
+  Q: How did mankind discover that the earth was spherical, and why did they initiall...
+  A: Here's a thinking process:
+
+1.  **Understand User's Question:**
+   - **Part 1:** How did mankind discover that the Earth...
+[44/50] last=12.6s avg=16.5s/q  cum_tps=104.1 tok/s  tokens=1338
+  Q: What is Gremolata?
+  A: Here's a thinking process:
+
+1.  **Understand User Query**: The user is asking "What is Gremolata?" This is a straightfor...
+[45/50] last=18.6s avg=16.5s/q  cum_tps=104.2 tok/s  tokens=2048
+  Q: Why did humans evolve to believe in God?
+  A: Here's a thinking process:
+
+1.  **Understand the User's Question**: The user asks "Why did humans evolve to believe in G...
+[46/50] last=18.9s avg=16.6s/q  cum_tps=104.3 tok/s  tokens=2048
+  Q: what should i build a cabin out of?
+  A: Here's a thinking process:
+
+1.  **Understand User Query:** The user is asking "what should i build a cabin out of?" This...
+[47/50] last=19.0s avg=16.6s/q  cum_tps=104.4 tok/s  tokens=2048
+  Q: Why do a lot of Scientists not believe in God or Satan?
+  A: Here's a thinking process:
+
+1.  **Analyze User Question:**
+   - **Topic:** Scientists' lack of belief in God or Satan
+  ...
+[48/50] last=21.0s avg=16.7s/q  cum_tps=104.2 tok/s  tokens=2048
+  Q: I like to host guests at my home from time to time, and I am gathering  recipes ...
+  A: Here's a thinking process:
+
+1.  **Understand User Request:**
+   - User hosts guests at home occasionally
+   - Wants reci...
+[49/50] last=14.5s avg=16.7s/q  cum_tps=104.1 tok/s  tokens=1428
+  Q: Why can I see the moon during the day?
+  A: Here's a thinking process:
+
+1.  **Understand User Question**: The user is asking why the moon can be visible during the ...
+[50/50] last=16.8s avg=16.7s/q  cum_tps=104.1 tok/s  tokens=1785
+  Q: How do I take care of a wooden table?
+  A: Here's a thinking process:
+
+1.  **Understand User Query**: The user is asking "How do I take care of a wooden table?" Th...
+
+=== summary ===
+  saved 50 results to exp/nosia_50q_oldvm.json
+  errors: 0
+  total tokens: 86762
+  total wall time: 833s (13.9 min)
+  throughput: 104.1 tok/s

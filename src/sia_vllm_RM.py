@@ -159,6 +159,7 @@ def make_sia_processor(
     topk: int = 10,
     weight: float = 1.0,
     entropy_threshold: Optional[float] = None,
+    logit_gap_threshold: Optional[float] = None,
     rm_backend: str = "pytorch",       # "pytorch" / "vllm" / "b2"
     rm_model: Optional[str] = None,    # required when rm_backend ∈ {"vllm","b2"}: RM model path
     use_token_ids: bool = False,       # C2: client pre-tokenizes and sends token_ids directly to RM
@@ -166,6 +167,20 @@ def make_sia_processor(
     rm_max_model_len: int = 4096,      # b2 backend: max_model_len for the RM vLLM instance
     enable_thinking: Optional[bool] = None,   # chat_template enable_thinking forwarded to RM prefix construction,
                                               # 100% consistent with what the LLM actually sees (None=not passed)
+    eager_vm_prefill: bool = False,    # b2 backend: after each decode step, prefill predicted next token
+                                       # into VM KV cache so the next INTERVENE finds warm prefix (no tail prefill)
+    vm_topk: Optional[int] = None,     # limit candidates sent to VM (None = same as topk).
+                                       # Useful for FaRMA proxy benchmarking: keep topk=10 for entropy
+                                       # gate (preserving intervention rate) but send only vm_topk=1
+                                       # candidates to VM, reducing VM batch from N×topk to N×1.
+    vm_head_type: str = "scalar",      # b2 backend: VM reward head architecture.
+                                       # "scalar" (default): K forwards per step (original)
+                                       # "vocab_lowrank": 1 forward per step + vocab indexing (FaRMA)
+    vm_head_rank: int = 64,            # b2 backend: rank for vocab_lowrank head
+    mapping_table: Optional[str] = None,  # b2 backend: path to .npy cross-tokenizer token mapping table.
+                                           # Enables O(1) LLM→RM token ID lookup in score_with_vocab_head_batch
+                                           # (e.g. token_mapping_ogm35b_to_qwen3_4b.npy for 0GM-35B + VM-Qwen3-4B).
+                                           # None (default) → existing decode→encode behavior unchanged.
 ):
     """
     Returns a SIALogitsProcessor class (not an instance).
@@ -199,10 +214,16 @@ def make_sia_processor(
         _TOPK = topk
         _WEIGHT = weight
         _ENTROPY_THRESHOLD = entropy_threshold
+        _GAP_THRESHOLD = logit_gap_threshold   # second gate: SKIP when top1-top2 logit gap >= this
         _USE_TOKEN_IDS = use_token_ids
         _RM_B2_GPU_MEM = rm_b2_gpu_mem
         _RM_MAX_MODEL_LEN = rm_max_model_len
         _ENABLE_THINKING = enable_thinking   # None / True / False
+        _EAGER_VM_PREFILL = eager_vm_prefill
+        _VM_TOPK: Optional[int] = vm_topk   # None = use _TOPK; int = limit VM candidates per request
+        _VM_HEAD_TYPE: str = vm_head_type   # "scalar" or "vocab_lowrank"
+        _VM_HEAD_RANK: int = vm_head_rank
+        _MAPPING_TABLE: Optional[str] = mapping_table  # path to .npy cross-tokenizer mapping table
 
         # Maximum number of sessions per score_candidates_batch() call (b2 backend).
         # Prevents RM KV-cache OOM at high concurrency: a single apply() with
@@ -250,6 +271,7 @@ def make_sia_processor(
         def __init__(self, vllm_config, device: torch.device,
                      is_pin_memory: bool) -> None:
             self._llm_device = device
+            print(f"[SIA] __init__ _EAGER_VM_PREFILL={self._EAGER_VM_PREFILL} _VM_TOPK={self._VM_TOPK} _RM_BACKEND={self._RM_BACKEND}", flush=True)
 
             # LLM tokenizer (for decoding candidate tokens and extracting user content)
             llm_model_path = vllm_config.model_config.model
@@ -323,6 +345,10 @@ def make_sia_processor(
                 # b2 backend phases (RMClient call internals — within one INTERVENE call)
                 "b2_prefix_adv":    [],   # _prepare_b2_session (session init + fix_a_token)
                 "b2_score_call":    [],   # RMClient.score_candidates end-to-end (amortized per-request)
+                "b2_batch_wall_abs":[],   # score_candidates_batch() absolute wall (not amortized; per INTERVENE step)
+                "intv_batch_size":  [],   # number of sessions batched per INTERVENE step (len(_b2_reqs))
+                "vm_cands_per_step":[],   # total candidates sent to VM per INTERVENE step
+                "b2_eager_wall":    [],   # eager_prefill_batch() wall per apply() call (only when --eager_vm_prefill)
                 "total":            [],   # one INTERVENE call end-to-end
 
                 # === apply() sub-phases (per-token) — added 2026-06-01 ===
@@ -332,11 +358,13 @@ def make_sia_processor(
                 "apply_cpu_sync":   [],   # entropy.cpu().tolist() (GPU->CPU sync wait)
                 "skip_step":        [],   # SKIP path only (from sync completion to apply return)
                 # Additional sub-phases for INTERVENE path only (subset of apply() time):
+                "apply_intv_step":  [],   # apply() total wall on steps where ≥1 request intervenes
                 "intv_prepare":     [],   # topk_indices.cpu().tolist() + output_ids/user_content retrieval
                 "intv_apply_logits":[],   # mean-norm + .to(gpu) + index_add_ + flip
             }
             self._pf_intervene_calls: int = 0
-            self._pf_apply_calls: int = 0  # incremented on every apply call (used to set per-token level interval)
+            self._pf_apply_calls: int = 0    # incremented on every apply call (used to set per-token level interval)
+            self._pf_total_req_steps: int = 0  # sum of batch_size across all apply() calls (denominator for rate)
 
             # Dual-VM log counter (used to rate-limit error messages)
             self._dual_vm_call_count: int = 0
@@ -376,8 +404,28 @@ def make_sia_processor(
                 )
             # ===== SIA DEBUG HISTOGRAM END =====
 
+            # ===== SIA DETAIL LOG START =====
+            # Per-request accumulators for SIA_LOG_LEVEL=detail diagnostic logging.
+            # Tracks VM score distribution, entropy, and top-2 gap at INTERVENE steps.
+            # Printed per-step (first SIA_DETAIL_STEPS steps) and at request DONE.
+            # Zero-cost when LOG_LEVEL != "detail".
+            self._detail_vm_scores: dict[int, list] = {}       # req -> [vm_score, ...]
+            self._detail_entropy_intv: dict[int, list] = {}    # req -> [entropy, ...]
+            self._detail_gap_intv: dict[int, list] = {}        # req -> [top2_gap, ...]
+            self._detail_intv_count: dict[int, int] = {}       # req -> per-req intervene counter
+            _detail_max_steps: int = int(os.environ.get("SIA_DETAIL_STEPS", "10"))
+            self._detail_max_steps: int = _detail_max_steps
+            if self._LOG_LEVEL == "detail":
+                print(
+                    f"[SIA-detail] SIA_LOG_LEVEL=detail 已启用；每请求前 {_detail_max_steps} 个干预步打印详情，"
+                    f"之后每50步打印摘要（SIA_DETAIL_STEPS={_detail_max_steps}）",
+                    flush=True,
+                )
+            # ===== SIA DETAIL LOG END =====
+
             # B2 backend: in-process RMClient + per-request session table
-            # Assumes LLM and RM use the same tokenizer (prerequisite for the B2 path), so token IDs are interchangeable
+            # Cross-tokenizer is supported: RMClient detects vocab mismatch via llm_tokenizer and
+            # enables the decode→encode bridge (or O(1) mapping table lookup for vocab_lowrank head).
             self._rm: Optional[object] = None
             self._b2_sessions: dict[int, int] = {}        # req_idx -> rm_sid
             self._b2_chat_prefix_len: dict[int, int] = {}  # req_idx -> chat_prefix token count
@@ -407,6 +455,9 @@ def make_sia_processor(
                     max_model_len=self._RM_MAX_MODEL_LEN,
                     multiprocessing=rm_mp,
                     llm_tokenizer=self._llm_tok,
+                    head_type=self._VM_HEAD_TYPE,
+                    head_rank=self._VM_HEAD_RANK,
+                    mapping_table_path=self._MAPPING_TABLE,
                 )
                 print(f"[SIA-b2] RMClient ready", flush=True)
 
@@ -629,6 +680,22 @@ def make_sia_processor(
             self._pf_intervene_calls += 1
             if self._pf_intervene_calls % self._PF_STATS_INTERVAL != 0:
                 return
+            # Rate header: intervention rate and average batch size per step
+            intv_rate = (
+                self._pf_intervene_calls / self._pf_total_req_steps * 100
+                if self._pf_total_req_steps > 0 else 0.0
+            )
+            bs_arr = self._pf_stats.get("intv_batch_size", [])
+            avg_batch = sum(bs_arr) / len(bs_arr) if bs_arr else 0.0
+            print(
+                f"[SIA-pf-rate @{self._pf_intervene_calls}] "
+                f"intv_calls={self._pf_intervene_calls} "
+                f"apply_steps={self._pf_apply_calls} "
+                f"req_slots={self._pf_total_req_steps} "
+                f"intv_rate={intv_rate:.1f}% "
+                f"avg_intv_batch={avg_batch:.2f}",
+                flush=True,
+            )
             parts = []
             for phase, arr in self._pf_stats.items():
                 if not arr:
@@ -1009,11 +1076,13 @@ def make_sia_processor(
             # (but GPU still running); t_after_sync = GPU pipeline wait complete triggered by .cpu()
             t_after_gpu_dispatch = time.perf_counter() if pf_on else 0.0
 
-            # Single GPU->CPU sync (replaces per-item .item() in the original code)
-            # ===== SIA DEBUG HISTOGRAM START =====
-            # When SIA_DEBUG_HIST=1, merge entropy + top1/top2 gap into a single sync
-            # (avoids introducing an extra CUDA sync round-trip).
-            if self._DEBUG_HIST:
+            # Single GPU->CPU sync (replaces per-item .item() in the original code).
+            # Merge entropy + logit gap into one sync when either dual-gating or DEBUG_HIST
+            # needs the gap — avoids a second GPU→CPU round-trip.
+            # logit gap = top1_logit - top2_logit (raw logit space; equivalent to log-prob ratio).
+            # ===== SIA DEBUG HISTOGRAM START (gap_values also used by dual-gating below) =====
+            _need_gap = (self._GAP_THRESHOLD is not None) or self._DEBUG_HIST or (self._LOG_LEVEL == "detail")
+            if _need_gap:
                 gap_tensor = entropy_topk_result.values[:, 0] - entropy_topk_result.values[:, 1]  # (batch,)
                 # Sync entropy + gap together in one call; saves one round-trip vs separate .cpu() calls
                 combined = torch.stack([entropies, gap_tensor], dim=1)  # (batch, 2)
@@ -1052,19 +1121,40 @@ def make_sia_processor(
                         self._dbg_entropy_hist_outthink.setdefault(bi, [0]*16)[eb] += 1
             # ===== SIA DEBUG HISTOGRAM END =====
 
-            # Make SKIP/INTERVENE decisions on CPU (no further sync triggered)
+            # Make SKIP/INTERVENE decisions on CPU (no further sync triggered).
+            # Dual-gating: INTERVENE only when entropy gate passes AND gap gate passes.
+            #   entropy gate: entropy >= _ENTROPY_THRESHOLD  (or no threshold → always pass)
+            #   gap gate:     logit_gap < _GAP_THRESHOLD     (or no threshold → always pass)
+            # Either gate can be disabled independently (set to None).
+            _gap_thr = self._GAP_THRESHOLD
             if self._ENTROPY_THRESHOLD is not None:
-                intervene_flags = [
-                    e >= self._ENTROPY_THRESHOLD for e in entropy_values
-                ]
+                if _gap_thr is not None:
+                    intervene_flags = [
+                        e >= self._ENTROPY_THRESHOLD and g < _gap_thr
+                        for e, g in zip(entropy_values, gap_values)
+                    ]
+                else:
+                    intervene_flags = [
+                        e >= self._ENTROPY_THRESHOLD for e in entropy_values
+                    ]
             else:
-                intervene_flags = [True] * batch_size
-            # Override per-request entropy threshold where set
+                if _gap_thr is not None:
+                    intervene_flags = [g < _gap_thr for g in gap_values]
+                else:
+                    intervene_flags = [True] * batch_size
+            # Override per-request entropy threshold where set.
+            # Per-request thr=None means "force intervene" — bypasses both gates.
+            # Per-request thr=value applies entropy gate; gap gate still applies.
             if self._entropy_per_req:
                 for i in range(batch_size):
                     if i in self._entropy_per_req:
                         thr = self._entropy_per_req[i]
-                        intervene_flags[i] = (thr is None) or (entropy_values[i] >= thr)
+                        if thr is None:
+                            intervene_flags[i] = True  # force: bypass both gates
+                        else:
+                            entropy_ok = entropy_values[i] >= thr
+                            gap_ok = (_gap_thr is None) or (gap_values[i] < _gap_thr)
+                            intervene_flags[i] = entropy_ok and gap_ok
 
             # Only pull topk_indices to CPU if at least one request will INTERVENE; pure SKIP saves a sync.
             # A-2: topk_values_lists no longer needed — flip detection uses GPU argmax path;
@@ -1103,6 +1193,8 @@ def make_sia_processor(
                         _eff_k = effective_topks[_i]
                         if _eff_k < max_topk:
                             _cands = _cands[:_eff_k]
+                    if self._VM_TOPK is not None and self._VM_TOPK < len(_cands):
+                        _cands = _cands[:self._VM_TOPK]
                     _t_prep = time.perf_counter() if pf_on else 0.0
                     try:
                         _sid = self._prepare_b2_session(_i, _user, _out_ids)
@@ -1119,6 +1211,9 @@ def make_sia_processor(
 
                 if _b2_reqs:
                     _t_batch = time.perf_counter() if pf_on else 0.0
+                    # vocab_lowrank head: one prefix forward per chunk → N forwards instead of N×K.
+                    # Falls back to N×K inside score_with_vocab_head_batch for cross-tokenizer sessions.
+                    _use_vocab_head = (self._VM_HEAD_TYPE == "vocab_lowrank")
                     # Chunk size: SIA_RM_BATCH_CHUNK sessions per call.
                     # Prevents RM KV-cache OOM when batch_size×topk is large
                     # (e.g. 128 sessions × 10 candidates = 1280 prompts).
@@ -1134,15 +1229,22 @@ def make_sia_processor(
                     )
                     try:
                         for _chunk in _chunks:
-                            _chunk_scores = self._rm.score_candidates_batch(
-                                [(_sid, _cands) for (_, _sid, _cands) in _chunk]
-                            )
+                            _payload = [(_sid, _cands) for (_, _sid, _cands) in _chunk]
+                            if _use_vocab_head:
+                                _chunk_scores = self._rm.score_with_vocab_head_batch(_payload)
+                            else:
+                                _chunk_scores = self._rm.score_candidates_batch(_payload)
                             for (_req_i, _, _), _s in zip(_chunk, _chunk_scores):
                                 b2_batch_scores[_req_i] = _s
                         if pf_on:
-                            # Divide by N so b2_score_call stays per-request amortized,
-                            # comparable to the sequential fallback path's values.
-                            _amortized_ms = (time.perf_counter() - _t_batch) * 1000 / len(_b2_reqs)
+                            _batch_wall_ms = (time.perf_counter() - _t_batch) * 1000
+                            # Absolute batch wall (one record per INTERVENE step, regardless of N)
+                            self._pf_record("b2_batch_wall_abs", _batch_wall_ms)
+                            self._pf_record("intv_batch_size", float(len(_b2_reqs)))
+                            _total_cands = sum(len(_c) for (_, _, _c) in _b2_reqs)
+                            self._pf_record("vm_cands_per_step", float(_total_cands))
+                            # Per-request amortized (divide by N so it's comparable to sequential path)
+                            _amortized_ms = _batch_wall_ms / len(_b2_reqs)
                             for _ in _b2_reqs:
                                 self._pf_record("b2_score_call", _amortized_ms)
                                 self._pf_summary_if_due()
@@ -1155,6 +1257,10 @@ def make_sia_processor(
                         # b2_batch_scores stays empty; per-item loop uses
                         # _score_candidates_b2() normally for each request.
             # ==== end b2 batch pre-scoring =====================================
+
+            # Predicted next token per intervening request (for eager VM prefill).
+            # Populated inside the INTERVENE branch; consumed after the loop.
+            _eager_intv_best: dict = {}   # req_idx -> post_top1 token
 
             # ==== Per-item loop: no more .item() / .tolist() syncs inside the loop body ====
             #
@@ -1172,10 +1278,17 @@ def make_sia_processor(
                 if not intervene_flags[i]:
                     if verbose:
                         req_step = self._total_steps[i]
+                        gap_val = gap_values[i] if gap_values is not None else None
+                        if self._ENTROPY_THRESHOLD is not None and entropy < self._ENTROPY_THRESHOLD:
+                            skip_reason = f"entropy={entropy:.3f} < {self._ENTROPY_THRESHOLD}"
+                        elif gap_val is not None and self._GAP_THRESHOLD is not None and gap_val >= self._GAP_THRESHOLD:
+                            skip_reason = f"gap={gap_val:.3f} >= {self._GAP_THRESHOLD}"
+                        else:
+                            skip_reason = f"entropy={entropy:.3f}"
                         print(
                             f"[SIA] {time.strftime('%H:%M:%S')}.{int(time.time() % 1 * 1_000_000):06d} "
                             f"step={req_step:3d} req={i} "
-                            f"SKIP (entropy={entropy:.3f} < {self._ENTROPY_THRESHOLD})",
+                            f"SKIP ({skip_reason})",
                             flush=True,
                         )
                     continue
@@ -1255,6 +1368,12 @@ def make_sia_processor(
                 # Fix: set all non-top-k positions to -inf, equivalent to official.
                 topk_vals_i = (scoring_topk_result.values[i] if effective_topks is None
                                else scoring_topk_result.values[i, :effective_topks[i]])
+                # vm_topk: rm_scores may cover fewer candidates than topk; trim GPU views to match
+                # so index_copy_ and the logit fill are consistent.
+                _n_vm = rm_scores.shape[0]
+                if _n_vm < topk_vals_i.shape[0]:
+                    topk_vals_i = topk_vals_i[:_n_vm]
+                    topk_indices_gpu = topk_indices_gpu[:_n_vm]
                 modified_topk = topk_vals_i + rm_deltas
                 logits[i].fill_(float('-inf'))
                 logits[i].index_copy_(0, topk_indices_gpu, modified_topk)
@@ -1272,8 +1391,96 @@ def make_sia_processor(
                 pre_top1 = topk_indices_i[0]
                 post_top1 = topk_indices_i[post_top1_local]
                 flipped = pre_top1 != post_top1
+                if self._EAGER_VM_PREFILL:
+                    _eager_intv_best[i] = post_top1
                 if flipped:
                     self._flipped_steps[i] = self._flipped_steps.get(i, 0) + 1
+
+                # ===== SIA DETAIL LOG START =====
+                if self._LOG_LEVEL == "detail":
+                    _d_cnt = self._detail_intv_count.get(i, 0) + 1
+                    self._detail_intv_count[i] = _d_cnt
+
+                    # Move rm_scores to CPU once for all detail uses (b2 returns CPU tensor,
+                    # but it may have been cast to GPU dtype by the .to() call above).
+                    _rm_cpu = rm_scores.detach().cpu().tolist()
+                    _n_scores = len(_rm_cpu)
+
+                    # Accumulate for DONE summary (all intervene steps, not just printed ones)
+                    self._detail_vm_scores.setdefault(i, []).extend(_rm_cpu)
+                    self._detail_entropy_intv.setdefault(i, []).append(entropy)
+                    _gap_now = gap_values[i] if gap_values is not None else None
+                    if _gap_now is not None:
+                        self._detail_gap_intv.setdefault(i, []).append(_gap_now)
+
+                    _print_detail = _d_cnt <= self._detail_max_steps
+                    _print_summary = (not _print_detail) and (_d_cnt % 50 == 0)
+
+                    if _print_detail:
+                        # Candidate token IDs and original logits (up to _n_vm)
+                        _cand_ids   = topk_indices_i[:_n_scores]
+                        _orig_logits = topk_vals_i[:_n_scores].detach().cpu().tolist()
+                        _mod_logits  = modified_topk[:_n_scores].detach().cpu().tolist()
+                        _cand_texts  = [
+                            repr(self._llm_tok.decode([tid], skip_special_tokens=False))
+                            for tid in _cand_ids
+                        ]
+                        _vm_mean  = sum(_rm_cpu) / _n_scores
+                        _vm_std   = (_n_scores > 1) and (
+                            sum((s - _vm_mean) ** 2 for s in _rm_cpu) / _n_scores
+                        ) ** 0.5 or 0.0
+                        _pre_txt  = repr(self._llm_tok.decode([pre_top1],  skip_special_tokens=False))
+                        _post_txt = repr(self._llm_tok.decode([post_top1], skip_special_tokens=False))
+                        _gap_str  = f"{_gap_now:.3f}" if _gap_now is not None else "N/A"
+
+                        _lines = [
+                            f"[SIA-detail] {time.strftime('%H:%M:%S')}  step={req_step}  req={i}  干预#{_d_cnt}",
+                            f"  熵={entropy:.4f}  top2差距={_gap_str}  生成长度={len(output_ids)}",
+                            f"  候选词及VM评分（共{_n_scores}个）:",
+                        ]
+                        for _rank, (_tid, _ol, _vs, _ml, _txt) in enumerate(
+                            zip(_cand_ids, _orig_logits, _rm_cpu, _mod_logits, _cand_texts), 1
+                        ):
+                            _marker = ""
+                            if _tid == pre_top1 and _tid == post_top1:
+                                _marker = "  ← top1 未翻转"
+                            elif _tid == pre_top1:
+                                _marker = "  ← 原top1（被翻转）"
+                            elif _tid == post_top1 and flipped:
+                                _marker = "  ← 新top1（翻转后）"
+                            _lines.append(
+                                f"    #{_rank:2d} {_txt:16s}  id={_tid:6d}"
+                                f"  原logit={_ol:+7.3f}  VM={_vs:+7.4f}  合并={_ml:+7.3f}{_marker}"
+                            )
+                        _lines.append(
+                            f"  VM评分统计: 均值={_vm_mean:+.4f}  std={_vm_std:.4f}"
+                            f"  范围=[{min(_rm_cpu):+.4f}, {max(_rm_cpu):+.4f}]"
+                        )
+                        _flip_str = f"是 {_pre_txt} → {_post_txt}" if flipped else f"否（保持 {_pre_txt}）"
+                        _lines.append(f"  top1翻转: {_flip_str}")
+                        print("\n".join(_lines), flush=True)
+
+                    elif _print_summary:
+                        _all_vm  = self._detail_vm_scores.get(i, [])
+                        _all_ent = self._detail_entropy_intv.get(i, [])
+                        _all_gap = self._detail_gap_intv.get(i, [])
+                        _s_mean  = sum(_all_vm) / len(_all_vm) if _all_vm else 0.0
+                        _e_mean  = sum(_all_ent) / len(_all_ent) if _all_ent else 0.0
+                        _g_mean  = sum(_all_gap) / len(_all_gap) if _all_gap else 0.0
+                        _cur_flipped    = self._flipped_steps.get(i, 0)
+                        _cur_intervened = self._intervened_steps.get(i, 0)
+                        _flip_pct = (
+                            f"{_cur_flipped/_cur_intervened*100:.1f}%"
+                            if _cur_intervened else "N/A"
+                        )
+                        print(
+                            f"[SIA-detail] {time.strftime('%H:%M:%S')}  req={i}  进度@干预#{_d_cnt}"
+                            f"  VM均值={_s_mean:+.4f}  平均熵={_e_mean:.4f}"
+                            f"  平均top2差距={_g_mean:.4f}"
+                            f"  翻转率={_cur_flipped}/{_cur_intervened}({_flip_pct})",
+                            flush=True,
+                        )
+                # ===== SIA DETAIL LOG END =====
 
                 if verbose:
                     # rm_scores.min()/.max() on a GPU tensor is a reduction,
@@ -1297,20 +1504,67 @@ def make_sia_processor(
                     self._pf_record("intv_apply_logits",
                                     (t_intv_apply_end - t_intv_apply_start) * 1000)
 
+            # ==== b2 eager VM prefill =====================================================
+            # Pre-warm the VM KV cache with predicted next tokens for every active request.
+            # Predicted token: post_top1 (highest logit+VM_score) for intervening requests,
+            # top-1 raw logit for skip requests.  At the NEXT intervention the APC hits the
+            # warmed prefix and only needs to compute the candidate tokens (no tail prefill).
+            #
+            # Runs at every apply() call (not just INTERVENE steps) so that even skip-step
+            # tokens accumulate in the VM cache.  For pure-skip steps where topk_indices_lists
+            # is None, one batch argmax is synced to CPU (cheap: 16 scalars vs 16×10 topk).
+            #
+            # Only warms sessions that are already initialized (_b2_sessions[i] != None);
+            # first-intervention requests still pay full prefill cost.
+            if self._RM_BACKEND == "b2" and self._EAGER_VM_PREFILL:
+                _t_eager = time.perf_counter() if pf_on else 0.0
+                # For pure skip steps, batch-sync argmax once (avoids 16 separate .item() calls).
+                _argmax_all: list = (
+                    logits.argmax(dim=-1).cpu().tolist()
+                    if topk_indices_lists is None else []
+                )
+                _eager_reqs: list = []
+                for _i in range(batch_size):
+                    _sid = self._b2_sessions.get(_i)
+                    if _sid is None:
+                        continue  # session not yet initialized; first intervene will do full prefill
+                    # Advance VM session with any tokens generated since the last fix_a_token call.
+                    _out = self._output_ids.get(_i, [])
+                    _n_vm = max(0, self._rm.session_length(_sid)
+                                   - self._b2_chat_prefix_len.get(_i, 0))
+                    for _tid in _out[_n_vm:]:
+                        self._rm.fix_a_token(_sid, int(_tid))
+                    # Predicted next token for this request.
+                    if _i in _eager_intv_best:
+                        _pred = _eager_intv_best[_i]      # intervening: post-intervention best
+                    elif topk_indices_lists is not None:
+                        _pred = topk_indices_lists[_i][0]  # skip at intervene step: top-1 raw logit
+                    else:
+                        _pred = _argmax_all[_i]            # pure skip step: batch argmax
+                    _eager_reqs.append((_sid, _pred))
+                if _eager_reqs:
+                    self._rm.eager_prefill_batch(_eager_reqs)
+                if pf_on:
+                    self._pf_record("b2_eager_wall",
+                                    (time.perf_counter() - _t_eager) * 1000)
+            # ==== end b2 eager VM prefill ================================================
+
             # === apply() exit: record overall timing + distinguish SKIP/INTERVENE paths ===
             if pf_on:
                 t_apply_end = time.perf_counter()
-                self._pf_record("apply_total",
-                                (t_apply_end - t_apply_start) * 1000)
+                _apply_ms = (t_apply_end - t_apply_start) * 1000
+                self._pf_record("apply_total", _apply_ms)
                 self._pf_record("apply_topk_ent",
                                 (t_after_gpu_dispatch - t_apply_start) * 1000)
                 self._pf_record("apply_cpu_sync",
                                 (t_after_sync - t_after_gpu_dispatch) * 1000)
-                # If this step was a pure SKIP (nobody intervened), record skip_step (apply() total time)
-                if not any(intervene_flags):
-                    self._pf_record("skip_step",
-                                    (t_apply_end - t_apply_start) * 1000)
+                _any_intv = any(intervene_flags)
+                if _any_intv:
+                    self._pf_record("apply_intv_step", _apply_ms)
+                else:
+                    self._pf_record("skip_step", _apply_ms)
                 self._pf_apply_calls += 1
+                self._pf_total_req_steps += batch_size
                 # apply is called ~3x more often than INTERVENE (33% intervention rate);
                 # just wait for the INTERVENE-driven summary trigger: by then apply has accumulated
                 # 300+ calls and SKIP data has converged. New phases (apply_*, intv_*, skip_step)
@@ -1340,6 +1594,33 @@ def make_sia_processor(
                     f"top1_flip={flipped}/{intervened} ({flip_ratio:.1%})",
                     flush=True,
                 )
+                # ===== SIA DETAIL LOG START =====
+                if self._LOG_LEVEL == "detail":
+                    _dv = self._detail_vm_scores.pop(idx, [])
+                    _de = self._detail_entropy_intv.pop(idx, [])
+                    _dg = self._detail_gap_intv.pop(idx, [])
+                    self._detail_intv_count.pop(idx, None)
+                    if _dv:
+                        _dv_mean = sum(_dv) / len(_dv)
+                        _dv_std  = (sum((s - _dv_mean) ** 2 for s in _dv) / len(_dv)) ** 0.5
+                        _de_mean = sum(_de) / len(_de) if _de else 0.0
+                        _dg_mean = sum(_dg) / len(_dg) if _dg else 0.0
+                        _dv_sorted = sorted(_dv)
+                        _dv_p25 = _dv_sorted[len(_dv_sorted) // 4]
+                        _dv_p75 = _dv_sorted[3 * len(_dv_sorted) // 4]
+                        print(
+                            f"[SIA-detail] req={idx} 完成统计\n"
+                            f"  VM评分分布: 均值={_dv_mean:+.4f}  std={_dv_std:.4f}"
+                            f"  min={_dv_sorted[0]:+.4f}  p25={_dv_p25:+.4f}"
+                            f"  p75={_dv_p75:+.4f}  max={_dv_sorted[-1]:+.4f}"
+                            f"  n={len(_dv)}\n"
+                            f"  干预步平均熵={_de_mean:.4f}"
+                            f"  干预步平均top2差距={_dg_mean:.4f}"
+                            f"  top1翻转率={flipped}/{intervened}"
+                            f"({flip_ratio:.1%})",
+                            flush=True,
+                        )
+                # ===== SIA DETAIL LOG END =====
                 # ===== SIA DEBUG HISTOGRAM START =====
                 if self._DEBUG_HIST:
                     eh = self._dbg_entropy_hist.pop(idx, None)
@@ -1400,6 +1681,12 @@ def make_sia_processor(
                 old_manual_prefix = dict(self._manual_prefix_ids_per_req)
                 old_b2_sessions = dict(self._b2_sessions)
                 old_b2_prefix_len = dict(self._b2_chat_prefix_len)
+                # ===== SIA DETAIL LOG START =====
+                old_detail_vm  = dict(self._detail_vm_scores)
+                old_detail_ent = dict(self._detail_entropy_intv)
+                old_detail_gap = dict(self._detail_gap_intv)
+                old_detail_cnt = dict(self._detail_intv_count)
+                # ===== SIA DETAIL LOG END =====
                 for i1, i2, directionality in batch_update.moved:
                     if directionality == MoveDirectionality.UNIDIRECTIONAL:
                         self._output_ids[i2] = old_out.get(i1, [])
@@ -1433,6 +1720,13 @@ def make_sia_processor(
                         # must start a fresh session, not inherit the moved one.
                         self._b2_sessions.pop(i1, None)
                         self._b2_chat_prefix_len.pop(i1, None)
+                        # ===== SIA DETAIL LOG START =====
+                        if i1 in old_detail_vm:
+                            self._detail_vm_scores[i2]      = old_detail_vm[i1]
+                            self._detail_entropy_intv[i2]   = old_detail_ent.get(i1, [])
+                            self._detail_gap_intv[i2]       = old_detail_gap.get(i1, [])
+                            self._detail_intv_count[i2]     = old_detail_cnt.get(i1, 0)
+                        # ===== SIA DETAIL LOG END =====
                     else:  # SWAP
                         self._output_ids[i1] = old_out.get(i2, [])
                         self._output_ids[i2] = old_out.get(i1, [])
@@ -1514,6 +1808,28 @@ def make_sia_processor(
                         else:
                             self._b2_sessions.pop(i2, None)
                             self._b2_chat_prefix_len.pop(i2, None)
+                        # ===== SIA DETAIL LOG START =====  detail accumulators: SWAP
+                        if i2 in old_detail_vm:
+                            self._detail_vm_scores[i1]    = old_detail_vm[i2]
+                            self._detail_entropy_intv[i1] = old_detail_ent.get(i2, [])
+                            self._detail_gap_intv[i1]     = old_detail_gap.get(i2, [])
+                            self._detail_intv_count[i1]   = old_detail_cnt.get(i2, 0)
+                        else:
+                            self._detail_vm_scores.pop(i1, None)
+                            self._detail_entropy_intv.pop(i1, None)
+                            self._detail_gap_intv.pop(i1, None)
+                            self._detail_intv_count.pop(i1, None)
+                        if i1 in old_detail_vm:
+                            self._detail_vm_scores[i2]    = old_detail_vm[i1]
+                            self._detail_entropy_intv[i2] = old_detail_ent.get(i1, [])
+                            self._detail_gap_intv[i2]     = old_detail_gap.get(i1, [])
+                            self._detail_intv_count[i2]   = old_detail_cnt.get(i1, 0)
+                        else:
+                            self._detail_vm_scores.pop(i2, None)
+                            self._detail_entropy_intv.pop(i2, None)
+                            self._detail_gap_intv.pop(i2, None)
+                            self._detail_intv_count.pop(i2, None)
+                        # ===== SIA DETAIL LOG END =====
 
             for idx, params, prompt_ids, output_ids in batch_update.added:
                 self._output_ids[idx] = output_ids
@@ -1560,10 +1876,37 @@ def parse_args():
     p.add_argument("--llm_gpu_mem", type=float, default=0.5,
                    help="vllm gpu_memory_utilization (default 0.5)")
     p.add_argument("--topk",      type=int,   default=10)
+    p.add_argument("--vm_topk",   type=int,   default=None,
+                   help="Limit candidates sent to VM (default: same as --topk). "
+                        "Keeps --topk for entropy gate so intervention rate is unchanged; "
+                        "sends only vm_topk candidates to VM, reducing VM batch size. "
+                        "Used for FaRMA proxy benchmarking.")
     p.add_argument("--weight",    type=float, default=1.0)
     p.add_argument("--max_tokens", type=int,  default=128)
     p.add_argument("--temperature", type=float, default=0.7)
     p.add_argument("--entropy_threshold", type=float, default=None)
+    p.add_argument("--logit_gap_threshold", type=float, default=None,
+                   help="Dual-gate: skip VM scoring when top1-top2 logit gap >= this value "
+                        "(None=disabled; 0 would skip everything since gap is always>=0). "
+                        "Reduces intervention rate. Requires AlpacaEval A/B validation before "
+                        "production use.")
+    p.add_argument("--eager_vm_prefill", action="store_true", default=False,
+                   help="b2 backend: after each decode step pre-warm the VM KV cache with the "
+                        "predicted next token for all active requests, so the next INTERVENE "
+                        "finds a warm prefix and only needs to compute candidate tokens.")
+    p.add_argument("--vm_head_type", default="scalar",
+                   choices=["scalar", "vocab_lowrank"],
+                   help="b2 backend: VM reward head type. "
+                        "'scalar' (default): K RM forwards per INTERVENE step (original). "
+                        "'vocab_lowrank': 1 RM forward per step + vocab indexing (FaRMA, ~K× speedup). "
+                        "Requires a checkpoint converted with convert_rm_for_vllm.py --head_type vocab_lowrank.")
+    p.add_argument("--vm_head_rank", type=int, default=64,
+                   help="Rank for vocab_lowrank head (default 64, ignored for scalar head).")
+    p.add_argument("--mapping_table", type=str, default=None,
+                   help="Path to .npy token mapping table for cross-tokenizer vocab_lowrank scoring "
+                        "(e.g. token_mapping_ogm35b_to_qwen3_4b.npy). "
+                        "Only used with --rm_backend b2 --vm_head_type vocab_lowrank when LLM and VM "
+                        "use different tokenizers (e.g. 0GM-35B 248K + VM-Qwen3-4B 151K).")
     p.add_argument("--prompt", type=str,
                    default="Human:\nTell me a joke.\nAssistant:\n")
     p.add_argument("--max_model_len", type=int, default=2048)
@@ -1577,7 +1920,8 @@ def main():
     print(f"LLM      : {args.llm}")
     print(f"RM URL   : {args.rm_url}")
     print(f"topk={args.topk}  weight={args.weight}  "
-          f"entropy_threshold={args.entropy_threshold}")
+          f"entropy_threshold={args.entropy_threshold}  "
+          f"logit_gap_threshold={args.logit_gap_threshold}")
     print("=" * 60)
 
     SIAProcessor = make_sia_processor(
@@ -1585,9 +1929,15 @@ def main():
         topk=args.topk,
         weight=args.weight,
         entropy_threshold=args.entropy_threshold,
+        logit_gap_threshold=args.logit_gap_threshold,
         rm_backend=args.rm_backend,
         rm_model=args.rm_model,
         rm_b2_gpu_mem=args.rm_b2_gpu_mem,
+        eager_vm_prefill=args.eager_vm_prefill,
+        vm_topk=args.vm_topk,
+        vm_head_type=args.vm_head_type,
+        vm_head_rank=args.vm_head_rank,
+        mapping_table=args.mapping_table,
     )
 
     print("Loading vllm LLM...")

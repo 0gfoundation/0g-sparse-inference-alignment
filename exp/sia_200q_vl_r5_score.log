@@ -1,0 +1,18 @@
+loading Skywork RM: /workspace/SIA/models/Skywork-Reward-V2-Llama-3.1-8B
+RM ready on cuda:0
+scoring 200 samples from exp/sia_200q_vl_r5.json
+strip_think = False
+  [50/200] scored 50 (skip_err=0 skip_long=0), cur_mean_reward=21.9781
+  [100/200] scored 100 (skip_err=0 skip_long=0), cur_mean_reward=21.3868
+  [150/200] scored 150 (skip_err=0 skip_long=0), cur_mean_reward=20.8164
+  [200/200] scored 200 (skip_err=0 skip_long=0), cur_mean_reward=20.8444
+
+=== summary ===
+  total samples: 200
+  scored: 200
+  skipped (error/empty): 0
+  skipped (too long > 2048): 0
+  mean reward: 20.8444
+  p50: 21.6250
+  min: -2.4062  max: 34.2500
+  saved scored JSON to: exp/sia_200q_vl_r5_scored.json

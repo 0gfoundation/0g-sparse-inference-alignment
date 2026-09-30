@@ -1,0 +1,79 @@
+# Production docker-compose for 0GM-35B SIA b2 inproc with vocab_lowrank head VM (FaRMA).
+#
+# Pairs with Dockerfile.0gm35b-vocab-lowrank + scripts/docker_entrypoint_0gm35b_vocab_lowrank.sh.
+# Uses vllm 0.18.0 (same base as docker-compose.0gm35b.yml) with vocab_lowrank head VM,
+# O(1) token mapping table, and max_model_len=2048 (required for 0GM-35B SIA intervention rate).
+#
+# Build + start:
+#   docker compose -f docker-compose.0gm35b-vocab-lowrank.yml up --build -d
+#   docker compose -f docker-compose.0gm35b-vocab-lowrank.yml logs -f sia-0gm35b-vocab-lowrank
+#   docker compose -f docker-compose.0gm35b-vocab-lowrank.yml down
+
+services:
+  sia-0gm35b-vocab-lowrank:
+    image: sia-0gm35b-vocab-lowrank:0.18.0
+    container_name: sia-0gm35b-vocab-lowrank-server
+
+    build:
+      context: .
+      dockerfile: Dockerfile.0gm35b-vocab-lowrank
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+    shm_size: 16g
+    ipc: host
+
+    ports:
+      - "8000:8000"
+
+    volumes:
+      - /dstack/persistent/SIA:/workspace
+      - vllm-compile-cache-0gm35b-vl:/root/.cache/vllm
+      - flashinfer-cache-0gm35b-vl:/root/.cache/flashinfer
+
+    environment:
+      # RM: must use eager mode (no CUDAGraph) for 0GM-35B b2 inproc under vllm 0.18.0.
+      SIA_RM_CUDAGRAPH: "none"
+      SIA_RM_MULTIPROCESS: "0"
+      SIA_DEBUG_HIST: "1"
+      # Chunk b2 RM scoring into groups of 8 sessions per call to prevent
+      # RM KV-cache OOM at high concurrency.
+      SIA_RM_BATCH_CHUNK: "8"
+
+    command: >
+      python src/sia_vllm_server.py
+        --llm        /workspace/models/0GM-1.0-35B-A3B-0427
+        --model_id   0GM-1.0-35B-A3B-SIA-vocab-lowrank
+        --rm_backend b2
+        --rm_model   /workspace/models/VM-Qwen3-4B-vocab-lowrank-sia-backbone-frozen-vllm
+        --llm_gpu_mem    0.75
+        --rm_b2_gpu_mem  0.20
+        --topk 10 --weight 1.0 --entropy_threshold 1.0
+        --max_model_len 2048
+        --enable_prefix_caching
+        --mamba_cache_mode align
+        --vm_head_type vocab_lowrank
+        --mapping_table /opt/token_mapping/token_mapping_ogm35b_to_qwen3_4b.npy
+        --host 0.0.0.0
+        --port 8000
+
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8000/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 25m
+
+    stop_grace_period: 30s
+
+volumes:
+  vllm-compile-cache-0gm35b-vl:
+  flashinfer-cache-0gm35b-vl:

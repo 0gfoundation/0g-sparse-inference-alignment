@@ -1,0 +1,71 @@
+# VM comparison experiment — scalar head vs vocab_lowrank, single container.
+#
+# Uses Qwen3-4B-Base as the main LLM for both servers (no 30B model).
+#   Port 8001 — scalar-head SIA          (VM-Qwen3-4B-merged-for-vllm)
+#   Port 8002 — vocab_lowrank SIA        (VM-Qwen3-4B-vocab-lowrank-frozen-20260706-merged)
+#
+# Startup sequence (inside the container):
+#   1. pip install -e $REPO  (registers sia_rm vllm plugin)
+#   2. scalar server starts → wait for /health on 8001  (~10 min cold start)
+#   3. vocab server starts  → wait for /health on 8002  (~10 min cold start)
+#
+# Quick-start:
+#   docker compose -f docker-compose.vm_sia.yml up -d
+#   docker compose -f docker-compose.vm_sia.yml logs -f   # watch startup
+#   docker compose -f docker-compose.vm_sia.yml down
+#
+# Note: if sia-vl30b:0.17.1 image is not present, add --build to the up command.
+
+services:
+  vm-sia:
+    image: sia-vl30b:0.17.1
+    container_name: vm-sia-comparison
+
+    build:
+      context: .
+      dockerfile: Dockerfile
+
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+
+    # vLLM needs large shared memory; ipc=host lets b2 inproc share CUDA context.
+    shm_size: 16g
+    ipc: host
+
+    ports:
+      - "8001:8001"   # scalar-head SIA server
+      - "8002:8002"   # vocab_lowrank SIA server
+
+    volumes:
+      - /dstack/persistent/SIA:/workspace
+      # Reuse compiled CUDA graphs across restarts (~10 min saved per server).
+      - vllm-sia-compile-cache:/root/.cache/vllm
+
+    # Env vars handled inside docker_entrypoint_vm_sia.sh per-server.
+    # No SIA_RM_CUDAGRAPH here to avoid overriding the per-server settings.
+
+    # The image ENTRYPOINT (/usr/local/bin/sia-entrypoint) installs the sia_rm
+    # vllm plugin and then exec's this command.  docker_entrypoint_vm_sia.sh
+    # runs as PID 1 (bash), starts both servers, and monitors them.
+    command: bash /workspace/sia-repo/0g-sparse-inference-alignment/scripts/docker_entrypoint_vm_sia.sh
+
+    restart: unless-stopped
+
+    # Both servers must be up before the container is "healthy".
+    # start_period covers: scalar startup (~10 min) + vocab startup (~10 min).
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:8001/health && curl -sf http://localhost:8002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 25m
+
+    stop_grace_period: 30s
+
+volumes:
+  vllm-sia-compile-cache:
