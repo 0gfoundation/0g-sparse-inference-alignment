@@ -173,19 +173,21 @@ jobs:
           🔍 **Verify on Sigstore:** https://search.sigstore.dev/?hash=${{ steps.push.outputs.digest }}
 
           To verify locally — two commands, per 0g-serving-broker's own
-          verification chain (`doc/attestation-trust-chain.md`, N6.4):
+          verification chain (`doc/attestation-trust-chain.md`, N6.4).
+          Pinned to the digest above, not the tag — a tag can be
+          repointed later; the digest cannot:
           ```
           # 1. This digest was signed by this repo's CI
           cosign verify \
             --certificate-identity-regexp="https://github.com/${{ github.repository }}/.*" \
             --certificate-oidc-issuer="https://token.actions.githubusercontent.com" \
-            ${{ steps.image.outputs.image_url }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.push.outputs.digest }}
 
           # 2. Which commit it was built from
           cosign verify-attestation --type slsaprovenance1 \
             --certificate-identity-regexp="https://github.com/${{ github.repository }}/.*" \
             --certificate-oidc-issuer="https://token.actions.githubusercontent.com" \
-            ${{ steps.image.outputs.image_url }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.push.outputs.digest }}
           ```
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
