@@ -1,20 +1,29 @@
 # Production docker-compose for 0GM-35B SIA b2 inproc.
 #
-# Pairs with Dockerfile.0gm35b + scripts/docker_entrypoint_0gm35b.sh.
+# Runs the signed, digest-pinned image published by CI (see the `image:`
+# comment below) — it does NOT build locally anymore.
 #
-# Build + start:
-#   docker compose -f docker-compose.0gm35b.yml up --build -d
+# Start / logs / stop:
+#   docker compose -f docker-compose.0gm35b.yml up -d
 #   docker compose -f docker-compose.0gm35b.yml logs -f sia-0gm35b
 #   docker compose -f docker-compose.0gm35b.yml down
 
 services:
   sia-0gm35b:
-    image: sia-0gm35b:0.18.0
+    # Pinned to the DIGEST of the signed CI-built image (see the GitHub
+    # Release page for this digest's cosign/SLSA verification commands) —
+    # not a tag, and not a local build. A tag can be repointed later; the
+    # digest cannot. This is what makes "the container we run" and "the
+    # image we verified" provably the same bytes.
+    #
+    # MANUAL STEP ON EVERY RELEASE: after CI publishes a new release,
+    # update this digest to the one shown on that release page.
+    #
+    # For local development builds, don't edit this — build and run a local
+    # image explicitly instead:
+    #   docker build -f Dockerfile.0gm35b -t sia-0gm35b:dev .
+    image: ghcr.io/0gfoundation/sia-0gm35b@sha256:c069b4ca50492f23c3ae74aa57206f931efb63ba90cf0ce0b15709e317593935
     container_name: sia-0gm35b-server
-
-    build:
-      context: .
-      dockerfile: Dockerfile.0gm35b
 
     deploy:
       resources:
