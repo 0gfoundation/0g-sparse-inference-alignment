@@ -207,6 +207,35 @@ jobs:
             --certificate-oidc-issuer="https://token.actions.githubusercontent.com" \
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.push.outputs.digest }}
           ```
+
+          ## Running this image
+
+          The SIA source code and all Python dependencies are baked into this
+          image (covered by the digest above). **Model weights are NOT** —
+          at ~80 GB total they are impractical to put inside a signed CI
+          artifact. The container expects them bind-mounted at
+          `/workspace/models`:
+          ```
+          docker run ... -v <YOUR_MODELS_DIR>:/workspace/models ...
+          # <YOUR_MODELS_DIR>/
+          #   0GM-1.0-35B-A3B-0427/          <- main LLM, ~70 GB
+          #   VM-Qwen3-4B-merged-for-vllm/   <- SIA RM, ~11 GB
+          ```
+
+          The SIA RM is public on HuggingFace. Download it pinned to the
+          exact revision (an HF revision is a git commit, so the hash pins
+          the model byte-for-byte):
+          ```
+          huggingface-cli download TengGao/VM-Qwen3-4B-merged-for-vllm_public \
+            --revision 8ab2d2994da7a38261d56406aa39ac21ee57efb2 \
+            --local-dir <YOUR_MODELS_DIR>/VM-Qwen3-4B-merged-for-vllm
+          ```
+
+          The main LLM (`0GM-1.0-35B-A3B-0427`) is an internal 0G Foundation
+          model — contact the model admin for access.
+
+          Full deployment guide (pinned to this release's commit):
+          https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/doc/docker-install-0gm35b-20260610.md
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -220,4 +249,18 @@ jobs:
           echo ""
           echo "✅ **Signed with Sigstore cosign**"
           echo "✅ **SLSA Build Provenance attached**"
+          echo ""
+          echo "## Running this image"
+          echo "Source code + deps are baked in; model weights are NOT (~80 GB) —"
+          echo "bind-mount them at \`/workspace/models\` (main LLM \`0GM-1.0-35B-A3B-0427\` +"
+          echo "SIA RM \`VM-Qwen3-4B-merged-for-vllm\`)."
+          echo ""
+          echo "SIA RM is public on HF, pinned revision:"
+          echo '```'
+          echo "huggingface-cli download TengGao/VM-Qwen3-4B-merged-for-vllm_public \\"
+          echo "  --revision 8ab2d2994da7a38261d56406aa39ac21ee57efb2 \\"
+          echo "  --local-dir <YOUR_MODELS_DIR>/VM-Qwen3-4B-merged-for-vllm"
+          echo '```'
+          echo ""
+          echo "Full guide: https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/doc/docker-install-0gm35b-20260610.md"
         } >> "$GITHUB_STEP_SUMMARY"
