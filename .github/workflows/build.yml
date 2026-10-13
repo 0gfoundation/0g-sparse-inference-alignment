@@ -222,17 +222,18 @@ jobs:
           #   VM-Qwen3-4B-merged-for-vllm/   <- SIA RM, ~11 GB
           ```
 
-          The SIA RM is public on HuggingFace. Download it pinned to the
-          exact revision (an HF revision is a git commit, so the hash pins
-          the model byte-for-byte):
+          Both models are public on HuggingFace. Download them pinned to the
+          exact revisions below (an HF revision is a git commit, so the hash
+          pins the model byte-for-byte):
           ```
+          huggingface-cli download 0G-AI/0GM-1.0-35B-A3B-0427 \
+            --revision 802e58f5c8211f04079bfb5c27fb2c6ab629b686 \
+            --local-dir <YOUR_MODELS_DIR>/0GM-1.0-35B-A3B-0427
+
           huggingface-cli download TengGao/VM-Qwen3-4B-merged-for-vllm_public \
             --revision 8ab2d2994da7a38261d56406aa39ac21ee57efb2 \
             --local-dir <YOUR_MODELS_DIR>/VM-Qwen3-4B-merged-for-vllm
           ```
-
-          The main LLM (`0GM-1.0-35B-A3B-0427`) is an internal 0G Foundation
-          model — contact the model admin for access.
 
           Full deployment guide (pinned to this release's commit):
           https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/doc/docker-install-0gm35b-20260610.md
