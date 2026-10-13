@@ -124,6 +124,24 @@ jobs:
       id: image
       run: echo "image_url=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
 
+    - name: Verify SIA source code is actually baked into the pushed image
+      run: |
+        # Pull back the exact digest just pushed (not a locally-cached copy)
+        # and check inside it — this verifies what's really in the registry,
+        # not just what buildx happened to build locally. Runs before
+        # signing: no point signing and releasing an image where the COPY .
+        # step silently didn't land (wrong WORKDIR, .dockerignore swallowing
+        # something it shouldn't, etc.) — fail fast instead.
+        IMAGE_REF="${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}@${{ steps.push.outputs.digest }}"
+        docker pull "$IMAGE_REF"
+        docker run --rm --entrypoint sh "$IMAGE_REF" -c '
+          set -e
+          REPO=/workspace/sia-repo/0g-sparse-inference-alignment
+          test -f "$REPO/pyproject.toml"
+          test -f "$REPO/src/sia_vllm_server.py"
+          echo "SIA source code confirmed present in the pushed image"
+        '
+
     - name: Sign container image with cosign
       run: |
         # Keyless: cosign uses this job's own GitHub OIDC token (granted by
