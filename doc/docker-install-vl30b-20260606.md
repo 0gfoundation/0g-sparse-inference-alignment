@@ -101,10 +101,14 @@ After download, the LoRA path is `/dstack/persistent/SIA/models/SIA-checkpoints/
 
 **Option A: Direct download (recommended — pre-merged version)**
 
-The merged checkpoint has been uploaded to HuggingFace and can be downloaded directly, skipping the merge step:
+The merged checkpoint has been uploaded to HuggingFace (public repo, no login
+needed) and can be downloaded directly, skipping the merge step. `--revision`
+pins the exact HF commit so the download is byte-for-byte reproducible — same
+revision as pinned in [docker-install-0gm35b-20260610.md](docker-install-0gm35b-20260610.md) §5.4:
 
 ```bash
 huggingface-cli download TengGao/VM-Qwen3-4B-merged-for-vllm_public \
+  --revision 8ab2d2994da7a38261d56406aa39ac21ee57efb2 \
   --local-dir /dstack/persistent/SIA/models/VM-Qwen3-4B-merged-for-vllm
 ```
 

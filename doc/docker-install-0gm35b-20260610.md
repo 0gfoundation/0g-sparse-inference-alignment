@@ -137,8 +137,16 @@ After download, the LoRA path is `/dstack/persistent/SIA/models/SIA-checkpoints/
 
 **Option A: Direct download (recommended — pre-merged version)**
 
+The repo is public (no login needed). `--revision` pins the exact HF commit:
+without it the command pulls whatever `main` points to at download time, so
+two people running it on different days could get different bytes. HF
+revisions are git commits (content-addressed), so pinning the hash pins the
+entire model byte-for-byte — this is what makes the RM independently
+verifiable alongside the signed docker image.
+
 ```bash
 huggingface-cli download TengGao/VM-Qwen3-4B-merged-for-vllm_public \
+  --revision 8ab2d2994da7a38261d56406aa39ac21ee57efb2 \
   --local-dir /dstack/persistent/SIA/models/VM-Qwen3-4B-merged-for-vllm
 ```
 
