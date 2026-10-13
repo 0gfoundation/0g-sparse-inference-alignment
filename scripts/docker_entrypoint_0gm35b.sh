@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
 # Entrypoint for the sia-0gm35b docker image (see Dockerfile.0gm35b at repo root).
 #
-# Heavy deps (vllm 0.18.0 + torch 2.10.0 + transformers ...) are already
-# baked into /opt/venv-0gm35b inside the image. The only thing left to do
-# at container startup is register the sia_rm vllm plugin entry point
-# against the bind-mounted repo path. That requires `pip install -e
+# Heavy deps (vllm 0.18.0 + torch 2.10.0 + transformers ...) AND the SIA
+# source code itself are already baked into the image (see Dockerfile.0gm35b's
+# COPY . step) — the repo path below is no longer bind-mounted. The only
+# thing left to do at container startup is register the sia_rm vllm plugin
+# entry point against that baked-in copy. That requires `pip install -e
 # <repo>` so vllm subprocesses discover Qwen3WithScoreForCausalLM via the
 # pyproject.toml [project.entry-points."vllm.general_plugins"] section.
 #
@@ -21,7 +22,9 @@ if [[ -f "$REPO/pyproject.toml" ]]; then
   "$VENV_PIP" install --quiet --no-deps -e "$REPO"
 else
   echo "[entrypoint] WARN: $REPO/pyproject.toml not found"
-  echo "[entrypoint]       did you docker run with -v /dstack/persistent/SIA:/workspace ?"
+  echo "[entrypoint]       this is baked into the image at build time now, not"
+  echo "[entrypoint]       bind-mounted — a missing file here means the image"
+  echo "[entrypoint]       itself was built wrong, not a missing docker run -v"
   echo "[entrypoint] continuing without sia_rm plugin — SIA b2 backend will not work"
 fi
 
