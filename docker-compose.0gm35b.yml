@@ -10,14 +10,18 @@
 
 services:
   sia-0gm35b:
-    # Pinned to the DIGEST of the signed CI-built image (see the GitHub
-    # Release page for this digest's cosign/SLSA verification commands) —
-    # not a tag, and not a local build. A tag can be repointed later; the
-    # digest cannot. This is what makes "the container we run" and "the
-    # image we verified" provably the same bytes.
+    # Pinned to release v0.18.0-rc6 — the DIGEST of the signed CI-built
+    # image, taken from that release's page (which also carries the
+    # cosign/SLSA verification commands for it). Not a tag, and not a local
+    # build: a tag can be repointed later; the digest cannot. This is what
+    # makes "the container we run" and "the image we verified" provably the
+    # same bytes.
     #
-    # MANUAL STEP ON EVERY RELEASE: after CI publishes a new release,
-    # update this digest to the one shown on that release page.
+    # MANUAL STEP ON EVERY RELEASE: bump BOTH the release tag in this
+    # comment and the digest below to the new release. The digest here
+    # always lags the newest tag by design — a commit cannot reference the
+    # digest of the image built from itself; the authoritative digest for
+    # each release lives on its release page.
     #
     # For local development builds, don't edit this — build and run a local
     # image explicitly instead:
