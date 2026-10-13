@@ -98,11 +98,13 @@ git clone <your-repo-url> \
 
 #### 5.2 Main LLM — 0GM-1.0-35B-A3B-0427 (~70 GB)
 
-0GM is an internal model from 0G Foundation. Contact the model admin for the specific path or HuggingFace repo name. Example:
+Public on HuggingFace: [0G-AI/0GM-1.0-35B-A3B-0427](https://huggingface.co/0G-AI/0GM-1.0-35B-A3B-0427)
+(no login needed). `--revision` pins the exact HF commit so the download is
+byte-for-byte reproducible, same as the RM in §5.4:
 
 ```bash
-# Replace <ORG>/<REPO> with the actual repo name
-huggingface-cli download <ORG>/0GM-1.0-35B-A3B-0427 \
+huggingface-cli download 0G-AI/0GM-1.0-35B-A3B-0427 \
+  --revision 802e58f5c8211f04079bfb5c27fb2c6ab629b686 \
   --local-dir /dstack/persistent/SIA/models/0GM-1.0-35B-A3B-0427
 ```
 
@@ -137,8 +139,16 @@ After download, the LoRA path is `/dstack/persistent/SIA/models/SIA-checkpoints/
 
 **Option A: Direct download (recommended — pre-merged version)**
 
+The repo is public (no login needed). `--revision` pins the exact HF commit:
+without it the command pulls whatever `main` points to at download time, so
+two people running it on different days could get different bytes. HF
+revisions are git commits (content-addressed), so pinning the hash pins the
+entire model byte-for-byte — this is what makes the RM independently
+verifiable alongside the signed docker image.
+
 ```bash
 huggingface-cli download TengGao/VM-Qwen3-4B-merged-for-vllm_public \
+  --revision 8ab2d2994da7a38261d56406aa39ac21ee57efb2 \
   --local-dir /dstack/persistent/SIA/models/VM-Qwen3-4B-merged-for-vllm
 ```
 
