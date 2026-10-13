@@ -67,29 +67,41 @@ docker compose version
 
 ### 4. Directory Structure
 
-Path B/C mounts the entire `/dstack/persistent/SIA` into the container at `/workspace`. Create this structure in advance:
+Path B/C mounts ONLY the models directory into the container
+(`-v /dstack/persistent/SIA/models:/workspace/models`) — the SIA source code
+is baked into the published image, so a `sia-repo/` checkout on the host is
+only needed for Path A (manual install) or §5.4 option B (self-convert the
+RM). **Do NOT mount the whole `/dstack/persistent/SIA` tree at `/workspace`
+when using the published image**: that would silently shadow the verified
+source code baked into the image at `/workspace/sia-repo/...` with whatever
+happens to be on the host. Create this structure in advance:
 
 ```
 /dstack/persistent/SIA/
-├── models/
+├── models/                                  ← the only dir mounted in Path B/C
 │   ├── 0GM-1.0-35B-A3B-0427/                    ← main LLM, ~70 GB  (§5.2)
 │   ├── Qwen3-4B-Base/                       ← RM convert source, ~8 GB   (§5.3, option B only)
 │   ├── SIA-checkpoints/                     ← LoRA checkpoints, ~3 GB  (§5.3, option B only)
 │   └── VM-Qwen3-4B-merged-for-vllm/        ← final RM checkpoint, ~11 GB (§5.4)
 └── sia-repo/
-    └── 0g-sparse-inference-alignment/       ← this repo (§5.1)
+    └── 0g-sparse-inference-alignment/       ← this repo (§5.1, Path A only)
 ```
 
 ```bash
 mkdir -p /dstack/persistent/SIA/models
-mkdir -p /dstack/persistent/SIA/sia-repo
+mkdir -p /dstack/persistent/SIA/sia-repo    # Path A / RM self-convert only
 ```
 
 ### 5. Repo + Model Weights (~81 GB minimum; ~92 GB including convert source)
 
 > Requires `huggingface-cli`: `pip install huggingface-hub`
 
-#### 5.1 Clone the Repo
+#### 5.1 Clone the Repo (Path A / RM self-convert only)
+
+Skip this for Path B/C — the published image already contains the source code
+(that's the point of the signed image). Only Path A (installing everything
+by hand in a bare pytorch container) and §5.4 option B (running the RM
+convert script) need a host-side checkout:
 
 ```bash
 git clone <your-repo-url> \
@@ -249,25 +261,42 @@ sia_rm plugin       : ✓ (['sia_rm'])
 
 ---
 
-## Path B — Dockerfile Build (recommended for repeated runs or sharing)
+## Path B — Pre-built image via docker run (recommended for repeated runs or sharing)
 
-Repo + models still use bind-mount — not baked into the image (image stays small ~10 GB).
+The image bakes in the SIA source code and all Python dependencies; only the
+model weights use bind-mount.
 
-### Step 1B — Build image (one-time, ~5-10 min)
+### Step 1B — Get the image
 
-On the host, `cd` to the repo root (containing `Dockerfile.0gm35b`):
+**Recommended: pull the signed CI-built image, pinned by digest.** Take the
+digest from the [GitHub Release](https://github.com/0gfoundation/0g-sparse-inference-alignment/releases)
+you are deploying (the release page also documents how to verify its cosign
+signature and SLSA provenance):
+
+```bash
+docker pull ghcr.io/0gfoundation/sia-0gm35b@sha256:<digest-from-release-page>
+```
+
+**Alternative: local dev build (~5-10 min)** — for testing uncommitted
+changes; the result is NOT the signed, verifiable artifact:
+
 ```bash
 cd /dstack/persistent/SIA/sia-repo/0g-sparse-inference-alignment
-docker build -f Dockerfile.0gm35b -t sia-0gm35b:0.18.0 .
+docker build -f Dockerfile.0gm35b -t sia-0gm35b:dev .
 ```
 
 What the build does (mirrors the Path A install script):
 1. `apt-get install python3.12-venv ca-certificates curl`
 2. `python3 -m venv /opt/venv-0gm35b`
 3. `pip install -r requirements/0gm35b-b2-inproc.txt` (vllm 0.18.0 + all Python dependencies)
-4. COPY entrypoint script into the image; on container startup it auto-runs `pip install -e <mounted-repo>` to register the sia_rm plugin (1-2 seconds)
+4. `COPY . .` — bakes the SIA source code itself into the image at `/workspace/sia-repo/0g-sparse-inference-alignment`
+5. COPY entrypoint script into the image; on container startup it auto-runs `pip install -e <baked-in repo>` to register the sia_rm plugin (1-2 seconds)
 
 ### Step 1B' — Start container
+
+Mount ONLY the models directory — **not** the whole `/dstack/persistent/SIA`
+tree: mounting at `/workspace` would shadow the source code baked into the
+image with whatever is on the host, defeating the signed-image verification.
 
 ```bash
 docker run -it --rm \
@@ -275,12 +304,12 @@ docker run -it --rm \
   --shm-size=16g \
   --ipc=host \
   -p 8000:8000 \
-  -v /dstack/persistent/SIA:/workspace \
-  sia-0gm35b:0.18.0 \
+  -v /dstack/persistent/SIA/models:/workspace/models \
+  ghcr.io/0gfoundation/sia-0gm35b@sha256:<digest-from-release-page> \
   bash
 ```
 
-Inside the container you will see:
+Inside the container you will see (the repo path is the baked-in copy, not a mount):
 ```
 [entrypoint] registering sia_rm vllm plugin (pip install -e /workspace/sia-repo/0g-sparse-inference-alignment)
 root@xxxx:/workspace/sia-repo/0g-sparse-inference-alignment#
@@ -309,10 +338,13 @@ All GPU resources / mounts / restart policies / health checks / complete server 
 
 ### Step 1C — Start services
 
-On the host, cd to the repo root (containing `docker-compose.0gm35b.yml`):
+The compose file pins the signed CI-built image by digest and pulls it from
+ghcr.io — no local build happens. You only need the compose file itself (plus
+the models from §5); grab it from the release's tag so it matches the
+released image:
 ```bash
-cd /dstack/persistent/SIA/sia-repo/0g-sparse-inference-alignment
-docker compose -f docker-compose.0gm35b.yml up -d --build   # First time: build image (~5-10 min) + start container in background
+cd /dstack/persistent/SIA/sia-repo/0g-sparse-inference-alignment   # or any dir holding docker-compose.0gm35b.yml
+docker compose -f docker-compose.0gm35b.yml up -d   # First time: pulls the image (~15 GB) + starts container in background
 ```
 
 Day-to-day operations:
