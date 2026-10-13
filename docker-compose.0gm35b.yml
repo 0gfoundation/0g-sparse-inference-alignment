@@ -31,7 +31,12 @@ services:
       - "8000:8000"
 
     volumes:
-      - /dstack/persistent/SIA:/workspace
+      # Only the model weights mount now — the SIA source code is baked into
+      # the image at build time (see Dockerfile.0gm35b). Do NOT mount the
+      # whole /workspace tree here: that would shadow the baked-in
+      # /workspace/sia-repo/... with whatever happens to be on the host,
+      # silently defeating the point of baking it in.
+      - /dstack/persistent/SIA/models:/workspace/models
       - vllm-compile-cache-0gm35b:/root/.cache/vllm
 
     environment:
