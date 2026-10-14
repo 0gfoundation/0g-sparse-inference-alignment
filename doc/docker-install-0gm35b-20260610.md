@@ -159,7 +159,7 @@ entire model byte-for-byte — this is what makes the RM independently
 verifiable alongside the signed docker image.
 
 ```bash
-huggingface-cli download TengGao/VM-Qwen3-4B-merged-for-vllm_public \
+huggingface-cli download 0G-AI/VM-Qwen3-4B-merged-for-vllm \
   --revision 8ab2d2994da7a38261d56406aa39ac21ee57efb2 \
   --local-dir /dstack/persistent/SIA/models/VM-Qwen3-4B-merged-for-vllm
 ```

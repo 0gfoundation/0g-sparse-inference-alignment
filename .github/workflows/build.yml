@@ -256,7 +256,7 @@ jobs:
             --revision 802e58f5c8211f04079bfb5c27fb2c6ab629b686 \
             --local-dir <YOUR_MODELS_DIR>/0GM-1.0-35B-A3B-0427
 
-          huggingface-cli download TengGao/VM-Qwen3-4B-merged-for-vllm_public \
+          huggingface-cli download 0G-AI/VM-Qwen3-4B-merged-for-vllm \
             --revision 8ab2d2994da7a38261d56406aa39ac21ee57efb2 \
             --local-dir <YOUR_MODELS_DIR>/VM-Qwen3-4B-merged-for-vllm
           ```
@@ -284,7 +284,7 @@ jobs:
           echo ""
           echo "SIA RM is public on HF, pinned revision:"
           echo '```'
-          echo "huggingface-cli download TengGao/VM-Qwen3-4B-merged-for-vllm_public \\"
+          echo "huggingface-cli download 0G-AI/VM-Qwen3-4B-merged-for-vllm \\"
           echo "  --revision 8ab2d2994da7a38261d56406aa39ac21ee57efb2 \\"
           echo "  --local-dir <YOUR_MODELS_DIR>/VM-Qwen3-4B-merged-for-vllm"
           echo '```'
